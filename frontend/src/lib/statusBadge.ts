@@ -1,4 +1,4 @@
-import { CheckCircle2, Circle, Clock, Lock, XCircle } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, GraduationCap, Lock, ShieldCheck, TrendingUp, User, XCircle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { BadgeTone } from '@/components/ui/Badge';
 import type {
@@ -7,7 +7,10 @@ import type {
     EnrolmentStatus,
     ForumPostReportStatus,
     OrderStatus,
+    PaymentSubmissionStatus,
     TicketStatus,
+    UserRole,
+    UserStatus,
 } from '@/lib/api/types';
 
 interface StatusDisplay {
@@ -33,9 +36,8 @@ const enrolmentStatusMap: Record<EnrolmentStatus, StatusDisplay> = {
 
 const orderStatusMap: Record<OrderStatus, StatusDisplay> = {
     pending: { label: 'Pending', tone: 'warning', icon: Clock },
+    partial: { label: 'Partial', tone: 'warning', icon: TrendingUp },
     paid: { label: 'Paid', tone: 'success', icon: CheckCircle2 },
-    failed: { label: 'Failed', tone: 'danger', icon: XCircle },
-    refunded: { label: 'Refunded', tone: 'neutral', icon: Circle },
 };
 
 export function courseStatusDisplay(status: CourseStatus): StatusDisplay {
@@ -79,4 +81,34 @@ const forumPostReportStatusMap: Record<ForumPostReportStatus, StatusDisplay> = {
 
 export function forumPostReportStatusDisplay(status: ForumPostReportStatus): StatusDisplay {
     return forumPostReportStatusMap[status];
+}
+
+const userRoleMap: Record<UserRole, StatusDisplay> = {
+    admin: { label: 'Admin', tone: 'progress', icon: ShieldCheck },
+    instructor: { label: 'Instructor', tone: 'success', icon: GraduationCap },
+    student: { label: 'Student', tone: 'neutral', icon: User },
+};
+
+export function userRoleDisplay(role: UserRole): StatusDisplay {
+    return userRoleMap[role];
+}
+
+const userStatusMap: Record<UserStatus, StatusDisplay> = {
+    active: { label: 'Active', tone: 'success', icon: CheckCircle2 },
+    suspended: { label: 'Suspended', tone: 'warning', icon: Clock },
+    deactivated: { label: 'Deactivated', tone: 'neutral', icon: XCircle },
+};
+
+export function userStatusDisplay(status: UserStatus): StatusDisplay {
+    return userStatusMap[status];
+}
+
+const paymentSubmissionStatusMap: Record<PaymentSubmissionStatus, StatusDisplay> = {
+    pending: { label: 'Awaiting confirmation', tone: 'warning', icon: Clock },
+    confirmed: { label: 'Confirmed', tone: 'success', icon: CheckCircle2 },
+    rejected: { label: 'Rejected', tone: 'danger', icon: XCircle },
+};
+
+export function paymentSubmissionStatusDisplay(status: PaymentSubmissionStatus): StatusDisplay {
+    return paymentSubmissionStatusMap[status];
 }

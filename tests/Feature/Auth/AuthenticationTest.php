@@ -16,6 +16,18 @@ it('authenticates a user via the login endpoint', function (): void {
     $response->assertNoContent();
 });
 
+it('records the login time on successful authentication', function (): void {
+    $user = User::factory()->create();
+    expect($user->last_login_at)->toBeNull();
+
+    $this->post('/api/v1/login', [
+        'email' => $user->email,
+        'password' => 'password',
+    ]);
+
+    expect($user->fresh()->last_login_at)->not->toBeNull();
+});
+
 it('rejects an invalid password', function (): void {
     $user = User::factory()->create();
 

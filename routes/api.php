@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\AccountController;
 use App\Http\Controllers\Api\V1\Admin\AuditLogController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Api\V1\Admin\OrderController as AdminOrderController;
+use App\Http\Controllers\Api\V1\Admin\PaymentSubmissionController as AdminPaymentSubmissionController;
 use App\Http\Controllers\Api\V1\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Api\V1\AnalyticsController;
 use App\Http\Controllers\Api\V1\AnnouncementController;
@@ -28,6 +29,7 @@ use App\Http\Controllers\Api\V1\MessageController;
 use App\Http\Controllers\Api\V1\ModuleController;
 use App\Http\Controllers\Api\V1\ModuleItemController;
 use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\PaymentSubmissionController;
 use App\Http\Controllers\Api\V1\ProgressController;
 use App\Http\Controllers\Api\V1\QuestionBankController;
 use App\Http\Controllers\Api\V1\QuestionController;
@@ -68,12 +70,17 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/enrolments/import', [EnrolmentImportController::class, 'store']);
         Route::post('/enrolments/{enrolment}/withdraw', [EnrolmentController::class, 'withdraw']);
 
+        Route::post('/orders/{order}/payment-submissions', [PaymentSubmissionController::class, 'store']);
+
         Route::get('/admin/users', [AdminUserController::class, 'index']);
         Route::post('/admin/users', [AdminUserController::class, 'store']);
         Route::patch('/admin/users/{user}', [AdminUserController::class, 'update']);
         Route::get('/admin/audit-logs', [AuditLogController::class, 'index']);
         Route::get('/admin/dashboard-summary', [AdminDashboardController::class, 'summary']);
         Route::get('/admin/orders', [AdminOrderController::class, 'index']);
+        Route::patch('/admin/orders/{order}', [AdminOrderController::class, 'update']);
+        Route::patch('/admin/payment-submissions/{paymentSubmission}/confirm', [AdminPaymentSubmissionController::class, 'confirm']);
+        Route::patch('/admin/payment-submissions/{paymentSubmission}/reject', [AdminPaymentSubmissionController::class, 'reject']);
 
         // Course structure (FR-6/FR-7/FR-8) — admin/instructor writes via Policies.
         Route::post('/courses/{course}/modules', [ModuleController::class, 'store']);

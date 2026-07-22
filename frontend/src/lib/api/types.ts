@@ -4,7 +4,8 @@ export type CourseLevel = 'beginner' | 'intermediate' | 'advanced';
 export type CourseStatus = 'draft' | 'published' | 'archived';
 export type EnrolmentStatus = 'confirmed' | 'withdrawn';
 export type EnrolmentSource = 'self' | 'admin_bulk';
-export type OrderStatus = 'pending' | 'paid' | 'failed' | 'refunded';
+export type OrderStatus = 'pending' | 'partial' | 'paid';
+export type PaymentSubmissionStatus = 'pending' | 'confirmed' | 'rejected';
 
 export interface User {
     id: number;
@@ -15,6 +16,7 @@ export interface User {
     avatar_url: string | null;
     status: UserStatus;
     email_verified_at: string | null;
+    last_login_at: string | null;
     created_at: string;
 }
 
@@ -46,17 +48,33 @@ export interface Course {
     updated_at: string;
 }
 
+export interface PaymentSubmission {
+    id: number;
+    order_id: number;
+    amount: string;
+    receipt_url: string;
+    receipt_original_name: string | null;
+    status: PaymentSubmissionStatus;
+    reviewed_at: string | null;
+    created_at: string;
+}
+
 export interface Order {
     id: number;
     course_id: number;
     student: User | null;
     course: { id: number; title: string } | null;
     amount: string;
+    amount_paid: string;
+    remaining_balance: number;
     currency: string;
     status: OrderStatus;
     payment_method: string | null;
+    provider_ref: string | null;
     paid_at: string | null;
     created_at: string;
+    pending_submission: PaymentSubmission | null;
+    payment_submissions: PaymentSubmission[];
 }
 
 export interface Enrolment {

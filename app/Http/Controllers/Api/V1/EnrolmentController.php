@@ -26,7 +26,7 @@ final class EnrolmentController extends Controller
     {
         $enrolments = Enrolment::query()
             ->where('student_id', $request->user()->id)
-            ->with(['course.category', 'order'])
+            ->with(['course.category', 'order.paymentSubmissions'])
             ->orderBy('applied_at', 'desc')
             ->paginate(15);
 
@@ -42,7 +42,7 @@ final class EnrolmentController extends Controller
 
         $enrolment = $this->enrolmentService->enrol($request->user(), $course, EnrolmentSource::Self);
 
-        return (new EnrolmentResource($enrolment->load(['course.category', 'order'])))
+        return (new EnrolmentResource($enrolment->load(['course.category', 'order.paymentSubmissions'])))
             ->response()
             ->setStatusCode(201);
     }
@@ -57,6 +57,6 @@ final class EnrolmentController extends Controller
 
         $enrolment = $this->enrolmentService->withdraw($enrolment, $request->user());
 
-        return new EnrolmentResource($enrolment->load(['course.category', 'order']));
+        return new EnrolmentResource($enrolment->load(['course.category', 'order.paymentSubmissions']));
     }
 }

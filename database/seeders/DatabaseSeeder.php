@@ -7,6 +7,7 @@ namespace Database\Seeders;
 use App\Models\Category;
 use App\Models\Course;
 use App\Models\LatePenaltyPolicy;
+use App\Models\Order;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -42,6 +43,15 @@ final class DatabaseSeeder extends Seeder
         ]);
 
         $course->instructors()->attach($instructor->id, ['is_primary' => true, 'assigned_at' => now()]);
+
+        // Seed a spread of orders so the admin Payments page (Receivables/Partials/Paid tabs)
+        // has something to show without needing a real payment gateway (7.1 is still not started).
+        // `amount` must be set via ->state() (applied before ->partial()/->paid() in the chain), not
+        // as a create() override — create() overrides land after every state closure has already run,
+        // so amount_paid would otherwise be derived from the factory's random default amount instead.
+        Order::factory()->count(3)->create(['course_id' => $course->id, 'amount' => '150000.00']);
+        Order::factory()->state(['amount' => '150000.00'])->partial()->count(2)->create(['course_id' => $course->id]);
+        Order::factory()->state(['amount' => '150000.00'])->paid()->count(2)->create(['course_id' => $course->id]);
 
         $latePenaltyPolicy = LatePenaltyPolicy::factory()->create(['name' => 'Standard Late Policy']);
 

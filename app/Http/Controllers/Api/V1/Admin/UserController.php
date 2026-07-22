@@ -9,11 +9,14 @@ use App\Http\Requests\Api\V1\StorePrivilegedUserRequest;
 use App\Http\Requests\Api\V1\UpdateUserRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Notifications\UserProvisionedQueued;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 
 /**
  * Instructors/admins are invite-provisioned by an admin, not self-registered
@@ -39,15 +42,23 @@ final class UserController extends Controller
         return UserResource::collection($query->paginate(50));
     }
 
+    /**
+     * No password is set here — the account gets an unusable placeholder hash and the new user
+     * is emailed an invite link (`UserProvisionedQueued`) to set their own password before the
+     * account can be used at all, reusing the same token broker `NewPasswordController` validates.
+     */
     public function store(StorePrivilegedUserRequest $request): JsonResponse
     {
         $user = User::create([
             'role' => $request->validated('role'),
             'name' => $request->validated('name'),
             'email' => $request->validated('email'),
-            'password_hash' => Hash::make($request->validated('password')),
+            'password_hash' => Hash::make(Str::random(64)),
         ]);
         $user->refresh();
+
+        $token = Password::broker()->createToken($user);
+        $user->notify(new UserProvisionedQueued($token));
 
         $this->auditLogger->log(
             action: 'user.provisioned',

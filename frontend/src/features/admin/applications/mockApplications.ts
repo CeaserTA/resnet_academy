@@ -1,4 +1,4 @@
-export type ApplicationStatus = 'pending' | 'approved';
+export type ApplicationStatus = 'pending' | 'approved' | 'rejected';
 
 export interface Application {
     id: number;
@@ -10,9 +10,9 @@ export interface Application {
 }
 
 /**
- * Placeholder data — there's no `pending`/`approved` application state anywhere in the schema
- * (enrolments auto-confirm by design, per FR-2/FR-3). This is a preview of what an approval
- * workflow could look like, not a live feed; see the note on `ApplicationsPage`.
+ * Placeholder data — there's no `pending`/`approved`/`rejected` application state anywhere in
+ * the schema (enrolments auto-confirm by design, per FR-2/FR-3). This is a preview of what an
+ * approval workflow could look like, not a live feed; see the note on `ApplicationsPage`.
  */
 export const MOCK_APPLICATIONS: Application[] = [
     {
@@ -54,5 +54,21 @@ export const MOCK_APPLICATIONS: Application[] = [
         courseTitle: 'Data Analysis with Python',
         appliedAt: '2026-07-20T16:55:00Z',
         status: 'pending',
+    },
+    {
+        id: 6,
+        studentName: 'Kevin Ssemwogerere',
+        studentEmail: 'kevin.ssemwogerere@example.com',
+        courseTitle: 'UX Design Fundamentals',
+        appliedAt: '2026-07-16T10:20:00Z',
+        status: 'rejected',
+    },
+    {
+        id: 7,
+        studentName: 'Faith Atim',
+        studentEmail: 'faith.atim@example.com',
+        courseTitle: 'Introduction to Web Development',
+        appliedAt: '2026-07-17T13:00:00Z',
+        status: 'rejected',
     },
 ];

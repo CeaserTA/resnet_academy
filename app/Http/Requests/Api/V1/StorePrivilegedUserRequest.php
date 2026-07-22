@@ -8,8 +8,12 @@ use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules;
 
+/**
+ * No `password` field — the account is created with no usable password and the new user sets
+ * their own via an emailed invite link (`UserProvisionedQueued`), never a credential the admin
+ * types in and transmits.
+ */
 final class StorePrivilegedUserRequest extends FormRequest
 {
     public function authorize(): bool
@@ -22,7 +26,6 @@ final class StorePrivilegedUserRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:150'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:191', 'unique:'.User::class],
-            'password' => ['required', Rules\Password::defaults()],
             'role' => ['required', Rule::in([UserRole::Instructor->value, UserRole::Admin->value])],
         ];
     }

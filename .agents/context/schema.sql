@@ -153,9 +153,12 @@ CREATE TABLE orders (
     student_id      BIGINT UNSIGNED NOT NULL,
     course_id       BIGINT UNSIGNED NOT NULL,
     enrolment_id    BIGINT UNSIGNED NULL,
-    amount          DECIMAL(10,2) NOT NULL,
+    amount          DECIMAL(10,2) NOT NULL COMMENT 'Total owed',
+    -- Added post-MVP for partial-payment tracking. `status` is derived server-side from
+    -- comparing amount_paid to amount (Admin\OrderController::update()), never set directly.
+    amount_paid     DECIMAL(10,2) NOT NULL DEFAULT 0 COMMENT 'Paid so far; remaining balance = amount - amount_paid',
     currency        CHAR(3) NOT NULL DEFAULT 'UGX',
-    status          ENUM('pending','paid','failed','refunded') NOT NULL DEFAULT 'pending',
+    status          ENUM('pending','partial','paid') NOT NULL DEFAULT 'pending',
     payment_method  VARCHAR(50) NULL,
     provider_ref    VARCHAR(150) NULL COMMENT 'External gateway transaction reference',
     paid_at         DATETIME NULL,
@@ -165,6 +168,25 @@ CREATE TABLE orders (
     CONSTRAINT fk_orders_student FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_orders_course FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
     CONSTRAINT fk_orders_enrolment FOREIGN KEY (enrolment_id) REFERENCES enrolments(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+-- Added post-MVP: a student submits a claimed amount + a receipt image against their own order;
+-- it sits `pending` until an admin confirms (applies it to orders.amount_paid, re-derives
+-- orders.status) or rejects it (order untouched, student may resubmit).
+CREATE TABLE payment_submissions (
+    id                      BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    order_id                BIGINT UNSIGNED NOT NULL,
+    amount                  DECIMAL(10,2) NOT NULL,
+    receipt_path            VARCHAR(255) NOT NULL,
+    receipt_original_name   VARCHAR(255) NULL,
+    status                  ENUM('pending','confirmed','rejected') NOT NULL DEFAULT 'pending',
+    reviewed_by             BIGINT UNSIGNED NULL,
+    reviewed_at             DATETIME NULL,
+    created_at              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at              DATETIME NULL,
+    KEY idx_payment_submissions_order (order_id),
+    CONSTRAINT fk_payment_submission_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    CONSTRAINT fk_payment_submission_reviewer FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- =====================================================================

@@ -6,8 +6,9 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
-final class UserResource extends JsonResource
+final class PaymentSubmissionResource extends JsonResource
 {
     /**
      * @return array<string, mixed>
@@ -16,14 +17,12 @@ final class UserResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'role' => $this->role->value,
-            'name' => $this->name,
-            'email' => $this->email,
-            'phone' => $this->phone,
-            'avatar_url' => $this->avatar_url,
+            'order_id' => $this->order_id,
+            'amount' => $this->amount,
+            'receipt_url' => Storage::disk('public')->url($this->receipt_path),
+            'receipt_original_name' => $this->receipt_original_name,
             'status' => $this->status->value,
-            'email_verified_at' => $this->email_verified_at?->toIso8601String(),
-            'last_login_at' => $this->last_login_at?->toIso8601String(),
+            'reviewed_at' => $this->reviewed_at?->toIso8601String(),
             'created_at' => $this->created_at->toIso8601String(),
         ];
     }

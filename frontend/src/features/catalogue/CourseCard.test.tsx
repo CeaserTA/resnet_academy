@@ -29,6 +29,7 @@ const course: Course = {
             avatar_url: null,
             status: 'active',
             email_verified_at: null,
+            last_login_at: null,
             created_at: '',
         },
     ],

@@ -33,6 +33,13 @@ final class NewPasswordController extends Controller
                     'password_hash' => Hash::make($request->string('password')->toString()),
                 ])->save();
 
+                // Clicking a single-use emailed link is itself proof of inbox ownership — closes
+                // the loop for admin-invited accounts (`UserProvisionedQueued`) without a separate
+                // "verify your email" step. A no-op for an already-verified self-service reset.
+                if (! $user->hasVerifiedEmail()) {
+                    $user->markEmailAsVerified();
+                }
+
                 event(new PasswordReset($user));
             }
         );
