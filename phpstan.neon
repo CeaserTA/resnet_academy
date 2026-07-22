@@ -1,0 +1,31 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - app
+
+    level: 6
+
+    excludePaths:
+        - app/Providers/*
+
+    ignoreErrors:
+        # Eloquent relation return types (HasMany/BelongsTo/BelongsToMany) without full
+        # <TRelated, TDeclaring> generics on every one of ~150 relationship methods across
+        # ~50 models — cosmetic completeness, not a correctness issue (Eloquent resolves
+        # these correctly at runtime regardless of the PHPDoc generics).
+        -
+            identifier: missingType.generics
+            path: app/Models/*
+        # API Resource classes read arbitrary attributes off the wrapped model via
+        # JsonResource's magic __get forwarding (the standard Laravel Resource pattern) —
+        # Larastan has no bundled extension for this, so every property read false-positives.
+        -
+            identifier: property.notFound
+            path: app/Http/Resources/*
+        # FormRequest::rules() arrays mix validation rule strings/arrays per key — annotating
+        # the full value-type shape adds noise without catching real bugs here.
+        -
+            identifier: missingType.iterableValue
+            path: app/Http/Requests/*

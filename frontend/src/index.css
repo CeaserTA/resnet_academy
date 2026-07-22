@@ -1,0 +1,48 @@
+@import 'tailwindcss';
+
+@theme {
+    /* Primary — blue (ui-context.md §2) */
+    --color-blue-900: #0b2a54;
+    --color-blue-700: #123c7a;
+    --color-blue-600: #1b4fa0;
+    --color-blue-400: #4b79c4;
+    --color-blue-100: #e3eaf7;
+    --color-blue-50: #f3f6fc;
+
+    /* Accent — warm amber, used sparingly */
+    --color-amber-500: #e8a33d;
+    --color-amber-100: #fbebd2;
+
+    /* Neutrals */
+    --color-ink-900: #151a24;
+    --color-ink-600: #4a5568;
+    --color-ink-300: #a0aec0;
+    --color-surface-0: #ffffff;
+    --color-surface-50: #f7f8fa;
+    --color-surface-100: #edeff3;
+
+    /* Semantic status */
+    --color-success-600: #1f8a55;
+    --color-warning-600: #e8a33d;
+    --color-danger-600: #c0392b;
+
+    --font-display: 'Sora', system-ui, sans-serif;
+    --font-body: 'Inter', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+@layer base {
+    body {
+        @apply bg-surface-50 text-ink-900 font-body antialiased;
+    }
+
+    h1,
+    h2,
+    h3 {
+        @apply font-display font-semibold text-ink-900;
+    }
+
+    :focus-visible {
+        @apply outline-2 outline-offset-2 outline-blue-600;
+    }
+}

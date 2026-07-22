@@ -1,0 +1,55 @@
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { it, expect, vi } from 'vitest';
+import { ProfileMenu } from '@/components/layout/ProfileMenu';
+import { AuthProvider } from '@/lib/auth/AuthContext';
+import type { User } from '@/lib/api/types';
+
+const { admin } = vi.hoisted(() => {
+    const admin: User = {
+        id: 1,
+        role: 'admin',
+        name: 'Resnet Admin',
+        email: 'admin@resnet.test',
+        phone: null,
+        avatar_url: null,
+        status: 'active',
+        email_verified_at: '2026-01-01T00:00:00Z',
+        created_at: '2026-01-01T00:00:00Z',
+    };
+
+    return { admin };
+});
+
+const logoutRequest = vi.fn().mockResolvedValue(undefined);
+
+vi.mock('@/features/auth/api', () => ({
+    fetchCurrentUser: vi.fn().mockResolvedValue(admin),
+    logout: () => logoutRequest(),
+}));
+
+it('opens on click, shows the user\'s name and email, and logs out on click', async () => {
+    const user = userEvent.setup();
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    render(
+        <QueryClientProvider client={queryClient}>
+            <MemoryRouter>
+                <AuthProvider>
+                    <ProfileMenu />
+                </AuthProvider>
+            </MemoryRouter>
+        </QueryClientProvider>,
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Account menu' }));
+
+    expect(screen.getByText('Resnet Admin')).toBeInTheDocument();
+    expect(screen.getByText('admin@resnet.test')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Log out' }));
+
+    expect(logoutRequest).toHaveBeenCalledTimes(1);
+});

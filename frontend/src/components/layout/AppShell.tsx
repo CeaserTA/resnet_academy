@@ -1,0 +1,174 @@
+import { type ReactNode } from 'react';
+import { Link, NavLink, Outlet } from 'react-router';
+import {
+    BookOpen,
+    ClipboardList,
+    CreditCard,
+    FileCheck,
+    FolderTree,
+    GraduationCap,
+    LayoutDashboard,
+    LifeBuoy,
+    MessageSquare,
+    Upload,
+    Users,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { NotificationBell } from '@/features/communication/NotificationBell';
+import { ProfileMenu } from '@/components/layout/ProfileMenu';
+import { PageHeaderProvider, usePageHeaderValue } from '@/lib/pageHeader/PageHeaderContext';
+import { cn } from '@/lib/utils';
+
+interface NavItem {
+    to: string;
+    label: string;
+    icon: LucideIcon;
+    end?: boolean;
+}
+
+const communicationItems: NavItem[] = [
+    { to: '/messages', label: 'Messages', icon: MessageSquare },
+    { to: '/tickets', label: 'Support', icon: LifeBuoy },
+];
+
+function navItemsForRole(role: string): NavItem[] {
+    if (role === 'admin') {
+        return [
+            { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
+            { to: '/admin/courses', label: 'Courses', icon: BookOpen },
+            ...communicationItems,
+            { to: '/admin/applications', label: 'Applications', icon: FileCheck },
+            { to: '/admin/payments', label: 'Payments', icon: CreditCard },
+            { to: '/admin/categories', label: 'Categories', icon: FolderTree },
+            { to: '/admin/enrolments/import', label: 'Bulk import', icon: Upload },
+            { to: '/admin/users', label: 'Team', icon: Users },
+            { to: '/admin/audit-log', label: 'Audit log', icon: ClipboardList },
+        ];
+    }
+
+    if (role === 'instructor') {
+        return [
+            { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
+            { to: '/admin/courses', label: 'My courses', icon: BookOpen },
+            ...communicationItems,
+        ];
+    }
+
+    return [
+        { to: '/dashboard', label: 'My courses', icon: LayoutDashboard, end: true },
+        { to: '/courses', label: 'Browse catalogue', icon: BookOpen },
+        ...communicationItems,
+    ];
+}
+
+function NavLinks({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => void }) {
+    return (
+        <>
+            {items.map(({ to, label, icon: Icon, end }) => (
+                <NavLink
+                    key={to}
+                    to={to}
+                    end={end}
+                    onClick={onNavigate}
+                    className={({ isActive }) =>
+                        cn(
+                            'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                            isActive
+                                ? 'bg-blue-600 text-white'
+                                : 'text-surface-0/80 hover:bg-blue-600/40 hover:text-surface-0',
+                        )
+                    }
+                >
+                    <Icon className="size-5" aria-hidden="true" />
+                    {label}
+                </NavLink>
+            ))}
+        </>
+    );
+}
+
+function TopBar() {
+    const header = usePageHeaderValue();
+
+    return (
+        <header className="flex shrink-0 items-center justify-between border-b border-surface-100 bg-surface-0 px-4 py-3 sm:px-6">
+            {header ? (
+                <div>
+                    <h1 className="text-lg text-ink-900">{header.title}</h1>
+                    {header.subtitle && <p className="text-sm text-ink-600">{header.subtitle}</p>}
+                </div>
+            ) : (
+                <Link to="/dashboard" className="flex items-center gap-2 font-display font-semibold text-blue-600">
+                    <GraduationCap className="size-5" aria-hidden="true" />
+                    Resnet LMS
+                </Link>
+            )}
+
+            <div className="flex items-center gap-1">
+                <NotificationBell className="text-ink-600 hover:bg-surface-100" />
+                <ProfileMenu />
+            </div>
+        </header>
+    );
+}
+
+export function AppShell(): ReactNode {
+    const { user } = useAuth();
+
+    if (!user) {
+        return null;
+    }
+
+    const items = navItemsForRole(user.role);
+
+    return (
+        <div className="flex h-screen overflow-hidden">
+            <aside className="hidden w-64 flex-col gap-1 overflow-y-auto bg-blue-700 p-4 lg:flex">
+                <Link
+                    to="/dashboard"
+                    className="mb-4 flex items-center gap-2 px-3 font-display text-lg font-semibold text-surface-0"
+                >
+                    <GraduationCap className="size-6" aria-hidden="true" />
+                    Resnet LMS
+                </Link>
+
+                <nav className="flex flex-1 flex-col gap-1">
+                    <NavLinks items={items} />
+                </nav>
+            </aside>
+
+            <div className="flex flex-1 flex-col">
+                <PageHeaderProvider>
+                    <TopBar />
+
+                    <main className="flex-1 overflow-y-auto bg-surface-50 p-4 pb-20 sm:p-6 lg:pb-6">
+                        <Outlet />
+                    </main>
+                </PageHeaderProvider>
+
+                <nav
+                    className="fixed inset-x-0 bottom-0 z-10 flex items-center justify-around border-t border-surface-100 bg-surface-0 py-2 lg:hidden"
+                    aria-label="Primary"
+                >
+                    {items.slice(0, 4).map(({ to, label, icon: Icon, end }) => (
+                        <NavLink
+                            key={to}
+                            to={to}
+                            end={end}
+                            className={({ isActive }) =>
+                                cn(
+                                    'flex flex-col items-center gap-0.5 px-2 text-xs font-medium',
+                                    isActive ? 'text-blue-600' : 'text-ink-600',
+                                )
+                            }
+                        >
+                            <Icon className="size-5" aria-hidden="true" />
+                            {label}
+                        </NavLink>
+                    ))}
+                </nav>
+            </div>
+        </div>
+    );
+}
