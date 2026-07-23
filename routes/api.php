@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\V1\EvaluationAttemptController;
 use App\Http\Controllers\Api\V1\EvaluationController;
 use App\Http\Controllers\Api\V1\ForumPostController;
 use App\Http\Controllers\Api\V1\ForumPostReportController;
+use App\Http\Controllers\Api\V1\ForumTagController;
 use App\Http\Controllers\Api\V1\ForumThreadController;
 use App\Http\Controllers\Api\V1\GradebookController;
 use App\Http\Controllers\Api\V1\GroupController;
@@ -151,6 +152,7 @@ Route::prefix('v1')->group(function (): void {
         // Analytics dashboard (business rule "Analytics dashboard") — completion rates,
         // at-risk flags, engagement metrics, admin/instructor only.
         Route::get('/courses/{course}/analytics', [AnalyticsController::class, 'courseAnalytics']);
+        Route::post('/courses/{course}/at-risk-notice', [AnalyticsController::class, 'notifyAtRisk']);
 
         // Messaging (FR-15/16/17) — one generic conversations/messages system covers
         // Admin<->Instructor, Instructor<->Student, Admin<->Student; read receipts on show().
@@ -167,17 +169,20 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('/tickets/{ticket}', [TicketController::class, 'update']);
         Route::post('/tickets/{ticket}/messages', [TicketMessageController::class, 'store']);
 
-        // Course forums (FR-18) — threads/posts/search, plus moderation (report/pin/lock).
+        // Course forums (FR-18) — threaded discussions/replies/search/tags, plus moderation
+        // (report/pin/lock/solve).
         Route::get('/courses/{course}/forum/threads', [ForumThreadController::class, 'index']);
         Route::post('/courses/{course}/forum/threads', [ForumThreadController::class, 'store']);
         Route::get('/forum-threads/{thread}', [ForumThreadController::class, 'show']);
         Route::patch('/forum-threads/{thread}', [ForumThreadController::class, 'update']);
+        Route::get('/forum-threads/{thread}/posts', [ForumPostController::class, 'index']);
         Route::post('/forum-threads/{thread}/posts', [ForumPostController::class, 'store']);
         Route::patch('/forum-posts/{post}', [ForumPostController::class, 'update']);
         Route::delete('/forum-posts/{post}', [ForumPostController::class, 'destroy']);
         Route::post('/forum-posts/{post}/reports', [ForumPostReportController::class, 'store']);
         Route::get('/courses/{course}/forum/reports', [ForumPostReportController::class, 'index']);
         Route::patch('/forum-post-reports/{report}', [ForumPostReportController::class, 'update']);
+        Route::get('/forum-tags', [ForumTagController::class, 'index']);
 
         // Announcements — one-to-many broadcast from Instructor/Admin to enrolled students.
         Route::get('/courses/{course}/announcements', [AnnouncementController::class, 'index']);

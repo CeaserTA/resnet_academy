@@ -1,4 +1,22 @@
-import { CheckCircle2, Circle, Clock, GraduationCap, Lock, ShieldCheck, TrendingUp, User, XCircle } from 'lucide-react';
+import {
+    AlertTriangle,
+    Award,
+    BookOpen,
+    CheckCircle2,
+    Circle,
+    Clock,
+    GraduationCap,
+    LifeBuoy,
+    Lock,
+    Mail,
+    Megaphone,
+    MessageCircle,
+    ShieldCheck,
+    TrendingUp,
+    Unlock,
+    User,
+    XCircle,
+} from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { BadgeTone } from '@/components/ui/Badge';
 import type {
@@ -111,4 +129,30 @@ const paymentSubmissionStatusMap: Record<PaymentSubmissionStatus, StatusDisplay>
 
 export function paymentSubmissionStatusDisplay(status: PaymentSubmissionStatus): StatusDisplay {
     return paymentSubmissionStatusMap[status];
+}
+
+/**
+ * `AppNotification.type` mirrors the string literals `NotificationDispatcher` writes
+ * server-side (`app/Services/Notifications/NotificationDispatcher.php`) — not a strict union on
+ * the frontend, so unrecognized values fall back rather than throwing. Announcements arrive here
+ * as `announcement_posted` like every other notification type — there's no separate
+ * announcements surface anymore.
+ */
+const notificationTypeMap: Record<string, StatusDisplay> = {
+    announcement_posted: { label: 'Announcement', tone: 'warning', icon: Megaphone },
+    course_updated: { label: 'Course updated', tone: 'neutral', icon: BookOpen },
+    certificate_issued: { label: 'Certificate', tone: 'success', icon: Award },
+    new_message: { label: 'Message', tone: 'progress', icon: Mail },
+    ticket_reply: { label: 'Support reply', tone: 'progress', icon: LifeBuoy },
+    forum_reply: { label: 'Forum reply', tone: 'progress', icon: MessageCircle },
+    forum_thread_solved: { label: 'Discussion solved', tone: 'success', icon: CheckCircle2 },
+    grade_posted: { label: 'Grade posted', tone: 'success', icon: GraduationCap },
+    module_unlocked: { label: 'Module unlocked', tone: 'success', icon: Unlock },
+    at_risk_reminder: { label: 'At-risk check-in', tone: 'warning', icon: AlertTriangle },
+};
+
+const defaultNotificationTypeDisplay: StatusDisplay = { label: 'Notification', tone: 'neutral', icon: Circle };
+
+export function notificationTypeDisplay(type: string): StatusDisplay {
+    return notificationTypeMap[type] ?? defaultNotificationTypeDisplay;
 }

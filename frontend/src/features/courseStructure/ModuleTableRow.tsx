@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { CalendarCheck, ChevronDown, ChevronUp, ClipboardList, Clock, FileCheck2, Pencil, Plus, Trash2 } from 'lucide-react';
-import { Card } from '@/components/ui/Card';
+import { CalendarCheck, ChevronDown, ChevronRight, ClipboardList, Clock, FileCheck2, FileEdit, ListChecks, Pencil, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
 import { ResourceForm } from '@/features/courseStructure/ResourceForm';
 import { AssignmentQuickForm } from '@/features/assessment/AssignmentQuickForm';
 import { EvaluationQuickForm } from '@/features/assessment/EvaluationQuickForm';
@@ -98,7 +98,24 @@ function ItemRow({ item, onDelete }: { item: ModuleItem; onDelete: () => void })
     );
 }
 
-export function ModuleCard({ module, courseId, onDelete }: { module: Module; courseId: number; onDelete: () => void }) {
+/**
+ * One row of the "Module Management" table (course builder redesign) — same state/handlers
+ * `ModuleCard` used to own, just rendered as `<tr>` + a conditional expanded `<tr>` instead of a
+ * `<Card>`. The three action icons open the existing add-forms in a `Modal` instead of expanding
+ * inline; expanding the row (chevron or clicking the title) still shows the existing item list
+ * and lets you delete them or the module itself, so none of that capability is lost.
+ */
+export function ModuleTableRow({
+    index,
+    module,
+    courseId,
+    onDelete,
+}: {
+    index: number;
+    module: Module;
+    courseId: number;
+    onDelete: () => void;
+}) {
     const [isOpen, setIsOpen] = useState(false);
     const [addingForm, setAddingForm] = useState<AddingForm>(null);
 
@@ -134,86 +151,92 @@ export function ModuleCard({ module, courseId, onDelete }: { module: Module; cou
         }
     };
 
-    return (
-        <Card>
-            <div className="flex items-start justify-between">
-                <div>
-                    <div className="flex items-center gap-2">
-                        <h3 className="text-lg">{module.title}</h3>
-                        {module.scheduled_start_at && (
-                            <Badge
-                                label={`Opens ${new Date(module.scheduled_start_at).toLocaleDateString()}`}
-                                tone="warning"
-                                icon={Clock}
-                            />
-                        )}
-                        {module.group_ids && module.group_ids.length > 0 && (
-                            <Badge label="Group-scoped" tone="neutral" />
-                        )}
-                    </div>
-                    {module.description && <p className="mt-1 text-sm text-ink-600">{module.description}</p>}
-                </div>
+    const opensInFuture = module.scheduled_start_at && new Date(module.scheduled_start_at) > new Date();
 
-                <div className="flex items-center gap-2">
-                    <Button
-                        variant="ghost"
-                        className="px-2 py-1"
+    return (
+        <>
+            <tr className={index % 2 === 1 ? 'bg-surface-50' : undefined}>
+                <td className="px-4 py-3">
+                    <button
                         onClick={() => setIsOpen((v) => !v)}
+                        className="flex w-full items-center gap-3 text-left"
+                        aria-expanded={isOpen}
                         aria-label={isOpen ? `Collapse ${module.title}` : `Expand ${module.title}`}
                     >
-                        {isOpen ? <ChevronUp className="size-4" aria-hidden="true" /> : <ChevronDown className="size-4" aria-hidden="true" />}
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        className="px-2 py-1"
-                        onClick={onDelete}
-                        aria-label={`Delete ${module.title}`}
-                    >
-                        <Trash2 className="size-4" aria-hidden="true" />
-                    </Button>
-                </div>
-            </div>
+                        {isOpen ? (
+                            <ChevronDown className="size-4 shrink-0 text-ink-600" aria-hidden="true" />
+                        ) : (
+                            <ChevronRight className="size-4 shrink-0 text-ink-600" aria-hidden="true" />
+                        )}
+                        <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-blue-600/10 text-xs font-medium text-blue-600">
+                            {index + 1}
+                        </span>
+                        <span className="text-sm text-ink-900">{module.title}</span>
+                    </button>
+                </td>
+                <td className="px-4 py-3">
+                    {opensInFuture ? (
+                        <Badge label={`Opens ${new Date(module.scheduled_start_at as string).toLocaleDateString()}`} tone="warning" icon={Clock} />
+                    ) : (
+                        <Badge label="Active" tone="success" />
+                    )}
+                </td>
+                <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1">
+                        <Button
+                            variant="ghost"
+                            className="px-2 py-1"
+                            onClick={() => setAddingForm('resource')}
+                            aria-label={`Add a resource to ${module.title}`}
+                        >
+                            <FileEdit className="size-4" aria-hidden="true" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            className="px-2 py-1"
+                            onClick={() => setAddingForm('assignment')}
+                            aria-label={`Add an assignment to ${module.title}`}
+                        >
+                            <FileCheck2 className="size-4" aria-hidden="true" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            className="px-2 py-1"
+                            onClick={() => setAddingForm('evaluation')}
+                            aria-label={`Add an evaluation to ${module.title}`}
+                        >
+                            <ListChecks className="size-4" aria-hidden="true" />
+                        </Button>
+                        <Button variant="ghost" className="px-2 py-1" onClick={onDelete} aria-label={`Delete ${module.title}`}>
+                            <Trash2 className="size-4" aria-hidden="true" />
+                        </Button>
+                    </div>
+                </td>
+            </tr>
 
             {isOpen && (
-                <div className="mt-4 flex flex-col gap-2 border-t border-surface-100 pt-4">
-                    {module.items.length === 0 && <p className="text-sm text-ink-600">No content yet.</p>}
+                <tr className={index % 2 === 1 ? 'bg-surface-50' : undefined}>
+                    <td colSpan={3} className="px-4 pb-3">
+                        <div className="flex flex-col gap-2 rounded-md border border-surface-100 p-3">
+                            {module.items.length === 0 && <p className="text-sm text-ink-600">No content yet.</p>}
 
-                    {module.items.map((item) => (
-                        <ItemRow
-                            key={`${item.item_type}-${item.id}`}
-                            item={item}
-                            onDelete={() => deleteItem(item)}
-                        />
-                    ))}
-
-                    {addingForm === 'resource' && (
-                        <ResourceForm onSubmit={handleCreateResource} onCancel={() => setAddingForm(null)} />
-                    )}
-                    {addingForm === 'assignment' && (
-                        <AssignmentQuickForm onSubmit={handleCreateAssignment} onCancel={() => setAddingForm(null)} />
-                    )}
-                    {addingForm === 'evaluation' && (
-                        <EvaluationQuickForm onSubmit={handleCreateEvaluation} onCancel={() => setAddingForm(null)} />
-                    )}
-
-                    {addingForm === null && (
-                        <div className="mt-2 flex gap-2">
-                            <Button variant="secondary" onClick={() => setAddingForm('resource')}>
-                                <Plus className="size-4" aria-hidden="true" />
-                                Resource
-                            </Button>
-                            <Button variant="secondary" onClick={() => setAddingForm('assignment')}>
-                                <Plus className="size-4" aria-hidden="true" />
-                                Assignment
-                            </Button>
-                            <Button variant="secondary" onClick={() => setAddingForm('evaluation')}>
-                                <Plus className="size-4" aria-hidden="true" />
-                                Evaluation
-                            </Button>
+                            {module.items.map((item) => (
+                                <ItemRow key={`${item.item_type}-${item.id}`} item={item} onDelete={() => deleteItem(item)} />
+                            ))}
                         </div>
-                    )}
-                </div>
+                    </td>
+                </tr>
             )}
-        </Card>
+
+            <Modal isOpen={addingForm === 'resource'} onClose={() => setAddingForm(null)} title={`Add a resource to ${module.title}`}>
+                <ResourceForm onSubmit={handleCreateResource} onCancel={() => setAddingForm(null)} />
+            </Modal>
+            <Modal isOpen={addingForm === 'assignment'} onClose={() => setAddingForm(null)} title={`Add an assignment to ${module.title}`}>
+                <AssignmentQuickForm onSubmit={handleCreateAssignment} onCancel={() => setAddingForm(null)} />
+            </Modal>
+            <Modal isOpen={addingForm === 'evaluation'} onClose={() => setAddingForm(null)} title={`Add an evaluation to ${module.title}`}>
+                <EvaluationQuickForm onSubmit={handleCreateEvaluation} onCancel={() => setAddingForm(null)} />
+            </Modal>
+        </>
     );
 }

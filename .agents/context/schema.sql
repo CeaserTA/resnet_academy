@@ -659,10 +659,43 @@ CREATE TABLE forum_threads (
     title       VARCHAR(200) NOT NULL,
     is_pinned   BOOLEAN NOT NULL DEFAULT FALSE,
     is_locked   BOOLEAN NOT NULL DEFAULT FALSE,
+    -- Added for the threaded-discussion refactor.
+    solved            BOOLEAN NOT NULL DEFAULT FALSE COMMENT 'Staff-only (ForumThreadPolicy::moderate)',
+    last_activity_at  DATETIME NULL COMMENT 'Bumped on every new reply, not on edits; drives list sort/grouping',
     created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     KEY idx_threads_forum (forum_id),
+    KEY idx_threads_last_activity (last_activity_at),
     CONSTRAINT fk_thread_forum FOREIGN KEY (forum_id) REFERENCES forums(id) ON DELETE CASCADE,
     CONSTRAINT fk_thread_creator FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Added for the threaded-discussion refactor: a global (not course-scoped) tag vocabulary a
+-- thread author can pick from or create on the fly.
+CREATE TABLE forum_tags (
+    id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name        VARCHAR(50) NOT NULL UNIQUE,
+    slug        VARCHAR(50) NOT NULL UNIQUE,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE TABLE forum_thread_tag (
+    thread_id   BIGINT UNSIGNED NOT NULL,
+    tag_id      BIGINT UNSIGNED NOT NULL,
+    PRIMARY KEY (thread_id, tag_id),
+    CONSTRAINT fk_thread_tag_thread FOREIGN KEY (thread_id) REFERENCES forum_threads(id) ON DELETE CASCADE,
+    CONSTRAINT fk_thread_tag_tag FOREIGN KEY (tag_id) REFERENCES forum_tags(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Added for the threaded-discussion refactor: per-user read-state, powering the discussion
+-- list's unread indicator. A thread is unread when forum_threads.last_activity_at is newer than
+-- this row (or the user has no row at all for that thread).
+CREATE TABLE forum_thread_reads (
+    user_id       BIGINT UNSIGNED NOT NULL,
+    thread_id     BIGINT UNSIGNED NOT NULL,
+    last_read_at  DATETIME NOT NULL,
+    PRIMARY KEY (user_id, thread_id),
+    CONSTRAINT fk_thread_read_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_thread_read_thread FOREIGN KEY (thread_id) REFERENCES forum_threads(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 CREATE TABLE forum_posts (

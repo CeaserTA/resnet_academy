@@ -8,6 +8,7 @@ use Database\Factories\ForumThreadFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -24,11 +25,15 @@ final class ForumThread extends Model
         'title',
         'is_pinned',
         'is_locked',
+        'solved',
+        'last_activity_at',
     ];
 
     protected $casts = [
         'is_pinned' => 'boolean',
         'is_locked' => 'boolean',
+        'solved' => 'boolean',
+        'last_activity_at' => 'datetime',
     ];
 
     /**
@@ -65,5 +70,24 @@ final class ForumThread extends Model
     public function headPost(): HasOne
     {
         return $this->hasOne(ForumPost::class, 'thread_id')->oldestOfMany();
+    }
+
+    /**
+     * The discussion list's "latest participant" avatar — same real-relation pattern as
+     * `headPost()`, just newest instead of oldest.
+     *
+     * @return HasOne<ForumPost, $this>
+     */
+    public function latestPost(): HasOne
+    {
+        return $this->hasOne(ForumPost::class, 'thread_id')->latestOfMany();
+    }
+
+    /**
+     * @return BelongsToMany<ForumTag, $this>
+     */
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(ForumTag::class, 'forum_thread_tag', 'thread_id', 'tag_id');
     }
 }

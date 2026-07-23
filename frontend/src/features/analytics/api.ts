@@ -6,6 +6,13 @@ export async function fetchCourseAnalytics(courseId: number): Promise<CourseAnal
     return data.data;
 }
 
+export async function notifyAtRiskStudents(courseId: number, message?: string): Promise<{ notified: number }> {
+    const { data } = await apiClient.post<{ data: { notified: number } }>(`/courses/${courseId}/at-risk-notice`, {
+        message: message || undefined,
+    });
+    return data.data;
+}
+
 export async function fetchAuditLogs(filters: {
     entity_type?: string;
     entity_id?: number;

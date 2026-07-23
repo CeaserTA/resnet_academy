@@ -24,6 +24,8 @@ final class ForumThreadFactory extends Factory
             'title' => fake()->sentence(4),
             'is_pinned' => false,
             'is_locked' => false,
+            'solved' => false,
+            'last_activity_at' => now(),
         ];
     }
 }

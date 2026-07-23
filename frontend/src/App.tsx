@@ -30,7 +30,6 @@ import { TicketsPage } from '@/features/communication/TicketsPage';
 import { TicketRedirect } from '@/features/communication/TicketRedirect';
 import { ForumPage } from '@/features/communication/ForumPage';
 import { ForumModerationPage } from '@/features/communication/ForumModerationPage';
-import { AnalyticsDashboardPage } from '@/features/analytics/AnalyticsDashboardPage';
 import { AuditLogPage } from '@/features/analytics/AuditLogPage';
 import { AccountPage } from '@/features/account/AccountPage';
 import { PaymentsPage } from '@/features/admin/payments/PaymentsPage';
@@ -131,14 +130,6 @@ function App() {
                     element={
                         <ProtectedRoute roles={['admin', 'instructor']}>
                             <GradebookPage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="admin/courses/:id/analytics"
-                    element={
-                        <ProtectedRoute roles={['admin', 'instructor']}>
-                            <AnalyticsDashboardPage />
                         </ProtectedRoute>
                     }
                 />

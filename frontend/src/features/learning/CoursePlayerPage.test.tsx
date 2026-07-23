@@ -131,10 +131,6 @@ vi.mock('@/features/auth/api', () => ({
     fetchCurrentUser: vi.fn().mockResolvedValue(student),
 }));
 
-vi.mock('@/features/communication/api', () => ({
-    fetchAnnouncements: vi.fn().mockResolvedValue([]),
-}));
-
 it('shows an unlocked module’s resources but hides a locked module’s resources', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 

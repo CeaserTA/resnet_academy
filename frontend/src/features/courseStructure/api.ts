@@ -1,12 +1,11 @@
 import { apiClient } from '@/lib/api/client';
-import type { Group, Module, ResourceItem } from '@/lib/api/types';
+import type { Module, ResourceItem } from '@/lib/api/types';
 
 export interface ModulePayload {
     title: string;
     description?: string;
     order_index?: number;
     scheduled_start_at?: string | null;
-    group_ids?: number[];
 }
 
 export async function fetchModules(courseId: number): Promise<Module[]> {
@@ -26,34 +25,6 @@ export async function updateModule(moduleId: number, payload: Partial<ModulePayl
 
 export async function deleteModule(moduleId: number): Promise<void> {
     await apiClient.delete(`/modules/${moduleId}`);
-}
-
-export interface GroupPayload {
-    name: string;
-    description?: string;
-}
-
-export async function fetchGroups(courseId: number): Promise<Group[]> {
-    const { data } = await apiClient.get<{ data: Group[] }>(`/courses/${courseId}/groups`);
-    return data.data;
-}
-
-export async function createGroup(courseId: number, payload: GroupPayload): Promise<Group> {
-    const { data } = await apiClient.post<{ data: Group }>(`/courses/${courseId}/groups`, payload);
-    return data.data;
-}
-
-export async function deleteGroup(groupId: number): Promise<void> {
-    await apiClient.delete(`/groups/${groupId}`);
-}
-
-export async function addGroupMember(groupId: number, studentId: number): Promise<Group> {
-    const { data } = await apiClient.post<{ data: Group }>(`/groups/${groupId}/members`, { student_id: studentId });
-    return data.data;
-}
-
-export async function removeGroupMember(groupId: number, studentId: number): Promise<void> {
-    await apiClient.delete(`/groups/${groupId}/members/${studentId}`);
 }
 
 /**

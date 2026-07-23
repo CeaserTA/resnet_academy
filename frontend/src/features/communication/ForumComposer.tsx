@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react';
 import { FileText, Image as ImageIcon, Music, Video, X } from 'lucide-react';
-import { Textarea } from '@/components/ui/Textarea';
+import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
+import { MarkdownComposer } from '@/lib/markdown/MarkdownComposer';
+import { useForumTags } from '@/features/communication/useCommunication';
 import type { ForumPostAttachmentType } from '@/lib/api/types';
 import type { ForumPostAttachmentInput } from '@/features/communication/api';
 
@@ -15,22 +17,31 @@ const ATTACHMENT_ACCEPT: Record<'image' | 'video' | 'audio', string> = {
 };
 
 interface ForumComposerProps {
+    /** Title + tag inputs only make sense when starting a new discussion, not when editing a post's body. */
+    isNewDiscussion?: boolean;
+    initialTitle?: string;
+    initialTags?: string[];
     initialBody?: string;
     initialAttachmentType?: ForumPostAttachmentType | null;
     existingAttachmentName?: string | null;
     submitLabel?: string;
     placeholder?: string;
     onCancel?: () => void;
-    onSubmit: (body: string, input: ForumPostAttachmentInput) => Promise<void>;
+    onSubmit: (values: { title?: string; body: string; tags?: string[] } & ForumPostAttachmentInput) => Promise<void>;
     isSubmitting?: boolean;
 }
 
 /**
- * Shared by the Feed/My Posts composer and post editing. Image/Video/Audio each open a hidden
- * file input for that type; Article just expands the textarea for a longer write-up — no file
- * (confirmed with the user: "Article" is a long-form text mode, not an upload).
+ * Shared by "new discussion" and "edit a post's body" — title/tags only render for the former.
+ * Image/Video/Audio each open a hidden file input for that type; Article just switches the
+ * composer to a long-form write-up — no file (confirmed with the user in an earlier pass:
+ * "Article" is a long-form text mode, not an upload). Body itself is Markdown, edited via
+ * `MarkdownComposer`'s formatting toolbar + live preview.
  */
 export function ForumComposer({
+    isNewDiscussion = false,
+    initialTitle = '',
+    initialTags = [],
     initialBody = '',
     initialAttachmentType = null,
     existingAttachmentName = null,
@@ -40,6 +51,9 @@ export function ForumComposer({
     onSubmit,
     isSubmitting = false,
 }: ForumComposerProps) {
+    const [title, setTitle] = useState(initialTitle);
+    const [tags, setTags] = useState<string[]>(initialTags);
+    const [tagInput, setTagInput] = useState('');
     const [body, setBody] = useState(initialBody);
     const [attachmentType, setAttachmentType] = useState<ForumPostAttachmentType | null>(initialAttachmentType);
     const [file, setFile] = useState<File | null>(null);
@@ -47,6 +61,7 @@ export function ForumComposer({
     const [fileError, setFileError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const pendingFileKind = useRef<'image' | 'video' | 'audio' | null>(null);
+    const { data: existingTags } = useForumTags();
 
     const openFilePicker = (kind: 'image' | 'video' | 'audio') => {
         pendingFileKind.current = kind;
@@ -90,18 +105,40 @@ export function ForumComposer({
         setFileError(null);
     };
 
+    const addTag = (raw: string) => {
+        const value = raw.trim();
+        if (!value || tags.some((tag) => tag.toLowerCase() === value.toLowerCase()) || tags.length >= 10) {
+            setTagInput('');
+            return;
+        }
+        setTags((prev) => [...prev, value]);
+        setTagInput('');
+    };
+
+    const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            addTag(tagInput);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!body.trim() || fileError) {
+        if (!body.trim() || fileError || (isNewDiscussion && !title.trim())) {
             return;
         }
 
-        await onSubmit(body, {
+        await onSubmit({
+            title: isNewDiscussion ? title : undefined,
+            body,
+            tags: isNewDiscussion ? tags : undefined,
             attachmentType: attachmentType ?? undefined,
             attachment: file ?? undefined,
             removeAttachment: existingAttachmentName !== null && !keptExistingAttachment && !file,
         });
 
+        setTitle('');
+        setTags([]);
         setBody('');
         setFile(null);
         setAttachmentType(null);
@@ -112,22 +149,58 @@ export function ForumComposer({
     const attachmentLabel = file?.name ?? (keptExistingAttachment ? existingAttachmentName : null);
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-md border border-surface-100 bg-surface-50 p-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-lg border border-surface-100 bg-surface-0 p-4">
             <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileChange} />
 
             {fileError && <Alert variant="error" message={fileError} />}
 
-            <Textarea
-                label=""
-                placeholder={placeholder}
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                rows={isArticleMode ? 8 : 2}
-                required
-            />
+            {isNewDiscussion && (
+                <>
+                    <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} required />
+
+                    <div className="flex flex-col gap-1.5">
+                        <span className="text-sm font-medium text-ink-900">Tags (optional)</span>
+                        {tags.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-1.5">
+                                {tags.map((tag) => (
+                                    <span
+                                        key={tag}
+                                        className="inline-flex items-center gap-1 rounded-full bg-ink-300/20 px-2.5 py-0.5 text-xs font-medium text-ink-600"
+                                    >
+                                        {tag}
+                                        <button
+                                            type="button"
+                                            onClick={() => setTags((prev) => prev.filter((t) => t !== tag))}
+                                            aria-label={`Remove tag ${tag}`}
+                                        >
+                                            <X className="size-3" aria-hidden="true" />
+                                        </button>
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                        <input
+                            list="forum-tag-suggestions"
+                            value={tagInput}
+                            onChange={(e) => setTagInput(e.target.value)}
+                            onKeyDown={handleTagKeyDown}
+                            onBlur={() => addTag(tagInput)}
+                            placeholder="e.g. Flutter, Navigation — press Enter to add"
+                            className="rounded-md border border-surface-100 bg-surface-0 px-3 py-2 text-sm text-ink-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                        />
+                        <datalist id="forum-tag-suggestions">
+                            {(existingTags ?? []).map((tag) => (
+                                <option key={tag.id} value={tag.name} />
+                            ))}
+                        </datalist>
+                    </div>
+                </>
+            )}
+
+            <MarkdownComposer value={body} onChange={setBody} placeholder={placeholder} rows={isArticleMode ? 8 : 4} required />
 
             {attachmentType && attachmentType !== 'article' && (
-                <div className="flex items-center justify-between rounded-md bg-surface-0 px-3 py-2 text-sm text-ink-600">
+                <div className="flex items-center justify-between rounded-md bg-surface-50 px-3 py-2 text-sm text-ink-600">
                     <span className="truncate">{attachmentLabel}</span>
                     <button type="button" onClick={removeAttachment} aria-label="Remove attachment" className="shrink-0">
                         <X className="size-4" aria-hidden="true" />
@@ -182,7 +255,7 @@ export function ForumComposer({
                             Cancel
                         </Button>
                     )}
-                    <Button type="submit" isLoading={isSubmitting} disabled={!body.trim()}>
+                    <Button type="submit" isLoading={isSubmitting} disabled={!body.trim() || (isNewDiscussion && !title.trim())}>
                         {submitLabel}
                     </Button>
                 </div>

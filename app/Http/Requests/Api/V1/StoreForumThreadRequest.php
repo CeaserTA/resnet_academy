@@ -29,7 +29,10 @@ final class StoreForumThreadRequest extends FormRequest
         $attachmentType = $this->input('attachment_type');
 
         return [
+            'title' => ['required', 'string', 'max:200'],
             'body' => ['required', 'string'],
+            'tags' => ['sometimes', 'array', 'max:10'],
+            'tags.*' => ['string', 'max:30'],
             'attachment_type' => ['nullable', Rule::in(['image', 'video', 'audio', 'article'])],
             'attachment' => [
                 Rule::requiredIf(in_array($attachmentType, ['image', 'video', 'audio'], true)),

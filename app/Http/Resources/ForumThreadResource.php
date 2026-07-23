@@ -8,12 +8,12 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * The feed shape: `title` is internal-only (never shown in the UI) so it's deliberately not
- * exposed here. `post` is the thread's head post (its body/attachment) — see
- * `ForumThread::headPost()` — and `reply_count` excludes that head post from the total.
- * `replies` is only populated on the single-thread `show()` response (eager-loads `posts`),
- * used to lazily expand a feed card's comment section — the feed list endpoint never pays for
- * every reply's payload.
+ * Threaded-discussion refactor: `title` is a real, required, user-authored field (see
+ * `ForumService::createThread()`'s docblock). `post` is the discussion's head post (its
+ * body/attachment) — see `ForumThread::headPost()`. `reply_count` excludes that head post from
+ * the total. Replies themselves are no longer embedded here — they're paginated separately via
+ * `GET /forum-threads/{thread}/posts` (`ForumPostController::index()`), so a list of discussions
+ * never pays for every reply's payload.
  */
 final class ForumThreadResource extends JsonResource
 {
@@ -25,18 +25,27 @@ final class ForumThreadResource extends JsonResource
         return [
             'id' => $this->id,
             'forum_id' => $this->forum_id,
+            'title' => $this->title,
             'creator' => new UserResource($this->whenLoaded('creator')),
             'is_pinned' => $this->is_pinned,
             'is_locked' => $this->is_locked,
+            'solved' => $this->solved,
             'created_at' => $this->created_at->toIso8601String(),
+            'last_activity_at' => $this->last_activity_at?->toIso8601String(),
             'reply_count' => $this->when($this->posts_count !== null, fn () => max(0, $this->posts_count - 1)),
             'post' => new ForumPostResource($this->whenLoaded('headPost')),
-            'replies' => ForumPostResource::collection(
-                $this->whenLoaded('posts', function () {
-                    $headPostId = $this->posts->sortBy('id')->first()?->id;
-
-                    return $this->posts->reject(fn ($post) => $post->id === $headPostId)->values();
-                }),
+            'latest_participant' => $this->whenLoaded(
+                'latestPost',
+                fn () => $this->latestPost ? new UserResource($this->latestPost->user) : null,
+            ),
+            'tags' => ForumTagResource::collection($this->whenLoaded('tags')),
+            'unread' => $this->when(
+                array_key_exists('viewer_last_read_at', $this->resource->getAttributes()),
+                fn () => $this->last_activity_at !== null
+                    && (
+                        $this->viewer_last_read_at === null
+                        || $this->last_activity_at->gt($this->viewer_last_read_at)
+                    ),
             ),
         ];
     }

@@ -473,20 +473,34 @@ export interface ForumPost {
     attachment_type: ForumPostAttachmentType | null;
     attachment_url: string | null;
     attachment_original_name: string | null;
+    edited: boolean;
     created_at: string;
     updated_at: string;
 }
 
+export interface ForumTag {
+    id: number;
+    name: string;
+    slug: string;
+}
+
+export type ForumSort = 'latest_activity' | 'newest' | 'most_replies';
+
 export interface ForumThread {
     id: number;
     forum_id: number;
+    title: string;
     creator: User | null;
     is_pinned: boolean;
     is_locked: boolean;
+    solved: boolean;
     created_at: string;
+    last_activity_at: string | null;
     reply_count?: number;
     post: ForumPost;
-    replies?: ForumPost[];
+    latest_participant?: User | null;
+    tags?: ForumTag[];
+    unread?: boolean;
 }
 
 export interface ForumPostReport {
@@ -529,6 +543,15 @@ export interface AtRiskStudent {
     student: { id: number; name: string; email: string };
     enrolled_at: string;
     last_engaged_at: string | null;
+    final_grade_percent: number | null;
+    risk_factor: string;
+}
+
+export interface RosterEntry {
+    student: { id: number; name: string; email: string };
+    enrolled_at: string;
+    percent_complete: number;
+    status: 'active' | 'graduated';
 }
 
 export interface CourseAnalytics {
@@ -537,6 +560,7 @@ export interface CourseAnalytics {
     completion_rate: number;
     at_risk_students: AtRiskStudent[];
     engagement_summary: Record<string, number>;
+    roster: RosterEntry[];
 }
 
 export interface AuditLogEntry {
