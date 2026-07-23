@@ -26,14 +26,58 @@
     --color-warning-600: #e8a33d;
     --color-danger-600: #c0392b;
 
+    /* shadcn-compatible theme tokens */
+    --color-background: #fafbfc;
+    --color-foreground: #151a24;
+    --color-card: #ffffff;
+    --color-card-foreground: #151a24;
+    --color-popover: #ffffff;
+    --color-popover-foreground: #151a24;
+    --color-primary: #3b82f6;
+    --color-primary-foreground: #ffffff;
+    --color-secondary: #f8fafc;
+    --color-secondary-foreground: #151a24;
+    --color-muted: #f8fafc;
+    --color-muted-foreground: #94a3b8;
+    --color-accent: #f8fafc;
+    --color-accent-foreground: #151a24;
+    --color-destructive: #c0392b;
+    --color-destructive-foreground: #ffffff;
+    --color-border: #e8ecf1;
+    --color-input: #e8ecf1;
+    --color-ring: #3b82f6;
+
     --font-display: 'Sora', system-ui, sans-serif;
     --font-body: 'Inter', system-ui, sans-serif;
     --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 }
 
+:root {
+    --background: #fafbfc;
+    --foreground: #151a24;
+    --card: #ffffff;
+    --card-foreground: #151a24;
+    --popover: #ffffff;
+    --popover-foreground: #151a24;
+    --primary: #3b82f6;
+    --primary-foreground: #ffffff;
+    --secondary: #f8fafc;
+    --secondary-foreground: #151a24;
+    --muted: #f8fafc;
+    --muted-foreground: #94a3b8;
+    --accent: #f8fafc;
+    --accent-foreground: #151a24;
+    --destructive: #c0392b;
+    --destructive-foreground: #ffffff;
+    --border: #e8ecf1;
+    --input: #e8ecf1;
+    --ring: #3b82f6;
+    --radius: 0.5rem;
+}
+
 @layer base {
     body {
-        @apply bg-surface-50 text-ink-900 font-body antialiased;
+        @apply bg-background text-foreground font-body antialiased;
     }
 
     h1,
@@ -43,6 +87,6 @@
     }
 
     :focus-visible {
-        @apply outline-2 outline-offset-2 outline-blue-600;
+        @apply outline-2 outline-offset-2 outline-primary;
     }
 }

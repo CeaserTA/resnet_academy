@@ -6,9 +6,7 @@ use App\Http\Controllers\Api\V1\AccountController;
 use App\Http\Controllers\Auth\SocialAuthController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return ['Laravel' => app()->version()];
-});
+Route::view('/', 'welcome');
 
 /*
 |--------------------------------------------------------------------------

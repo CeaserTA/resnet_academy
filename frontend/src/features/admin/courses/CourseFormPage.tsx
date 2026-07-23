@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
-import { Card } from '@/components/ui/Card';
+import { Card } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/Spinner';
 import { ApiError } from '@/lib/api/client';
 

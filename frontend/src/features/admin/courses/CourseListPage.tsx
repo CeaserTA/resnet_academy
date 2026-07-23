@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { BookOpen, Layers, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useCourses } from '@/features/catalogue/useCourses';
 import { useDeleteCourse } from '@/features/admin/courses/useAdminCourses';
-import { Card } from '@/components/ui/Card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';

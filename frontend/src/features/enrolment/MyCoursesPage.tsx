@@ -4,7 +4,7 @@ import { Award, BookOpen, Compass, LogOut } from 'lucide-react';
 import { useMyEnrolments, useWithdrawEnrolment } from '@/features/enrolment/useEnrolments';
 import { useProgressDashboard } from '@/features/progress/useProgress';
 import { Spinner } from '@/components/ui/Spinner';
-import { Card } from '@/components/ui/Card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';

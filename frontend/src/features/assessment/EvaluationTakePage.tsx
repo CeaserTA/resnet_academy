@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { ArrowLeft, CheckCircle2, Clock, XCircle } from 'lucide-react';
-import { Card } from '@/components/ui/Card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';

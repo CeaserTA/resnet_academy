@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router';
 import { CheckCircle2, ChevronRight, Circle, Lock, MessageCircle } from 'lucide-react';
-import { Card } from '@/components/ui/Card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';

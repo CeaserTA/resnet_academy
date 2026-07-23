@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Megaphone, Plus, Trash2 } from 'lucide-react';
-import { Card } from '@/components/ui/Card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';

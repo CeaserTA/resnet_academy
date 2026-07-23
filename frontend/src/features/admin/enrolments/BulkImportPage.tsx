@@ -5,7 +5,7 @@ import { useCourses } from '@/features/catalogue/useCourses';
 import { importEnrolmentsCsv } from '@/features/admin/enrolments/api';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
+import { Card } from '@/components/ui/card';
 import { Alert } from '@/components/ui/Alert';
 import { ApiError } from '@/lib/api/client';
 

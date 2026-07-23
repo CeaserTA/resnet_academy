@@ -7,7 +7,7 @@ import { useProvisionUser, useUpdateUser, useUsers } from '@/features/admin/user
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
+import { Card } from '@/components/ui/card';
 import { Alert } from '@/components/ui/Alert';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ApiError } from '@/lib/api/client';

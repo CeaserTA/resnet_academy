@@ -8,7 +8,7 @@ import { useCategories } from '@/features/catalogue/useCourses';
 import { createCategory, deleteCategory } from '@/features/admin/categories/api';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
+import { Card } from '@/components/ui/card';
 import { Alert } from '@/components/ui/Alert';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Spinner } from '@/components/ui/Spinner';

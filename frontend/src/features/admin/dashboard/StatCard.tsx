@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { Card } from '@/components/ui/Card';
+import { Card } from '@/components/ui/card';
 import type { BadgeTone } from '@/components/ui/Badge';
 import { cn } from '@/lib/utils';
 

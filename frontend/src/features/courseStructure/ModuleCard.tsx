@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { CalendarCheck, ChevronDown, ChevronUp, ClipboardList, Clock, FileCheck2, Pencil, Plus, Trash2 } from 'lucide-react';
-import { Card } from '@/components/ui/Card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { ResourceForm } from '@/features/courseStructure/ResourceForm';

@@ -1,13 +1,11 @@
-import { Routes, Route } from 'react-router';
-import { PublicLayout } from '@/components/layout/PublicLayout';
+import { Routes, Route, Navigate } from 'react-router';
 import { AppShell } from '@/components/layout/AppShell';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
-import { LoginPage } from '@/features/auth/LoginPage';
-import { RegisterPage } from '@/features/auth/RegisterPage';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { LandingPage } from '@/pages/LandingPage';
 import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage';
 import { VerifyEmailNoticePage } from '@/features/auth/VerifyEmailNoticePage';
-import { CataloguePage } from '@/features/catalogue/CataloguePage';
 import { CourseDetailPage } from '@/features/catalogue/CourseDetailPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { CourseListPage } from '@/features/admin/courses/CourseListPage';
@@ -23,7 +21,6 @@ import { AssignmentGradingPage } from '@/features/assessment/AssignmentGradingPa
 import { EvaluationTakePage } from '@/features/assessment/EvaluationTakePage';
 import { EvaluationGradingPage } from '@/features/assessment/EvaluationGradingPage';
 import { GradebookPage } from '@/features/assessment/GradebookPage';
-import { CertificateVerifyPage } from '@/features/progress/CertificateVerifyPage';
 import { AttendanceRosterPage } from '@/features/progress/AttendanceRosterPage';
 import { InboxPage } from '@/features/communication/InboxPage';
 import { ConversationPage } from '@/features/communication/ConversationPage';
@@ -39,18 +36,26 @@ import { ApplicationsPage } from '@/features/admin/applications/ApplicationsPage
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
 function App() {
+    const { user, isLoading } = useAuth();
+
     return (
         <Routes>
-            <Route element={<PublicLayout />}>
-                <Route index element={<CataloguePage />} />
-                <Route path="courses" element={<CataloguePage />} />
+                <Route
+                    index
+                    element={
+                        isLoading ? (
+                            <div />
+                        ) : user ? (
+                            <Navigate to="/dashboard" replace />
+                        ) : (
+                            <LandingPage />
+                        )
+                    }
+                />
                 <Route path="courses/:id" element={<CourseDetailPage />} />
-                <Route path="login" element={<LoginPage />} />
-                <Route path="register" element={<RegisterPage />} />
-                <Route path="forgot-password" element={<ForgotPasswordPage />} />
-                <Route path="reset-password" element={<ResetPasswordPage />} />
-                <Route path="verify-certificate" element={<CertificateVerifyPage />} />
-            </Route>
+            <Route path="forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="reset-password" element={<ResetPasswordPage />} />
+            <Route path="verify-certificate" element={<VerifyEmailNoticePage />} />
 
             <Route
                 element={
