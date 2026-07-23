@@ -43,7 +43,7 @@ export function LandingHeader({ onLoginClick, onSignupClick }: LandingHeaderProp
                 {/* Logo */}
                 <Link
                     to="/"
-                    className="flex items-center gap-2 font-display text-lg font-semibold text-ink-900"
+                    className="flex items-center gap-2 font-display text-lg font-semibold text-blue-600"
                 >
                     <GraduationCap className="size-6 text-blue-600" aria-hidden="true" />
                     <span className="hidden sm:inline">Resnet LMS</span>
@@ -55,7 +55,7 @@ export function LandingHeader({ onLoginClick, onSignupClick }: LandingHeaderProp
                         <a
                             key={href}
                             href={href}
-                            className="text-sm font-medium text-ink-600 transition-colors hover:text-ink-900"
+                            className="rounded-full px-3 py-2 text-sm font-medium text-ink-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
                         >
                             {label}
                         </a>
@@ -67,6 +67,7 @@ export function LandingHeader({ onLoginClick, onSignupClick }: LandingHeaderProp
                     <Button
                         variant="outline"
                         size="sm"
+                        className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-900 hover:underline"
                         onClick={onLoginClick}
                     >
                         Log in
