@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { LandingHeader } from '@/components/layout/LandingHeader';
 import { Hero } from '@/components/landing/Hero';
+import { Features } from '@/components/landing/Features';
 import { LoginModal } from '@/features/auth/LoginModal';
 import { SignupModal } from '@/features/auth/SignupModal';
 
@@ -46,23 +47,7 @@ export function LandingPage() {
                 </section>
 
                 {/* Features Section */}
-                <section id="features" className="border-t border-[#e8ecf1] bg-surface-50 px-4 py-20 sm:px-6 lg:px-8">
-                    <div className="mx-auto max-w-6xl">
-                        <div className="mb-12 h-12 w-64 rounded-lg bg-surface-100">
-                            {/* Section title placeholder */}
-                        </div>
-                        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-                            {[1, 2, 3].map((i) => (
-                                <div
-                                    key={i}
-                                    className="h-48 rounded-lg bg-white"
-                                >
-                                    {/* Feature card placeholder */}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </section>
+                <Features />
 
                 {/* Testimonials Section */}
                 <section id="testimonials" className="border-t border-[#e8ecf1] px-4 py-20 sm:px-6 lg:px-8">
