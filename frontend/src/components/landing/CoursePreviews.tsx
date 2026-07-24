@@ -39,7 +39,7 @@ interface CoursePreviewsProps {
 
 export function CoursePreviews({ onViewCourseClick }: CoursePreviewsProps) {
   return (
-    <section id="courses" className="border-t border-[#e8ecf1] bg-[#fafbfc] px-4 py-20 sm:px-6 lg:px-8">
+    <section id="courses" className="border-t border-[#e8ecf1] bg-[#eff6ff] px-4 py-20 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
         <div className="mx-auto mb-12 max-w-3xl text-center">
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-blue-600">Course previews</p>
@@ -55,12 +55,14 @@ export function CoursePreviews({ onViewCourseClick }: CoursePreviewsProps) {
           {courses.map(({ category, title, description, duration, level }) => (
             <Card
               key={title}
-              className="transform rounded-3xl border border-[#e8ecf1] bg-white transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+              className="transform rounded-3xl border border-blue-100 bg-blue-50 transition duration-300 hover:-translate-y-1 hover:shadow-lg"
             >
               <CardHeader className="space-y-4 p-6">
-                <Badge tone="progress" className="border border-blue-100 bg-blue-50 text-blue-600">
-                  {category}
-                </Badge>
+                <Badge
+                  label={category}
+                  tone="progress"
+                  className="border border-blue-100 bg-blue-50 text-blue-600"
+                />
                 <div className="space-y-2">
                   <CardTitle>{title}</CardTitle>
                   <CardDescription>{description}</CardDescription>
