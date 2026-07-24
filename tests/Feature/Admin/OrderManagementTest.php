@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\OrderStatus;
+use App\Models\AuditLog;
 use App\Models\Order;
 use App\Models\User;
 
@@ -40,4 +41,57 @@ it('denies a non-admin from listing orders', function (): void {
 
     $this->actingAs($instructor)->getJson('/api/v1/admin/orders')->assertForbidden();
     $this->actingAs($student)->getJson('/api/v1/admin/orders')->assertForbidden();
+});
+
+it('recording a partial payment moves the order to partial with the correct remaining balance', function (): void {
+    $admin = User::factory()->admin()->create();
+    $order = Order::factory()->create(['amount' => '100.00', 'status' => OrderStatus::Pending]);
+
+    $response = $this->actingAs($admin)->patchJson("/api/v1/admin/orders/{$order->id}", [
+        'amount_paid' => 40,
+        'payment_method' => 'mobile_money',
+    ]);
+
+    $response->assertOk();
+    $response->assertJsonPath('data.status', 'partial');
+    $response->assertJsonPath('data.amount_paid', '40.00');
+    $response->assertJsonPath('data.remaining_balance', 60);
+    $response->assertJsonPath('data.payment_method', 'mobile_money');
+
+    $log = AuditLog::where('action', 'order.payment_recorded')->first();
+    expect($log)->not->toBeNull();
+    expect($log->entity_id)->toBe($order->id);
+    // json_encode drops the trailing .0 on a whole-number float, so decoding gives ints here.
+    expect($log->meta)->toBe(['from' => 0, 'to' => 40, 'status' => 'partial']);
+});
+
+it('recording the rest of the balance moves the order to paid and sets paid_at', function (): void {
+    $admin = User::factory()->admin()->create();
+    $order = Order::factory()->create(['amount' => '100.00', 'amount_paid' => '40.00', 'status' => OrderStatus::Partial]);
+
+    $response = $this->actingAs($admin)->patchJson("/api/v1/admin/orders/{$order->id}", ['amount_paid' => 100]);
+
+    $response->assertOk();
+    $response->assertJsonPath('data.status', 'paid');
+    $response->assertJsonPath('data.remaining_balance', 0);
+    expect(Order::find($order->id)->paid_at)->not->toBeNull();
+});
+
+it('clamps an overpayment to the order amount instead of going negative on the balance', function (): void {
+    $admin = User::factory()->admin()->create();
+    $order = Order::factory()->create(['amount' => '100.00', 'status' => OrderStatus::Pending]);
+
+    $response = $this->actingAs($admin)->patchJson("/api/v1/admin/orders/{$order->id}", ['amount_paid' => 150]);
+
+    $response->assertOk();
+    $response->assertJsonPath('data.status', 'paid');
+    $response->assertJsonPath('data.amount_paid', '100.00');
+    $response->assertJsonPath('data.remaining_balance', 0);
+});
+
+it('denies a non-admin from updating an order', function (): void {
+    $instructor = User::factory()->instructor()->create();
+    $order = Order::factory()->create();
+
+    $this->actingAs($instructor)->patchJson("/api/v1/admin/orders/{$order->id}", ['amount_paid' => 50])->assertForbidden();
 });

@@ -12,11 +12,31 @@ use App\Http\Resources\ForumPostResource;
 use App\Models\ForumPost;
 use App\Models\ForumThread;
 use App\Services\Communication\ForumService;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
 final class ForumPostController extends Controller
 {
     public function __construct(private readonly ForumService $forumService) {}
+
+    /**
+     * Paginated replies (everything but the thread's head post) — "lazy load replies" instead
+     * of the old single-response `posts.user` eager load, oldest-first (chat reading order).
+     */
+    public function index(ForumThread $thread): AnonymousResourceCollection
+    {
+        $this->authorize('view', $thread);
+
+        $headPostId = $thread->headPost->id;
+
+        $posts = $thread->posts()
+            ->where('id', '!=', $headPostId)
+            ->with('user')
+            ->oldest('id')
+            ->paginate(30);
+
+        return ForumPostResource::collection($posts);
+    }
 
     public function store(StoreForumPostRequest $request, ForumThread $thread): ForumPostResource
     {

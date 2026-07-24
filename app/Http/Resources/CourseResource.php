@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Services\Storage\MediaStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -20,7 +21,7 @@ final class CourseResource extends JsonResource
             'slug' => $this->slug,
             'description' => $this->description,
             'level' => $this->level->value,
-            'thumbnail_url' => $this->thumbnail_url,
+            'thumbnail_url' => app(MediaStorageService::class)->url($this->thumbnail_url),
             'prerequisites_text' => $this->prerequisites_text,
             'price' => $this->price,
             'currency' => $this->currency,

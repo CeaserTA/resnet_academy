@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\AccountController;
 use App\Http\Controllers\Api\V1\Admin\AuditLogController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Api\V1\Admin\OrderController as AdminOrderController;
+use App\Http\Controllers\Api\V1\Admin\PaymentSubmissionController as AdminPaymentSubmissionController;
 use App\Http\Controllers\Api\V1\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Api\V1\AnalyticsController;
 use App\Http\Controllers\Api\V1\AnnouncementController;
@@ -21,6 +22,7 @@ use App\Http\Controllers\Api\V1\EvaluationAttemptController;
 use App\Http\Controllers\Api\V1\EvaluationController;
 use App\Http\Controllers\Api\V1\ForumPostController;
 use App\Http\Controllers\Api\V1\ForumPostReportController;
+use App\Http\Controllers\Api\V1\ForumTagController;
 use App\Http\Controllers\Api\V1\ForumThreadController;
 use App\Http\Controllers\Api\V1\GradebookController;
 use App\Http\Controllers\Api\V1\GroupController;
@@ -28,6 +30,7 @@ use App\Http\Controllers\Api\V1\MessageController;
 use App\Http\Controllers\Api\V1\ModuleController;
 use App\Http\Controllers\Api\V1\ModuleItemController;
 use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\PaymentSubmissionController;
 use App\Http\Controllers\Api\V1\ProgressController;
 use App\Http\Controllers\Api\V1\QuestionBankController;
 use App\Http\Controllers\Api\V1\QuestionController;
@@ -62,11 +65,14 @@ Route::prefix('v1')->group(function (): void {
         Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
 
         Route::get('/me/data-export', [AccountController::class, 'export']);
+        Route::post('/me/avatar', [AccountController::class, 'updateAvatar']);
 
         Route::get('/enrolments', [EnrolmentController::class, 'index']);
         Route::post('/enrolments', [EnrolmentController::class, 'store']);
         Route::post('/enrolments/import', [EnrolmentImportController::class, 'store']);
         Route::post('/enrolments/{enrolment}/withdraw', [EnrolmentController::class, 'withdraw']);
+
+        Route::post('/orders/{order}/payment-submissions', [PaymentSubmissionController::class, 'store']);
 
         Route::get('/admin/users', [AdminUserController::class, 'index']);
         Route::post('/admin/users', [AdminUserController::class, 'store']);
@@ -74,6 +80,9 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/admin/audit-logs', [AuditLogController::class, 'index']);
         Route::get('/admin/dashboard-summary', [AdminDashboardController::class, 'summary']);
         Route::get('/admin/orders', [AdminOrderController::class, 'index']);
+        Route::patch('/admin/orders/{order}', [AdminOrderController::class, 'update']);
+        Route::patch('/admin/payment-submissions/{paymentSubmission}/confirm', [AdminPaymentSubmissionController::class, 'confirm']);
+        Route::patch('/admin/payment-submissions/{paymentSubmission}/reject', [AdminPaymentSubmissionController::class, 'reject']);
 
         // Course structure (FR-6/FR-7/FR-8) — admin/instructor writes via Policies.
         Route::post('/courses/{course}/modules', [ModuleController::class, 'store']);
@@ -144,6 +153,7 @@ Route::prefix('v1')->group(function (): void {
         // Analytics dashboard (business rule "Analytics dashboard") — completion rates,
         // at-risk flags, engagement metrics, admin/instructor only.
         Route::get('/courses/{course}/analytics', [AnalyticsController::class, 'courseAnalytics']);
+        Route::post('/courses/{course}/at-risk-notice', [AnalyticsController::class, 'notifyAtRisk']);
 
         // Messaging (FR-15/16/17) — one generic conversations/messages system covers
         // Admin<->Instructor, Instructor<->Student, Admin<->Student; read receipts on show().
@@ -160,17 +170,20 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('/tickets/{ticket}', [TicketController::class, 'update']);
         Route::post('/tickets/{ticket}/messages', [TicketMessageController::class, 'store']);
 
-        // Course forums (FR-18) — threads/posts/search, plus moderation (report/pin/lock).
+        // Course forums (FR-18) — threaded discussions/replies/search/tags, plus moderation
+        // (report/pin/lock/solve).
         Route::get('/courses/{course}/forum/threads', [ForumThreadController::class, 'index']);
         Route::post('/courses/{course}/forum/threads', [ForumThreadController::class, 'store']);
         Route::get('/forum-threads/{thread}', [ForumThreadController::class, 'show']);
         Route::patch('/forum-threads/{thread}', [ForumThreadController::class, 'update']);
+        Route::get('/forum-threads/{thread}/posts', [ForumPostController::class, 'index']);
         Route::post('/forum-threads/{thread}/posts', [ForumPostController::class, 'store']);
         Route::patch('/forum-posts/{post}', [ForumPostController::class, 'update']);
         Route::delete('/forum-posts/{post}', [ForumPostController::class, 'destroy']);
         Route::post('/forum-posts/{post}/reports', [ForumPostReportController::class, 'store']);
         Route::get('/courses/{course}/forum/reports', [ForumPostReportController::class, 'index']);
         Route::patch('/forum-post-reports/{report}', [ForumPostReportController::class, 'update']);
+        Route::get('/forum-tags', [ForumTagController::class, 'index']);
 
         // Announcements — one-to-many broadcast from Instructor/Admin to enrolled students.
         Route::get('/courses/{course}/announcements', [AnnouncementController::class, 'index']);

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     createAnnouncement,
     createForumThread,
@@ -9,7 +9,9 @@ import {
     fetchContactableUsers,
     fetchConversation,
     fetchConversations,
+    fetchForumReplies,
     fetchForumReports,
+    fetchForumTags,
     fetchForumThread,
     fetchForumThreads,
     fetchNotifications,
@@ -27,6 +29,7 @@ import {
     updateForumThread,
     updateTicket,
     type ForumPostAttachmentInput,
+    type ForumThreadListParams,
 } from '@/features/communication/api';
 
 // --- Conversations ---
@@ -110,10 +113,12 @@ export function useUpdateTicket(ticketId: number) {
 
 // --- Forums ---
 
-export function useForumThreads(courseId: number, params: { search?: string; mine?: boolean } = {}) {
-    return useQuery({
-        queryKey: ['courses', courseId, 'forum-threads', params.search ?? null, params.mine ?? false],
-        queryFn: () => fetchForumThreads(courseId, params),
+export function useForumThreads(courseId: number, params: Omit<ForumThreadListParams, 'page'> = {}) {
+    return useInfiniteQuery({
+        queryKey: ['courses', courseId, 'forum-threads', params.search ?? null, params.mine ?? false, params.sort ?? null, params.tags ?? []],
+        queryFn: ({ pageParam }) => fetchForumThreads(courseId, { ...params, page: pageParam }),
+        initialPageParam: 1,
+        getNextPageParam: (lastPage) => (lastPage.meta.current_page < lastPage.meta.last_page ? lastPage.meta.current_page + 1 : undefined),
         enabled: Number.isFinite(courseId),
     });
 }
@@ -124,6 +129,20 @@ export function useForumThread(threadId: number, enabled = true) {
         queryFn: () => fetchForumThread(threadId),
         enabled: Number.isFinite(threadId) && enabled,
     });
+}
+
+export function useForumReplies(threadId: number, enabled = true) {
+    return useInfiniteQuery({
+        queryKey: ['forum-threads', threadId, 'posts'],
+        queryFn: ({ pageParam }) => fetchForumReplies(threadId, pageParam),
+        initialPageParam: 1,
+        getNextPageParam: (lastPage) => (lastPage.meta.current_page < lastPage.meta.last_page ? lastPage.meta.current_page + 1 : undefined),
+        enabled: Number.isFinite(threadId) && enabled,
+    });
+}
+
+export function useForumTags() {
+    return useQuery({ queryKey: ['forum-tags'], queryFn: fetchForumTags });
 }
 
 function invalidateForumFeed(queryClient: ReturnType<typeof useQueryClient>, courseId: number, threadId?: number) {
@@ -137,9 +156,12 @@ export function useCreateForumThread(courseId: number) {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: ({ body, ...input }: { body: string } & ForumPostAttachmentInput) =>
-            createForumThread(courseId, body, input),
-        onSuccess: () => invalidateForumFeed(queryClient, courseId),
+        mutationFn: ({ title, body, tags, ...input }: { title: string; body: string; tags?: string[] } & ForumPostAttachmentInput) =>
+            createForumThread(courseId, title, body, tags, input),
+        onSuccess: () => {
+            invalidateForumFeed(queryClient, courseId);
+            queryClient.invalidateQueries({ queryKey: ['forum-tags'] });
+        },
     });
 }
 
@@ -147,7 +169,7 @@ export function useUpdateForumThread(courseId: number, threadId: number) {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (payload: { is_pinned?: boolean; is_locked?: boolean }) => updateForumThread(threadId, payload),
+        mutationFn: (payload: { is_pinned?: boolean; is_locked?: boolean; solved?: boolean }) => updateForumThread(threadId, payload),
         onSuccess: () => invalidateForumFeed(queryClient, courseId, threadId),
     });
 }

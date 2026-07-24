@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { useCourse } from '@/features/catalogue/useCourses';
 import { useCoursePlayer } from '@/features/learning/useLearning';
-import { AnnouncementsPanel } from '@/features/communication/AnnouncementsPanel';
 import { cn } from '@/lib/utils';
 import type { ModuleItem, ModuleProgressStatus } from '@/lib/api/types';
 
@@ -61,10 +60,6 @@ export function CoursePlayerPage() {
                         Forum
                     </Button>
                 </Link>
-            </div>
-
-            <div className="mt-6">
-                <AnnouncementsPanel courseId={courseId} />
             </div>
 
             <div className="mt-6 flex flex-col gap-3">

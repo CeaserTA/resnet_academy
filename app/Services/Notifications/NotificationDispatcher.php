@@ -108,15 +108,28 @@ final class NotificationDispatcher
 
     /**
      * Business rule "Notifications system": new forum reply — notified to the thread's
-     * creator only (not every prior poster), matching this MVP's scope. `title` is now
-     * internal-only (the feed redesign never shows it), so the message no longer quotes it.
+     * creator only (not every prior poster), matching this MVP's scope.
      */
     public function notifyForumReply(User $recipient, ForumThread $thread, User $replier): void
     {
         $this->notify(
             user: $recipient,
             type: 'forum_reply',
-            title: "{$replier->name} replied to your post",
+            title: "{$replier->name} replied to \"{$thread->title}\"",
+            relatedEntityType: 'forum_thread',
+            relatedEntityId: $thread->id,
+        );
+    }
+
+    /**
+     * Threaded-discussion refactor: staff marked a discussion solved (`ForumService::markThreadSolved()`).
+     */
+    public function notifyForumThreadSolved(User $recipient, ForumThread $thread): void
+    {
+        $this->notify(
+            user: $recipient,
+            type: 'forum_thread_solved',
+            title: "\"{$thread->title}\" was marked solved",
             relatedEntityType: 'forum_thread',
             relatedEntityId: $thread->id,
         );
@@ -171,6 +184,22 @@ final class NotificationDispatcher
             title: "\"{$module->title}\" is now unlocked",
             relatedEntityType: 'module',
             relatedEntityId: $module->id,
+        );
+    }
+
+    /**
+     * Course builder redesign: "Send Mass Notice" — a staff-triggered check-in sent to every
+     * currently at-risk student in a course (`AnalyticsService::notifyAtRiskStudents()`).
+     */
+    public function notifyAtRiskReminder(User $student, Course $course, ?string $message): void
+    {
+        $this->notify(
+            user: $student,
+            type: 'at_risk_reminder',
+            title: "Checking in on {$course->title}",
+            body: $message ?? "It looks like you've fallen behind — reach out if you need help catching up.",
+            relatedEntityType: 'course',
+            relatedEntityId: $course->id,
         );
     }
 }

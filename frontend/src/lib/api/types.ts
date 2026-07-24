@@ -4,7 +4,8 @@ export type CourseLevel = 'beginner' | 'intermediate' | 'advanced';
 export type CourseStatus = 'draft' | 'published' | 'archived';
 export type EnrolmentStatus = 'confirmed' | 'withdrawn';
 export type EnrolmentSource = 'self' | 'admin_bulk';
-export type OrderStatus = 'pending' | 'paid' | 'failed' | 'refunded';
+export type OrderStatus = 'pending' | 'partial' | 'paid';
+export type PaymentSubmissionStatus = 'pending' | 'confirmed' | 'rejected';
 
 export interface User {
     id: number;
@@ -15,6 +16,7 @@ export interface User {
     avatar_url: string | null;
     status: UserStatus;
     email_verified_at: string | null;
+    last_login_at: string | null;
     created_at: string;
 }
 
@@ -46,17 +48,33 @@ export interface Course {
     updated_at: string;
 }
 
+export interface PaymentSubmission {
+    id: number;
+    order_id: number;
+    amount: string;
+    receipt_url: string;
+    receipt_original_name: string | null;
+    status: PaymentSubmissionStatus;
+    reviewed_at: string | null;
+    created_at: string;
+}
+
 export interface Order {
     id: number;
     course_id: number;
     student: User | null;
     course: { id: number; title: string } | null;
     amount: string;
+    amount_paid: string;
+    remaining_balance: number;
     currency: string;
     status: OrderStatus;
     payment_method: string | null;
+    provider_ref: string | null;
     paid_at: string | null;
     created_at: string;
+    pending_submission: PaymentSubmission | null;
+    payment_submissions: PaymentSubmission[];
 }
 
 export interface Enrolment {
@@ -455,20 +473,34 @@ export interface ForumPost {
     attachment_type: ForumPostAttachmentType | null;
     attachment_url: string | null;
     attachment_original_name: string | null;
+    edited: boolean;
     created_at: string;
     updated_at: string;
 }
 
+export interface ForumTag {
+    id: number;
+    name: string;
+    slug: string;
+}
+
+export type ForumSort = 'latest_activity' | 'newest' | 'most_replies';
+
 export interface ForumThread {
     id: number;
     forum_id: number;
+    title: string;
     creator: User | null;
     is_pinned: boolean;
     is_locked: boolean;
+    solved: boolean;
     created_at: string;
+    last_activity_at: string | null;
     reply_count?: number;
     post: ForumPost;
-    replies?: ForumPost[];
+    latest_participant?: User | null;
+    tags?: ForumTag[];
+    unread?: boolean;
 }
 
 export interface ForumPostReport {
@@ -511,6 +543,15 @@ export interface AtRiskStudent {
     student: { id: number; name: string; email: string };
     enrolled_at: string;
     last_engaged_at: string | null;
+    final_grade_percent: number | null;
+    risk_factor: string;
+}
+
+export interface RosterEntry {
+    student: { id: number; name: string; email: string };
+    enrolled_at: string;
+    percent_complete: number;
+    status: 'active' | 'graduated';
 }
 
 export interface CourseAnalytics {
@@ -519,6 +560,7 @@ export interface CourseAnalytics {
     completion_rate: number;
     at_risk_students: AtRiskStudent[];
     engagement_summary: Record<string, number>;
+    roster: RosterEntry[];
 }
 
 export interface AuditLogEntry {

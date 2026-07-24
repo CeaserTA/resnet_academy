@@ -8,12 +8,13 @@ use App\Enums\ForumPostAttachmentType;
 use App\Models\Course;
 use App\Models\Forum;
 use App\Models\ForumPost;
+use App\Models\ForumTag;
 use App\Models\ForumThread;
 use App\Models\User;
 use App\Services\Notifications\NotificationDispatcher;
+use App\Services\Storage\MediaStorageService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -22,14 +23,18 @@ use Illuminate\Support\Str;
  * open for more than one per course (no unique constraint on course_id) but this MVP only
  * ever needs the one.
  *
- * Feed redesign: a "feed post" is a `ForumThread` + its oldest `ForumPost` (see
- * `ForumThread::headPost()`); everything else in the thread is a reply. `title` still exists
- * on `forum_threads` (schema keeps it NOT NULL) but is now purely internal, auto-generated
- * from the body — the UI never asks for or shows it.
+ * Threaded-discussion refactor: a "discussion" is a `ForumThread` + its oldest `ForumPost` (see
+ * `ForumThread::headPost()`); everything else in the thread is a reply. `title` is a real,
+ * required, user-authored field again (it was auto-derived from the body during the earlier feed
+ * redesign — existing threads already have a value there from that era, so nothing needed
+ * backfilling when it became user-facing again).
  */
 final class ForumService
 {
-    public function __construct(private readonly NotificationDispatcher $notificationDispatcher) {}
+    public function __construct(
+        private readonly NotificationDispatcher $notificationDispatcher,
+        private readonly MediaStorageService $mediaStorage,
+    ) {}
 
     public function forCourse(Course $course): Forum
     {
@@ -39,20 +44,26 @@ final class ForumService
         );
     }
 
+    /**
+     * @param  array<int, string>  $tagNames
+     */
     public function createThread(
         Course $course,
         User $author,
+        string $title,
         string $body,
+        array $tagNames = [],
         ?ForumPostAttachmentType $attachmentType = null,
         ?UploadedFile $attachment = null,
     ): ForumThread {
         $forum = $this->forCourse($course);
 
-        return DB::transaction(function () use ($forum, $course, $author, $body, $attachmentType, $attachment): ForumThread {
+        $thread = DB::transaction(function () use ($forum, $course, $author, $title, $body, $attachmentType, $attachment): ForumThread {
             $thread = ForumThread::create([
                 'forum_id' => $forum->id,
                 'created_by' => $author->id,
-                'title' => Str::limit($body, 190, ''),
+                'title' => $title,
+                'last_activity_at' => now(),
             ]);
 
             [$path, $originalName] = $this->storeAttachment($course, $attachment);
@@ -68,11 +79,15 @@ final class ForumService
 
             return $thread;
         });
+
+        $this->syncTags($thread, $tagNames);
+
+        return $thread;
     }
 
     /**
      * Replies stay text-only — the composer's attachment buttons only appear on the top-level
-     * feed post, matching the design; not an oversight.
+     * discussion post, matching the design; not an oversight.
      */
     public function reply(ForumThread $thread, User $author, string $body): ForumPost
     {
@@ -82,11 +97,59 @@ final class ForumService
             'body' => $body,
         ]);
 
+        $thread->update(['last_activity_at' => now()]);
+
         if ($thread->created_by !== $author->id) {
             $this->notificationDispatcher->notifyForumReply($thread->creator, $thread, $author);
         }
 
         return $post;
+    }
+
+    /**
+     * Staff-only (`ForumThreadPolicy::moderate`) — the spec's own role list gives "mark solved"
+     * to the instructor, not the thread's own author.
+     */
+    public function markThreadSolved(ForumThread $thread, User $actor): void
+    {
+        $thread->update(['solved' => true]);
+
+        if ($thread->created_by !== $actor->id) {
+            $this->notificationDispatcher->notifyForumThreadSolved($thread->creator, $thread);
+        }
+    }
+
+    public function markThreadRead(User $user, ForumThread $thread): void
+    {
+        DB::table('forum_thread_reads')->updateOrInsert(
+            ['user_id' => $user->id, 'thread_id' => $thread->id],
+            ['last_read_at' => now()],
+        );
+    }
+
+    /**
+     * Find-or-create each tag by case-insensitive name, then replace the thread's tag set —
+     * matches the composer's "pick existing or type a new one" UX.
+     *
+     * @param  array<int, string>  $tagNames
+     */
+    public function syncTags(ForumThread $thread, array $tagNames): void
+    {
+        $tagIds = collect($tagNames)
+            ->map(fn (string $name): string => trim($name))
+            ->filter()
+            ->unique(fn (string $name): string => Str::lower($name))
+            ->map(function (string $name): int {
+                $tag = ForumTag::query()->whereRaw('LOWER(name) = ?', [Str::lower($name)])->first();
+
+                if ($tag !== null) {
+                    return $tag->id;
+                }
+
+                return ForumTag::create(['name' => $name, 'slug' => Str::slug($name)])->id;
+            });
+
+        $thread->tags()->sync($tagIds);
     }
 
     public function updatePost(
@@ -147,15 +210,13 @@ final class ForumService
             return [null, null];
         }
 
-        $path = $attachment->store("forum-attachments/{$course->id}", 'public');
+        $path = $this->mediaStorage->store($attachment, "forum-attachments/{$course->id}");
 
         return [$path, $attachment->getClientOriginalName()];
     }
 
     private function deleteStoredAttachment(ForumPost $post): void
     {
-        if ($post->attachment_path) {
-            Storage::disk('public')->delete($post->attachment_path);
-        }
+        $this->mediaStorage->delete($post->attachment_path);
     }
 }

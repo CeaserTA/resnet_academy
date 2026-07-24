@@ -9,7 +9,6 @@ export async function fetchUsers(role?: UserRole): Promise<User[]> {
 export interface ProvisionUserPayload {
     name: string;
     email: string;
-    password: string;
     role: 'instructor' | 'admin';
 }
 

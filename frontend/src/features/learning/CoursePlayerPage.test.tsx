@@ -106,6 +106,7 @@ const { course, modules, progress, student } = vi.hoisted(() => {
         avatar_url: null,
         status: 'active',
         email_verified_at: '2026-01-01T00:00:00Z',
+        last_login_at: null,
         created_at: '2026-01-01T00:00:00Z',
     };
 
@@ -128,10 +129,6 @@ vi.mock('@/features/learning/api', () => ({
 
 vi.mock('@/features/auth/api', () => ({
     fetchCurrentUser: vi.fn().mockResolvedValue(student),
-}));
-
-vi.mock('@/features/communication/api', () => ({
-    fetchAnnouncements: vi.fn().mockResolvedValue([]),
 }));
 
 it('shows an unlocked module’s resources but hides a locked module’s resources', async () => {

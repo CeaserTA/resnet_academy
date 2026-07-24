@@ -41,3 +41,39 @@ it('submits the type, title, and type-specific fields together', async () => {
         }),
     );
 });
+
+it('defaults a document resource to file upload, and submits the picked file', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<ResourceForm onSubmit={onSubmit} onCancel={vi.fn()} />);
+
+    await user.selectOptions(screen.getByLabelText('Type'), 'document');
+
+    expect(screen.queryByLabelText('File URL')).not.toBeInTheDocument();
+
+    const file = new File(['%PDF-1.4'], 'syllabus.pdf', { type: 'application/pdf' });
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(fileInput, file);
+
+    await user.type(screen.getByLabelText('Title'), 'Syllabus');
+    await user.click(screen.getByRole('button', { name: 'Add resource' }));
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ type: 'document', file }));
+});
+
+it('lets a document resource fall back to pasting a URL instead of uploading', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<ResourceForm onSubmit={onSubmit} onCancel={vi.fn()} />);
+
+    await user.selectOptions(screen.getByLabelText('Type'), 'document');
+    await user.click(screen.getByRole('button', { name: 'Paste a URL instead' }));
+
+    await user.type(screen.getByLabelText('Title'), 'Syllabus');
+    await user.type(screen.getByLabelText('File URL'), 'https://example.com/syllabus.pdf');
+    await user.click(screen.getByRole('button', { name: 'Add resource' }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'document', file_url: 'https://example.com/syllabus.pdf' }),
+    );
+});

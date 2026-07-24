@@ -13,13 +13,17 @@ use App\Http\Resources\CourseResource;
 use App\Models\Course;
 use App\Models\CourseChangeLog;
 use App\Services\Notifications\NotificationDispatcher;
+use App\Services\Storage\MediaStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
 final class CourseController extends Controller
 {
-    public function __construct(private readonly NotificationDispatcher $notificationDispatcher) {}
+    public function __construct(
+        private readonly NotificationDispatcher $notificationDispatcher,
+        private readonly MediaStorageService $mediaStorage,
+    ) {}
 
     /**
      * FR-1: catalogue browse with filters (category, level, schedule, instructor).
@@ -73,7 +77,11 @@ final class CourseController extends Controller
     {
         $data = $request->validated();
         $instructorIds = $data['instructor_ids'] ?? [];
-        unset($data['instructor_ids']);
+        unset($data['instructor_ids'], $data['thumbnail']);
+
+        if ($request->hasFile('thumbnail')) {
+            $data['thumbnail_url'] = $this->mediaStorage->store($request->file('thumbnail'), 'courses');
+        }
 
         $course = Course::create([...$data, 'created_by' => $request->user()->id]);
         $course->refresh();
@@ -94,7 +102,12 @@ final class CourseController extends Controller
         $data = $request->validated();
         $instructorIds = $data['instructor_ids'] ?? null;
         $changeSummary = $data['change_summary'] ?? null;
-        unset($data['instructor_ids'], $data['change_summary']);
+        unset($data['instructor_ids'], $data['change_summary'], $data['thumbnail']);
+
+        if ($request->hasFile('thumbnail')) {
+            $this->mediaStorage->delete($course->thumbnail_url);
+            $data['thumbnail_url'] = $this->mediaStorage->store($request->file('thumbnail'), 'courses');
+        }
 
         $course->update($data);
 

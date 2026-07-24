@@ -22,6 +22,7 @@ final class UpdateForumThreadRequest extends FormRequest
         return [
             'is_pinned' => ['sometimes', 'boolean'],
             'is_locked' => ['sometimes', 'boolean'],
+            'solved' => ['sometimes', 'boolean'],
         ];
     }
 }

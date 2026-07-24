@@ -30,7 +30,10 @@ final class UpdateResourceRequest extends FormRequest
             'duration_seconds' => ['nullable', 'integer', 'min:0'],
             'caption_url' => ['nullable', 'url', 'max:500'],
 
+            // document / downloadable_file — either paste a URL or upload a file ('file' takes
+            // precedence when both are present; see ResourceController::update()).
             'file_url' => ['sometimes', 'url', 'max:500'],
+            'file' => ['nullable', 'file', 'mimes:pdf,doc,docx,ppt,pptx,xls,xlsx,zip,csv,txt', 'max:20480'],
             'file_type' => ['sometimes', Rule::in(['pdf', 'pptx', 'docx'])],
             'file_size_kb' => ['nullable', 'integer', 'min:0'],
 
@@ -38,7 +41,9 @@ final class UpdateResourceRequest extends FormRequest
 
             'url' => ['sometimes', 'url', 'max:500'],
 
+            // scorm — same URL-or-upload choice as above.
             'package_url' => ['sometimes', 'url', 'max:500'],
+            'package' => ['nullable', 'file', 'mimes:zip', 'max:51200'],
             'standard' => ['sometimes', Rule::in(['scorm_1_2', 'scorm_2004', 'xapi'])],
 
             'provider' => ['sometimes', Rule::in(['zoom', 'google_meet'])],

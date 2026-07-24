@@ -17,7 +17,7 @@ import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import type { BadgeTone } from '@/components/ui/Badge';
-import { StatCard } from '@/features/admin/dashboard/StatCard';
+import { StatCard } from '@/components/ui/StatCard';
 import { useDashboardSummary } from '@/features/admin/dashboard/useDashboard';
 import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import { formatRelativeTime } from '@/lib/utils';

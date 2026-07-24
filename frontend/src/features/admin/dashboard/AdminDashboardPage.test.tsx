@@ -19,7 +19,7 @@ const { summary } = vi.hoisted(() => {
         recent_audit_logs: [
             {
                 id: 1,
-                actor: { id: 1, role: 'admin', name: 'Resnet Admin', email: 'admin@resnet.test', phone: null, avatar_url: null, status: 'active', email_verified_at: '2026-01-01T00:00:00Z', created_at: '2026-01-01T00:00:00Z' },
+                actor: { id: 1, role: 'admin', name: 'Resnet Admin', email: 'admin@resnet.test', phone: null, avatar_url: null, status: 'active', email_verified_at: '2026-01-01T00:00:00Z', last_login_at: null, created_at: '2026-01-01T00:00:00Z' },
                 action: 'enrolment.confirmed',
                 entity_type: 'enrolment',
                 entity_id: 7,

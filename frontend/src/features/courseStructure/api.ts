@@ -1,12 +1,12 @@
 import { apiClient } from '@/lib/api/client';
-import type { Group, Module, ResourceItem } from '@/lib/api/types';
+import { postFormData, toFormData, type FormDataValue } from '@/lib/api/formData';
+import type { Module, ResourceItem } from '@/lib/api/types';
 
 export interface ModulePayload {
     title: string;
     description?: string;
     order_index?: number;
     scheduled_start_at?: string | null;
-    group_ids?: number[];
 }
 
 export async function fetchModules(courseId: number): Promise<Module[]> {
@@ -28,34 +28,6 @@ export async function deleteModule(moduleId: number): Promise<void> {
     await apiClient.delete(`/modules/${moduleId}`);
 }
 
-export interface GroupPayload {
-    name: string;
-    description?: string;
-}
-
-export async function fetchGroups(courseId: number): Promise<Group[]> {
-    const { data } = await apiClient.get<{ data: Group[] }>(`/courses/${courseId}/groups`);
-    return data.data;
-}
-
-export async function createGroup(courseId: number, payload: GroupPayload): Promise<Group> {
-    const { data } = await apiClient.post<{ data: Group }>(`/courses/${courseId}/groups`, payload);
-    return data.data;
-}
-
-export async function deleteGroup(groupId: number): Promise<void> {
-    await apiClient.delete(`/groups/${groupId}`);
-}
-
-export async function addGroupMember(groupId: number, studentId: number): Promise<Group> {
-    const { data } = await apiClient.post<{ data: Group }>(`/groups/${groupId}/members`, { student_id: studentId });
-    return data.data;
-}
-
-export async function removeGroupMember(groupId: number, studentId: number): Promise<void> {
-    await apiClient.delete(`/groups/${groupId}/members/${studentId}`);
-}
-
 /**
  * One payload shape for all 7 resource types — mirrors StoreResourceRequest on the backend,
  * only the fields for the selected `type` are actually required there.
@@ -69,12 +41,37 @@ export interface ResourcePayload {
     [key: string]: unknown;
 }
 
+/**
+ * `file`/`package` land in the payload as real `File` objects when the resource form's upload
+ * picker was used (document/downloadable_file/scorm types) — everything else stays plain JSON.
+ */
+function hasFileField(payload: Record<string, unknown>): boolean {
+    return Object.values(payload).some((value) => value instanceof File);
+}
+
 export async function createResource(moduleId: number, payload: ResourcePayload): Promise<ResourceItem> {
+    if (hasFileField(payload)) {
+        const response = await postFormData<{ data: ResourceItem }>(
+            `/modules/${moduleId}/resources`,
+            toFormData(payload as Record<string, FormDataValue>),
+        );
+        return response.data;
+    }
+
     const { data } = await apiClient.post<{ data: ResourceItem }>(`/modules/${moduleId}/resources`, payload);
     return data.data;
 }
 
 export async function updateResource(resourceId: number, payload: Partial<ResourcePayload>): Promise<ResourceItem> {
+    if (hasFileField(payload)) {
+        const response = await postFormData<{ data: ResourceItem }>(
+            `/resources/${resourceId}`,
+            toFormData(payload as Record<string, FormDataValue>),
+            'PATCH',
+        );
+        return response.data;
+    }
+
     const { data } = await apiClient.patch<{ data: ResourceItem }>(`/resources/${resourceId}`, payload);
     return data.data;
 }

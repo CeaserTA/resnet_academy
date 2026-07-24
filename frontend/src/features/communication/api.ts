@@ -5,9 +5,12 @@ import type {
     ForumPost,
     ForumPostAttachmentType,
     ForumPostReport,
+    ForumSort,
+    ForumTag,
     ForumThread,
     Message,
     NotificationListResponse,
+    PaginatedResponse,
     Ticket,
     TicketMessage,
     User,
@@ -99,14 +102,28 @@ function buildForumPostFormData(body: string, input: ForumPostAttachmentInput = 
     return formData;
 }
 
+export interface ForumThreadListParams {
+    search?: string;
+    mine?: boolean;
+    sort?: ForumSort;
+    tags?: number[];
+    page?: number;
+}
+
 export async function fetchForumThreads(
     courseId: number,
-    params: { search?: string; mine?: boolean } = {},
-): Promise<ForumThread[]> {
-    const { data } = await apiClient.get<{ data: ForumThread[] }>(`/courses/${courseId}/forum/threads`, {
-        params: { search: params.search || undefined, mine: params.mine ? 1 : undefined },
+    params: ForumThreadListParams = {},
+): Promise<PaginatedResponse<ForumThread>> {
+    const { data } = await apiClient.get<PaginatedResponse<ForumThread>>(`/courses/${courseId}/forum/threads`, {
+        params: {
+            search: params.search || undefined,
+            mine: params.mine ? 1 : undefined,
+            sort: params.sort,
+            tags: params.tags?.length ? params.tags : undefined,
+            page: params.page,
+        },
     });
-    return data.data;
+    return data;
 }
 
 export async function fetchForumThread(threadId: number): Promise<ForumThread> {
@@ -114,14 +131,32 @@ export async function fetchForumThread(threadId: number): Promise<ForumThread> {
     return data.data;
 }
 
+export async function fetchForumReplies(threadId: number, page = 1): Promise<PaginatedResponse<ForumPost>> {
+    const { data } = await apiClient.get<PaginatedResponse<ForumPost>>(`/forum-threads/${threadId}/posts`, {
+        params: { page },
+    });
+    return data;
+}
+
+export async function fetchForumTags(): Promise<ForumTag[]> {
+    const { data } = await apiClient.get<{ data: ForumTag[] }>('/forum-tags');
+    return data.data;
+}
+
 export async function createForumThread(
     courseId: number,
+    title: string,
     body: string,
+    tags: string[] = [],
     input: ForumPostAttachmentInput = {},
 ): Promise<ForumThread> {
+    const formData = buildForumPostFormData(body, input);
+    formData.append('title', title);
+    tags.forEach((tag) => formData.append('tags[]', tag));
+
     const { data } = await apiClient.post<{ data: ForumThread }>(
         `/courses/${courseId}/forum/threads`,
-        buildForumPostFormData(body, input),
+        formData,
         { headers: { 'Content-Type': 'multipart/form-data' } },
     );
     return data.data;
@@ -129,7 +164,7 @@ export async function createForumThread(
 
 export async function updateForumThread(
     threadId: number,
-    payload: { is_pinned?: boolean; is_locked?: boolean },
+    payload: { is_pinned?: boolean; is_locked?: boolean; solved?: boolean },
 ): Promise<ForumThread> {
     const { data } = await apiClient.patch<{ data: ForumThread }>(`/forum-threads/${threadId}`, payload);
     return data.data;

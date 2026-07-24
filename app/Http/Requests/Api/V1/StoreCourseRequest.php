@@ -26,7 +26,10 @@ final class StoreCourseRequest extends FormRequest
             'slug' => ['nullable', 'string', 'max:220', 'alpha_dash', Rule::unique('courses', 'slug')],
             'description' => ['nullable', 'string'],
             'level' => ['required', new Enum(CourseLevel::class)],
+            // Either paste a URL or upload an image — 'thumbnail' takes precedence when both are
+            // present (see CourseController::store()).
             'thumbnail_url' => ['nullable', 'url', 'max:500'],
+            'thumbnail' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'prerequisites_text' => ['nullable', 'string'],
             'price' => ['required', 'numeric', 'min:0'],
             'currency' => ['nullable', 'string', 'size:3'],

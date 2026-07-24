@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, useParams } from 'react-router';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { ImagePlus, Plus } from 'lucide-react';
 import { useCategories, useCourse } from '@/features/catalogue/useCourses';
 import { useUsers } from '@/features/admin/users/useAdminUsers';
 import { useCreateCourse, useUpdateCourse } from '@/features/admin/courses/useAdminCourses';
+import { createCategory } from '@/features/admin/categories/api';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
@@ -14,6 +17,8 @@ import { Alert } from '@/components/ui/Alert';
 import { Card } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/Spinner';
 import { ApiError } from '@/lib/api/client';
+
+const MAX_THUMBNAIL_BYTES = 5 * 1024 * 1024;
 
 const numericString = (message: string) =>
     z
@@ -49,12 +54,45 @@ export function CourseFormPage() {
     const createCourse = useCreateCourse();
     const updateCourse = useUpdateCourse(courseId);
     const [formError, setFormError] = useState<string | null>(null);
+    const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+    const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+    const [thumbnailError, setThumbnailError] = useState<string | null>(null);
+    const thumbnailInputRef = useRef<HTMLInputElement>(null);
+
+    const queryClient = useQueryClient();
+    const [isAddingCategory, setIsAddingCategory] = useState(false);
+    const [newCategoryName, setNewCategoryName] = useState('');
+    const [categoryError, setCategoryError] = useState<string | null>(null);
+    const createCategoryMutation = useMutation({
+        mutationFn: createCategory,
+        onSuccess: (category) => {
+            queryClient.invalidateQueries({ queryKey: ['categories'] });
+            setValue('category_id', category.id.toString());
+            setNewCategoryName('');
+            setIsAddingCategory(false);
+        },
+    });
+
+    const handleAddCategory = async () => {
+        setCategoryError(null);
+        if (!newCategoryName.trim()) {
+            setCategoryError('Name is required');
+            return;
+        }
+
+        try {
+            await createCategoryMutation.mutateAsync({ name: newCategoryName.trim() });
+        } catch (error) {
+            setCategoryError(error instanceof ApiError ? error.message : 'Could not create the category.');
+        }
+    };
 
     const {
         register,
         control,
         handleSubmit,
         reset,
+        setValue,
         formState: { errors, isSubmitting },
     } = useForm<FormValues>({
         resolver: zodResolver(schema),
@@ -78,6 +116,24 @@ export function CourseFormPage() {
         }
     }, [course, reset]);
 
+    const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const selected = e.target.files?.[0];
+        e.target.value = '';
+        if (!selected) {
+            return;
+        }
+
+        setThumbnailError(null);
+
+        if (selected.size > MAX_THUMBNAIL_BYTES) {
+            setThumbnailError('That image is over 5MB. Choose a smaller one.');
+            return;
+        }
+
+        setThumbnailFile(selected);
+        setThumbnailPreview(URL.createObjectURL(selected));
+    };
+
     const onSubmit = async (values: FormValues) => {
         setFormError(null);
 
@@ -86,6 +142,7 @@ export function CourseFormPage() {
             price: Number(values.price),
             confirmation_delay_hours: Number(values.confirmation_delay_hours),
             category_id: values.category_id ? Number(values.category_id) : undefined,
+            thumbnail: thumbnailFile ?? undefined,
         };
 
         try {
@@ -115,6 +172,35 @@ export function CourseFormPage() {
                     <Card className="flex flex-col gap-4 lg:col-span-2">
                         <Input label="Title" error={errors.title?.message} {...register('title')} />
 
+                        <div>
+                            <p className="text-sm font-medium text-ink-900">Thumbnail</p>
+                            {thumbnailError && <Alert variant="error" message={thumbnailError} className="mt-2" />}
+                            <div className="mt-2 flex items-center gap-4">
+                                <div className="flex aspect-video w-40 shrink-0 items-center justify-center overflow-hidden rounded-md bg-blue-50 text-blue-600">
+                                    {thumbnailPreview || course?.thumbnail_url ? (
+                                        <img
+                                            src={thumbnailPreview ?? course?.thumbnail_url ?? undefined}
+                                            alt=""
+                                            className="size-full object-cover"
+                                        />
+                                    ) : (
+                                        <ImagePlus className="size-6" aria-hidden="true" />
+                                    )}
+                                </div>
+                                <input
+                                    ref={thumbnailInputRef}
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    className="hidden"
+                                    onChange={handleThumbnailChange}
+                                />
+                                <Button type="button" variant="secondary" onClick={() => thumbnailInputRef.current?.click()}>
+                                    <ImagePlus className="size-4" aria-hidden="true" />
+                                    {thumbnailFile ? 'Change image' : 'Upload image'}
+                                </Button>
+                            </div>
+                        </div>
+
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <Select label="Level" {...register('level')}>
                                 <option value="beginner">Beginner</option>
@@ -122,14 +208,49 @@ export function CourseFormPage() {
                                 <option value="advanced">Advanced</option>
                             </Select>
 
-                            <Select label="Category" {...register('category_id')}>
-                                <option value="">No category</option>
-                                {categories?.map((category) => (
-                                    <option key={category.id} value={category.id}>
-                                        {category.name}
-                                    </option>
-                                ))}
-                            </Select>
+                            <div>
+                                <div className="flex items-end gap-2">
+                                    <div className="flex-1">
+                                        <Select label="Category" {...register('category_id')}>
+                                            <option value="">No category</option>
+                                            {categories?.map((category) => (
+                                                <option key={category.id} value={category.id}>
+                                                    {category.name}
+                                                </option>
+                                            ))}
+                                        </Select>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        className="px-2 py-2"
+                                        onClick={() => setIsAddingCategory((value) => !value)}
+                                        aria-label="Add a new category"
+                                    >
+                                        <Plus className="size-4" aria-hidden="true" />
+                                    </Button>
+                                </div>
+
+                                {isAddingCategory && (
+                                    <div className="mt-2 flex items-end gap-2">
+                                        <div className="flex-1">
+                                            <Input
+                                                label="New category name"
+                                                value={newCategoryName}
+                                                onChange={(e) => setNewCategoryName(e.target.value)}
+                                                error={categoryError ?? undefined}
+                                            />
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            onClick={handleAddCategory}
+                                            isLoading={createCategoryMutation.isPending}
+                                        >
+                                            Add
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

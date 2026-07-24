@@ -60,6 +60,31 @@ return [
             'report' => false,
         ],
 
+        /*
+        | Cloudflare R2 — S3-compatible object storage for uploaded media (profile images, course
+        | thumbnails, resource files, forum attachments, payment receipts, certificate PDFs).
+        | Videos are hosted separately on Bunny Stream and never touch this disk.
+        |
+        | 'endpoint' is R2's private S3 API endpoint (what the SDK talks to, e.g.
+        | https://<account_id>.r2.cloudflarestorage.com) — it is NOT a public file URL.
+        | 'url' is the public base domain used to build file URLs: either a custom domain you've
+        | connected to the bucket in the Cloudflare dashboard, or the bucket's public *.r2.dev URL.
+        | R2 has no real regions, so 'region' is hardcoded to Cloudflare's documented 'auto' value
+        | rather than pulled from an env var.
+        */
+        'r2' => [
+            'driver' => 's3',
+            'key' => env('R2_ACCESS_KEY'),
+            'secret' => env('R2_SECRET_KEY'),
+            'region' => 'auto',
+            'bucket' => env('R2_BUCKET'),
+            'url' => env('R2_URL'),
+            'endpoint' => env('R2_ENDPOINT'),
+            'use_path_style_endpoint' => true,
+            'throw' => false,
+            'report' => false,
+        ],
+
     ],
 
     /*

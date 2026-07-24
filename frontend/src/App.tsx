@@ -10,7 +10,6 @@ import { CourseDetailPage } from '@/features/catalogue/CourseDetailPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { CourseListPage } from '@/features/admin/courses/CourseListPage';
 import { CourseFormPage } from '@/features/admin/courses/CourseFormPage';
-import { CategoryListPage } from '@/features/admin/categories/CategoryListPage';
 import { BulkImportPage } from '@/features/admin/enrolments/BulkImportPage';
 import { ProvisionUserPage } from '@/features/admin/users/ProvisionUserPage';
 import { CourseBuilderPage } from '@/features/courseStructure/CourseBuilderPage';
@@ -25,10 +24,9 @@ import { AttendanceRosterPage } from '@/features/progress/AttendanceRosterPage';
 import { InboxPage } from '@/features/communication/InboxPage';
 import { ConversationPage } from '@/features/communication/ConversationPage';
 import { TicketsPage } from '@/features/communication/TicketsPage';
-import { TicketDetailPage } from '@/features/communication/TicketDetailPage';
+import { TicketRedirect } from '@/features/communication/TicketRedirect';
 import { ForumPage } from '@/features/communication/ForumPage';
 import { ForumModerationPage } from '@/features/communication/ForumModerationPage';
-import { AnalyticsDashboardPage } from '@/features/analytics/AnalyticsDashboardPage';
 import { AuditLogPage } from '@/features/analytics/AuditLogPage';
 import { AccountPage } from '@/features/account/AccountPage';
 import { PaymentsPage } from '@/features/admin/payments/PaymentsPage';
@@ -109,14 +107,6 @@ function App() {
                     }
                 />
                 <Route
-                    path="admin/categories"
-                    element={
-                        <ProtectedRoute roles={['admin']}>
-                            <CategoryListPage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
                     path="admin/enrolments/import"
                     element={
                         <ProtectedRoute roles={['admin']}>
@@ -145,14 +135,6 @@ function App() {
                     element={
                         <ProtectedRoute roles={['admin', 'instructor']}>
                             <GradebookPage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="admin/courses/:id/analytics"
-                    element={
-                        <ProtectedRoute roles={['admin', 'instructor']}>
-                            <AnalyticsDashboardPage />
                         </ProtectedRoute>
                     }
                 />
@@ -225,7 +207,7 @@ function App() {
                 <Route path="messages" element={<InboxPage />} />
                 <Route path="messages/:id" element={<ConversationPage />} />
                 <Route path="tickets" element={<TicketsPage />} />
-                <Route path="tickets/:id" element={<TicketDetailPage />} />
+                <Route path="tickets/:id" element={<TicketRedirect />} />
                 <Route path="courses/:id/forum" element={<ForumPage />} />
                 <Route
                     path="courses/:id/forum/moderation"
