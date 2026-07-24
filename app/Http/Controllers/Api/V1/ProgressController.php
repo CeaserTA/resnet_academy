@@ -18,6 +18,7 @@ use App\Models\ModuleProgress;
 use App\Models\Resource;
 use App\Models\User;
 use App\Services\Progress\ProgressEngine;
+use App\Services\Storage\MediaStorageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -30,7 +31,10 @@ use Illuminate\Http\Response;
  */
 final class ProgressController extends Controller
 {
-    public function __construct(private readonly ProgressEngine $progressEngine) {}
+    public function __construct(
+        private readonly ProgressEngine $progressEngine,
+        private readonly MediaStorageService $mediaStorage,
+    ) {}
 
     /**
      * FR-13: on-demand unlock evaluation (architecture.md §5.2) plus the student's current
@@ -108,7 +112,7 @@ final class ProgressController extends Controller
                 'modules' => ModuleProgressResource::collection($moduleProgress)->resolve($request),
                 'certificate' => $certificate ? [
                     'certificate_number' => $certificate->certificate_number,
-                    'certificate_url' => $certificate->certificate_url,
+                    'certificate_url' => $this->mediaStorage->url($certificate->certificate_url),
                 ] : null,
             ];
         });

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Models\Certificate;
+use App\Services\Storage\MediaStorageService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -12,7 +13,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * architecture.md §5.4: PDF rendering happens off the request cycle. ShouldBeUnique on the
@@ -33,7 +33,7 @@ final class GenerateCertificatePdf implements ShouldBeUnique, ShouldQueue
         return (string) $this->certificateId;
     }
 
-    public function handle(): void
+    public function handle(MediaStorageService $mediaStorage): void
     {
         $certificate = Certificate::query()->with(['student', 'course'])->find($this->certificateId);
 
@@ -49,9 +49,11 @@ final class GenerateCertificatePdf implements ShouldBeUnique, ShouldQueue
         ]);
 
         $path = "certificates/{$certificate->certificate_number}.pdf";
-        Storage::disk('public')->put($path, $pdf->output());
+        $mediaStorage->putRaw($path, $pdf->output());
 
-        $certificate->update(['certificate_url' => Storage::disk('public')->url($path)]);
+        // Stores the R2 *path*, not a full URL — CertificateResource/ProgressController resolve
+        // it to a URL at read time via MediaStorageService::url(), same as every other upload.
+        $certificate->update(['certificate_url' => $path]);
     }
 
     public function failed(\Throwable $e): void

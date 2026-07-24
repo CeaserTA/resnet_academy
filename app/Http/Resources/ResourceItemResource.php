@@ -8,6 +8,7 @@ use App\Enums\ResourceType;
 use App\Models\ModuleItem;
 use App\Models\Resource;
 use App\Services\Progress\ProgressEngine;
+use App\Services\Storage\MediaStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -57,14 +58,18 @@ final class ResourceItemResource extends JsonResource
      */
     private function typeDetails(): array
     {
+        $mediaStorage = app(MediaStorageService::class);
+
         return match ($this->resource->type) {
+            // Bunny Stream hosts video separately — captions are the one video-adjacent file
+            // that can live on R2, everything else about video storage is untouched.
             ResourceType::Video => [
                 'bunny_stream_video_id' => $this->video?->bunny_stream_video_id,
                 'duration_seconds' => $this->video?->duration_seconds,
-                'caption_url' => $this->video?->caption_url,
+                'caption_url' => $mediaStorage->url($this->video?->caption_url),
             ],
             ResourceType::Document => [
-                'file_url' => $this->document?->file_url,
+                'file_url' => $mediaStorage->url($this->document?->file_url),
                 'file_type' => $this->document?->file_type,
                 'file_size_kb' => $this->document?->file_size_kb,
             ],
@@ -75,7 +80,7 @@ final class ResourceItemResource extends JsonResource
                 'url' => $this->externalLink?->url,
             ],
             ResourceType::Scorm => [
-                'package_url' => $this->scormPackage?->package_url,
+                'package_url' => $mediaStorage->url($this->scormPackage?->package_url),
                 'standard' => $this->scormPackage?->standard?->value,
             ],
             ResourceType::LiveSession => [
@@ -85,7 +90,7 @@ final class ResourceItemResource extends JsonResource
                 'duration_minutes' => $this->liveSession?->duration_minutes,
             ],
             ResourceType::DownloadableFile => [
-                'file_url' => $this->downloadableFile?->file_url,
+                'file_url' => $mediaStorage->url($this->downloadableFile?->file_url),
                 'file_size_kb' => $this->downloadableFile?->file_size_kb,
             ],
         };

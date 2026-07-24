@@ -65,6 +65,7 @@ Route::prefix('v1')->group(function (): void {
         Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
 
         Route::get('/me/data-export', [AccountController::class, 'export']);
+        Route::post('/me/avatar', [AccountController::class, 'updateAvatar']);
 
         Route::get('/enrolments', [EnrolmentController::class, 'index']);
         Route::post('/enrolments', [EnrolmentController::class, 'store']);

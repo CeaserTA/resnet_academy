@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 use App\Models\Course;
 use App\Models\Module;
+use App\Models\ResourceDocument;
 use App\Models\User;
 use App\Services\Content\ResourceManager;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 it('creates a reading resource and its module item in one call', function (): void {
     $admin = User::factory()->admin()->create();
@@ -81,4 +84,42 @@ it('denies a student from creating a resource', function (): void {
     ]);
 
     $response->assertForbidden();
+});
+
+it('uploads a document resource file to R2, stores the path, and resolves a full URL in the response', function (): void {
+    Storage::fake('r2', ['url' => 'https://cdn.test']);
+    $admin = User::factory()->admin()->create();
+    $course = Course::factory()->create();
+    $module = Module::factory()->for($course)->create();
+
+    $response = $this->actingAs($admin)->post("/api/v1/modules/{$module->id}/resources", [
+        'type' => 'document',
+        'title' => 'Syllabus',
+        'file_type' => 'pdf',
+        'file' => UploadedFile::fake()->create('syllabus.pdf', 500),
+    ]);
+
+    $response->assertCreated();
+    $resourceId = $response->json('data.id');
+    $path = ResourceDocument::where('resource_id', $resourceId)->value('file_url');
+
+    expect($path)->toStartWith("resources/{$course->id}/");
+    Storage::disk('r2')->assertExists($path);
+    expect($response->json('data.details.file_url'))->toStartWith('http');
+});
+
+it('uploads a scorm package to R2 via the package field', function (): void {
+    Storage::fake('r2', ['url' => 'https://cdn.test']);
+    $admin = User::factory()->admin()->create();
+    $module = Module::factory()->create();
+
+    $response = $this->actingAs($admin)->post("/api/v1/modules/{$module->id}/resources", [
+        'type' => 'scorm',
+        'title' => 'SCORM package',
+        'standard' => 'scorm_2004',
+        'package' => UploadedFile::fake()->create('package.zip', 1000),
+    ]);
+
+    $response->assertCreated();
+    expect($response->json('data.details.package_url'))->toStartWith('http');
 });

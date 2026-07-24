@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/api/client';
+import { postFormData, toFormData, type FormDataValue } from '@/lib/api/formData';
 import type { Module, ResourceItem } from '@/lib/api/types';
 
 export interface ModulePayload {
@@ -40,12 +41,37 @@ export interface ResourcePayload {
     [key: string]: unknown;
 }
 
+/**
+ * `file`/`package` land in the payload as real `File` objects when the resource form's upload
+ * picker was used (document/downloadable_file/scorm types) — everything else stays plain JSON.
+ */
+function hasFileField(payload: Record<string, unknown>): boolean {
+    return Object.values(payload).some((value) => value instanceof File);
+}
+
 export async function createResource(moduleId: number, payload: ResourcePayload): Promise<ResourceItem> {
+    if (hasFileField(payload)) {
+        const response = await postFormData<{ data: ResourceItem }>(
+            `/modules/${moduleId}/resources`,
+            toFormData(payload as Record<string, FormDataValue>),
+        );
+        return response.data;
+    }
+
     const { data } = await apiClient.post<{ data: ResourceItem }>(`/modules/${moduleId}/resources`, payload);
     return data.data;
 }
 
 export async function updateResource(resourceId: number, payload: Partial<ResourcePayload>): Promise<ResourceItem> {
+    if (hasFileField(payload)) {
+        const response = await postFormData<{ data: ResourceItem }>(
+            `/resources/${resourceId}`,
+            toFormData(payload as Record<string, FormDataValue>),
+            'PATCH',
+        );
+        return response.data;
+    }
+
     const { data } = await apiClient.patch<{ data: ResourceItem }>(`/resources/${resourceId}`, payload);
     return data.data;
 }

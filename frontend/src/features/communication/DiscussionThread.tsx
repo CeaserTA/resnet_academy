@@ -110,7 +110,7 @@ function MessageRow({ post, isHead, courseId, threadId }: MessageRowProps) {
 
     return (
         <div className={`group flex gap-3 rounded-lg p-2 ${isOwn ? 'bg-blue-600/5' : ''}`}>
-            <Avatar name={post.user?.name ?? '?'} />
+            <Avatar name={post.user?.name ?? '?'} src={post.user?.avatar_url} />
             <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">

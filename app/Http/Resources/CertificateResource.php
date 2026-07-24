@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Services\Storage\MediaStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -17,7 +18,7 @@ final class CertificateResource extends JsonResource
         return [
             'id' => $this->id,
             'certificate_number' => $this->certificate_number,
-            'certificate_url' => $this->certificate_url,
+            'certificate_url' => app(MediaStorageService::class)->url($this->certificate_url),
             'issued_at' => $this->issued_at->toIso8601String(),
             'course' => [
                 'id' => $this->course->id,

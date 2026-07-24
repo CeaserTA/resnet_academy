@@ -99,9 +99,16 @@ function DiscussionListItem({
             </div>
 
             <div className="flex shrink-0 -space-x-2">
-                {thread.creator && <Avatar name={thread.creator.name} size="sm" className="ring-2 ring-surface-0" />}
+                {thread.creator && (
+                    <Avatar name={thread.creator.name} src={thread.creator.avatar_url} size="sm" className="ring-2 ring-surface-0" />
+                )}
                 {thread.latest_participant && thread.latest_participant.id !== thread.creator?.id && (
-                    <Avatar name={thread.latest_participant.name} size="sm" className="ring-2 ring-surface-0" />
+                    <Avatar
+                        name={thread.latest_participant.name}
+                        src={thread.latest_participant.avatar_url}
+                        size="sm"
+                        className="ring-2 ring-surface-0"
+                    />
                 )}
             </div>
         </button>

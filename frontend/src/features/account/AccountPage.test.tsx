@@ -29,10 +29,12 @@ vi.mock('@/features/auth/api', () => ({
 }));
 
 const requestAccountDeactivation = vi.fn().mockResolvedValue(undefined);
+const uploadAvatar = vi.fn().mockResolvedValue(student);
 
 vi.mock('@/features/account/api', () => ({
     fetchAccountDataExport: vi.fn().mockResolvedValue({ profile: student }),
     requestAccountDeactivation: () => requestAccountDeactivation(),
+    uploadAvatar: (file: File) => uploadAvatar(file),
 }));
 
 function renderPage() {
@@ -64,4 +66,17 @@ it('requires a second click to confirm deactivation, then calls the API', async 
     await user.click(screen.getByRole('button', { name: 'Confirm deactivation?' }));
 
     expect(requestAccountDeactivation).toHaveBeenCalledTimes(1);
+});
+
+it('uploads a selected photo as the new avatar', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(await screen.findByText(/quiet@example.com/)).toBeInTheDocument();
+
+    const file = new File(['fake-image-bytes'], 'me.jpg', { type: 'image/jpeg' });
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(input, file);
+
+    expect(uploadAvatar).toHaveBeenCalledWith(file);
 });

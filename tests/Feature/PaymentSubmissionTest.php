@@ -17,7 +17,7 @@ function fakeReceipt(): UploadedFile
 }
 
 it('lets a student submit a payment against their own order', function (): void {
-    Storage::fake('public');
+    Storage::fake('r2');
     $student = User::factory()->student()->create();
     $order = Order::factory()->for($student, 'student')->create(['amount' => '100.00']);
 
@@ -31,12 +31,12 @@ it('lets a student submit a payment against their own order', function (): void 
     expect($response->json('data.receipt_url'))->not->toBeNull();
 
     $submission = PaymentSubmission::first();
-    Storage::disk('public')->assertExists($submission->receipt_path);
+    Storage::disk('r2')->assertExists($submission->receipt_path);
     expect($order->fresh()->amount_paid)->toEqual('0.00');
 });
 
 it('rejects a submission that exceeds the remaining balance', function (): void {
-    Storage::fake('public');
+    Storage::fake('r2');
     $student = User::factory()->student()->create();
     $order = Order::factory()->for($student, 'student')->create(['amount' => '100.00', 'amount_paid' => '60.00']);
 
@@ -49,7 +49,7 @@ it('rejects a submission that exceeds the remaining balance', function (): void 
 });
 
 it('rejects a second submission while one is already pending', function (): void {
-    Storage::fake('public');
+    Storage::fake('r2');
     $student = User::factory()->student()->create();
     $order = Order::factory()->for($student, 'student')->create(['amount' => '100.00']);
 
@@ -67,7 +67,7 @@ it('rejects a second submission while one is already pending', function (): void
 });
 
 it('rejects a submission against an already fully paid order', function (): void {
-    Storage::fake('public');
+    Storage::fake('r2');
     $student = User::factory()->student()->create();
     $order = Order::factory()->for($student, 'student')->state(['amount' => '100.00'])->paid()->create();
 
@@ -80,7 +80,7 @@ it('rejects a submission against an already fully paid order', function (): void
 });
 
 it('denies a student submitting a payment against someone else\'s order', function (): void {
-    Storage::fake('public');
+    Storage::fake('r2');
     $order = Order::factory()->create(['amount' => '100.00']);
     $otherStudent = User::factory()->student()->create();
 
@@ -125,7 +125,7 @@ it('confirming a submission that completes the balance moves the order to paid a
 });
 
 it('rejecting a submission leaves the order untouched and allows a resubmission', function (): void {
-    Storage::fake('public');
+    Storage::fake('r2');
     $admin = User::factory()->admin()->create();
     $student = User::factory()->student()->create();
     $order = Order::factory()->for($student, 'student')->create(['amount' => '100.00', 'status' => OrderStatus::Pending]);

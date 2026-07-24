@@ -10,6 +10,7 @@ use App\Models\Order;
 use App\Models\PaymentSubmission;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
+use App\Services\Storage\MediaStorageService;
 use Illuminate\Http\UploadedFile;
 
 /**
@@ -18,7 +19,10 @@ use Illuminate\Http\UploadedFile;
  */
 final class PaymentSubmissionService
 {
-    public function __construct(private readonly AuditLogger $auditLogger) {}
+    public function __construct(
+        private readonly AuditLogger $auditLogger,
+        private readonly MediaStorageService $mediaStorage,
+    ) {}
 
     public function submit(Order $order, float $amount, UploadedFile $receipt): PaymentSubmission
     {
@@ -38,7 +42,7 @@ final class PaymentSubmissionService
             'You can\'t pay more than the remaining balance for this course.',
         );
 
-        $path = $receipt->store("payment-receipts/{$order->id}", 'public');
+        $path = $this->mediaStorage->store($receipt, "payment-receipts/{$order->id}");
 
         return PaymentSubmission::create([
             'order_id' => $order->id,

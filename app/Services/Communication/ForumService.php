@@ -12,9 +12,9 @@ use App\Models\ForumTag;
 use App\Models\ForumThread;
 use App\Models\User;
 use App\Services\Notifications\NotificationDispatcher;
+use App\Services\Storage\MediaStorageService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -31,7 +31,10 @@ use Illuminate\Support\Str;
  */
 final class ForumService
 {
-    public function __construct(private readonly NotificationDispatcher $notificationDispatcher) {}
+    public function __construct(
+        private readonly NotificationDispatcher $notificationDispatcher,
+        private readonly MediaStorageService $mediaStorage,
+    ) {}
 
     public function forCourse(Course $course): Forum
     {
@@ -207,15 +210,13 @@ final class ForumService
             return [null, null];
         }
 
-        $path = $attachment->store("forum-attachments/{$course->id}", 'public');
+        $path = $this->mediaStorage->store($attachment, "forum-attachments/{$course->id}");
 
         return [$path, $attachment->getClientOriginalName()];
     }
 
     private function deleteStoredAttachment(ForumPost $post): void
     {
-        if ($post->attachment_path) {
-            Storage::disk('public')->delete($post->attachment_path);
-        }
+        $this->mediaStorage->delete($post->attachment_path);
     }
 }

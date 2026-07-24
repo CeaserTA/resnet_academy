@@ -1,5 +1,5 @@
-import { useMutation } from '@tanstack/react-query';
-import { fetchAccountDataExport, requestAccountDeactivation } from '@/features/account/api';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { fetchAccountDataExport, requestAccountDeactivation, uploadAvatar } from '@/features/account/api';
 
 /**
  * Triggers a browser download rather than just returning the JSON — this is a one-off export
@@ -23,5 +23,14 @@ export function useDownloadAccountData() {
 export function useRequestAccountDeactivation() {
     return useMutation({
         mutationFn: requestAccountDeactivation,
+    });
+}
+
+export function useUploadAvatar() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: uploadAvatar,
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['auth', 'me'] }),
     });
 }

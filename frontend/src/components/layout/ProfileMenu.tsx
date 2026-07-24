@@ -31,7 +31,7 @@ export function ProfileMenu({ className }: { className?: string }) {
                 aria-label="Account menu"
                 className={cn('flex items-center rounded-full', className)}
             >
-                <Avatar name={user.name} />
+                <Avatar name={user.name} src={user.avatar_url} />
             </button>
 
             {isOpen && (

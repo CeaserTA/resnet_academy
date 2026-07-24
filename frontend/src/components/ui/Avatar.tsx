@@ -18,6 +18,8 @@ function initials(name: string): string {
 
 interface AvatarProps {
     name: string;
+    /** When present, renders the image instead of initials — falls back to initials on load error. */
+    src?: string | null;
     size?: 'sm' | 'lg';
     className?: string;
 }
@@ -27,7 +29,22 @@ const sizeClasses: Record<NonNullable<AvatarProps['size']>, string> = {
     lg: 'size-12 text-base',
 };
 
-export function Avatar({ name, size = 'sm', className }: AvatarProps) {
+export function Avatar({ name, src, size = 'sm', className }: AvatarProps) {
+    if (src) {
+        return (
+            <img
+                src={src}
+                alt={name}
+                className={cn('shrink-0 rounded-full object-cover', sizeClasses[size], className)}
+                onError={(e) => {
+                    // Falls back to the initials circle by hiding the broken image — the parent
+                    // still renders a stable-sized element either way.
+                    e.currentTarget.style.display = 'none';
+                }}
+            />
+        );
+    }
+
     return (
         <span
             className={cn(

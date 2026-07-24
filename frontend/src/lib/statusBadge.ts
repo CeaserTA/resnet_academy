@@ -42,7 +42,7 @@ interface StatusDisplay {
  * per-screen synonyms like "Ongoing" or "Active".
  */
 const courseStatusMap: Record<CourseStatus, StatusDisplay> = {
-    draft: { label: 'Draft', tone: 'neutral', icon: Circle },
+    draft: { label: 'Draft', tone: 'warning', icon: Circle },
     published: { label: 'Published', tone: 'success', icon: CheckCircle2 },
     archived: { label: 'Archived', tone: 'neutral', icon: Lock },
 };

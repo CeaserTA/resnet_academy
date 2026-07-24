@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\UpdateAvatarRequest;
 use App\Http\Resources\UserResource;
 use App\Models\AssignmentSubmission;
 use App\Models\Certificate;
@@ -17,6 +19,7 @@ use App\Models\Message;
 use App\Models\Notification;
 use App\Models\Ticket;
 use App\Services\Audit\AuditLogger;
+use App\Services\Storage\MediaStorageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -30,7 +33,38 @@ use Illuminate\Support\Facades\Auth;
  */
 final class AccountController extends Controller
 {
-    public function __construct(private readonly AuditLogger $auditLogger) {}
+    /**
+     * One shared "profiles/instructors/admins" avatar prefix scheme (Cloudflare R2 media
+     * storage) covers all three roles off the same `users.avatar_url` column — chosen by the
+     * uploader's own role, never by the caller.
+     */
+    private const AVATAR_PREFIXES = [
+        UserRole::Admin->value => 'admins',
+        UserRole::Instructor->value => 'instructors',
+        UserRole::Student->value => 'profiles',
+    ];
+
+    public function __construct(
+        private readonly AuditLogger $auditLogger,
+        private readonly MediaStorageService $mediaStorage,
+    ) {}
+
+    /**
+     * Self-service profile photo upload — works identically for students, instructors, and
+     * admins; only the storage prefix differs, picked from the caller's own role.
+     */
+    public function updateAvatar(UpdateAvatarRequest $request): UserResource
+    {
+        $user = $request->user();
+        $prefix = self::AVATAR_PREFIXES[$user->role->value];
+
+        $this->mediaStorage->delete($user->avatar_url);
+        $path = $this->mediaStorage->store($request->file('avatar'), $prefix);
+
+        $user->update(['avatar_url' => $path]);
+
+        return new UserResource($user);
+    }
 
     /**
      * Returns every row this account owns across the tables it appears in, as one downloadable

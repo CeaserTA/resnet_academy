@@ -71,7 +71,7 @@ it('denies a student outside the course from posting in its forum', function ():
 });
 
 it('attaches an image to a discussion and exposes a downloadable url', function (): void {
-    Storage::fake('public');
+    Storage::fake('r2');
     ['student' => $student, 'course' => $course] = setUpForumCourseWithStudent();
 
     $response = $this->actingAs($student)->postJson("/api/v1/courses/{$course->id}/forum/threads", [
@@ -86,11 +86,11 @@ it('attaches an image to a discussion and exposes a downloadable url', function 
     expect($response->json('data.post.attachment_url'))->not->toBeNull();
 
     $path = ForumPost::first()->attachment_path;
-    Storage::disk('public')->assertExists($path);
+    Storage::disk('r2')->assertExists($path);
 });
 
 it('rejects a video attachment over 5MB', function (): void {
-    Storage::fake('public');
+    Storage::fake('r2');
     ['student' => $student, 'course' => $course] = setUpForumCourseWithStudent();
 
     $response = $this->actingAs($student)->postJson("/api/v1/courses/{$course->id}/forum/threads", [
@@ -105,7 +105,7 @@ it('rejects a video attachment over 5MB', function (): void {
 });
 
 it('lets the author edit their own discussion body and swap its attachment', function (): void {
-    Storage::fake('public');
+    Storage::fake('r2');
     ['student' => $student, 'course' => $course] = setUpForumCourseWithStudent();
 
     $created = $this->actingAs($student)->postJson("/api/v1/courses/{$course->id}/forum/threads", [
@@ -134,7 +134,7 @@ it('lets the author edit their own discussion body and swap its attachment', fun
     $updated->assertOk();
     $updated->assertJsonPath('data.body', 'Edited body.');
     $updated->assertJsonPath('data.edited', true);
-    Storage::disk('public')->assertMissing($originalPath);
+    Storage::disk('r2')->assertMissing($originalPath);
 });
 
 it('denies a non-owner from editing someone else\'s discussion', function (): void {

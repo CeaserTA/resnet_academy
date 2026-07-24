@@ -36,8 +36,10 @@ final class StoreResourceRequest extends FormRequest
             'duration_seconds' => ['nullable', 'integer', 'min:0'],
             'caption_url' => ['nullable', 'url', 'max:500'],
 
-            // document
-            'file_url' => ['required_if:type,document,downloadable_file', 'url', 'max:500'],
+            // document / downloadable_file — either paste a URL or upload a file ('file' takes
+            // precedence when both are present; see ResourceController::store()).
+            'file_url' => [Rule::requiredIf(fn () => in_array($this->input('type'), ['document', 'downloadable_file'], true) && ! $this->hasFile('file')), 'url', 'max:500'],
+            'file' => ['nullable', 'file', 'mimes:pdf,doc,docx,ppt,pptx,xls,xlsx,zip,csv,txt', 'max:20480'],
             'file_type' => ['required_if:type,document', Rule::in(['pdf', 'pptx', 'docx'])],
             'file_size_kb' => ['nullable', 'integer', 'min:0'],
 
@@ -47,8 +49,9 @@ final class StoreResourceRequest extends FormRequest
             // external_link
             'url' => ['required_if:type,external_link', 'url', 'max:500'],
 
-            // scorm
-            'package_url' => ['required_if:type,scorm', 'url', 'max:500'],
+            // scorm — same URL-or-upload choice as above.
+            'package_url' => [Rule::requiredIf(fn () => $this->input('type') === 'scorm' && ! $this->hasFile('package')), 'url', 'max:500'],
+            'package' => ['nullable', 'file', 'mimes:zip', 'max:51200'],
             'standard' => ['required_if:type,scorm', Rule::in(['scorm_1_2', 'scorm_2004', 'xapi'])],
 
             // live_session

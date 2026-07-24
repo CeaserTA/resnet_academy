@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, useParams } from 'react-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus } from 'lucide-react';
+import { ImagePlus, Plus } from 'lucide-react';
 import { useCategories, useCourse } from '@/features/catalogue/useCourses';
 import { useUsers } from '@/features/admin/users/useAdminUsers';
 import { useCreateCourse, useUpdateCourse } from '@/features/admin/courses/useAdminCourses';
@@ -17,6 +17,8 @@ import { Alert } from '@/components/ui/Alert';
 import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
 import { ApiError } from '@/lib/api/client';
+
+const MAX_THUMBNAIL_BYTES = 5 * 1024 * 1024;
 
 const numericString = (message: string) =>
     z
@@ -52,6 +54,10 @@ export function CourseFormPage() {
     const createCourse = useCreateCourse();
     const updateCourse = useUpdateCourse(courseId);
     const [formError, setFormError] = useState<string | null>(null);
+    const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+    const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+    const [thumbnailError, setThumbnailError] = useState<string | null>(null);
+    const thumbnailInputRef = useRef<HTMLInputElement>(null);
 
     const queryClient = useQueryClient();
     const [isAddingCategory, setIsAddingCategory] = useState(false);
@@ -110,6 +116,24 @@ export function CourseFormPage() {
         }
     }, [course, reset]);
 
+    const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const selected = e.target.files?.[0];
+        e.target.value = '';
+        if (!selected) {
+            return;
+        }
+
+        setThumbnailError(null);
+
+        if (selected.size > MAX_THUMBNAIL_BYTES) {
+            setThumbnailError('That image is over 5MB. Choose a smaller one.');
+            return;
+        }
+
+        setThumbnailFile(selected);
+        setThumbnailPreview(URL.createObjectURL(selected));
+    };
+
     const onSubmit = async (values: FormValues) => {
         setFormError(null);
 
@@ -118,6 +142,7 @@ export function CourseFormPage() {
             price: Number(values.price),
             confirmation_delay_hours: Number(values.confirmation_delay_hours),
             category_id: values.category_id ? Number(values.category_id) : undefined,
+            thumbnail: thumbnailFile ?? undefined,
         };
 
         try {
@@ -146,6 +171,35 @@ export function CourseFormPage() {
                 <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
                     <Card className="flex flex-col gap-4 lg:col-span-2">
                         <Input label="Title" error={errors.title?.message} {...register('title')} />
+
+                        <div>
+                            <p className="text-sm font-medium text-ink-900">Thumbnail</p>
+                            {thumbnailError && <Alert variant="error" message={thumbnailError} className="mt-2" />}
+                            <div className="mt-2 flex items-center gap-4">
+                                <div className="flex aspect-video w-40 shrink-0 items-center justify-center overflow-hidden rounded-md bg-blue-50 text-blue-600">
+                                    {thumbnailPreview || course?.thumbnail_url ? (
+                                        <img
+                                            src={thumbnailPreview ?? course?.thumbnail_url ?? undefined}
+                                            alt=""
+                                            className="size-full object-cover"
+                                        />
+                                    ) : (
+                                        <ImagePlus className="size-6" aria-hidden="true" />
+                                    )}
+                                </div>
+                                <input
+                                    ref={thumbnailInputRef}
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    className="hidden"
+                                    onChange={handleThumbnailChange}
+                                />
+                                <Button type="button" variant="secondary" onClick={() => thumbnailInputRef.current?.click()}>
+                                    <ImagePlus className="size-4" aria-hidden="true" />
+                                    {thumbnailFile ? 'Change image' : 'Upload image'}
+                                </Button>
+                            </div>
+                        </div>
 
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <Select label="Level" {...register('level')}>

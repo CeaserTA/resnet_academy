@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Services\Storage\MediaStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 
 final class ForumPostResource extends JsonResource
 {
@@ -21,7 +21,7 @@ final class ForumPostResource extends JsonResource
             'user' => new UserResource($this->whenLoaded('user')),
             'body' => $this->body,
             'attachment_type' => $this->attachment_type?->value,
-            'attachment_url' => $this->attachment_path ? Storage::disk('public')->url($this->attachment_path) : null,
+            'attachment_url' => app(MediaStorageService::class)->url($this->attachment_path),
             'attachment_original_name' => $this->attachment_original_name,
             // No separate `edited_at` column — `updated_at` already carries this signal, and
             // Eloquent's `ON UPDATE CURRENT_TIMESTAMP` means the two only diverge on a real edit.
