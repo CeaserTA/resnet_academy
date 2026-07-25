@@ -1,4 +1,5 @@
-import { useEffect, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -11,54 +12,36 @@ interface ModalProps {
     className?: string;
 }
 
+/**
+ * Built on Radix's Dialog for real focus trapping, return-focus-on-close, and Escape/overlay-click
+ * handling — the hand-rolled version this replaced had none of that (no focus trap at all).
+ */
 export function Modal({ isOpen, onClose, title, children, footer, className }: ModalProps) {
-    useEffect(() => {
-        if (!isOpen) {
-            return;
-        }
-
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                onClose();
-            }
-        };
-
-        document.addEventListener('keydown', handleKeyDown);
-        return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen, onClose]);
-
-    if (!isOpen) {
-        return null;
-    }
-
     return (
-        <div className="fixed inset-0 z-30 flex items-center justify-center p-4">
-            <button
-                type="button"
-                aria-label="Close"
-                onClick={onClose}
-                className="absolute inset-0 bg-ink-900/50"
-            />
+        <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <Dialog.Portal>
+                <Dialog.Overlay className="fixed inset-0 z-30 bg-ink-900/50 transition-opacity duration-200 data-[state=closed]:opacity-0 data-[state=open]:opacity-100" />
+                <Dialog.Content
+                    className={cn(
+                        'fixed left-1/2 top-1/2 z-30 flex max-h-[90vh] w-full max-w-md -translate-x-1/2 -translate-y-1/2 flex-col rounded-lg bg-card shadow-lg',
+                        'transition-all duration-200 data-[state=closed]:scale-95 data-[state=closed]:opacity-0 data-[state=open]:scale-100 data-[state=open]:opacity-100',
+                        className,
+                    )}
+                >
+                    <div className="flex items-center justify-between border-b border-border px-5 py-4">
+                        <Dialog.Title className="text-lg text-card-foreground">{title}</Dialog.Title>
+                        <Dialog.Close asChild>
+                            <button aria-label="Close" className="rounded-md p-1 text-muted-foreground hover:bg-accent">
+                                <X className="size-5" aria-hidden="true" />
+                            </button>
+                        </Dialog.Close>
+                    </div>
 
-            <div
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="modal-title"
-                className={cn('relative flex max-h-[90vh] w-full max-w-md flex-col rounded-lg bg-surface-0 shadow-lg', className)}
-            >
-                <div className="flex items-center justify-between border-b border-surface-100 px-4 py-3">
-                    <h2 id="modal-title" className="text-lg text-ink-900">
-                        {title}
-                    </h2>
-                    <button onClick={onClose} aria-label="Close" className="rounded-md p-1 text-ink-600 hover:bg-surface-100">
-                        <X className="size-5" aria-hidden="true" />
-                    </button>
-                </div>
+                    <div className="overflow-y-auto px-5 py-5">{children}</div>
 
-                <div className="overflow-y-auto px-4 py-4">{children}</div>
-
-                {footer && <div className="flex justify-end gap-2 border-t border-surface-100 px-4 py-3">{footer}</div>}
-            </div>
-        </div>
+                    {footer && <div className="flex justify-end gap-2 border-t border-border px-5 py-4">{footer}</div>}
+                </Dialog.Content>
+            </Dialog.Portal>
+        </Dialog.Root>
     );
 }

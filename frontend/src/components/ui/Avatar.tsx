@@ -1,3 +1,4 @@
+import * as RadixAvatar from '@radix-ui/react-avatar';
 import { cn } from '@/lib/utils';
 
 const AVATAR_TONES = ['bg-blue-600', 'bg-emerald-600', 'bg-amber-600', 'bg-rose-600', 'bg-violet-600'];
@@ -29,32 +30,20 @@ const sizeClasses: Record<NonNullable<AvatarProps['size']>, string> = {
     lg: 'size-12 text-base',
 };
 
+/**
+ * Built on Radix's Avatar so a slow/broken `src` falls back to the initials circle via Radix's
+ * documented image-load-state handling, rather than a manual `onError` DOM hide — same visual
+ * result, no flash of a broken-image icon first.
+ */
 export function Avatar({ name, src, size = 'sm', className }: AvatarProps) {
-    if (src) {
-        return (
-            <img
-                src={src}
-                alt={name}
-                className={cn('shrink-0 rounded-full object-cover', sizeClasses[size], className)}
-                onError={(e) => {
-                    // Falls back to the initials circle by hiding the broken image — the parent
-                    // still renders a stable-sized element either way.
-                    e.currentTarget.style.display = 'none';
-                }}
-            />
-        );
-    }
-
     return (
-        <span
-            className={cn(
-                'flex shrink-0 items-center justify-center rounded-full font-medium text-white',
-                sizeClasses[size],
-                avatarTone(name),
-                className,
-            )}
-        >
-            {initials(name)}
-        </span>
+        <RadixAvatar.Root className={cn('flex shrink-0 items-center justify-center rounded-full', sizeClasses[size], className)}>
+            {src && <RadixAvatar.Image src={src} alt={name} className="size-full rounded-full object-cover" />}
+            <RadixAvatar.Fallback
+                className={cn('flex size-full items-center justify-center rounded-full font-medium text-white', avatarTone(name))}
+            >
+                {initials(name)}
+            </RadixAvatar.Fallback>
+        </RadixAvatar.Root>
     );
 }

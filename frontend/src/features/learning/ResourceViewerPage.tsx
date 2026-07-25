@@ -12,6 +12,7 @@ import {
     useRecordVideoProgress,
     useResource,
 } from '@/features/learning/useLearning';
+import { ReadingLessonView } from '@/features/learning/ReadingLessonView';
 
 /**
  * Simulated playback: this app doesn't have real Bunny Stream credentials wired up yet
@@ -105,8 +106,10 @@ export function ResourceViewerPage() {
 
     const isComplete = resource.is_complete;
 
+    const isReading = resource.type === 'reading';
+
     return (
-        <div className="mx-auto max-w-2xl">
+        <div className={isReading ? 'mx-auto max-w-3xl' : 'mx-auto max-w-2xl'}>
             <Link
                 to={`/learn/courses/${courseId}`}
                 className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
@@ -116,7 +119,7 @@ export function ResourceViewerPage() {
             </Link>
 
             <div className="mt-2 flex items-center gap-2">
-                <h1 className="text-2xl">{resource.title}</h1>
+                <h1 className={isReading ? 'text-3xl' : 'text-2xl'}>{resource.title}</h1>
                 {isComplete && <Badge label="Completed" tone="success" icon={CheckCircle2} />}
             </div>
             {resource.description && <p className="mt-1 text-ink-600">{resource.description}</p>}
@@ -130,24 +133,26 @@ export function ResourceViewerPage() {
                     />
                 )}
 
-                {(resource.type === 'reading' || resource.type === 'scorm') && (
+                {resource.type === 'reading' && (
+                    <ReadingLessonView
+                        resource={resource}
+                        courseId={courseId}
+                        isComplete={Boolean(isComplete)}
+                        onMarkRead={() => markRead.mutate(resource.id)}
+                        isMarkingRead={markRead.isPending}
+                    />
+                )}
+
+                {resource.type === 'scorm' && (
                     <div className="flex flex-col gap-4">
-                        {resource.type === 'reading' ? (
-                            // Course content is authored by trusted admins/instructors, not arbitrary users.
-                            <div
-                                className="prose max-w-none"
-                                dangerouslySetInnerHTML={{ __html: resource.details.content_html ?? '' }}
-                            />
-                        ) : (
-                            <a
-                                href={resource.details.package_url ?? '#'}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-blue-600 hover:underline"
-                            >
-                                Open SCORM package
-                            </a>
-                        )}
+                        <a
+                            href={resource.details.package_url ?? '#'}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-blue-600 hover:underline"
+                        >
+                            Open SCORM package
+                        </a>
                         {!isComplete && (
                             <Button
                                 onClick={() => markRead.mutate(resource.id)}

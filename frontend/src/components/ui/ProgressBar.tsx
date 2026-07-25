@@ -1,3 +1,4 @@
+import * as RadixProgress from '@radix-ui/react-progress';
 import { cn } from '@/lib/utils';
 
 interface ProgressBarProps {
@@ -5,21 +6,22 @@ interface ProgressBarProps {
     className?: string;
 }
 
+/**
+ * Built on Radix's Progress for correct `aria-valuenow`/`aria-valuemax` wiring and a real
+ * transition on value change, instead of a manually clamped `width` style.
+ */
 export function ProgressBar({ percent, className }: ProgressBarProps) {
     const clamped = Math.min(100, Math.max(0, percent));
 
     return (
-        <div
-            role="progressbar"
-            aria-valuenow={clamped}
-            aria-valuemin={0}
-            aria-valuemax={100}
+        <RadixProgress.Root
+            value={clamped}
             className={cn('h-2 w-full overflow-hidden rounded-full bg-surface-100', className)}
         >
-            <div
-                className={cn('h-full transition-all', clamped >= 100 ? 'bg-success-600' : 'bg-blue-600')}
-                style={{ width: `${clamped}%` }}
+            <RadixProgress.Indicator
+                className={cn('h-full w-full transition-all duration-300', clamped >= 100 ? 'bg-success-600' : 'bg-primary')}
+                style={{ transform: `translateX(-${100 - clamped}%)` }}
             />
-        </div>
+        </RadixProgress.Root>
     );
 }

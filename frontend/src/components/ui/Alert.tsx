@@ -14,8 +14,10 @@ export function Alert({ variant, message, className }: AlertProps) {
         <div
             role="alert"
             className={cn(
-                'flex items-start gap-2 rounded-md px-3 py-2 text-sm',
-                variant === 'error' ? 'bg-danger-600/10 text-danger-600' : 'bg-success-600/10 text-success-600',
+                'flex items-start gap-2 rounded-lg border px-3 py-2 text-sm',
+                variant === 'error'
+                    ? 'border-destructive/30 bg-destructive/10 text-destructive'
+                    : 'border-success-600/30 bg-success-600/10 text-success-600',
                 className,
             )}
         >

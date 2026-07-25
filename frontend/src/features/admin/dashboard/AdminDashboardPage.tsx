@@ -17,7 +17,7 @@ import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import type { BadgeTone } from '@/components/ui/Badge';
-import { StatCard } from '@/components/ui/StatCard';
+import { StatWidget } from '@/components/dashboard/StatWidget';
 import { useDashboardSummary } from '@/features/admin/dashboard/useDashboard';
 import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import { formatRelativeTime } from '@/lib/utils';
@@ -90,7 +90,7 @@ export function AdminDashboardPage() {
         <div className="max-w-7xl">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {statCards.map((stat) => (
-                    <StatCard key={stat.label} icon={stat.icon} label={stat.label} value={stat.value} sub={stat.sub} tone={stat.tone} />
+                    <StatWidget key={stat.label} icon={stat.icon} label={stat.label} value={stat.value} sub={stat.sub} tone={stat.tone} />
                 ))}
             </div>
 

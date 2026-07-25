@@ -1,13 +1,16 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Link as LinkIcon, Upload } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
-import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
 import { ApiError } from '@/lib/api/client';
 import type { ResourceType } from '@/lib/api/types';
 import type { ResourcePayload } from '@/features/courseStructure/api';
+
+// Lazy-loaded: Tiptap + its extensions are only needed on this instructor-authoring path, never
+// on the far more frequently hit student reading path, so they shouldn't bloat the main bundle.
+const RichTextEditor = lazy(() => import('@/components/editor/RichTextEditor'));
 
 interface ResourceFormProps {
     onSubmit: (payload: ResourcePayload) => Promise<void>;
@@ -124,6 +127,14 @@ export function ResourceForm({ onSubmit, onCancel }: ResourceFormProps) {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
+
+        // The rich text editor has no native `required` attribute to lean on (unlike the plain
+        // textarea it replaced), so this mirrors the backend's `required_if:type,reading` rule.
+        if (type === 'reading' && !(fields.content_html ?? '').replace(/<[^>]+>/g, '').trim()) {
+            setError('Lesson content is required.');
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
@@ -203,13 +214,22 @@ export function ResourceForm({ onSubmit, onCancel }: ResourceFormProps) {
             )}
 
             {type === 'reading' && (
-                <Textarea
-                    label="Content (HTML)"
-                    rows={4}
-                    value={fields.content_html ?? ''}
-                    onChange={setField('content_html')}
-                    required
-                />
+                <div>
+                    <p className="mb-1.5 text-sm font-medium text-ink-900">Lesson content</p>
+                    <Suspense
+                        fallback={
+                            <div className="flex h-48 items-center justify-center rounded-md border border-input text-sm text-ink-600">
+                                Loading editor…
+                            </div>
+                        }
+                    >
+                        <RichTextEditor
+                            value={fields.content_html ?? ''}
+                            onChange={(html) => setFields((prev) => ({ ...prev, content_html: html }))}
+                            placeholder="Write the lesson…"
+                        />
+                    </Suspense>
+                </div>
             )}
 
             {type === 'external_link' && (
