@@ -1,0 +1,116 @@
+/* WYSIWYG styling for the Tiptap editor surface itself — Tailwind's preflight strips default
+   list-style/table borders/etc., so the editing view needs the same basic treatment the
+   read-only LessonRenderer applies, just scoped to `.editor-content` instead of `.lesson-content`. */
+
+.editor-content h1 {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--color-ink-900);
+    margin: 1rem 0 0.5rem;
+}
+
+.editor-content h2 {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-ink-900);
+    margin: 1rem 0 0.5rem;
+}
+
+.editor-content h3 {
+    font-family: var(--font-display);
+    font-size: 1.0625rem;
+    font-weight: 600;
+    color: var(--color-ink-900);
+    margin: 0.75rem 0 0.5rem;
+}
+
+.editor-content p {
+    margin: 0.5rem 0;
+    line-height: 1.7;
+}
+
+.editor-content ul,
+.editor-content ol {
+    padding-left: 1.5rem;
+    margin: 0.5rem 0;
+}
+
+.editor-content ul {
+    list-style: disc;
+}
+
+.editor-content ol {
+    list-style: decimal;
+}
+
+.editor-content blockquote {
+    border-left: 3px solid var(--color-surface-100);
+    padding-left: 0.75rem;
+    color: var(--color-ink-600);
+    margin: 0.75rem 0;
+}
+
+.editor-content code {
+    background: var(--color-surface-100);
+    border-radius: 0.25rem;
+    padding: 0.125rem 0.375rem;
+    font-family: var(--font-mono);
+    font-size: 0.8125em;
+}
+
+.editor-content pre {
+    background: var(--color-ink-900);
+    color: var(--color-surface-0);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    overflow-x: auto;
+    margin: 0.75rem 0;
+}
+
+.editor-content pre code {
+    background: none;
+    padding: 0;
+    color: inherit;
+}
+
+.editor-content hr {
+    border: none;
+    border-top: 1px solid var(--color-surface-100);
+    margin: 1rem 0;
+}
+
+.editor-content img {
+    max-width: 100%;
+    border-radius: 0.5rem;
+}
+
+.editor-content table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0.75rem 0;
+}
+
+.editor-content th,
+.editor-content td {
+    border: 1px solid var(--color-surface-100);
+    padding: 0.375rem 0.625rem;
+    text-align: left;
+}
+
+.editor-content th {
+    background: var(--color-surface-50);
+    font-weight: 600;
+}
+
+.editor-content a {
+    color: var(--color-blue-600);
+    text-decoration: underline;
+}
+
+.editor-content mark {
+    background: var(--color-amber-100);
+    border-radius: 0.125rem;
+    padding: 0 0.125rem;
+}

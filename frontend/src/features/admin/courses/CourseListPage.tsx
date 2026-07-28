@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { DropdownMenu } from '@/components/ui/DropdownMenu';
+import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { courseStatusDisplay } from '@/lib/statusBadge';
@@ -121,12 +122,14 @@ export function CourseListPage() {
 
                 <div className="flex items-center gap-2">
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-600" aria-hidden="true" />
-                        <input
+                        <Search className="absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-ink-600" aria-hidden="true" />
+                        <Input
+                            label="Search courses"
+                            labelClassName="sr-only"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             placeholder="Search courses…"
-                            className="w-56 rounded-md border border-surface-100 bg-surface-0 py-2 pl-9 pr-3 text-sm text-ink-900"
+                            className="w-56 py-2 pl-9 pr-3"
                         />
                     </div>
                     {isAdmin && (

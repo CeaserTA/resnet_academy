@@ -50,6 +50,30 @@
     --font-display: 'Sora', system-ui, sans-serif;
     --font-body: 'Inter', system-ui, sans-serif;
     --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+    /* shadcn/ui compatibility layer — aliases onto the tokens above, not new colors. Lets
+       shadcn-pattern component classes (bg-primary, border-input, ring-ring, etc.) resolve to
+       this app's existing palette instead of shadcn's defaults. */
+    --color-background: var(--color-surface-0);
+    --color-foreground: var(--color-ink-900);
+    --color-card: var(--color-surface-0);
+    --color-card-foreground: var(--color-ink-900);
+    --color-border: var(--color-surface-100);
+    --color-input: var(--color-surface-100);
+    --color-ring: var(--color-blue-600);
+    --color-primary: var(--color-blue-600);
+    --color-primary-foreground: var(--color-surface-0);
+    --color-secondary: var(--color-surface-50);
+    --color-secondary-foreground: var(--color-ink-900);
+    --color-muted: var(--color-surface-50);
+    --color-muted-foreground: var(--color-ink-600);
+    --color-accent: var(--color-surface-50);
+    --color-accent-foreground: var(--color-ink-900);
+    --color-destructive: var(--color-danger-600);
+    --color-destructive-foreground: var(--color-surface-0);
+    --color-popover: var(--color-surface-0);
+    --color-popover-foreground: var(--color-ink-900);
+    --radius: 0.5rem;
 }
 
 :root {

@@ -1,16 +1,8 @@
 import type { LucideIcon } from 'lucide-react';
 import { cva, type VariantProps } from 'class-variance-authority';
-
 import { cn } from '@/lib/utils';
 
 export type BadgeTone = 'success' | 'progress' | 'neutral' | 'warning' | 'danger';
-
-interface BadgeProps extends VariantProps<typeof badgeVariants> {
-    label: string;
-    tone?: BadgeTone;
-    icon?: LucideIcon;
-    className?: string;
-}
 
 const badgeVariants = cva(
     'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap transition-colors',
@@ -35,12 +27,19 @@ const badgeVariants = cva(
     },
 );
 
+interface BadgeProps extends VariantProps<typeof badgeVariants> {
+    label: string;
+    tone?: BadgeTone;
+    icon?: LucideIcon;
+    className?: string;
+}
+
 /**
  * Status is never color-only (ui-context.md §1/§8) — icon + label always accompany the color.
  */
 export function Badge({ label, tone = 'neutral', icon: Icon, className }: BadgeProps) {
     return (
-        <span className={cn(badgeVariants({ tone, className }))}>
+        <span className={cn(badgeVariants({ tone }), className)}>
             {Icon && <Icon className="size-3.5" aria-hidden="true" />}
             {label}
         </span>

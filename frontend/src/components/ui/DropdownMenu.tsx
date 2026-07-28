@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import * as RadixDropdownMenu from '@radix-ui/react-dropdown-menu';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -10,51 +11,54 @@ export interface DropdownMenuItem {
 }
 
 interface DropdownMenuProps {
-    /** Receives a `toggle` callback to wire onto whatever trigger element is rendered. */
+    /**
+     * Receives a `toggle` callback for the trigger's onClick. Radix's Trigger (below) already
+     * drives open/close on click via its own composed handler, so this is a no-op kept for
+     * backward API compatibility with existing call sites that wire it to onClick.
+     */
     trigger: (toggle: () => void) => ReactNode;
     items: DropdownMenuItem[];
     align?: 'left' | 'right';
     className?: string;
 }
 
+const noop = () => {};
+
 /**
- * Generalizes the toggle-state + absolute-panel "..." menu pattern already used inline in
- * `ProfileMenu`/`NotificationBell`/`ForumPostCard` — one reusable primitive instead of
- * reimplementing it per page.
+ * Built on Radix's DropdownMenu for correct menu ARIA roles, arrow-key navigation, and
+ * type-ahead — the hand-rolled toggle-panel version this replaced had none of that. Kept
+ * uncontrolled (Radix owns open state internally) so its own click handling on the trigger never
+ * fights a parallel state toggle. Keeps the same `trigger`/`items`/`align` render-prop API used by
+ * `ProfileMenu`/`CourseListPage`, so no call site needs to change shape.
  */
 export function DropdownMenu({ trigger, items, align = 'right', className }: DropdownMenuProps) {
-    const [isOpen, setIsOpen] = useState(false);
-    const toggle = () => setIsOpen((prev) => !prev);
-
     return (
-        <div className={cn('relative', className)}>
-            {trigger(toggle)}
+        <RadixDropdownMenu.Root>
+            <RadixDropdownMenu.Trigger asChild className={className}>
+                {trigger(noop)}
+            </RadixDropdownMenu.Trigger>
 
-            {isOpen && (
-                <div
-                    className={cn(
-                        'absolute top-full z-20 mt-1 w-48 rounded-md border border-surface-100 bg-surface-0 py-1 text-sm shadow-lg',
-                        align === 'right' ? 'right-0' : 'left-0',
-                    )}
+            <RadixDropdownMenu.Portal>
+                <RadixDropdownMenu.Content
+                    align={align === 'right' ? 'end' : 'start'}
+                    sideOffset={4}
+                    className="z-20 w-48 rounded-md border border-border bg-popover py-1 text-sm shadow-lg"
                 >
                     {items.map((item) => (
-                        <button
+                        <RadixDropdownMenu.Item
                             key={item.label}
-                            onClick={() => {
-                                item.onClick();
-                                setIsOpen(false);
-                            }}
+                            onSelect={item.onClick}
                             className={cn(
-                                'flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-surface-50',
-                                item.variant === 'danger' ? 'text-danger-600' : 'text-ink-900',
+                                'flex cursor-pointer items-center gap-2 px-3 py-1.5 outline-none hover:bg-accent focus:bg-accent',
+                                item.variant === 'danger' ? 'text-destructive' : 'text-popover-foreground',
                             )}
                         >
                             {item.icon && <item.icon className="size-3.5" aria-hidden="true" />}
                             {item.label}
-                        </button>
+                        </RadixDropdownMenu.Item>
                     ))}
-                </div>
-            )}
-        </div>
+                </RadixDropdownMenu.Content>
+            </RadixDropdownMenu.Portal>
+        </RadixDropdownMenu.Root>
     );
 }

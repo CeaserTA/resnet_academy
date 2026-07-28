@@ -228,7 +228,12 @@ export function ModuleTableRow({
                 </tr>
             )}
 
-            <Modal isOpen={addingForm === 'resource'} onClose={() => setAddingForm(null)} title={`Add a resource to ${module.title}`}>
+            <Modal
+                isOpen={addingForm === 'resource'}
+                onClose={() => setAddingForm(null)}
+                title={`Add a resource to ${module.title}`}
+                className="max-w-2xl"
+            >
                 <ResourceForm onSubmit={handleCreateResource} onCancel={() => setAddingForm(null)} />
             </Modal>
             <Modal isOpen={addingForm === 'assignment'} onClose={() => setAddingForm(null)} title={`Add an assignment to ${module.title}`}>

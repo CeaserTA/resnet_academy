@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useParams, Link } from 'react-router';
 import { AlertTriangle, ArrowLeft, BookOpen, ClipboardList, MessageCircle, Plus, TrendingUp, Users } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -87,20 +87,14 @@ export function CourseBuilderPage() {
 
                 {analytics && (
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                        <StatCard icon={Users} label="Enrolled students" value={analytics.total_students} tone="progress" />
+                        <StatCard label="Enrolled students" value={analytics.total_students} tone="progress" />
                         <StatCard
-                            icon={TrendingUp}
                             label="Completion rate"
                             value={`${analytics.completion_rate}%`}
                             sub={`${analytics.completed_students} of ${analytics.total_students} completed`}
                             tone="success"
                         />
-                        <StatCard
-                            icon={AlertTriangle}
-                            label="At-risk students"
-                            value={analytics.at_risk_students.length}
-                            tone="danger"
-                        />
+                        <StatCard label="At-risk students" value={analytics.at_risk_students.length} tone="danger" />
                     </div>
                 )}
             </div>
