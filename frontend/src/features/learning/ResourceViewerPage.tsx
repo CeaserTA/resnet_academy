@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { ArrowLeft, CheckCircle2, ExternalLink, Pause, Play, Video } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
+import { YouTubeEmbed } from '@/components/media/YouTubeEmbed';
+import { extractYouTubeVideoId } from '@/lib/youtube';
 import {
     useMarkAttendance,
     useMarkOpened,
@@ -13,6 +15,48 @@ import {
     useResource,
 } from '@/features/learning/useLearning';
 import { ReadingLessonView } from '@/features/learning/ReadingLessonView';
+
+/**
+ * External links normally just navigate away in a new tab — a YouTube link is the one exception,
+ * playing inline instead so students never leave the system to watch it. "Opened" is recorded as
+ * soon as the embed is shown (there's no click to hook into once it's inline).
+ */
+function ExternalLinkViewer({
+    url,
+    isComplete,
+    onOpened,
+}: {
+    url: string | null | undefined;
+    isComplete: boolean;
+    onOpened: () => void;
+}) {
+    const videoId = url ? extractYouTubeVideoId(url) : null;
+    const hasNotifiedRef = useRef(false);
+
+    useEffect(() => {
+        if (videoId && !isComplete && !hasNotifiedRef.current) {
+            hasNotifiedRef.current = true;
+            onOpened();
+        }
+    }, [videoId, isComplete, onOpened]);
+
+    if (videoId) {
+        return <YouTubeEmbed videoId={videoId} />;
+    }
+
+    return (
+        <a
+            href={url ?? '#'}
+            target="_blank"
+            rel="noreferrer"
+            onClick={() => !isComplete && onOpened()}
+            className="inline-flex items-center gap-2 text-blue-600 hover:underline"
+        >
+            <ExternalLink className="size-4" aria-hidden="true" />
+            Open link
+        </a>
+    );
+}
 
 /**
  * Simulated playback: this app doesn't have real Bunny Stream credentials wired up yet
@@ -165,21 +209,27 @@ export function ResourceViewerPage() {
                     </div>
                 )}
 
-                {(resource.type === 'document' ||
-                    resource.type === 'downloadable_file' ||
-                    resource.type === 'external_link') && (
+                {(resource.type === 'document' || resource.type === 'downloadable_file') && (
                     <div className="flex flex-col gap-4">
                         <a
-                            href={resource.details.file_url ?? resource.details.url ?? '#'}
+                            href={resource.details.file_url ?? '#'}
                             target="_blank"
                             rel="noreferrer"
                             onClick={() => !isComplete && markOpened.mutate(resource.id)}
                             className="inline-flex items-center gap-2 text-blue-600 hover:underline"
                         >
                             <ExternalLink className="size-4" aria-hidden="true" />
-                            {resource.type === 'external_link' ? 'Open link' : 'Open file'}
+                            Open file
                         </a>
                     </div>
+                )}
+
+                {resource.type === 'external_link' && (
+                    <ExternalLinkViewer
+                        url={resource.details.url}
+                        isComplete={Boolean(isComplete)}
+                        onOpened={() => markOpened.mutate(resource.id)}
+                    />
                 )}
 
                 {resource.type === 'live_session' && (

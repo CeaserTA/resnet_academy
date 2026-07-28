@@ -146,6 +146,27 @@
     padding: 0 0.15rem;
 }
 
+/* YouTube embeds (from the reading editor's YouTube extension, wrapped by Tiptap in a
+   [data-youtube-video] div) — forced to a responsive 16:9 box regardless of the raw width/height
+   attributes baked into the stored HTML, so it fills the reading column at any screen size. */
+.lesson-content [data-youtube-video] {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    margin: 1.5rem 0;
+    border-radius: 0.75rem;
+    overflow: hidden;
+}
+
+.lesson-content [data-youtube-video] iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    margin: 0;
+}
+
 @media (max-width: 640px) {
     .lesson-content {
         font-size: 1rem;

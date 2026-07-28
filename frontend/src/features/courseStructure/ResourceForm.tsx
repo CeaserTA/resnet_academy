@@ -143,6 +143,13 @@ export function ResourceForm({ onSubmit, onCancel }: ResourceFormProps) {
                 title,
                 is_required: isRequired,
                 ...fields,
+                // These selects show a default option but never fire onChange (and so never land
+                // in `fields`) unless the user actually picks something else — this fills in the
+                // same default the UI already implies, rather than silently submitting nothing
+                // and hitting the backend's `required_if` rule.
+                ...(type === 'document' ? { file_type: fields.file_type ?? 'pdf' } : {}),
+                ...(type === 'scorm' ? { standard: fields.standard ?? 'scorm_2004' } : {}),
+                ...(type === 'live_session' ? { provider: fields.provider ?? 'zoom' } : {}),
                 ...(file ? { file } : {}),
                 ...(packageFile ? { package: packageFile } : {}),
             });

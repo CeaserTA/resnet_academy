@@ -23,9 +23,11 @@ import {
     Trash2,
     Underline as UnderlineIcon,
     Undo2,
+    Video,
     X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { isYouTubeUrl } from '@/lib/youtube';
 
 const TEXT_COLORS = ['#151a24', '#1b4fa0', '#1f8a55', '#c0392b', '#e8a33d'];
 
@@ -160,6 +162,74 @@ function ImageControl({ editor }: { editor: Editor }) {
     return (
         <ToolbarButton label="Image" onClick={() => setIsOpen(true)}>
             <ImageIcon className="size-4" aria-hidden="true" />
+        </ToolbarButton>
+    );
+}
+
+function YouTubeControl({ editor }: { editor: Editor }) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [url, setUrl] = useState('');
+    const [error, setError] = useState(false);
+
+    const confirm = () => {
+        const trimmed = url.trim();
+        if (!trimmed) {
+            setIsOpen(false);
+            return;
+        }
+
+        if (!isYouTubeUrl(trimmed)) {
+            setError(true);
+            return;
+        }
+
+        editor.chain().focus().setYoutubeVideo({ src: trimmed }).run();
+        setIsOpen(false);
+        setUrl('');
+        setError(false);
+    };
+
+    if (isOpen) {
+        return (
+            <div className="flex items-center gap-1 px-1">
+                <input
+                    autoFocus
+                    type="url"
+                    value={url}
+                    onChange={(e) => {
+                        setUrl(e.target.value);
+                        setError(false);
+                    }}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            confirm();
+                        }
+                        if (e.key === 'Escape') {
+                            setIsOpen(false);
+                        }
+                    }}
+                    placeholder="YouTube video URL…"
+                    aria-invalid={error}
+                    className={cn(
+                        'h-8 w-52 rounded-md border bg-background px-2 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-ring',
+                        error ? 'border-destructive' : 'border-input',
+                    )}
+                />
+                <ToolbarButton label="Embed video" onClick={confirm}>
+                    <Plus className="size-4" aria-hidden="true" />
+                </ToolbarButton>
+                <ToolbarButton label="Cancel" onClick={() => setIsOpen(false)}>
+                    <X className="size-4" aria-hidden="true" />
+                </ToolbarButton>
+                {error && <span className="text-xs text-destructive">Not a YouTube link</span>}
+            </div>
+        );
+    }
+
+    return (
+        <ToolbarButton label="Embed YouTube video" onClick={() => setIsOpen(true)}>
+            <Video className="size-4" aria-hidden="true" />
         </ToolbarButton>
     );
 }
@@ -353,6 +423,7 @@ export function RichTextToolbar({ editor }: { editor: Editor }) {
 
             <LinkControl editor={editor} />
             <ImageControl editor={editor} />
+            <YouTubeControl editor={editor} />
             <ToolbarButton
                 label="Insert table"
                 onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
