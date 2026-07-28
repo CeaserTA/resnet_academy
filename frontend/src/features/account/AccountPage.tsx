@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+﻿import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Camera, Download, ShieldAlert } from 'lucide-react';
 import { Card } from '@/components/ui/card';

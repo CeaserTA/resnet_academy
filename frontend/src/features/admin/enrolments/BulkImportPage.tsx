@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+﻿import { useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Upload } from 'lucide-react';
 import { useCourses } from '@/features/catalogue/useCourses';

@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import { useNavigate } from 'react-router';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { Alert } from '@/components/ui/Alert';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { ApiError } from '@/lib/api/client';
 
 export type AuthMode = 'login' | 'signup';
 
@@ -41,17 +45,42 @@ const expertiseOptions = [
 ];
 
 export function AuthModal({ open, mode, onModeChange, onClose }: AuthModalProps) {
+  const { login, register } = useAuth();
+  const navigate = useNavigate();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<(typeof roleOptions)[number]['value']>('student');
   const [expertise, setExpertise] = useState(expertiseOptions[0].value);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isSignup = mode === 'signup';
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    // TODO: implement auth submission
+    setFormError(null);
+    setIsSubmitting(true);
+
+    try {
+      if (isSignup) {
+        await register(name, email, password, password);
+      } else {
+        await login(email, password);
+      }
+      onClose();
+      navigate('/dashboard');
+    } catch (error) {
+      setFormError(
+        error instanceof ApiError
+          ? error.message
+          : isSignup
+            ? 'Could not create your account. Try again.'
+            : 'Those credentials don\'t match an account. Check your email and password.',
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -102,6 +131,7 @@ export function AuthModal({ open, mode, onModeChange, onClose }: AuthModalProps)
           </div>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+            {formError && <Alert variant="error" message={formError} />}
             {isSignup && (
               <Input
                 label="Full name"
@@ -165,7 +195,7 @@ export function AuthModal({ open, mode, onModeChange, onClose }: AuthModalProps)
               />
             )}
 
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full" isLoading={isSubmitting}>
               {isSignup ? 'Create account' : 'Log in'}
             </Button>
           </form>

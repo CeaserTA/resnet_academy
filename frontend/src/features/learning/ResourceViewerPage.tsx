@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { ArrowLeft, CheckCircle2, ExternalLink, Pause, Play, Video } from 'lucide-react';
 import { Card } from '@/components/ui/card';

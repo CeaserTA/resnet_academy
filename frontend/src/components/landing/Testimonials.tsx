@@ -1,4 +1,4 @@
-// TODO: Replace placeholder testimonials with real student quotes
+﻿// TODO: Replace placeholder testimonials with real student quotes
 import {
   Card,
   CardContent,
@@ -48,7 +48,7 @@ export function Testimonials() {
           {testimonials.map(({ initials, name, role, quote }) => (
             <Card
               key={name}
-              className="rounded-3xl border border-[#e8ecf1] bg-white px-6 py-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+              className="rounded-3xl border border-[#e8ecf1] bg-white p-0 px-6 py-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
             >
               <CardHeader className="flex items-start gap-4 p-0 pb-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 text-blue-700 font-semibold">

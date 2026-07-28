@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, NavLink } from 'react-router';
 import { GraduationCap, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
@@ -16,7 +16,6 @@ export function LandingHeader({ onLoginClick, onSignupClick }: LandingHeaderProp
     useEffect(() => {
         const handleScroll = () => {
             const scrolled = window.scrollY > 0;
-            // Only update state if the value actually changed (prevents excessive re-renders)
             setIsScrolled((prev) => (prev !== scrolled ? scrolled : prev));
         };
 
@@ -25,9 +24,9 @@ export function LandingHeader({ onLoginClick, onSignupClick }: LandingHeaderProp
     }, []);
 
     const navLinks = [
-        { label: 'Browse Courses', href: '#courses' },
-        { label: 'Features', href: '#features' },
-        { label: 'Testimonials', href: '#testimonials' },
+        { label: 'Courses', to: '/#courses' },
+        { label: 'About', to: '/about' },
+        { label: 'Contact', to: '/contact' },
     ];
 
     return (
@@ -51,14 +50,19 @@ export function LandingHeader({ onLoginClick, onSignupClick }: LandingHeaderProp
 
                 {/* Desktop Navigation */}
                 <nav className="hidden gap-8 lg:flex">
-                    {navLinks.map(({ label, href }) => (
-                        <a
-                            key={href}
-                            href={href}
-                            className="rounded-full px-3 py-2 text-sm font-medium text-ink-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
+                    {navLinks.map(({ label, to }) => (
+                        <NavLink
+                            key={to}
+                            to={to}
+                            className={({ isActive }) =>
+                                cn(
+                                    'rounded-full px-3 py-2 text-sm font-medium transition-colors hover:bg-blue-50 hover:text-blue-700',
+                                    isActive ? 'text-blue-700' : 'text-ink-600',
+                                )
+                            }
                         >
                             {label}
-                        </a>
+                        </NavLink>
                     ))}
                 </nav>
 
@@ -109,15 +113,20 @@ export function LandingHeader({ onLoginClick, onSignupClick }: LandingHeaderProp
             {mobileMenuOpen && (
                 <div className="border-t border-[#e8ecf1] bg-white px-4 py-4 sm:px-6 lg:hidden">
                     <nav className="flex flex-col gap-3">
-                        {navLinks.map(({ label, href }) => (
-                            <a
-                                key={href}
-                                href={href}
+                        {navLinks.map(({ label, to }) => (
+                            <NavLink
+                                key={to}
+                                to={to}
                                 onClick={() => setMobileMenuOpen(false)}
-                                className="block rounded-md px-3 py-2 text-sm font-medium text-ink-600 transition-colors hover:bg-surface-100 hover:text-ink-900"
+                                className={({ isActive }) =>
+                                    cn(
+                                        'block rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-surface-100 hover:text-ink-900',
+                                        isActive ? 'text-blue-700' : 'text-ink-600',
+                                    )
+                                }
                             >
                                 {label}
-                            </a>
+                            </NavLink>
                         ))}
                         <div className="border-t border-[#e8ecf1] pt-3">
                             <Button

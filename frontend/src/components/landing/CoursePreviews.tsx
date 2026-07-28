@@ -1,6 +1,7 @@
-import { Clock3, SignalHigh } from 'lucide-react';
+﻿import { Link } from 'react-router';
+import { BookOpen, SignalHigh } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
+import { Spinner } from '@/components/ui/Spinner';
 import {
   Card,
   CardContent,
@@ -8,36 +9,18 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { useCourses } from '@/features/catalogue/useCourses';
 
-const courses = [
-  {
-    category: 'Frontend',
-    title: 'Frontend Development',
-    description: 'HTML5/CSS3, JavaScript ES6+, responsive design, and Bootstrap fundamentals.',
-    duration: '6 weeks',
-    level: 'Beginner to Advanced',
-  },
-  {
-    category: 'Backend',
-    title: 'Backend Development',
-    description: 'PHP/Laravel, MySQL, and REST API architecture for real-world applications.',
-    duration: '8 weeks',
-    level: 'Intermediate to Advanced',
-  },
-  {
-    category: 'Specialized',
-    title: 'Specialized Skills',
-    description: 'SEO, analytics, WordPress, and database optimization for modern teams.',
-    duration: '4-6 weeks',
-    level: 'All Levels',
-  },
-];
+const levelLabel: Record<string, string> = {
+  beginner: 'Beginner',
+  intermediate: 'Intermediate',
+  advanced: 'Advanced',
+};
 
-interface CoursePreviewsProps {
-  onViewCourseClick: () => void;
-}
+export function CoursePreviews() {
+  const { data, isLoading } = useCourses({ status: 'published' });
+  const courses = data?.data ?? [];
 
-export function CoursePreviews({ onViewCourseClick }: CoursePreviewsProps) {
   return (
     <section id="courses" className="border-t border-[#e8ecf1] bg-[#eff6ff] px-4 py-20 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
@@ -51,21 +34,33 @@ export function CoursePreviews({ onViewCourseClick }: CoursePreviewsProps) {
           </p>
         </div>
 
+        {isLoading && (
+          <div className="flex justify-center">
+            <Spinner />
+          </div>
+        )}
+
+        {!isLoading && courses.length === 0 && (
+          <p className="text-center text-sm text-[#64748b]">No courses available yet.</p>
+        )}
+
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {courses.map(({ category, title, description, duration, level }) => (
+          {courses.map((course) => (
             <Card
-              key={title}
-              className="transform rounded-3xl border border-blue-100 bg-blue-50 transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+              key={course.id}
+              className="transform rounded-3xl border border-blue-100 bg-blue-50 p-0 transition duration-300 hover:-translate-y-1 hover:shadow-lg"
             >
               <CardHeader className="space-y-4 p-6">
                 <Badge
-                  label={category}
+                  label={course.category?.name ?? 'Course'}
                   tone="progress"
                   className="border border-blue-100 bg-blue-50 text-blue-600"
                 />
                 <div className="space-y-2">
-                  <CardTitle>{title}</CardTitle>
-                  <CardDescription>{description}</CardDescription>
+                  <CardTitle>{course.title}</CardTitle>
+                  <CardDescription>
+                    {course.description ?? 'No description available.'}
+                  </CardDescription>
                 </div>
               </CardHeader>
 
@@ -73,26 +68,26 @@ export function CoursePreviews({ onViewCourseClick }: CoursePreviewsProps) {
                 <div className="space-y-3 text-sm text-[#64748b]">
                   <div className="flex items-center gap-2">
                     <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-                      <Clock3 className="size-4" aria-hidden="true" />
-                    </span>
-                    <span>{duration}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-600">
                       <SignalHigh className="size-4" aria-hidden="true" />
                     </span>
-                    <span>{level}</span>
+                    <span>{levelLabel[course.level] ?? course.level}</span>
                   </div>
+                  {course.instructors.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                        <BookOpen className="size-4" aria-hidden="true" />
+                      </span>
+                      <span>{course.instructors[0].name}</span>
+                    </div>
+                  )}
                 </div>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-900"
-                  onClick={onViewCourseClick}
+                <Link
+                  to={`/courses/${course.id}`}
+                  className="inline-flex w-full items-center justify-center rounded-md border border-blue-200 bg-surface-0 px-3 py-2 text-xs font-medium text-blue-700 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-900"
                 >
                   View Course
-                </Button>
+                </Link>
               </CardContent>
             </Card>
           ))}

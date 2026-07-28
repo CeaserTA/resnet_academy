@@ -176,9 +176,8 @@ export async function updateForumPost(
     input: ForumPostAttachmentInput = {},
 ): Promise<ForumPost> {
     const formData = buildForumPostFormData(body, input);
-    formData.append('_method', 'PATCH');
 
-    const { data } = await apiClient.post<{ data: ForumPost }>(`/forum-posts/${postId}`, formData, {
+    const { data } = await apiClient.patch<{ data: ForumPost }>(`/forum-posts/${postId}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
     });
     return data.data;

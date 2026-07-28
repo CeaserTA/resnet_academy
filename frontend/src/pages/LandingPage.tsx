@@ -30,7 +30,7 @@ export function LandingPage() {
                 />
 
                 {/* Course Previews Section */}
-                <CoursePreviews onViewCourseClick={handleSignupClick} />
+                <CoursePreviews />
 
                 {/* Features Section */}
                 <Features />

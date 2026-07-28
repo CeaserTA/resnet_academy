@@ -23,15 +23,15 @@ export function toFormData(fields: Record<string, FormDataValue>): FormData {
 }
 
 /**
- * Laravel doesn't parse multipart bodies on a real PATCH request, so an update-with-a-file call
- * spoofs the method the same way `communication/api.ts`'s `updateForumPost` already does.
+ * Laravel doesn't parse multipart bodies on a real PATCH request — use POST with
+ * _method spoofing only for web-middleware routes. For API (Sanctum) routes, send
+ * a real PATCH; axios handles multipart/form-data on PATCH correctly.
  */
-export async function postFormData<T>(url: string, formData: FormData, spoofMethod?: 'PATCH'): Promise<T> {
-    if (spoofMethod) {
-        formData.append('_method', spoofMethod);
-    }
-
-    const { data } = await apiClient.post<T>(url, formData, {
+export async function postFormData<T>(url: string, formData: FormData, method: 'POST' | 'PATCH' = 'POST'): Promise<T> {
+    const { data } = await apiClient.request<T>({
+        method,
+        url,
+        data: formData,
         headers: { 'Content-Type': 'multipart/form-data' },
     });
 

@@ -3,6 +3,10 @@ import { AppShell } from '@/components/layout/AppShell';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { LandingPage } from '@/pages/LandingPage';
+import { AboutPage } from '@/pages/AboutPage';
+import { ContactPage } from '@/pages/ContactPage';
+import { LoginPage } from '@/features/auth/LoginPage';
+import { RegisterPage } from '@/features/auth/RegisterPage';
 import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage';
 import { VerifyEmailNoticePage } from '@/features/auth/VerifyEmailNoticePage';
@@ -38,19 +42,23 @@ function App() {
 
     return (
         <Routes>
-                <Route
-                    index
-                    element={
-                        isLoading ? (
-                            <div />
-                        ) : user ? (
-                            <Navigate to="/dashboard" replace />
-                        ) : (
-                            <LandingPage />
-                        )
-                    }
-                />
-                <Route path="courses/:id" element={<CourseDetailPage />} />
+            <Route
+                index
+                element={
+                    isLoading ? (
+                        <div />
+                    ) : user ? (
+                        <Navigate to="/dashboard" replace />
+                    ) : (
+                        <LandingPage />
+                    )
+                }
+            />
+            <Route path="courses/:id" element={<CourseDetailPage />} />
+            <Route path="about" element={<AboutPage />} />
+            <Route path="contact" element={<ContactPage />} />
+            <Route path="login" element={<LoginPage />} />
+            <Route path="register" element={<RegisterPage />} />
             <Route path="forgot-password" element={<ForgotPasswordPage />} />
             <Route path="reset-password" element={<ResetPasswordPage />} />
             <Route path="verify-certificate" element={<VerifyEmailNoticePage />} />

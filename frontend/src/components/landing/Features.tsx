@@ -1,4 +1,4 @@
-import {
+﻿import {
   Award,
   BellRing,
   BookOpen,
@@ -71,7 +71,7 @@ export function Features() {
           {features.map(({ title, description, Icon }) => (
             <Card
               key={title}
-              className="transform transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+              className="transform p-0 transition duration-300 hover:-translate-y-1 hover:shadow-lg"
             >
               <CardHeader>
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-600">

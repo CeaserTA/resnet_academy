@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router';
 import { GraduationCap, Users, ExternalLink, MailCheck, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
@@ -23,7 +24,7 @@ export function Footer({ onLoginClick, onSignupClick }: FooterProps) {
               <GraduationCap className="size-6 text-blue-600" />
               <span>Resnet LMS</span>
             </a>
-            <p className="mt-3 text-sm text-[#94a3b8]">Hands-on mentorship in modern web development</p>
+            <p className="mt-3 text-sm text-[#94a3b8]">Hands-on mentorship in web technologies. Learn by building real projects with guided support to launch your tech career.</p>
             <div className="mt-4 flex gap-3">
               <a aria-label="Community" href="#" className="text-[#94a3b8] hover:text-blue-600">
                 <Users className="size-5" />
@@ -65,10 +66,10 @@ export function Footer({ onLoginClick, onSignupClick }: FooterProps) {
             <h4 className="text-sm font-semibold text-ink-900">Company</h4>
             <ul className="mt-3 space-y-2 text-sm">
               <li>
-                <a href="#" className="text-[#94a3b8] hover:text-blue-600">About</a>
+                <Link to="/about" className="text-[#94a3b8] hover:text-blue-600">About</Link>
               </li>
               <li>
-                <a href="#" className="text-[#94a3b8] hover:text-blue-600">Contact</a>
+                <Link to="/contact" className="text-[#94a3b8] hover:text-blue-600">Contact</Link>
               </li>
               <li>
                 <a href="#" className="text-[#94a3b8] hover:text-blue-600">Careers</a>
