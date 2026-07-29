@@ -55,31 +55,34 @@ const features = [
 
 export function Features() {
   return (
-    <section id="features" className="border-t border-[#e8ecf1] bg-[#fafbfc] px-4 py-20 sm:px-6 lg:px-8">
+    <section id="features" className="border-t border-[#e8ecf1] bg-white px-4 py-14 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-blue-600">Key capabilities</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-blue-600">
+            Key capabilities
+          </p>
           <h2 className="mt-4 text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl">
             Everything your learning ecosystem needs.
           </h2>
-          <p className="mt-4 text-base leading-7 text-[#94a3b8] sm:text-lg">
-            From course publishing to learner progress, assessments, and communications, this LMS gives admins and students a single collaborative experience.
+          <p className="mt-4 text-base leading-7 text-[#64748b] sm:text-lg">
+            From course publishing to learner progress, assessments, and communications,
+            this LMS gives admins and students a single collaborative experience.
           </p>
         </div>
 
-        <div className="mt-16 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-12 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {features.map(({ title, description, Icon }) => (
             <Card
               key={title}
-              className="transform p-0 transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+              className="p-0 transition duration-300 hover:-translate-y-1 hover:shadow-lg"
             >
-              <CardHeader>
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-600">
+              <CardHeader className="p-6 pb-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#eff6ff] text-blue-600">
                   <Icon className="size-5" aria-hidden="true" />
                 </div>
-                <CardTitle>{title}</CardTitle>
+                <CardTitle className="mt-4">{title}</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6 pt-0">
                 <CardDescription>{description}</CardDescription>
               </CardContent>
             </Card>

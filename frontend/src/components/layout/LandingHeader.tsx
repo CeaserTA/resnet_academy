@@ -24,7 +24,7 @@ export function LandingHeader({ onLoginClick, onSignupClick }: LandingHeaderProp
     }, []);
 
     const navLinks = [
-        { label: 'Courses', to: '/#courses' },
+        { label: 'Home', to: '/' },
         { label: 'About', to: '/about' },
         { label: 'Contact', to: '/contact' },
     ];

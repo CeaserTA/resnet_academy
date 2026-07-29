@@ -37,19 +37,31 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, VariantPr
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, isLoading, disabled, children, ...props }, ref) => {
-    const Comp = asChild ? Slot : 'button';
+    // When asChild the underlying Comp is Radix's Slot, which requires exactly one React element
+    // child. We must never pass a second node (even a boolean false) alongside children, so the
+    // spinner is only rendered in the non-asChild branch.
+    if (asChild) {
+      return (
+        <Slot
+          ref={ref}
+          className={cn(buttonVariants({ variant, size }), className)}
+          {...props}
+        >
+          {children}
+        </Slot>
+      );
+    }
 
     return (
-      <Comp
+      <button
         ref={ref}
         disabled={disabled || isLoading}
         className={cn(buttonVariants({ variant, size }), className)}
         {...props}
       >
-        {/* isLoading spinner only injected when not using asChild — Slot requires exactly one child */}
-        {!asChild && isLoading && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
+        {isLoading && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
         {children}
-      </Comp>
+      </button>
     );
   },
 );
