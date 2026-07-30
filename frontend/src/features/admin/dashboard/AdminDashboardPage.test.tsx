@@ -1,10 +1,15 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { it, expect, vi } from 'vitest';
 import { AdminDashboardPage } from '@/features/admin/dashboard/AdminDashboardPage';
 import { PageHeaderProvider } from '@/lib/pageHeader/PageHeaderContext';
 import type { DashboardSummary } from '@/lib/api/types';
+
+vi.mock('@/features/catalogue/api', () => ({
+    fetchCourses: vi.fn().mockResolvedValue({ data: [] }),
+}));
 
 const { summary } = vi.hoisted(() => {
     const summary: DashboardSummary = {
@@ -19,7 +24,25 @@ const { summary } = vi.hoisted(() => {
         recent_audit_logs: [
             {
                 id: 1,
-                actor: { id: 1, role: 'admin', name: 'Resnet Admin', email: 'admin@resnet.test', phone: null, avatar_url: null, status: 'active', email_verified_at: '2026-01-01T00:00:00Z', last_login_at: null, created_at: '2026-01-01T00:00:00Z' },
+                actor: {
+                    id: 1,
+                    role: 'admin',
+                    name: 'Resnet Admin',
+                    email: 'admin@resnet.test',
+                    phone: null,
+                    avatar_url: null,
+                    first_name: null,
+                    last_name: null,
+                    bio: null,
+                    country: null,
+                    city: null,
+                    postal_code: null,
+                    tax_id: null,
+                    status: 'active',
+                    email_verified_at: '2026-01-01T00:00:00Z',
+                    last_login_at: null,
+                    created_at: '2026-01-01T00:00:00Z',
+                },
                 action: 'enrolment.confirmed',
                 entity_type: 'enrolment',
                 entity_id: 7,
@@ -64,7 +87,22 @@ it('shows stat cards from the fetched summary and quick action links to the righ
 
     expect(screen.getByRole('link', { name: /New course/ })).toHaveAttribute('href', '/admin/courses/new');
     expect(screen.getByRole('link', { name: /Provision user/ })).toHaveAttribute('href', '/admin/users');
-    expect(screen.getByRole('link', { name: /Bulk import/ })).toHaveAttribute('href', '/admin/enrolments/import');
+    expect(screen.queryByText('Categories')).not.toBeInTheDocument();
 
-    expect(screen.getByText(/enrolment.confirmed/)).toBeInTheDocument();
+    expect(screen.getByText('Resnet Admin confirmed an enrolment.')).toBeInTheDocument();
+});
+
+it('opens Bulk import as a modal instead of navigating to a page', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText('42');
+
+    const bulkImportButton = screen.getByRole('button', { name: /Bulk import/ });
+    expect(bulkImportButton).not.toHaveAttribute('href');
+
+    await user.click(bulkImportButton);
+
+    expect(await screen.findByText('Bulk enrolment import')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Queue import/ })).toBeInTheDocument();
 });

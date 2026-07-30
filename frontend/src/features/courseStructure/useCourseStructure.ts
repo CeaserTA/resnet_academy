@@ -5,6 +5,8 @@ import {
     deleteModule,
     deleteResource,
     fetchModules,
+    fetchTrashedModules,
+    restoreModule,
     updateModule,
     updateResource,
     type ModulePayload,
@@ -43,7 +45,30 @@ export function useDeleteModule(courseId: number) {
 
     return useMutation({
         mutationFn: (moduleId: number) => deleteModule(moduleId),
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['courses', courseId, 'modules'] }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['courses', courseId, 'modules'] });
+            queryClient.invalidateQueries({ queryKey: ['courses', courseId, 'modules', 'trashed'] });
+        },
+    });
+}
+
+export function useTrashedModules(courseId: number) {
+    return useQuery({
+        queryKey: ['courses', courseId, 'modules', 'trashed'],
+        queryFn: () => fetchTrashedModules(courseId),
+        enabled: Number.isFinite(courseId),
+    });
+}
+
+export function useRestoreModule(courseId: number) {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (moduleId: number) => restoreModule(moduleId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['courses', courseId, 'modules'] });
+            queryClient.invalidateQueries({ queryKey: ['courses', courseId, 'modules', 'trashed'] });
+        },
     });
 }
 

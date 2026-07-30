@@ -26,11 +26,11 @@ final class StoreSubmissionRequest extends FormRequest
 
         if ($assignment->submission_type === AssignmentSubmissionType::Both) {
             $fileRule = 'required_without:text_content';
-            $textRule = 'required_without:file_url';
+            $textRule = 'required_without:file';
         }
 
         return [
-            'file_url' => [$fileRule, 'url', 'max:500'],
+            'file' => [$fileRule, 'file', 'max:20480'],
             'text_content' => [$textRule, 'string'],
         ];
     }

@@ -12,7 +12,6 @@ import { CourseDetailPage } from '@/features/catalogue/CourseDetailPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { CourseListPage } from '@/features/admin/courses/CourseListPage';
 import { CourseFormPage } from '@/features/admin/courses/CourseFormPage';
-import { BulkImportPage } from '@/features/admin/enrolments/BulkImportPage';
 import { ProvisionUserPage } from '@/features/admin/users/ProvisionUserPage';
 import { CourseBuilderPage } from '@/features/courseStructure/CourseBuilderPage';
 import { CoursePlayerPage } from '@/features/learning/CoursePlayerPage';
@@ -24,8 +23,7 @@ import { EvaluationGradingPage } from '@/features/assessment/EvaluationGradingPa
 import { GradebookPage } from '@/features/assessment/GradebookPage';
 import { CertificateVerifyPage } from '@/features/progress/CertificateVerifyPage';
 import { AttendanceRosterPage } from '@/features/progress/AttendanceRosterPage';
-import { InboxPage } from '@/features/communication/InboxPage';
-import { ConversationPage } from '@/features/communication/ConversationPage';
+import { MessagesPage } from '@/features/communication/MessagesPage';
 import { TicketsPage } from '@/features/communication/TicketsPage';
 import { TicketRedirect } from '@/features/communication/TicketRedirect';
 import { ForumPage } from '@/features/communication/ForumPage';
@@ -98,14 +96,6 @@ function App() {
                     element={
                         <ProtectedRoute roles={['admin']}>
                             <PaymentsPage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="admin/enrolments/import"
-                    element={
-                        <ProtectedRoute roles={['admin']}>
-                            <BulkImportPage />
                         </ProtectedRoute>
                     }
                 />
@@ -199,8 +189,8 @@ function App() {
                     }
                 />
 
-                <Route path="messages" element={<InboxPage />} />
-                <Route path="messages/:id" element={<ConversationPage />} />
+                <Route path="messages" element={<MessagesPage />} />
+                <Route path="messages/:id" element={<MessagesPage />} />
                 <Route path="tickets" element={<TicketsPage />} />
                 <Route path="tickets/:id" element={<TicketRedirect />} />
                 <Route path="courses/:id/forum" element={<ForumPage />} />

@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/api/client';
+import { postFormData, toFormData } from '@/lib/api/formData';
 import type {
     Assignment,
     AssignmentSubmission,
@@ -54,8 +55,16 @@ export async function fetchAssignment(assignmentId: number): Promise<Assignment>
 
 export async function submitAssignment(
     assignmentId: number,
-    payload: { file_url?: string; text_content?: string },
+    payload: { file?: File; text_content?: string },
 ): Promise<AssignmentSubmission> {
+    if (payload.file) {
+        const response = await postFormData<{ data: AssignmentSubmission }>(
+            `/assignments/${assignmentId}/submissions`,
+            toFormData(payload),
+        );
+        return response.data;
+    }
+
     const { data } = await apiClient.post<{ data: AssignmentSubmission }>(
         `/assignments/${assignmentId}/submissions`,
         payload,

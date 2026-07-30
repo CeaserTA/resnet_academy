@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\CourseEnrolmentPolicy;
+use App\Enums\CourseLevel;
 use App\Enums\CourseStatus;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
@@ -78,6 +80,8 @@ final class CourseController extends Controller
         $data = $request->validated();
         $instructorIds = $data['instructor_ids'] ?? [];
         unset($data['instructor_ids'], $data['thumbnail']);
+
+        $data['enrolment_policy'] ??= CourseEnrolmentPolicy::defaultForLevel(CourseLevel::from($data['level']))->value;
 
         if ($request->hasFile('thumbnail')) {
             $data['thumbnail_url'] = $this->mediaStorage->store($request->file('thumbnail'), 'courses');

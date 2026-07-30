@@ -4,6 +4,8 @@ export type CourseLevel = 'beginner' | 'intermediate' | 'advanced';
 export type CourseStatus = 'draft' | 'published' | 'archived';
 export type EnrolmentStatus = 'confirmed' | 'withdrawn';
 export type EnrolmentSource = 'self' | 'admin_bulk';
+export type EnrolmentPolicy = 'open' | 'advisory' | 'application';
+export type CourseApplicationStatus = 'pending' | 'approved' | 'rejected';
 export type OrderStatus = 'pending' | 'partial' | 'paid';
 export type PaymentSubmissionStatus = 'pending' | 'confirmed' | 'rejected';
 
@@ -11,9 +13,16 @@ export interface User {
     id: number;
     role: UserRole;
     name: string;
+    first_name: string | null;
+    last_name: string | null;
     email: string;
     phone: string | null;
     avatar_url: string | null;
+    bio: string | null;
+    country: string | null;
+    city: string | null;
+    postal_code: string | null;
+    tax_id: string | null;
     status: UserStatus;
     email_verified_at: string | null;
     last_login_at: string | null;
@@ -34,6 +43,11 @@ export interface Course {
     slug: string;
     description: string | null;
     level: CourseLevel;
+    enrolment_policy: EnrolmentPolicy;
+    advisory_require_attestation: boolean;
+    application_questions: string[] | null;
+    application_allow_alternative_proof: boolean;
+    application_require_portfolio_url: boolean;
     thumbnail_url: string | null;
     prerequisites_text: string | null;
     price: string;
@@ -86,6 +100,19 @@ export interface Enrolment {
     confirmation_email_due_at: string;
     confirmation_email_sent_at: string | null;
     order: Order | null;
+}
+
+export interface CourseApplication {
+    id: number;
+    status: CourseApplicationStatus;
+    student: User;
+    course: Course;
+    answers: string[] | null;
+    portfolio_url: string | null;
+    alternative_proof_text: string | null;
+    recommended_courses: Course[];
+    applied_at: string;
+    reviewed_at: string | null;
 }
 
 export interface PaginatedResponse<T> {
@@ -161,6 +188,7 @@ export interface Module {
     group_ids: number[] | null;
     items: ModuleItem[];
     status: ModuleProgressStatus | null;
+    deleted_at: string | null;
 }
 
 export interface Group {

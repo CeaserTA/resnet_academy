@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import type { BadgeTone } from '@/components/ui/Badge';
+import { BarsAccent } from '@/components/ui/BarsAccent';
 import { cn } from '@/lib/utils';
 
 const ICON_CLASSES: Record<BadgeTone, string> = {
@@ -25,9 +26,9 @@ interface StatWidgetProps {
  * tone tokens still carry the meaning, just via the icon chip instead of a border). Every card
  * reserves the same sub-text line height (via `&nbsp;` when `sub` is absent) so cards stay a
  * consistent size across the grid regardless of which ones have subtext.
- * No trend arrow or sparkline: the dashboard API only returns current-moment counts, nothing
+ * No trend arrow or real sparkline: the dashboard API only returns current-moment counts, nothing
  * time-series, so there's no real data to back either — confirmed with the user rather than
- * fabricated.
+ * fabricated. `BarsAccent` is a fixed decorative flourish only, not a data visualization.
  */
 export function StatWidget({ icon: Icon, label, value, sub, tone }: StatWidgetProps) {
     return (
@@ -37,11 +38,14 @@ export function StatWidget({ icon: Icon, label, value, sub, tone }: StatWidgetPr
                 'shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
             )}
         >
-            <div className="flex items-center gap-2">
-                <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-full', ICON_CLASSES[tone])}>
-                    <Icon className="size-3.5" aria-hidden="true" />
-                </span>
-                <span className="truncate text-sm font-medium text-ink-600">{label}</span>
+            <div className="flex items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2">
+                    <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-full', ICON_CLASSES[tone])}>
+                        <Icon className="size-3.5" aria-hidden="true" />
+                    </span>
+                    <span className="truncate text-sm font-medium text-ink-600">{label}</span>
+                </div>
+                <BarsAccent />
             </div>
             <p className="mt-2 text-2xl font-semibold tracking-tight text-ink-900">{value}</p>
             <p className="mt-0.5 truncate text-xs text-ink-600">{sub || ' '}</p>

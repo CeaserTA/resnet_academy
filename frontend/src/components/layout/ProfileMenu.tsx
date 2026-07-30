@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { LogOut, ShieldCheck } from 'lucide-react';
+import { ChevronDown, LifeBuoy, LogOut, Pencil, Settings2 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth/AuthContext';
 
 /**
- * Top-bar profile dropdown — replaces the separate "My data & privacy" icon and the
- * sidebar-footer logout button with one place, following the same toggled-panel pattern
- * `NotificationBell` already uses.
+ * Top-bar profile dropdown. "Account settings" jumps to the same /account page as "Edit
+ * profile" — there's one unified profile page, not a separate settings screen — but scrolls to
+ * its Security section via the #security hash (see AccountPage's scroll-into-view effect).
  */
 export function ProfileMenu({ className }: { className?: string }) {
     const { user, logout } = useAuth();
@@ -29,9 +29,19 @@ export function ProfileMenu({ className }: { className?: string }) {
             <button
                 onClick={() => setIsOpen((prev) => !prev)}
                 aria-label="Account menu"
-                className={cn('flex items-center rounded-full', className)}
+                aria-expanded={isOpen}
+                className={cn(
+                    'flex min-w-0 items-center gap-2 rounded-full py-1 pl-1 pr-2 transition-colors hover:bg-surface-100',
+                    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600',
+                    className,
+                )}
             >
                 <Avatar name={user.name} src={user.avatar_url} />
+                <span className="hidden max-w-[8rem] truncate text-sm font-medium text-ink-900 sm:inline">{user.name}</span>
+                <ChevronDown
+                    className={cn('size-4 shrink-0 text-ink-600 transition-transform duration-200', isOpen && 'rotate-180')}
+                    aria-hidden="true"
+                />
             </button>
 
             {isOpen && (
@@ -46,16 +56,36 @@ export function ProfileMenu({ className }: { className?: string }) {
                         onClick={() => setIsOpen(false)}
                         className="flex items-center gap-2 px-3 py-2 text-sm text-ink-900 hover:bg-surface-50"
                     >
-                        <ShieldCheck className="size-4" aria-hidden="true" />
-                        My data & privacy
+                        <Pencil className="size-4" aria-hidden="true" />
+                        Edit profile
                     </Link>
+
+                    <Link
+                        to="/account#security"
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-ink-900 hover:bg-surface-50"
+                    >
+                        <Settings2 className="size-4" aria-hidden="true" />
+                        Account settings
+                    </Link>
+
+                    <Link
+                        to="/tickets"
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-ink-900 hover:bg-surface-50"
+                    >
+                        <LifeBuoy className="size-4" aria-hidden="true" />
+                        Support
+                    </Link>
+
+                    <div className="my-1 border-t border-surface-100" />
 
                     <button
                         onClick={handleLogout}
                         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-danger-600 hover:bg-surface-50"
                     >
                         <LogOut className="size-4" aria-hidden="true" />
-                        Log out
+                        Sign out
                     </button>
                 </div>
             )}

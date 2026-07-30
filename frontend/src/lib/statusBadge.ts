@@ -20,6 +20,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import type { BadgeTone } from '@/components/ui/Badge';
 import type {
+    CourseApplicationStatus,
     CourseProgressStatus,
     CourseStatus,
     EnrolmentStatus,
@@ -68,6 +69,41 @@ export function enrolmentStatusDisplay(status: EnrolmentStatus): StatusDisplay {
 
 export function orderStatusDisplay(status: OrderStatus): StatusDisplay {
     return orderStatusMap[status];
+}
+
+/**
+ * Only urgent cases get a badge — a due date months away stays plain text (see CoursePlayerPage)
+ * so the module list isn't full of badges for deadlines nobody needs to think about yet.
+ */
+export function assignmentDueBadge(dueAt: string | null, isComplete: boolean | null): StatusDisplay | null {
+    if (!dueAt || isComplete) {
+        return null;
+    }
+
+    const due = new Date(dueAt);
+    const now = new Date();
+
+    if (due < now) {
+        return { label: 'Overdue', tone: 'danger', icon: AlertTriangle };
+    }
+
+    const daysUntilDue = (due.getTime() - now.getTime()) / (24 * 60 * 60 * 1000);
+
+    if (daysUntilDue <= 3) {
+        return { label: `Due ${due.toLocaleDateString()}`, tone: 'warning', icon: Clock };
+    }
+
+    return null;
+}
+
+const courseApplicationStatusMap: Record<CourseApplicationStatus, StatusDisplay> = {
+    pending: { label: 'Pending', tone: 'warning', icon: Clock },
+    approved: { label: 'Approved', tone: 'success', icon: CheckCircle2 },
+    rejected: { label: 'Not accepted', tone: 'danger', icon: XCircle },
+};
+
+export function courseApplicationStatusDisplay(status: CourseApplicationStatus): StatusDisplay {
+    return courseApplicationStatusMap[status];
 }
 
 const courseProgressStatusMap: Record<CourseProgressStatus, StatusDisplay> = {
@@ -149,6 +185,8 @@ const notificationTypeMap: Record<string, StatusDisplay> = {
     grade_posted: { label: 'Grade posted', tone: 'success', icon: GraduationCap },
     module_unlocked: { label: 'Module unlocked', tone: 'success', icon: Unlock },
     at_risk_reminder: { label: 'At-risk check-in', tone: 'warning', icon: AlertTriangle },
+    application_approved: { label: 'Application approved', tone: 'success', icon: CheckCircle2 },
+    application_rejected: { label: 'Application update', tone: 'warning', icon: XCircle },
 };
 
 const defaultNotificationTypeDisplay: StatusDisplay = { label: 'Notification', tone: 'neutral', icon: Circle };

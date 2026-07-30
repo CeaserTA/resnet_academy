@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Services\Storage\MediaStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -19,7 +20,7 @@ final class AssignmentSubmissionResource extends JsonResource
             'assignment_id' => $this->assignment_id,
             'student' => new UserResource($this->whenLoaded('student')),
             'attempt_number' => $this->attempt_number,
-            'file_url' => $this->file_url,
+            'file_url' => app(MediaStorageService::class)->url($this->file_url),
             'text_content' => $this->text_content,
             'submitted_at' => $this->submitted_at->toIso8601String(),
             'is_late' => $this->is_late,

@@ -28,6 +28,16 @@ export async function deleteModule(moduleId: number): Promise<void> {
     await apiClient.delete(`/modules/${moduleId}`);
 }
 
+export async function fetchTrashedModules(courseId: number): Promise<Module[]> {
+    const { data } = await apiClient.get<{ data: Module[] }>(`/courses/${courseId}/modules/trashed`);
+    return data.data;
+}
+
+export async function restoreModule(moduleId: number): Promise<Module> {
+    const { data } = await apiClient.post<{ data: Module }>(`/modules/${moduleId}/restore`);
+    return data.data;
+}
+
 /**
  * One payload shape for all 7 resource types — mirrors StoreResourceRequest on the backend,
  * only the fields for the selected `type` are actually required there.

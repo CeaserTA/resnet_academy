@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { BookOpen, CircleCheck, Lock } from 'lucide-react';
+import { BookOpen, CircleCheck, Clock, Lock } from 'lucide-react';
 import { useCourse } from '@/features/catalogue/useCourses';
 import { Spinner } from '@/components/ui/Spinner';
 import { Badge } from '@/components/ui/Badge';
@@ -8,6 +8,9 @@ import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useEnrol } from '@/features/enrolment/useEnrolments';
+import { useMyCourseApplications } from '@/features/courseApplications/useCourseApplications';
+import { AdvisoryEnrolModal } from '@/features/catalogue/AdvisoryEnrolModal';
+import { ApplicationModal } from '@/features/catalogue/ApplicationModal';
 import { ApiError } from '@/lib/api/client';
 
 const levelLabel: Record<string, string> = {
@@ -29,8 +32,11 @@ export function CourseDetailPage() {
     const { user } = useAuth();
     const navigate = useNavigate();
     const enrol = useEnrol();
+    const { data: myApplications } = useMyCourseApplications(user?.role === 'student');
     const [enrolError, setEnrolError] = useState<string | null>(null);
     const [enrolled, setEnrolled] = useState(false);
+    const [showAdvisoryModal, setShowAdvisoryModal] = useState(false);
+    const [showApplicationModal, setShowApplicationModal] = useState(false);
 
     if (isLoading) {
         return <Spinner />;
@@ -40,9 +46,23 @@ export function CourseDetailPage() {
         return <p className="mx-auto max-w-3xl px-4 py-16 text-center text-ink-600">Course not found.</p>;
     }
 
+    const pendingApplication = myApplications?.find(
+        (application) => application.course.id === course.id && application.status === 'pending',
+    );
+
     const handleEnrol = async () => {
         if (!user) {
             navigate('/login', { state: { from: { pathname: `/courses/${course.id}` } } });
+            return;
+        }
+
+        if (course.enrolment_policy === 'advisory') {
+            setShowAdvisoryModal(true);
+            return;
+        }
+
+        if (course.enrolment_policy === 'application') {
+            setShowApplicationModal(true);
             return;
         }
 
@@ -96,16 +116,52 @@ export function CourseDetailPage() {
 
                 {enrolled ? (
                     <Badge label="Enrolled" tone="success" icon={CircleCheck} />
+                ) : pendingApplication ? (
+                    <Badge label="Pending approval" tone="warning" icon={Clock} />
                 ) : user?.role === 'student' || !user ? (
                     <Button onClick={handleEnrol} isLoading={enrol.isPending}>
-                        Enrol now
+                        {course.enrolment_policy === 'application' ? 'Apply to enrol' : 'Enrol now'}
                     </Button>
                 ) : (
                     <Badge label="Students only" tone="neutral" icon={Lock} />
                 )}
             </div>
 
+            {!enrolled && !pendingApplication && (user?.role === 'student' || !user) && (
+                <>
+                    {course.enrolment_policy === 'advisory' && (
+                        <p className="mt-2 text-sm text-ink-600">
+                            You&apos;ll be asked to confirm you meet the prerequisites before you&apos;re enrolled.
+                        </p>
+                    )}
+                    {course.enrolment_policy === 'application' && (
+                        <p className="mt-2 text-sm text-ink-600">
+                            Requires an admin to review and approve your application before you&apos;re enrolled.
+                        </p>
+                    )}
+                </>
+            )}
+
             {enrolError && <Alert variant="error" message={enrolError} className="mt-4" />}
+
+            {showAdvisoryModal && (
+                <AdvisoryEnrolModal
+                    course={course}
+                    onClose={() => setShowAdvisoryModal(false)}
+                    onEnrolled={() => {
+                        setShowAdvisoryModal(false);
+                        setEnrolled(true);
+                    }}
+                />
+            )}
+
+            {showApplicationModal && (
+                <ApplicationModal
+                    course={course}
+                    onClose={() => setShowApplicationModal(false)}
+                    onSubmitted={() => setShowApplicationModal(false)}
+                />
+            )}
         </div>
     );
 }

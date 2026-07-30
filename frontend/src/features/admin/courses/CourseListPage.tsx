@@ -1,17 +1,17 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { BookOpen, Layers, MoreVertical, Pencil, Search, Trash2 } from 'lucide-react';
+import { BookOpen, Layers, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { useCourses } from '@/features/catalogue/useCourses';
 import { useDeleteCourse } from '@/features/admin/courses/useAdminCourses';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { DropdownMenu } from '@/components/ui/DropdownMenu';
-import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { courseStatusDisplay } from '@/lib/statusBadge';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { usePageSearch } from '@/lib/pageHeader/PageHeaderContext';
 import type { Course } from '@/lib/api/types';
 
 function formatPrice(price: string): string {
@@ -97,6 +97,7 @@ export function CourseListPage() {
     const { data, isLoading } = useCourses({});
     const deleteCourse = useDeleteCourse();
     const [search, setSearch] = useState('');
+    usePageSearch(search, setSearch, 'Search courses…');
 
     const isAdmin = user?.role === 'admin';
 
@@ -120,27 +121,14 @@ export function CourseListPage() {
                     </p>
                 </div>
 
-                <div className="flex items-center gap-2">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-ink-600" aria-hidden="true" />
-                        <Input
-                            label="Search courses"
-                            labelClassName="sr-only"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            placeholder="Search courses…"
-                            className="w-56 py-2 pl-9 pr-3"
-                        />
-                    </div>
-                    {isAdmin && (
-                        <Link to="/admin/courses/new">
-                            <Button>
-                                <span aria-hidden="true">+</span>
-                                New course
-                            </Button>
-                        </Link>
-                    )}
-                </div>
+                {isAdmin && (
+                    <Link to="/admin/courses/new">
+                        <Button>
+                            <span aria-hidden="true">+</span>
+                            New course
+                        </Button>
+                    </Link>
+                )}
             </div>
 
             {isLoading && <Spinner className="mt-6" />}

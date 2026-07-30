@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api\V1;
 
+use App\Enums\CourseEnrolmentPolicy;
 use App\Enums\CourseLevel;
 use App\Enums\CourseStatus;
 use App\Models\Course;
@@ -29,6 +30,12 @@ final class UpdateCourseRequest extends FormRequest
             'slug' => ['sometimes', 'required', 'string', 'max:220', 'alpha_dash', Rule::unique('courses', 'slug')->ignore($course->id)],
             'description' => ['nullable', 'string'],
             'level' => ['sometimes', 'required', new Enum(CourseLevel::class)],
+            'enrolment_policy' => ['sometimes', 'required', new Enum(CourseEnrolmentPolicy::class)],
+            'advisory_require_attestation' => ['nullable', 'boolean'],
+            'application_questions' => ['nullable', 'array', 'max:10'],
+            'application_questions.*' => ['string', 'max:300'],
+            'application_allow_alternative_proof' => ['nullable', 'boolean'],
+            'application_require_portfolio_url' => ['nullable', 'boolean'],
             // Either paste a URL or upload an image — 'thumbnail' takes precedence when both are
             // present (see CourseController::update()).
             'thumbnail_url' => ['nullable', 'url', 'max:500'],

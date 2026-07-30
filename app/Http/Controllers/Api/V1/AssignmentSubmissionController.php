@@ -11,13 +11,17 @@ use App\Http\Resources\AssignmentSubmissionResource;
 use App\Models\Assignment;
 use App\Models\AssignmentSubmission;
 use App\Services\Assessment\AssignmentSubmissionService;
+use App\Services\Storage\MediaStorageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 final class AssignmentSubmissionController extends Controller
 {
-    public function __construct(private readonly AssignmentSubmissionService $submissionService) {}
+    public function __construct(
+        private readonly AssignmentSubmissionService $submissionService,
+        private readonly MediaStorageService $mediaStorage,
+    ) {}
 
     /**
      * Instructor/admin: every submission for this assignment. Student: only their own.
@@ -33,7 +37,14 @@ final class AssignmentSubmissionController extends Controller
 
     public function store(StoreSubmissionRequest $request, Assignment $assignment): JsonResponse
     {
-        $submission = $this->submissionService->submit($request->user(), $assignment, $request->validated());
+        $data = $request->validated();
+        unset($data['file']);
+
+        if ($request->hasFile('file')) {
+            $data['file_url'] = $this->mediaStorage->store($request->file('file'), "submissions/{$assignment->id}");
+        }
+
+        $submission = $this->submissionService->submit($request->user(), $assignment, $data);
 
         return (new AssignmentSubmissionResource($submission))->response()->setStatusCode(201);
     }

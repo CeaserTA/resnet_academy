@@ -9,14 +9,14 @@ import {
     LayoutDashboard,
     LifeBuoy,
     MessageSquare,
-    Upload,
+    Search,
     Users,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { NotificationBell } from '@/features/communication/NotificationBell';
 import { ProfileMenu } from '@/components/layout/ProfileMenu';
-import { PageHeaderProvider, usePageHeaderValue } from '@/lib/pageHeader/PageHeaderContext';
+import { PageHeaderProvider, usePageHeaderValue, usePageSearchValue } from '@/lib/pageHeader/PageHeaderContext';
 import { cn } from '@/lib/utils';
 
 interface NavItem {
@@ -39,7 +39,6 @@ function navItemsForRole(role: string): NavItem[] {
             ...communicationItems,
             { to: '/admin/applications', label: 'Applications', icon: FileCheck },
             { to: '/admin/payments', label: 'Payments', icon: CreditCard },
-            { to: '/admin/enrolments/import', label: 'Bulk import', icon: Upload },
             { to: '/admin/users', label: 'Team', icon: Users },
             { to: '/admin/audit-log', label: 'Audit log', icon: ClipboardList },
         ];
@@ -88,24 +87,40 @@ function NavLinks({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => 
 
 function TopBar() {
     const header = usePageHeaderValue();
+    const search = usePageSearchValue();
 
     return (
-        <header className="flex shrink-0 items-center justify-between border-b border-surface-100 bg-surface-0 px-4 py-3 sm:px-6">
+        <header className="flex shrink-0 items-center justify-between gap-4 border-b border-surface-100 bg-surface-0 px-4 py-3 sm:px-6">
             {header ? (
-                <div>
+                <div className="min-w-0 shrink-0">
                     <h1 className="text-lg text-ink-900">{header.title}</h1>
                     {header.subtitle && <p className="text-sm text-ink-600">{header.subtitle}</p>}
                 </div>
             ) : (
-                <Link to="/dashboard" className="flex items-center gap-2 font-display font-semibold text-blue-600">
+                <Link to="/dashboard" className="flex shrink-0 items-center gap-2 font-display font-semibold text-blue-600">
                     <GraduationCap className="size-5" aria-hidden="true" />
                     Resnet LMS
                 </Link>
             )}
 
-            <div className="flex items-center gap-1">
-                <NotificationBell className="text-ink-600 hover:bg-surface-100" />
-                <ProfileMenu />
+            <div className="flex flex-1 items-center justify-end gap-2">
+                {search && (
+                    <div className="relative w-full max-w-64">
+                        <Search className="absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-ink-600" aria-hidden="true" />
+                        <input
+                            value={search.value}
+                            onChange={(e) => search.onChange(e.target.value)}
+                            placeholder={search.placeholder}
+                            aria-label={search.placeholder ?? 'Search'}
+                            className="w-full rounded-md border border-surface-100 bg-surface-0 py-2 pl-9 pr-3 text-sm text-ink-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                        />
+                    </div>
+                )}
+
+                <div className="flex shrink-0 items-center gap-1">
+                    <NotificationBell className="text-ink-600 hover:bg-surface-100" />
+                    <ProfileMenu />
+                </div>
             </div>
         </header>
     );

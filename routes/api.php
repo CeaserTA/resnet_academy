@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V1\AssignmentSubmissionController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CertificateController;
 use App\Http\Controllers\Api\V1\ConversationController;
+use App\Http\Controllers\Api\V1\CourseApplicationController;
 use App\Http\Controllers\Api\V1\CourseController;
 use App\Http\Controllers\Api\V1\EnrolmentController;
 use App\Http\Controllers\Api\V1\EnrolmentImportController;
@@ -66,11 +67,19 @@ Route::prefix('v1')->group(function (): void {
 
         Route::get('/me/data-export', [AccountController::class, 'export']);
         Route::post('/me/avatar', [AccountController::class, 'updateAvatar']);
+        Route::patch('/me/profile', [AccountController::class, 'updateProfile']);
+        Route::post('/me/change-password', [AccountController::class, 'changePassword']);
 
         Route::get('/enrolments', [EnrolmentController::class, 'index']);
         Route::post('/enrolments', [EnrolmentController::class, 'store']);
         Route::post('/enrolments/import', [EnrolmentImportController::class, 'store']);
         Route::post('/enrolments/{enrolment}/withdraw', [EnrolmentController::class, 'withdraw']);
+
+        Route::get('/course-applications', [CourseApplicationController::class, 'index']);
+        Route::get('/course-applications/me', [CourseApplicationController::class, 'mine']);
+        Route::post('/course-applications', [CourseApplicationController::class, 'store']);
+        Route::post('/course-applications/{application}/approve', [CourseApplicationController::class, 'approve']);
+        Route::post('/course-applications/{application}/reject', [CourseApplicationController::class, 'reject']);
 
         Route::post('/orders/{order}/payment-submissions', [PaymentSubmissionController::class, 'store']);
 
@@ -88,6 +97,8 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/courses/{course}/modules', [ModuleController::class, 'store']);
         Route::patch('/modules/{module}', [ModuleController::class, 'update']);
         Route::delete('/modules/{module}', [ModuleController::class, 'destroy']);
+        Route::get('/courses/{course}/modules/trashed', [ModuleController::class, 'trashed']);
+        Route::post('/modules/{module}/restore', [ModuleController::class, 'restore'])->withTrashed();
 
         Route::get('/courses/{course}/groups', [GroupController::class, 'index']);
         Route::post('/courses/{course}/groups', [GroupController::class, 'store']);

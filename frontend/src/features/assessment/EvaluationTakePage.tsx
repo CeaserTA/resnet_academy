@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router';
-import { ArrowLeft, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { useParams, useSearchParams } from 'react-router';
+import { CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';
 import { Alert } from '@/components/ui/Alert';
 import { Spinner } from '@/components/ui/Spinner';
+import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
+import { useCourse } from '@/features/catalogue/useCourses';
 import { ApiError } from '@/lib/api/client';
 import { useStartAttempt, useSubmitAttempt } from '@/features/assessment/useAssessment';
 import type { AttemptAnswerInput } from '@/features/assessment/api';
@@ -157,6 +159,7 @@ export function EvaluationTakePage() {
     const [searchParams] = useSearchParams();
     const courseId = Number(searchParams.get('course'));
 
+    const { data: course } = useCourse(courseId);
     const startAttempt = useStartAttempt();
     const submitAttempt = useSubmitAttempt();
 
@@ -220,13 +223,13 @@ export function EvaluationTakePage() {
 
     return (
         <div className="mx-auto max-w-2xl">
-            <Link
-                to={`/learn/courses/${courseId}`}
-                className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
-            >
-                <ArrowLeft className="size-4" aria-hidden="true" />
-                Back to course
-            </Link>
+            <Breadcrumbs
+                items={[
+                    { label: 'My Courses', to: '/dashboard' },
+                    { label: course?.title ?? '', to: `/learn/courses/${courseId}` },
+                    { label: `Attempt #${session.attempt.attempt_number}` },
+                ]}
+            />
 
             <div className="mt-2 flex items-center justify-between">
                 <h1 className="text-2xl">Attempt #{session.attempt.attempt_number}</h1>
