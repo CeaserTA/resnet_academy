@@ -21,22 +21,10 @@ interface AuthModalProps {
 }
 
 const roleOptions = [
-  {
-    value: 'student',
-    label: 'Student',
-    description: 'Access learning paths, hands-on exercises, and community support.',
-  },
-  {
-    value: 'instructor',
-    label: 'Instructor',
-    description: 'Create courses, mentor learners, and share practical projects.',
-  },
-  {
-    value: 'admin',
-    label: 'Admin',
-    description: 'Manage users, content, and academy settings with full controls.',
-  },
+  { value: 'student', label: 'Student' },
+  { value: 'instructor', label: 'Instructor' },
 ] as const;
+// Admin accounts are provisioned by existing admins via POST /api/v1/admin/users — not public signup.
 
 const expertiseOptions = [
   { value: 'web-development', label: 'Web development' },
@@ -165,21 +153,20 @@ export function AuthModal({ open, mode, onModeChange, onClose }: AuthModalProps)
             {isSignup && (
               <div className="space-y-4 rounded-3xl border border-[#e8ecf1] bg-white p-4">
                 <p className="text-sm font-semibold text-ink-900">Choose your role</p>
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid grid-cols-2 gap-3">
                   {roleOptions.map((option) => (
                     <button
                       key={option.value}
                       type="button"
                       onClick={() => setRole(option.value)}
                       className={cn(
-                        'rounded-3xl border p-4 text-left transition',
+                        'rounded-2xl border px-4 py-3 text-center transition',
                         role === option.value
                           ? 'border-blue-300 bg-blue-50 shadow-sm'
                           : 'border-[#e8ecf1] bg-white hover:border-blue-200 hover:bg-blue-50',
                       )}
                     >
                       <p className="text-sm font-semibold text-ink-900">{option.label}</p>
-                      <p className="mt-1 text-sm leading-6 text-[#64748b]">{option.description}</p>
                     </button>
                   ))}
                 </div>

@@ -357,7 +357,7 @@ export function AboutPage() {
                             {mentors.map(({ initials, name, role, skills, quote, avatarGradient, avatarText }) => (
                                 <div
                                     key={name}
-                                    className="flex flex-col items-center rounded-3xl border border-[#e8ecf1] bg-white p-8 text-center shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+                                    className="flex flex-col items-center rounded-2xl border border-[#e8ecf1] bg-white p-8 text-center shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
                                 >
                                     {/* TODO: replace gradient div with <img src={photo} ... /> when mentor photos are available */}
                                     <div

@@ -247,7 +247,7 @@ export function ContactPage() {
                 </section>
 
                 {/* ── 3. Map + dark form ─────────────────────────────────── */}
-                <section className="border-t border-[#e8ecf1] bg-white px-4 py-16 sm:px-6 lg:px-8">
+                <section className="border-t border-[#e8ecf1] bg-[#fafbfc] px-4 py-16 sm:px-6 lg:px-8">
                     <div className="mx-auto max-w-7xl">
                         <div className="grid gap-8 lg:grid-cols-2">
 
@@ -347,7 +347,8 @@ export function ContactPage() {
 
                                             <Button
                                                 type="submit"
-                                                className="w-full bg-white text-blue-700 hover:bg-blue-50 font-semibold"
+                                                variant="outline"
+                                                className="w-full border-white/40 bg-white text-blue-700 font-semibold hover:bg-blue-50"
                                             >
                                                 Send Message
                                             </Button>

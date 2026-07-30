@@ -32,7 +32,7 @@ const testimonials = [
 
 export function Testimonials() {
   return (
-    <section id="testimonials" className="border-t border-[#e8ecf1] bg-[#fafbfc] px-4 py-20 sm:px-6 lg:px-8">
+    <section id="testimonials" className="border-t border-[#e8ecf1] bg-[#fafbfc] px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         {/* Left-aligned heading block */}
         <div className="mb-12 max-w-2xl">
