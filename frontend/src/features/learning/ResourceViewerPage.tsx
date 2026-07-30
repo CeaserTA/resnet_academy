@@ -1,10 +1,13 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
-import { ArrowLeft, CheckCircle2, ExternalLink, Pause, Play, Video } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { ChevronLeft, ChevronRight, CheckCircle2, ExternalLink, Pause, Play, Video } from 'lucide-react';
+import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
+import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
+import { YouTubeEmbed } from '@/components/media/YouTubeEmbed';
+import { extractYouTubeVideoId } from '@/lib/youtube';
 import {
     useMarkAttendance,
     useMarkOpened,
@@ -12,7 +15,52 @@ import {
     useRecordVideoProgress,
     useResource,
 } from '@/features/learning/useLearning';
+import { useCourseSequence } from '@/features/learning/useCourseSequence';
 import { ReadingLessonView } from '@/features/learning/ReadingLessonView';
+import { useCourse } from '@/features/catalogue/useCourses';
+import { findAdjacentItems, itemLinkFor } from '@/lib/courseSequence';
+
+/**
+ * External links normally just navigate away in a new tab — a YouTube link is the one exception,
+ * playing inline instead so students never leave the system to watch it. "Opened" is recorded as
+ * soon as the embed is shown (there's no click to hook into once it's inline).
+ */
+function ExternalLinkViewer({
+    url,
+    isComplete,
+    onOpened,
+}: {
+    url: string | null | undefined;
+    isComplete: boolean;
+    onOpened: () => void;
+}) {
+    const videoId = url ? extractYouTubeVideoId(url) : null;
+    const hasNotifiedRef = useRef(false);
+
+    useEffect(() => {
+        if (videoId && !isComplete && !hasNotifiedRef.current) {
+            hasNotifiedRef.current = true;
+            onOpened();
+        }
+    }, [videoId, isComplete, onOpened]);
+
+    if (videoId) {
+        return <YouTubeEmbed videoId={videoId} />;
+    }
+
+    return (
+        <a
+            href={url ?? '#'}
+            target="_blank"
+            rel="noreferrer"
+            onClick={() => !isComplete && onOpened()}
+            className="inline-flex items-center gap-2 text-blue-600 hover:underline"
+        >
+            <ExternalLink className="size-4" aria-hidden="true" />
+            Open link
+        </a>
+    );
+}
 
 /**
  * Simulated playback: this app doesn't have real Bunny Stream credentials wired up yet
@@ -95,10 +143,12 @@ export function ResourceViewerPage() {
     const [searchParams] = useSearchParams();
     const courseId = Number(searchParams.get('course'));
 
+    const { data: course } = useCourse(courseId);
     const { data: resource, isLoading } = useResource(resourceId);
     const markRead = useMarkRead(courseId);
     const markOpened = useMarkOpened(courseId);
     const markAttendance = useMarkAttendance(courseId);
+    const { flatItems } = useCourseSequence(courseId);
 
     if (isLoading || !resource) {
         return <Spinner />;
@@ -108,15 +158,17 @@ export function ResourceViewerPage() {
 
     const isReading = resource.type === 'reading';
 
+    const { prevItem, nextItem } = findAdjacentItems(flatItems, 'resource', resource.id);
+
     return (
         <div className={isReading ? 'mx-auto max-w-3xl' : 'mx-auto max-w-2xl'}>
-            <Link
-                to={`/learn/courses/${courseId}`}
-                className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
-            >
-                <ArrowLeft className="size-4" aria-hidden="true" />
-                Back to course
-            </Link>
+            <Breadcrumbs
+                items={[
+                    { label: 'My Courses', to: '/dashboard' },
+                    { label: course?.title ?? '', to: `/learn/courses/${courseId}` },
+                    { label: resource.title },
+                ]}
+            />
 
             <div className="mt-2 flex items-center gap-2">
                 <h1 className={isReading ? 'text-3xl' : 'text-2xl'}>{resource.title}</h1>
@@ -136,7 +188,6 @@ export function ResourceViewerPage() {
                 {resource.type === 'reading' && (
                     <ReadingLessonView
                         resource={resource}
-                        courseId={courseId}
                         isComplete={Boolean(isComplete)}
                         onMarkRead={() => markRead.mutate(resource.id)}
                         isMarkingRead={markRead.isPending}
@@ -165,21 +216,27 @@ export function ResourceViewerPage() {
                     </div>
                 )}
 
-                {(resource.type === 'document' ||
-                    resource.type === 'downloadable_file' ||
-                    resource.type === 'external_link') && (
+                {(resource.type === 'document' || resource.type === 'downloadable_file') && (
                     <div className="flex flex-col gap-4">
                         <a
-                            href={resource.details.file_url ?? resource.details.url ?? '#'}
+                            href={resource.details.file_url ?? '#'}
                             target="_blank"
                             rel="noreferrer"
                             onClick={() => !isComplete && markOpened.mutate(resource.id)}
                             className="inline-flex items-center gap-2 text-blue-600 hover:underline"
                         >
                             <ExternalLink className="size-4" aria-hidden="true" />
-                            {resource.type === 'external_link' ? 'Open link' : 'Open file'}
+                            Open file
                         </a>
                     </div>
+                )}
+
+                {resource.type === 'external_link' && (
+                    <ExternalLinkViewer
+                        url={resource.details.url}
+                        isComplete={Boolean(isComplete)}
+                        onOpened={() => markOpened.mutate(resource.id)}
+                    />
                 )}
 
                 {resource.type === 'live_session' && (
@@ -210,6 +267,38 @@ export function ResourceViewerPage() {
                     </div>
                 )}
             </Card>
+
+            {(prevItem || nextItem) && (
+                <div className="mt-4 flex items-center justify-between gap-3">
+                    {prevItem ? (
+                        <Link
+                            to={itemLinkFor(prevItem, courseId)}
+                            className="flex min-w-0 items-center gap-1.5 text-sm text-ink-600 hover:text-blue-600"
+                        >
+                            <ChevronLeft className="size-4 shrink-0" aria-hidden="true" />
+                            <span className="flex flex-col items-start">
+                                <span className="text-xs text-ink-600">Previous</span>
+                                <span className="max-w-40 truncate text-ink-900 sm:max-w-xs">{prevItem.title}</span>
+                            </span>
+                        </Link>
+                    ) : (
+                        <span />
+                    )}
+
+                    {nextItem && (
+                        <Link
+                            to={itemLinkFor(nextItem, courseId)}
+                            className="flex min-w-0 items-center gap-1.5 text-right text-sm text-ink-600 hover:text-blue-600"
+                        >
+                            <span className="flex flex-col items-end">
+                                <span className="text-xs text-ink-600">Next</span>
+                                <span className="max-w-40 truncate text-ink-900 sm:max-w-xs">{nextItem.title}</span>
+                            </span>
+                            <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
+                        </Link>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

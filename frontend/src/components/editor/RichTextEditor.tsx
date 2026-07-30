@@ -10,6 +10,7 @@ import TableRow from '@tiptap/extension-table-row';
 import TableCell from '@tiptap/extension-table-cell';
 import TableHeader from '@tiptap/extension-table-header';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
+import Youtube from '@tiptap/extension-youtube';
 import { RichTextToolbar } from '@/components/editor/RichTextToolbar';
 import { lowlight } from '@/components/editor/lowlight';
 import { normalizeLessonHtml } from '@/components/editor/htmlContent';
@@ -50,6 +51,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
             TableHeader,
             TableCell,
             CodeBlockLowlight.configure({ lowlight }),
+            Youtube.configure({ nocookie: true, width: 640, height: 360, HTMLAttributes: { class: 'youtube-embed' } }),
         ],
         content: normalizeLessonHtml(value),
         onUpdate: ({ editor: instance }) => onChange(instance.getHTML()),

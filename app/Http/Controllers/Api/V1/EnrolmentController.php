@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\CourseEnrolmentPolicy;
 use App\Enums\EnrolmentSource;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreEnrolmentRequest;
@@ -14,6 +15,7 @@ use App\Services\Enrolment\EnrolmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Validation\ValidationException;
 
 final class EnrolmentController extends Controller
 {
@@ -34,11 +36,17 @@ final class EnrolmentController extends Controller
     }
 
     /**
-     * FR-2/FR-3: self-enrolment, auto-confirmed, no eligibility gate.
+     * FR-2/FR-3: self-enrolment, auto-confirmed, no eligibility gate — except Application-policy
+     * courses, which must go through `CourseApplicationController::store()` and admin review
+     * instead. Advisory and Open courses both still self-enrol here directly.
      */
     public function store(StoreEnrolmentRequest $request): JsonResponse
     {
         $course = Course::query()->findOrFail($request->validated('course_id'));
+
+        if ($course->enrolment_policy === CourseEnrolmentPolicy::Application) {
+            throw ValidationException::withMessages(['course_id' => 'This course requires an application — you can’t enrol directly.']);
+        }
 
         $enrolment = $this->enrolmentService->enrol($request->user(), $course, EnrolmentSource::Self);
 

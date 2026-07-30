@@ -15,6 +15,13 @@ const { student } = vi.hoisted(() => {
         email: 'quiet@example.com',
         phone: null,
         avatar_url: null,
+        first_name: null,
+        last_name: null,
+        bio: null,
+        country: null,
+        city: null,
+        postal_code: null,
+        tax_id: null,
         status: 'active',
         email_verified_at: '2026-01-01T00:00:00Z',
         last_login_at: null,
@@ -30,11 +37,16 @@ vi.mock('@/features/auth/api', () => ({
 
 const requestAccountDeactivation = vi.fn().mockResolvedValue(undefined);
 const uploadAvatar = vi.fn().mockResolvedValue(student);
+const updateProfile = vi.fn().mockResolvedValue(student);
+const changePassword = vi.fn().mockResolvedValue(undefined);
+const logoutOtherSessions = vi.fn().mockResolvedValue(undefined);
 
 vi.mock('@/features/account/api', () => ({
-    fetchAccountDataExport: vi.fn().mockResolvedValue({ profile: student }),
     requestAccountDeactivation: () => requestAccountDeactivation(),
     uploadAvatar: (file: File) => uploadAvatar(file),
+    updateProfile: (payload: unknown) => updateProfile(payload),
+    changePassword: (payload: unknown) => changePassword(payload),
+    logoutOtherSessions: () => logoutOtherSessions(),
 }));
 
 function renderPage() {
@@ -79,4 +91,31 @@ it('uploads a selected photo as the new avatar', async () => {
     await user.upload(input, file);
 
     expect(uploadAvatar).toHaveBeenCalledWith(file);
+});
+
+it('edits the profile via the Edit modal', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(await screen.findByText(/quiet@example.com/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Edit profile' }));
+    const firstNameInput = await screen.findByLabelText('First name');
+    await user.clear(firstNameInput);
+    await user.type(firstNameInput, 'Jane');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(updateProfile).toHaveBeenCalledWith(expect.objectContaining({ first_name: 'Jane' }));
+});
+
+it('logs out other devices from the Danger Zone', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(await screen.findByText(/quiet@example.com/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Logout all devices' }));
+
+    expect(logoutOtherSessions).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText('Every other session has been signed out.')).toBeInTheDocument();
 });

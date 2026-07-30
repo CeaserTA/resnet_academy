@@ -3,6 +3,7 @@ import { ClipboardList } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { describeAuditLogEntry } from '@/lib/auditLog';
 
 import { useAuditLogs } from '@/features/analytics/useAnalytics';
 
@@ -47,20 +48,19 @@ export function AuditLogPage() {
                     <table className="w-full text-sm">
                         <thead className="sticky top-0 bg-surface-100 text-left">
                             <tr>
-                                <th className="px-4 py-2 font-medium text-ink-600">Action</th>
-                                <th className="px-4 py-2 font-medium text-ink-600">Entity</th>
-                                <th className="px-4 py-2 font-medium text-ink-600">Actor</th>
+                                <th className="px-4 py-2 font-medium text-ink-600">Event</th>
                                 <th className="px-4 py-2 text-right font-medium text-ink-600">When</th>
                             </tr>
                         </thead>
                         <tbody>
                             {logs.map((log, index) => (
                                 <tr key={log.id} className={index % 2 === 1 ? 'bg-surface-50' : undefined}>
-                                    <td className="px-4 py-3 font-mono text-xs text-ink-900">{log.action}</td>
-                                    <td className="px-4 py-3 text-ink-600">
-                                        {log.entity_type} #{log.entity_id}
+                                    <td className="px-4 py-3">
+                                        <p className="text-ink-900">{describeAuditLogEntry(log)}</p>
+                                        <p className="mt-0.5 font-mono text-xs text-ink-600">
+                                            {log.action} · {log.entity_type} #{log.entity_id}
+                                        </p>
                                     </td>
-                                    <td className="px-4 py-3 text-ink-900">{log.actor?.name ?? 'System'}</td>
                                     <td className="px-4 py-3 text-right font-mono text-xs text-ink-600">
                                         {new Date(log.created_at).toLocaleString()}
                                     </td>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\CourseEnrolmentPolicy;
 use App\Enums\CourseLevel;
 use App\Enums\CourseStatus;
 use Database\Factories\CourseFactory;
@@ -24,6 +25,11 @@ final class Course extends Model
         'slug',
         'description',
         'level',
+        'enrolment_policy',
+        'advisory_require_attestation',
+        'application_questions',
+        'application_allow_alternative_proof',
+        'application_require_portfolio_url',
         'thumbnail_url',
         'prerequisites_text',
         'price',
@@ -37,6 +43,11 @@ final class Course extends Model
 
     protected $casts = [
         'level' => CourseLevel::class,
+        'enrolment_policy' => CourseEnrolmentPolicy::class,
+        'advisory_require_attestation' => 'boolean',
+        'application_questions' => 'array',
+        'application_allow_alternative_proof' => 'boolean',
+        'application_require_portfolio_url' => 'boolean',
         'status' => CourseStatus::class,
         'price' => 'decimal:2',
         'schedule_start_date' => 'date',
@@ -89,6 +100,14 @@ final class Course extends Model
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
+    }
+
+    /**
+     * @return HasMany<CourseApplication, $this>
+     */
+    public function applications(): HasMany
+    {
+        return $this->hasMany(CourseApplication::class);
     }
 
     /**

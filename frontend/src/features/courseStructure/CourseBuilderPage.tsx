@@ -12,6 +12,7 @@ import { StatCard } from '@/components/ui/StatCard';
 import { useCourse } from '@/features/catalogue/useCourses';
 import { useCreateModule, useDeleteModule, useModules } from '@/features/courseStructure/useCourseStructure';
 import { ModuleTableRow } from '@/features/courseStructure/ModuleTableRow';
+import { TrashedModulesSection } from '@/features/courseStructure/TrashedModulesSection';
 import { useCourseAnalytics } from '@/features/analytics/useAnalytics';
 import { AtRiskStudentsTable } from '@/features/analytics/AtRiskStudentsTable';
 import { EnrollmentTable } from '@/features/analytics/EnrollmentTable';
@@ -141,6 +142,8 @@ export function CourseBuilderPage() {
                     )}
                 </div>
             </Card>
+
+            <TrashedModulesSection courseId={courseId} />
 
             {analytics && (
                 <div className="mt-6 flex flex-col gap-6">

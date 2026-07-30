@@ -1,13 +1,14 @@
-﻿import { useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router';
-import { ArrowLeft, Clock } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { useRef, useState } from 'react';
+import { useParams, useSearchParams } from 'react-router';
+import { Clock, FolderOpen, Send, Upload } from 'lucide-react';
+import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Alert } from '@/components/ui/Alert';
 import { Spinner } from '@/components/ui/Spinner';
+import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
+import { useCourse } from '@/features/catalogue/useCourses';
 import { ApiError } from '@/lib/api/client';
 import { useAssignment, useSubmitAssignment } from '@/features/assessment/useAssessment';
 
@@ -22,10 +23,12 @@ export function AssignmentSubmitPage() {
     const [searchParams] = useSearchParams();
     const courseId = Number(searchParams.get('course'));
 
+    const { data: course } = useCourse(courseId);
     const { data: assignment, isLoading } = useAssignment(assignmentId);
     const submit = useSubmitAssignment(assignmentId);
 
-    const [fileUrl, setFileUrl] = useState('');
+    const [file, setFile] = useState<File | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [textContent, setTextContent] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [justSubmitted, setJustSubmitted] = useState(false);
@@ -38,13 +41,30 @@ export function AssignmentSubmitPage() {
     const needsText = assignment.submission_type === 'text' || assignment.submission_type === 'both';
     const isOverdue = assignment.due_at !== null && new Date(assignment.due_at) < new Date();
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setFile(e.target.files?.[0] ?? null);
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
 
+        if (assignment.submission_type === 'file' && !file) {
+            setError('Choose a file to submit.');
+            return;
+        }
+        if (assignment.submission_type === 'text' && !textContent.trim()) {
+            setError('Enter an answer before submitting.');
+            return;
+        }
+        if (assignment.submission_type === 'both' && !file && !textContent.trim()) {
+            setError('Attach a file or enter an answer.');
+            return;
+        }
+
         try {
             await submit.mutateAsync({
-                file_url: needsFile ? fileUrl : undefined,
+                file: needsFile && file ? file : undefined,
                 text_content: needsText ? textContent : undefined,
             });
             setJustSubmitted(true);
@@ -55,13 +75,13 @@ export function AssignmentSubmitPage() {
 
     return (
         <div className="mx-auto max-w-2xl">
-            <Link
-                to={`/learn/courses/${courseId}`}
-                className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
-            >
-                <ArrowLeft className="size-4" aria-hidden="true" />
-                Back to course
-            </Link>
+            <Breadcrumbs
+                items={[
+                    { label: 'My Courses', to: '/dashboard' },
+                    { label: course?.title ?? '', to: `/learn/courses/${courseId}` },
+                    { label: assignment.title },
+                ]}
+            />
 
             <div className="mt-2 flex items-center gap-2">
                 <h1 className="text-2xl">{assignment.title}</h1>
@@ -79,30 +99,48 @@ export function AssignmentSubmitPage() {
                         message="Submission received. Your instructor will grade it and you'll see the score here."
                     />
                 ) : (
-                    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                        <div className="flex items-center gap-2">
+                            <Upload className="size-5 text-blue-600" aria-hidden="true" />
+                            <h2 className="text-lg text-ink-900">Submission</h2>
+                        </div>
+
                         {error && <Alert variant="error" message={error} />}
 
-                        {needsFile && (
-                            <Input
-                                label="File URL"
-                                type="url"
-                                value={fileUrl}
-                                onChange={(e) => setFileUrl(e.target.value)}
-                                required
-                            />
-                        )}
-                        {needsText && (
-                            <Textarea
-                                label="Answer"
-                                rows={6}
-                                value={textContent}
-                                onChange={(e) => setTextContent(e.target.value)}
-                                required
-                            />
-                        )}
+                        <div className="flex flex-col gap-4 rounded-lg border border-dashed border-surface-100 bg-surface-50 p-4">
+                            {needsFile && (
+                                <div>
+                                    <p className="text-sm text-ink-900">Upload your file for this assignment.</p>
+                                    <p className="text-sm text-ink-600">
+                                        {assignment.submission_type === 'both'
+                                            ? 'Optional if you answer below instead.'
+                                            : 'Any file type is accepted.'}
+                                    </p>
 
-                        <Button type="submit" isLoading={submit.isPending} className="self-start">
-                            Submit assignment
+                                    <div className="mt-3 flex items-center gap-3">
+                                        <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileChange} />
+                                        <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>
+                                            <FolderOpen className="size-4" aria-hidden="true" />
+                                            Choose File
+                                        </Button>
+                                        <span className="text-sm text-ink-600">{file ? file.name : 'No file chosen'}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {needsText && (
+                                <Textarea
+                                    label="Answer"
+                                    rows={6}
+                                    value={textContent}
+                                    onChange={(e) => setTextContent(e.target.value)}
+                                />
+                            )}
+                        </div>
+
+                        <Button type="submit" isLoading={submit.isPending} className="w-full justify-center">
+                            <Send className="size-4" aria-hidden="true" />
+                            Submit Assignment
                         </Button>
                     </form>
                 )}

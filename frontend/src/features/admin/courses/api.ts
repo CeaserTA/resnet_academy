@@ -8,6 +8,11 @@ export interface CoursePayload {
     category_id?: number;
     description?: string;
     level: string;
+    enrolment_policy: string;
+    advisory_require_attestation?: boolean;
+    application_questions?: string[];
+    application_allow_alternative_proof?: boolean;
+    application_require_portfolio_url?: boolean;
     price: number;
     currency?: string;
     status?: string;
@@ -21,14 +26,15 @@ export interface CoursePayload {
 /**
  * Plain JSON when there's no file to upload (the common case); multipart only when a thumbnail
  * is attached — mirrors the file-or-no-file branching already established in `ForumComposer`.
- * `instructor_ids` is the one array field, appended index-free (`instructor_ids[]`) the way
- * Laravel expects an array from a multipart body.
+ * `instructor_ids`/`application_questions` are the array fields, appended index-free
+ * (`field[]`) the way Laravel expects an array from a multipart body.
  */
 function buildCourseFormData(payload: Partial<CoursePayload>): FormData {
-    const { instructor_ids, ...rest } = payload;
+    const { instructor_ids, application_questions, ...rest } = payload;
     const formData = toFormData(rest);
 
     instructor_ids?.forEach((id) => formData.append('instructor_ids[]', String(id)));
+    application_questions?.forEach((question) => formData.append('application_questions[]', question));
 
     return formData;
 }

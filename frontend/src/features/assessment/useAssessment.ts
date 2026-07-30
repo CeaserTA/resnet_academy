@@ -78,8 +78,7 @@ export function useSubmitAssignment(assignmentId: number) {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (payload: { file_url?: string; text_content?: string }) =>
-            submitAssignment(assignmentId, payload),
+        mutationFn: (payload: { file?: File; text_content?: string }) => submitAssignment(assignmentId, payload),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['assignments', assignmentId] });
             queryClient.invalidateQueries({ queryKey: ['modules'] });

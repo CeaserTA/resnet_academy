@@ -26,6 +26,11 @@ final class ModulePolicy
         return $this->canManage($user, $module->course);
     }
 
+    public function restore(User $user, Module $module): bool
+    {
+        return $this->canManage($user, $module->course);
+    }
+
     private function canManage(User $user, Course $course): bool
     {
         return $user->role === UserRole::Admin || ($user->role === UserRole::Instructor && $course->isTaughtBy($user));
