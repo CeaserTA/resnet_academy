@@ -1,65 +1,86 @@
 import { useState } from 'react';
-import { Check, Eye, Info, Pencil, Trash2, X } from 'lucide-react';
+import { Check, Eye, Info, X } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
 import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { cn } from '@/lib/utils';
+import { useCourses } from '@/features/catalogue/useCourses';
 import {
-    useApplications,
-    useDeleteApplication,
-    useSetApplicationStatus,
-    useUpdateApplication,
-} from '@/features/admin/applications/useApplications';
+    useApproveCourseApplication,
+    useCourseApplications,
+    useRejectCourseApplication,
+} from '@/features/courseApplications/useCourseApplications';
+import { courseApplicationStatusDisplay } from '@/lib/statusBadge';
 import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
-import type { Application, ApplicationStatus } from '@/features/admin/applications/mockApplications';
+import type { CourseApplication, CourseApplicationStatus } from '@/lib/api/types';
 
 type Tab = 'all' | 'rejected' | 'approved';
 
-const STATUS_ORDER: Record<ApplicationStatus, number> = { pending: 0, approved: 1, rejected: 2 };
-const STATUS_DISPLAY: Record<ApplicationStatus, { label: string; tone: 'warning' | 'success' | 'danger' }> = {
-    pending: { label: 'Pending', tone: 'warning' },
-    approved: { label: 'Approved', tone: 'success' },
-    rejected: { label: 'Rejected', tone: 'danger' },
-};
+const STATUS_ORDER: Record<CourseApplicationStatus, number> = { pending: 0, approved: 1, rejected: 2 };
 
-function ViewApplicationModal({ application, onClose }: { application: Application; onClose: () => void }) {
-    const status = STATUS_DISPLAY[application.status];
+function ViewApplicationModal({ application, onClose }: { application: CourseApplication; onClose: () => void }) {
+    const status = courseApplicationStatusDisplay(application.status);
 
     return (
-        <Modal isOpen onClose={onClose} title={application.studentName}>
+        <Modal isOpen onClose={onClose} title={application.student.name}>
             <div className="flex flex-col gap-3 text-sm">
                 <div className="flex items-center justify-between">
                     <span className="text-ink-600">Status</span>
-                    <Badge label={status.label} tone={status.tone} />
+                    <Badge label={status.label} tone={status.tone} icon={status.icon} />
                 </div>
                 <div className="flex items-center justify-between gap-4">
                     <span className="text-ink-600">Email</span>
-                    <span className="text-ink-900">{application.studentEmail}</span>
+                    <span className="text-ink-900">{application.student.email}</span>
                 </div>
                 <div className="flex items-center justify-between gap-4">
                     <span className="text-ink-600">Course</span>
-                    <span className="text-ink-900">{application.courseTitle}</span>
+                    <span className="text-ink-900">{application.course.title}</span>
                 </div>
                 <div className="flex items-center justify-between gap-4">
                     <span className="text-ink-600">Applied</span>
-                    <span className="text-ink-900">{new Date(application.appliedAt).toLocaleString()}</span>
+                    <span className="text-ink-900">{new Date(application.applied_at).toLocaleString()}</span>
                 </div>
+
+                {(application.course.application_questions ?? []).map((question, index) => (
+                    <div key={index} className="border-t border-surface-100 pt-3">
+                        <p className="font-medium text-ink-900">{question}</p>
+                        <p className="mt-1 text-ink-600">{application.answers?.[index] || '—'}</p>
+                    </div>
+                ))}
+
+                {application.portfolio_url && (
+                    <div className="border-t border-surface-100 pt-3">
+                        <p className="font-medium text-ink-900">Portfolio / link</p>
+                        <a href={application.portfolio_url} target="_blank" rel="noreferrer" className="mt-1 block text-blue-600 hover:underline">
+                            {application.portfolio_url}
+                        </a>
+                    </div>
+                )}
+
+                {application.alternative_proof_text && (
+                    <div className="border-t border-surface-100 pt-3">
+                        <p className="font-medium text-ink-900">Alternative proof of skill</p>
+                        <p className="mt-1 text-ink-600">{application.alternative_proof_text}</p>
+                    </div>
+                )}
             </div>
         </Modal>
     );
 }
 
-function EditApplicationModal({ application, onClose }: { application: Application; onClose: () => void }) {
-    const updateApplication = useUpdateApplication();
-    const [studentName, setStudentName] = useState(application.studentName);
-    const [studentEmail, setStudentEmail] = useState(application.studentEmail);
-    const [courseTitle, setCourseTitle] = useState(application.courseTitle);
+function RejectApplicationModal({ application, onClose }: { application: CourseApplication; onClose: () => void }) {
+    const { data: beginnerCourses } = useCourses({ level: 'beginner' });
+    const rejectApplication = useRejectCourseApplication();
+    const [recommendedIds, setRecommendedIds] = useState<number[]>([]);
 
-    const handleSave = async () => {
-        await updateApplication.mutateAsync({ id: application.id, studentName, studentEmail, courseTitle });
+    const toggleCourse = (id: number) => {
+        setRecommendedIds((current) => (current.includes(id) ? current.filter((c) => c !== id) : [...current, id]));
+    };
+
+    const handleConfirm = async () => {
+        await rejectApplication.mutateAsync({ id: application.id, recommendedCourseIds: recommendedIds });
         onClose();
     };
 
@@ -67,22 +88,35 @@ function EditApplicationModal({ application, onClose }: { application: Applicati
         <Modal
             isOpen
             onClose={onClose}
-            title={`Edit application`}
+            title={`Reject ${application.student.name}'s application`}
             footer={
                 <>
                     <Button variant="ghost" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button onClick={handleSave} isLoading={updateApplication.isPending}>
-                        Save changes
+                    <Button variant="destructive" onClick={handleConfirm} isLoading={rejectApplication.isPending}>
+                        Confirm reject
                     </Button>
                 </>
             }
         >
-            <div className="flex flex-col gap-4">
-                <Input label="Student name" value={studentName} onChange={(e) => setStudentName(e.target.value)} />
-                <Input label="Student email" value={studentEmail} onChange={(e) => setStudentEmail(e.target.value)} />
-                <Input label="Course" value={courseTitle} onChange={(e) => setCourseTitle(e.target.value)} />
+            <div className="flex flex-col gap-3 text-sm">
+                <p className="text-ink-600">
+                    Optionally recommend beginner courses to point this student toward instead.
+                </p>
+                <div className="flex flex-col gap-2">
+                    {beginnerCourses?.data.map((course) => (
+                        <label key={course.id} className="flex items-center gap-2 text-ink-900">
+                            <input
+                                type="checkbox"
+                                checked={recommendedIds.includes(course.id)}
+                                onChange={() => toggleCourse(course.id)}
+                            />
+                            {course.title}
+                        </label>
+                    ))}
+                    {beginnerCourses?.data.length === 0 && <p className="text-ink-600">No beginner courses yet.</p>}
+                </div>
             </div>
         </Modal>
     );
@@ -90,40 +124,20 @@ function EditApplicationModal({ application, onClose }: { application: Applicati
 
 export function ApplicationsPage() {
     usePageHeader('Applications', 'Course applications, pending first.');
-    const { data, isLoading } = useApplications();
-    const setStatus = useSetApplicationStatus();
-    const deleteApplication = useDeleteApplication();
+    const { data, isLoading } = useCourseApplications();
+    const approveApplication = useApproveCourseApplication();
 
     const [tab, setTab] = useState<Tab>('all');
-    const [viewingApplication, setViewingApplication] = useState<Application | null>(null);
-    const [editingApplication, setEditingApplication] = useState<Application | null>(null);
-    const [deletingId, setDeletingId] = useState<number | null>(null);
+    const [viewingApplication, setViewingApplication] = useState<CourseApplication | null>(null);
+    const [rejectingApplication, setRejectingApplication] = useState<CourseApplication | null>(null);
 
     const applications = [...(data ?? [])]
         .filter((application) => tab === 'all' || application.status === tab)
         .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
 
-    const handleDelete = async (id: number) => {
-        if (deletingId !== id) {
-            setDeletingId(id);
-            return;
-        }
-
-        await deleteApplication.mutateAsync(id);
-        setDeletingId(null);
-    };
-
     return (
         <div>
-            <div className="flex items-start gap-2 rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-600">
-                <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                <p>
-                    Preview — enrolments in Resnet LMS confirm automatically today, so this isn&apos;t connected to a
-                    live approval workflow yet. This is what one would look like.
-                </p>
-            </div>
-
-            <div className="mt-4 flex gap-1 border-b border-surface-100">
+            <div className="flex gap-1 border-b border-surface-100">
                 {(
                     [
                         ['all', 'All'],
@@ -164,21 +178,20 @@ export function ApplicationsPage() {
                         </thead>
                         <tbody>
                             {applications.map((application, index) => {
-                                const status = STATUS_DISPLAY[application.status];
-                                const isConfirmingDelete = deletingId === application.id;
+                                const status = courseApplicationStatusDisplay(application.status);
 
                                 return (
                                     <tr key={application.id} className={index % 2 === 1 ? 'bg-surface-50' : undefined}>
                                         <td className="px-4 py-3">
-                                            <p className="font-medium text-ink-900">{application.studentName}</p>
-                                            <p className="text-xs text-ink-600">{application.studentEmail}</p>
+                                            <p className="font-medium text-ink-900">{application.student.name}</p>
+                                            <p className="text-xs text-ink-600">{application.student.email}</p>
                                         </td>
-                                        <td className="px-4 py-3 text-ink-600">{application.courseTitle}</td>
+                                        <td className="px-4 py-3 text-ink-600">{application.course.title}</td>
                                         <td className="px-4 py-3">
-                                            <Badge label={status.label} tone={status.tone} />
+                                            <Badge label={status.label} tone={status.tone} icon={status.icon} />
                                         </td>
                                         <td className="px-4 py-3 text-right font-mono text-xs text-ink-600">
-                                            {new Date(application.appliedAt).toLocaleDateString()}
+                                            {new Date(application.applied_at).toLocaleDateString()}
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex justify-end gap-1">
@@ -187,16 +200,20 @@ export function ApplicationsPage() {
                                                         <Button
                                                             variant="ghost"
                                                             className="px-2 py-1"
-                                                            onClick={() => setStatus.mutate({ id: application.id, status: 'approved' })}
-                                                            aria-label={`Approve ${application.studentName}`}
+                                                            onClick={() => approveApplication.mutate(application.id)}
+                                                            isLoading={
+                                                                approveApplication.isPending &&
+                                                                approveApplication.variables === application.id
+                                                            }
+                                                            aria-label={`Approve ${application.student.name}`}
                                                         >
                                                             <Check className="size-4 text-success-600" aria-hidden="true" />
                                                         </Button>
                                                         <Button
                                                             variant="ghost"
                                                             className="px-2 py-1"
-                                                            onClick={() => setStatus.mutate({ id: application.id, status: 'rejected' })}
-                                                            aria-label={`Reject ${application.studentName}`}
+                                                            onClick={() => setRejectingApplication(application)}
+                                                            aria-label={`Reject ${application.student.name}`}
                                                         >
                                                             <X className="size-4 text-danger-600" aria-hidden="true" />
                                                         </Button>
@@ -206,30 +223,9 @@ export function ApplicationsPage() {
                                                     variant="ghost"
                                                     className="px-2 py-1"
                                                     onClick={() => setViewingApplication(application)}
-                                                    aria-label={`View ${application.studentName}`}
+                                                    aria-label={`View ${application.student.name}`}
                                                 >
                                                     <Eye className="size-4" aria-hidden="true" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    className="px-2 py-1"
-                                                    onClick={() => setEditingApplication(application)}
-                                                    aria-label={`Edit ${application.studentName}`}
-                                                >
-                                                    <Pencil className="size-4" aria-hidden="true" />
-                                                </Button>
-                                                <Button
-                                                    variant={isConfirmingDelete ? 'destructive' : 'ghost'}
-                                                    className="px-2 py-1"
-                                                    onClick={() => handleDelete(application.id)}
-                                                    aria-label={
-                                                        isConfirmingDelete
-                                                            ? `Confirm delete ${application.studentName}`
-                                                            : `Delete ${application.studentName}`
-                                                    }
-                                                >
-                                                    <Trash2 className="size-4" aria-hidden="true" />
-                                                    {isConfirmingDelete && 'Confirm'}
                                                 </Button>
                                             </div>
                                         </td>
@@ -244,8 +240,8 @@ export function ApplicationsPage() {
             {viewingApplication && (
                 <ViewApplicationModal application={viewingApplication} onClose={() => setViewingApplication(null)} />
             )}
-            {editingApplication && (
-                <EditApplicationModal application={editingApplication} onClose={() => setEditingApplication(null)} />
+            {rejectingApplication && (
+                <RejectApplicationModal application={rejectingApplication} onClose={() => setRejectingApplication(null)} />
             )}
         </div>
     );

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -14,8 +14,19 @@ import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { ApiError } from '@/lib/api/client';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { usePageSearch } from '@/lib/pageHeader/PageHeaderContext';
 import { userRoleDisplay, userStatusDisplay } from '@/lib/statusBadge';
+import { cn } from '@/lib/utils';
 import type { User, UserRole, UserStatus } from '@/lib/api/types';
+
+type RoleTab = 'all' | UserRole;
+
+const ROLE_TABS: [RoleTab, string][] = [
+    ['all', 'All'],
+    ['admin', 'Admins'],
+    ['instructor', 'Instructors'],
+    ['student', 'Students'],
+];
 
 const schema = z.object({
     name: z.string().min(1, 'Name is required').max(150),
@@ -134,9 +145,23 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
 
 export function ProvisionUserPage() {
     const { user: currentUser } = useAuth();
-    const { data: users, isLoading } = useUsers();
+    const [roleTab, setRoleTab] = useState<RoleTab>('all');
+    const { data: users, isLoading } = useUsers(roleTab === 'all' ? undefined : roleTab);
     const [managingUser, setManagingUser] = useState<User | null>(null);
     const [isAddingUser, setIsAddingUser] = useState(false);
+
+    const [search, setSearch] = useState('');
+    usePageSearch(search, setSearch, 'Search team…');
+
+    const filteredUsers = useMemo(() => {
+        const term = search.trim().toLowerCase();
+        if (!term) {
+            return users ?? [];
+        }
+        return (users ?? []).filter(
+            (member) => member.name.toLowerCase().includes(term) || member.email.toLowerCase().includes(term),
+        );
+    }, [users, search]);
 
     return (
         <div className="mx-auto max-w-4xl">
@@ -151,14 +176,36 @@ export function ProvisionUserPage() {
                 </Button>
             </div>
 
+            <div className="mt-4 flex gap-1 border-b border-surface-100">
+                {ROLE_TABS.map(([value, label]) => (
+                    <button
+                        key={value}
+                        onClick={() => setRoleTab(value)}
+                        className={cn(
+                            'border-b-2 px-3 py-2 text-sm font-medium',
+                            roleTab === value ? 'border-blue-600 text-blue-600' : 'border-transparent text-ink-600',
+                        )}
+                    >
+                        {label}
+                    </button>
+                ))}
+            </div>
+
             <div className="mt-6">
                 {isLoading && <Spinner className="mt-3" />}
 
-                {!isLoading && users?.length === 0 && (
-                    <EmptyState icon={Users} title="No users yet" description="Everyone in the system appears here." className="mt-3" />
+                {!isLoading && filteredUsers.length === 0 && (
+                    <EmptyState
+                        icon={Users}
+                        title={users?.length === 0 ? 'No users yet' : 'No users match this search'}
+                        description={
+                            users?.length === 0 ? 'Everyone in the system appears here.' : 'Try a different search term or role.'
+                        }
+                        className="mt-3"
+                    />
                 )}
 
-                {!isLoading && users && users.length > 0 && (
+                {!isLoading && filteredUsers.length > 0 && (
                     <div className="overflow-x-auto rounded-lg border border-surface-100 bg-surface-0">
                         <table className="w-full text-sm">
                             <thead className="bg-surface-100 text-left">
@@ -170,7 +217,7 @@ export function ProvisionUserPage() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {users.map((member, index) => {
+                                {filteredUsers.map((member, index) => {
                                     const role = userRoleDisplay(member.role);
                                     const status = userStatusDisplay(member.status);
                                     const isSelf = member.id === currentUser?.id;

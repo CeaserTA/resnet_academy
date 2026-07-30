@@ -37,4 +37,12 @@ Route::prefix('api/v1')->group(function (): void {
     // too (see note above) rather than living in routes/api.php with the rest of AccountController.
     Route::post('/me/request-deactivation', [AccountController::class, 'requestDeactivation'])
         ->middleware('auth');
+
+    // Reads/deletes rows in the database-backed `sessions` table via $request->session() —
+    // routes/api.php's "api" middleware group only starts a session when Sanctum's
+    // EnsureFrontendRequestsAreStateful recognizes the request as coming from a configured
+    // stateful domain (Origin/Referer match); the "web" group starts one unconditionally, which
+    // is what this needs to reliably work.
+    Route::post('/me/logout-other-devices', [AccountController::class, 'logoutOtherSessions'])
+        ->middleware('auth');
 });

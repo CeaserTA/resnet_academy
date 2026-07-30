@@ -1,5 +1,6 @@
 import { Card } from '@/components/ui/Card';
 import type { BadgeTone } from '@/components/ui/Badge';
+import { BarsAccent } from '@/components/ui/BarsAccent';
 import { cn } from '@/lib/utils';
 
 const LABEL_CLASSES: Record<BadgeTone, string> = {
@@ -27,7 +28,10 @@ interface StatCardProps {
 export function StatCard({ label, value, sub, tone }: StatCardProps) {
     return (
         <Card>
-            <span className={cn('text-sm font-medium', LABEL_CLASSES[tone])}>{label}</span>
+            <div className="flex items-center justify-between gap-2">
+                <span className={cn('truncate text-sm font-medium', LABEL_CLASSES[tone])}>{label}</span>
+                <BarsAccent />
+            </div>
             <p className="mt-2 text-2xl font-semibold text-ink-900">{value}</p>
             {sub && <p className="mt-1 text-xs text-ink-600">{sub}</p>}
         </Card>

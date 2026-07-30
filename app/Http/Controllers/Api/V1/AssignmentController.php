@@ -9,6 +9,7 @@ use App\Http\Requests\Api\V1\StoreAssignmentRequest;
 use App\Http\Requests\Api\V1\UpdateAssignmentRequest;
 use App\Http\Resources\AssignmentResource;
 use App\Models\Assignment;
+use App\Models\Module;
 use App\Services\Assessment\AssignmentManager;
 use Illuminate\Http\Response;
 
@@ -21,9 +22,9 @@ final class AssignmentController extends Controller
         return new AssignmentResource($assignment->load('rubrics'));
     }
 
-    public function store(StoreAssignmentRequest $request): AssignmentResource
+    public function store(StoreAssignmentRequest $request, Module $module): AssignmentResource
     {
-        $assignment = $this->assignmentManager->create($request->route('module'), $request->validated());
+        $assignment = $this->assignmentManager->create($module, $request->validated());
 
         return new AssignmentResource($assignment->load('rubrics'));
     }

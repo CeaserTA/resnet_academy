@@ -114,3 +114,21 @@
     border-radius: 0.125rem;
     padding: 0 0.125rem;
 }
+
+.editor-content [data-youtube-video] {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    aspect-ratio: 16 / 9;
+    margin: 0.75rem 0;
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.editor-content [data-youtube-video] iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}

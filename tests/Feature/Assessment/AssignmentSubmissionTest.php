@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Enums\AssignmentSubmissionType;
 use App\Enums\EnrolmentSource;
 use App\Enums\ModuleProgressStatus;
 use App\Models\Assignment;
+use App\Models\AssignmentSubmission;
 use App\Models\Course;
 use App\Models\LatePenaltyPolicy;
 use App\Models\Module;
@@ -13,6 +15,8 @@ use App\Models\ModuleProgress;
 use App\Models\Notification;
 use App\Models\User;
 use App\Services\Enrolment\EnrolmentService;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 function setUpAssignmentForSubmission(?LatePenaltyPolicy $policy = null, ?Carbon\Carbon $dueAt = null): array
 {
@@ -104,6 +108,23 @@ it('applies the late penalty to the final score when graded', function (): void 
     $gradeResponse->assertJsonPath('data.final_score', '72.00');
 
     expect(Notification::where('user_id', $student->id)->where('type', 'grade_posted')->exists())->toBeTrue();
+});
+
+it('uploads a real file to R2 and resolves it to a full URL in the response', function (): void {
+    Storage::fake('r2', ['url' => 'https://cdn.test']);
+    ['student' => $student, 'assignment' => $assignment] = setUpAssignmentForSubmission();
+    $assignment->update(['submission_type' => AssignmentSubmissionType::File]);
+
+    $response = $this->actingAs($student)->post("/api/v1/assignments/{$assignment->id}/submissions", [
+        'file' => UploadedFile::fake()->create('project.zip', 100),
+    ]);
+
+    $response->assertCreated();
+    $submission = AssignmentSubmission::where('assignment_id', $assignment->id)->firstOrFail();
+
+    expect($submission->file_url)->toStartWith("submissions/{$assignment->id}/");
+    Storage::disk('r2')->assertExists($submission->file_url);
+    expect($response->json('data.file_url'))->toStartWith('http');
 });
 
 it('denies a student without a confirmed enrolment from submitting', function (): void {

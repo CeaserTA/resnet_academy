@@ -31,9 +31,41 @@ const ALLOWED_TAGS = [
     'tr',
     'th',
     'td',
+    'div',
+    'iframe',
 ];
 
-const ALLOWED_ATTR = ['href', 'target', 'rel', 'src', 'alt', 'class', 'style'];
+const ALLOWED_ATTR = [
+    'href',
+    'target',
+    'rel',
+    'src',
+    'alt',
+    'class',
+    'style',
+    'width',
+    'height',
+    'allow',
+    'allowfullscreen',
+    'frameborder',
+    'title',
+    'data-youtube-video',
+];
+
+// Only youtube.com/youtube-nocookie.com embed URLs are allowed through — an iframe is otherwise
+// a real code-injection surface (arbitrary cross-origin content, clickjacking), so this is a hard
+// allowlist, not just a UI convenience. Applies to every iframe, however it got into the stored
+// HTML (the editor's YouTube extension, or old content saved before this check existed).
+const YOUTUBE_EMBED_SRC = /^https:\/\/www\.youtube(-nocookie)?\.com\/embed\//;
+
+DOMPurify.addHook('uponSanitizeElement', (node, data) => {
+    if (data.tagName === 'iframe') {
+        const src = node instanceof Element ? node.getAttribute('src') : null;
+        if (!src || !YOUTUBE_EMBED_SRC.test(src)) {
+            node.parentNode?.removeChild(node);
+        }
+    }
+});
 
 DOMPurify.addHook('afterSanitizeAttributes', (node) => {
     if (node.tagName === 'A') {

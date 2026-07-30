@@ -1,10 +1,10 @@
+import { useState } from 'react';
 import { Link } from 'react-router';
 import {
     AlertTriangle,
     Award,
     BookOpen,
     ClipboardList,
-    FolderTree,
     GraduationCap,
     LifeBuoy,
     Plus,
@@ -16,11 +16,14 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
+import { Modal } from '@/components/ui/Modal';
 import type { BadgeTone } from '@/components/ui/Badge';
 import { StatWidget } from '@/components/dashboard/StatWidget';
 import { useDashboardSummary } from '@/features/admin/dashboard/useDashboard';
+import { BulkImportForm } from '@/features/admin/enrolments/BulkImportForm';
 import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import { formatRelativeTime } from '@/lib/utils';
+import { describeAuditLogEntry } from '@/lib/auditLog';
 
 const COURSE_STATUS_LABELS: Record<string, string> = {
     published: 'published',
@@ -49,6 +52,7 @@ interface StatCardConfig {
 export function AdminDashboardPage() {
     usePageHeader('Dashboard', 'A system-wide look at Resnet LMS.');
     const { data, isLoading } = useDashboardSummary();
+    const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
 
     if (isLoading || !data) {
         return <Spinner />;
@@ -78,11 +82,10 @@ export function AdminDashboardPage() {
         { icon: AlertTriangle, label: 'At-risk students', value: data.at_risk_students, tone: 'danger' },
     ];
 
-    const quickActions = [
+    const quickActions: { label: string; icon: LucideIcon; to?: string; onClick?: () => void }[] = [
         { to: '/admin/courses/new', label: 'New course', icon: Plus },
         { to: '/admin/users', label: 'Provision user', icon: Users },
-        { to: '/admin/enrolments/import', label: 'Bulk import', icon: Upload },
-        { to: '/admin/categories', label: 'Categories', icon: FolderTree },
+        { label: 'Bulk import', icon: Upload, onClick: () => setIsBulkImportOpen(true) },
         { to: '/admin/audit-log', label: 'Audit log', icon: ClipboardList },
     ];
 
@@ -96,14 +99,21 @@ export function AdminDashboardPage() {
 
             <h2 className="mt-8 text-lg">Quick actions</h2>
             <div className="mt-3 flex flex-wrap gap-2">
-                {quickActions.map((action) => (
-                    <Link key={action.to} to={action.to}>
-                        <Button variant="secondary">
+                {quickActions.map((action) =>
+                    action.to ? (
+                        <Link key={action.label} to={action.to}>
+                            <Button variant="secondary">
+                                <action.icon className="size-4" aria-hidden="true" />
+                                {action.label}
+                            </Button>
+                        </Link>
+                    ) : (
+                        <Button key={action.label} variant="secondary" onClick={action.onClick}>
                             <action.icon className="size-4" aria-hidden="true" />
                             {action.label}
                         </Button>
-                    </Link>
-                ))}
+                    ),
+                )}
             </div>
 
             <div className="mt-8 flex items-center justify-between">
@@ -117,14 +127,15 @@ export function AdminDashboardPage() {
                 {data.recent_audit_logs.length === 0 && <p className="px-4 py-6 text-center text-sm text-ink-600">Nothing logged yet.</p>}
                 {data.recent_audit_logs.map((entry) => (
                     <div key={entry.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                        <p className="truncate text-sm text-ink-900">
-                            <span className="font-medium">{entry.actor?.name ?? 'System'}</span> — {entry.action} ({entry.entity_type} #
-                            {entry.entity_id})
-                        </p>
+                        <p className="truncate text-sm text-ink-900">{describeAuditLogEntry(entry)}</p>
                         <p className="shrink-0 text-xs text-ink-600">{formatRelativeTime(entry.created_at)}</p>
                     </div>
                 ))}
             </div>
+
+            <Modal isOpen={isBulkImportOpen} onClose={() => setIsBulkImportOpen(false)} title="Bulk enrolment import">
+                <BulkImportForm onClose={() => setIsBulkImportOpen(false)} />
+            </Modal>
         </div>
     );
 }

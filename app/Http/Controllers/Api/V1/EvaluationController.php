@@ -9,6 +9,7 @@ use App\Http\Requests\Api\V1\StoreEvaluationRequest;
 use App\Http\Requests\Api\V1\UpdateEvaluationRequest;
 use App\Http\Resources\EvaluationResource;
 use App\Models\Evaluation;
+use App\Models\Module;
 use App\Services\Assessment\EvaluationManager;
 use Illuminate\Http\Response;
 
@@ -23,9 +24,9 @@ final class EvaluationController extends Controller
         return new EvaluationResource($evaluation->load('questions.options'));
     }
 
-    public function store(StoreEvaluationRequest $request): EvaluationResource
+    public function store(StoreEvaluationRequest $request, Module $module): EvaluationResource
     {
-        $evaluation = $this->evaluationManager->create($request->route('module'), $request->validated());
+        $evaluation = $this->evaluationManager->create($module, $request->validated());
 
         return new EvaluationResource($evaluation->load('questions.options'));
     }

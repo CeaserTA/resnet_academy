@@ -75,6 +75,27 @@ it('lets an admin create a course', function (): void {
     $this->assertDatabaseHas('courses', ['title' => 'New Course', 'created_by' => $admin->id]);
 });
 
+/**
+ * Regression: without an explicit `boolean` cast on the Course model, MySQL's tinyint(1)
+ * columns serialize as 0/1 in the JSON response. The admin edit form's zod schema requires a
+ * strict boolean for these fields, so 0/1 fails client-side validation silently (no error was
+ * rendered for these fields) — every course edit appeared to do nothing when saved.
+ */
+it('serializes the enrolment-gating boolean flags as real booleans, not 0/1', function (): void {
+    $course = Course::factory()->create([
+        'advisory_require_attestation' => true,
+        'application_allow_alternative_proof' => false,
+        'application_require_portfolio_url' => true,
+    ]);
+
+    $response = $this->getJson("/api/v1/courses/{$course->id}");
+
+    $response->assertOk();
+    expect($response->json('data.advisory_require_attestation'))->toBeTrue();
+    expect($response->json('data.application_allow_alternative_proof'))->toBeFalse();
+    expect($response->json('data.application_require_portfolio_url'))->toBeTrue();
+});
+
 it('uploads a course thumbnail to R2, stores the path, and resolves a full URL in the response', function (): void {
     Storage::fake('r2', ['url' => 'https://cdn.test']);
     $admin = User::factory()->admin()->create();

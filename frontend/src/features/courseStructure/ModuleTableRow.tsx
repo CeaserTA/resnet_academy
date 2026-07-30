@@ -153,6 +153,12 @@ export function ModuleTableRow({
 
     const opensInFuture = module.scheduled_start_at && new Date(module.scheduled_start_at) > new Date();
 
+    const handleDeleteModule = () => {
+        if (window.confirm(`Delete "${module.title}"? It'll move to Recently Deleted and can be restored for 30 days.`)) {
+            onDelete();
+        }
+    };
+
     return (
         <>
             <tr className={index % 2 === 1 ? 'bg-surface-50' : undefined}>
@@ -207,7 +213,7 @@ export function ModuleTableRow({
                         >
                             <ListChecks className="size-4" aria-hidden="true" />
                         </Button>
-                        <Button variant="ghost" className="px-2 py-1" onClick={onDelete} aria-label={`Delete ${module.title}`}>
+                        <Button variant="ghost" className="px-2 py-1" onClick={handleDeleteModule} aria-label={`Delete ${module.title}`}>
                             <Trash2 className="size-4" aria-hidden="true" />
                         </Button>
                     </div>

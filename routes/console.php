@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('enrolments:send-due-confirmation-emails')->everyFiveMinutes();
 Schedule::command('progress:evaluate-module-unlocks')->everyFiveMinutes();
+Schedule::command('modules:purge-soft-deleted')->daily();

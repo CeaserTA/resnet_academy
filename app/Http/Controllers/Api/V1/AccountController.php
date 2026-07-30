@@ -7,7 +7,9 @@ namespace App\Http\Controllers\Api\V1;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\ChangePasswordRequest;
 use App\Http\Requests\Api\V1\UpdateAvatarRequest;
+use App\Http\Requests\Api\V1\UpdateProfileRequest;
 use App\Http\Resources\UserResource;
 use App\Models\AssignmentSubmission;
 use App\Models\Certificate;
@@ -24,6 +26,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Self-service data export and account deactivation, per architecture.md §7's data-protection
@@ -64,6 +69,78 @@ final class AccountController extends Controller
         $user->update(['avatar_url' => $path]);
 
         return new UserResource($user);
+    }
+
+    /**
+     * Recomputes `name` from first/last in the same update so every other place that already
+     * displays `name` (messages, forum, notifications, the top bar) stays correct with no other
+     * changes needed.
+     */
+    public function updateProfile(UpdateProfileRequest $request): UserResource
+    {
+        $user = $request->user();
+        $data = $request->validated();
+
+        $lastName = $data['last_name'] ?? $user->last_name ?? '';
+
+        $user->update([
+            ...$data,
+            'name' => trim($data['first_name'].' '.$lastName),
+        ]);
+
+        return new UserResource($user);
+    }
+
+    /**
+     * Self-service password change — verifies the caller actually knows their current password
+     * before accepting a new one. `Hash::make()` here matches the same explicit pattern
+     * `RegisteredUserController`/`NewPasswordController` already use (the `password_hash`
+     * `'hashed'` cast would no-op on an already-hashed value, so this stays consistent either way).
+     */
+    public function changePassword(ChangePasswordRequest $request): Response
+    {
+        $user = $request->user();
+
+        if (! Hash::check($request->string('current_password')->toString(), $user->password_hash)) {
+            throw ValidationException::withMessages([
+                'current_password' => 'That is not your current password.',
+            ]);
+        }
+
+        $user->update(['password_hash' => Hash::make($request->string('password')->toString())]);
+
+        $this->auditLogger->log(
+            action: 'account.password_changed',
+            entityType: 'user',
+            entityId: $user->id,
+            actorId: $user->id,
+        );
+
+        return response()->noContent();
+    }
+
+    /**
+     * Ends every other active session for this account — `SESSION_DRIVER=database` means each
+     * one is a real row here, so this is a real sign-out everywhere else, not just a UI gesture.
+     * The caller's own current session is deliberately excluded so they stay signed in.
+     */
+    public function logoutOtherSessions(Request $request): Response
+    {
+        $user = $request->user();
+
+        DB::table('sessions')
+            ->where('user_id', $user->id)
+            ->where('id', '!=', $request->session()->getId())
+            ->delete();
+
+        $this->auditLogger->log(
+            action: 'account.logged_out_other_devices',
+            entityType: 'user',
+            entityId: $user->id,
+            actorId: $user->id,
+        );
+
+        return response()->noContent();
     }
 
     /**

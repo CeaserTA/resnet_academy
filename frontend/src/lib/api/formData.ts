@@ -16,7 +16,21 @@ export function toFormData(fields: Record<string, FormDataValue>): FormData {
             continue;
         }
 
-        formData.append(key, value instanceof File ? value : String(value));
+        if (value instanceof File) {
+            formData.append(key, value);
+            continue;
+        }
+
+        // Laravel's `boolean` validation rule accepts 1/0/"1"/"0"/true/false — NOT the literal
+        // strings "true"/"false" that `String(true)` would produce, which multipart form fields
+        // always arrive as server-side. Without this, any boolean field sent through a
+        // multipart (file-upload) request fails validation even though the value is correct.
+        if (typeof value === 'boolean') {
+            formData.append(key, value ? '1' : '0');
+            continue;
+        }
+
+        formData.append(key, String(value));
     }
 
     return formData;

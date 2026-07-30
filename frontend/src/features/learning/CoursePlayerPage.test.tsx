@@ -1,18 +1,24 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { it, expect, vi } from 'vitest';
 import { CoursePlayerPage } from '@/features/learning/CoursePlayerPage';
 import { AuthProvider } from '@/lib/auth/AuthContext';
-import type { Course, Module, ModuleProgressEntry, User } from '@/lib/api/types';
+import type { Course, Module, ModuleProgressEntry, ProgressDashboardRow, User } from '@/lib/api/types';
 
-const { course, modules, progress, student } = vi.hoisted(() => {
+const { course, modules, progress, progressRows, student } = vi.hoisted(() => {
     const course: Course = {
         id: 1,
         title: 'Intro to Testing',
         slug: 'intro-to-testing',
         description: null,
         level: 'beginner',
+        enrolment_policy: 'open',
+        advisory_require_attestation: false,
+        application_questions: null,
+        application_allow_alternative_proof: true,
+        application_require_portfolio_url: false,
         thumbnail_url: null,
         prerequisites_text: null,
         price: '0.00',
@@ -35,6 +41,7 @@ const { course, modules, progress, student } = vi.hoisted(() => {
             description: null,
             order_index: 1,
             scheduled_start_at: null,
+            deleted_at: null,
             group_ids: [],
             status: 'not_started',
             items: [
@@ -59,6 +66,7 @@ const { course, modules, progress, student } = vi.hoisted(() => {
             description: null,
             order_index: 2,
             scheduled_start_at: null,
+            deleted_at: null,
             group_ids: [],
             status: 'locked',
             items: [
@@ -97,6 +105,10 @@ const { course, modules, progress, student } = vi.hoisted(() => {
         },
     ];
 
+    const progressRows: ProgressDashboardRow[] = [
+        { course: { id: 1, title: 'Intro to Testing' }, status: 'in_progress', percent_complete: 50, modules: [], certificate: null },
+    ];
+
     const student: User = {
         id: 1,
         role: 'student',
@@ -104,13 +116,20 @@ const { course, modules, progress, student } = vi.hoisted(() => {
         email: 'student@example.com',
         phone: null,
         avatar_url: null,
+        first_name: null,
+        last_name: null,
+        bio: null,
+        country: null,
+        city: null,
+        postal_code: null,
+        tax_id: null,
         status: 'active',
         email_verified_at: '2026-01-01T00:00:00Z',
         last_login_at: null,
         created_at: '2026-01-01T00:00:00Z',
     };
 
-    return { course, modules, progress, student };
+    return { course, modules, progress, progressRows, student };
 });
 
 vi.mock('@/features/catalogue/api', () => ({
@@ -127,14 +146,18 @@ vi.mock('@/features/learning/api', () => ({
     fetchCourseProgress: vi.fn().mockResolvedValue(progress),
 }));
 
+vi.mock('@/features/progress/api', () => ({
+    fetchProgressDashboard: vi.fn().mockResolvedValue(progressRows),
+}));
+
 vi.mock('@/features/auth/api', () => ({
     fetchCurrentUser: vi.fn().mockResolvedValue(student),
 }));
 
-it('shows an unlocked module’s resources but hides a locked module’s resources', async () => {
+function renderPlayer() {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
-    render(
+    return render(
         <QueryClientProvider client={queryClient}>
             <AuthProvider>
                 <MemoryRouter initialEntries={['/learn/courses/1']}>
@@ -145,8 +168,52 @@ it('shows an unlocked module’s resources but hides a locked module’s resourc
             </AuthProvider>
         </QueryClientProvider>,
     );
+}
 
-    expect(await screen.findByText('Welcome')).toBeInTheDocument();
+it('shows an unlocked module’s resources but hides a locked module’s resources', async () => {
+    renderPlayer();
+
+    expect(await screen.findAllByText('Welcome')).toHaveLength(2); // Continue banner + module list
     expect(screen.queryByText('Locked lesson')).not.toBeInTheDocument();
     expect(screen.getByText('Locked')).toBeInTheDocument();
+});
+
+it('shows a Continue banner pointing at the next incomplete item', async () => {
+    renderPlayer();
+
+    expect(await screen.findByText('Continue where you left off')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Continue/ })).toHaveAttribute('href', '/learn/resources/10?course=1');
+});
+
+it('explains why a locked module is locked', async () => {
+    renderPlayer();
+
+    expect(await screen.findByText('Complete "Module 1" first')).toBeInTheDocument();
+});
+
+it('shows the overall progress percentage from the progress dashboard', async () => {
+    renderPlayer();
+
+    expect(await screen.findByText('50%')).toBeInTheDocument();
+});
+
+it('numbers modules and offers a Start Module action linking to the next incomplete item', async () => {
+    renderPlayer();
+
+    expect(await screen.findByText('Module 01')).toBeInTheDocument();
+    const startLink = screen.getByRole('link', { name: 'Start Module' });
+    expect(startLink).toHaveAttribute('href', '/learn/resources/10?course=1');
+});
+
+it('collapses and re-expands a module’s resource list', async () => {
+    const user = userEvent.setup();
+    renderPlayer();
+
+    expect(await screen.findAllByText('Welcome')).toHaveLength(2);
+
+    await user.click(screen.getByRole('button', { name: /View 1 Resource/ }));
+    expect(screen.getAllByText('Welcome')).toHaveLength(1); // only the Continue banner now
+
+    await user.click(screen.getByRole('button', { name: /View 1 Resource/ }));
+    expect(screen.getAllByText('Welcome')).toHaveLength(2);
 });

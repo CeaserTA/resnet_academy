@@ -35,6 +35,7 @@ final class ModuleResource extends JsonResource
             'description' => $this->description,
             'order_index' => $this->order_index,
             'scheduled_start_at' => $this->scheduled_start_at?->toIso8601String(),
+            'deleted_at' => $this->deleted_at?->toIso8601String(),
             'group_ids' => $this->whenLoaded('groups', fn () => $this->groups->pluck('id')),
             'items' => $this->resource->relationLoaded('resources') ? $this->itemsPayload($request) : [],
             'status' => $studentStatus,
