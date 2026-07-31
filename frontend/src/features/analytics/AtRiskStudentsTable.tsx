@@ -3,7 +3,7 @@ import { AlertTriangle, Send } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/card';
+import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useNotifyAtRiskStudents } from '@/features/analytics/useAnalytics';
 import { formatRelativeTime } from '@/lib/utils';

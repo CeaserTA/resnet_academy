@@ -1,7 +1,13 @@
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { it, expect, vi } from 'vitest';
 import { ResourceForm } from '@/features/courseStructure/ResourceForm';
+
+/** `Select` is a Radix combobox now, not a native `<select>` — open it, then click the option. */
+async function selectRadixOption(user: UserEvent, labelText: string, optionText: string) {
+    await user.click(screen.getByRole('combobox', { name: labelText }));
+    await user.click(await screen.findByRole('option', { name: optionText }));
+}
 
 // The real Tiptap/ProseMirror editor dispatches transactions that call DOM APIs jsdom doesn't
 // implement (elementFromPoint, Range.getClientRects) — a well-known jsdom/ProseMirror gap, not
@@ -23,12 +29,12 @@ it('shows only the fields relevant to the selected resource type', async () => {
     expect(await screen.findByLabelText('Lesson content')).toBeInTheDocument();
     expect(screen.queryByLabelText('Bunny Stream video ID')).not.toBeInTheDocument();
 
-    await user.selectOptions(screen.getByLabelText('Type'), 'video');
+    await selectRadixOption(user, 'Type', 'Video');
 
     expect(screen.getByLabelText('Bunny Stream video ID')).toBeInTheDocument();
     expect(screen.queryByLabelText('Lesson content')).not.toBeInTheDocument();
 
-    await user.selectOptions(screen.getByLabelText('Type'), 'live_session');
+    await selectRadixOption(user, 'Type', 'Live session');
 
     expect(screen.getByLabelText('Meeting URL')).toBeInTheDocument();
     expect(screen.getByLabelText('Duration (minutes)')).toBeInTheDocument();
@@ -72,7 +78,7 @@ it('defaults a document resource to file upload, and submits the picked file', a
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(<ResourceForm onSubmit={onSubmit} onCancel={vi.fn()} />);
 
-    await user.selectOptions(screen.getByLabelText('Type'), 'document');
+    await selectRadixOption(user, 'Type', 'Document (PDF/PPTX/DOCX)');
 
     expect(screen.queryByLabelText('File URL')).not.toBeInTheDocument();
 
@@ -91,7 +97,7 @@ it('lets a document resource fall back to pasting a URL instead of uploading', a
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(<ResourceForm onSubmit={onSubmit} onCancel={vi.fn()} />);
 
-    await user.selectOptions(screen.getByLabelText('Type'), 'document');
+    await selectRadixOption(user, 'Type', 'Document (PDF/PPTX/DOCX)');
     await user.click(screen.getByRole('button', { name: 'Paste a URL instead' }));
 
     await user.type(screen.getByLabelText('Title'), 'Syllabus');

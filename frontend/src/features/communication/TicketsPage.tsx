@@ -2,7 +2,7 @@
 import { useSearchParams } from 'react-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Eye, LifeBuoy, Plus, X } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';

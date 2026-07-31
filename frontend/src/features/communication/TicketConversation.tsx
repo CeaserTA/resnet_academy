@@ -1,6 +1,6 @@
 ﻿import { useState } from 'react';
 import { Send } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';

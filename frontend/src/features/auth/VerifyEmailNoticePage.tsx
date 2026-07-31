@@ -2,7 +2,7 @@
 import { MailCheck } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
-import { Card } from '@/components/ui/card';
+import { Card } from '@/components/ui/Card';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { resendVerificationEmail } from '@/features/auth/api';
 

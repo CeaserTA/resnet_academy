@@ -1,7 +1,7 @@
 ﻿import { useState } from 'react';
 import { useParams, Link } from 'react-router';
-import { AlertTriangle, ArrowLeft, BookOpen, ClipboardList, MessageCircle, Plus, TrendingUp, Users } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { ArrowLeft, BookOpen, ClipboardList, MessageCircle, Plus } from 'lucide-react';
+import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';

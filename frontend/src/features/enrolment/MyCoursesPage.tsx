@@ -6,7 +6,7 @@ import { useMyCourseApplications } from '@/features/courseApplications/useCourse
 import { useCourseSequence } from '@/features/learning/useCourseSequence';
 import { useProgressDashboard } from '@/features/progress/useProgress';
 import { Spinner } from '@/components/ui/Spinner';
-import { Card } from '@/components/ui/card';
+import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';

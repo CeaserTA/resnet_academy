@@ -1,5 +1,5 @@
 ﻿import { Quote } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { Card } from '@/components/ui/Card';
 import { Avatar } from '@/components/ui/Avatar';
 
 interface Testimonial {

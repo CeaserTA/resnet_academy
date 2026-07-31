@@ -1,10 +1,18 @@
-import { Link, useParams } from 'react-router';
-import { ArrowLeft, BookOpen, Clock, GraduationCap, SignalHigh, Users } from 'lucide-react';
+import { useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router';
+import { ArrowLeft, BookOpen, CircleCheck, Clock, GraduationCap, Lock, SignalHigh, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/card';
+import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
+import { Alert } from '@/components/ui/Alert';
 import { useCourse } from '@/features/catalogue/useCourses';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { useEnrol } from '@/features/enrolment/useEnrolments';
+import { useMyCourseApplications } from '@/features/courseApplications/useCourseApplications';
+import { AdvisoryEnrolModal } from '@/features/catalogue/AdvisoryEnrolModal';
+import { ApplicationModal } from '@/features/catalogue/ApplicationModal';
+import { ApiError } from '@/lib/api/client';
 
 // ─── Local image fallback map ────────────────────────────────────────────────
 // Used when course.thumbnail_url is null (R2 upload not yet configured).
@@ -68,8 +76,16 @@ function formatPrice(price: string, currency: string): string {
 export function CourseDetailPage() {
     const { id } = useParams();
     const courseId = Number(id);
+    const navigate = useNavigate();
 
     const { data: course, isLoading, isError } = useCourse(courseId);
+    const { user } = useAuth();
+    const enrol = useEnrol();
+    const { data: myApplications } = useMyCourseApplications(user?.role === 'student');
+    const [enrolError, setEnrolError] = useState<string | null>(null);
+    const [enrolled, setEnrolled] = useState(false);
+    const [showAdvisoryModal, setShowAdvisoryModal] = useState(false);
+    const [showApplicationModal, setShowApplicationModal] = useState(false);
 
     /* ── Loading ── */
     if (isLoading) {
@@ -99,6 +115,36 @@ export function CourseDetailPage() {
     }
 
     /* ── Resolved ── */
+    const pendingApplication = myApplications?.find(
+        (application) => application.course.id === course.id && application.status === 'pending',
+    );
+
+    const handleEnrol = async () => {
+        if (!user) {
+            navigate('/login', { state: { from: { pathname: `/courses/${course.id}` } } });
+            return;
+        }
+
+        if (course.enrolment_policy === 'advisory') {
+            setShowAdvisoryModal(true);
+            return;
+        }
+
+        if (course.enrolment_policy === 'application') {
+            setShowApplicationModal(true);
+            return;
+        }
+
+        setEnrolError(null);
+
+        try {
+            await enrol.mutateAsync(course.id);
+            setEnrolled(true);
+        } catch (error) {
+            setEnrolError(error instanceof ApiError ? error.message : 'Could not enrol. Try again.');
+        }
+    };
+
     const resolvedImage = course.thumbnail_url ?? courseImageMap[course.slug] ?? null;
     return (
         <div className="min-h-screen bg-[#fafbfc]">
@@ -254,23 +300,43 @@ export function CourseDetailPage() {
                                 </p>
                                 <p className="mt-0.5 text-xs text-[#94a3b8]">One-time payment · lifetime access</p>
 
-                                {/* CTAs */}
-                                {/* TODO: wire Apply / Self-Paced handlers after backend merge */}
+                                {/* CTA */}
                                 <div className="mt-5 flex flex-col gap-3">
-                                    <Button
-                                        variant="primary"
-                                        className="w-full"
-                                        onClick={() => {/* TODO */ }}
-                                    >
-                                        Apply for Course
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        className="w-full"
-                                        onClick={() => {/* TODO */ }}
-                                    >
-                                        Self-Paced Learning
-                                    </Button>
+                                    {enrolled ? (
+                                        <Badge label="Enrolled" tone="success" icon={CircleCheck} className="self-start" />
+                                    ) : pendingApplication ? (
+                                        <Badge label="Pending approval" tone="warning" icon={Clock} className="self-start" />
+                                    ) : user?.role === 'student' || !user ? (
+                                        <Button
+                                            variant="primary"
+                                            className="w-full"
+                                            onClick={handleEnrol}
+                                            isLoading={enrol.isPending}
+                                        >
+                                            {course.enrolment_policy === 'application' ? 'Apply to enrol' : 'Enrol now'}
+                                        </Button>
+                                    ) : (
+                                        <Badge label="Students only" tone="neutral" icon={Lock} className="self-start" />
+                                    )}
+
+                                    {!enrolled && !pendingApplication && (user?.role === 'student' || !user) && (
+                                        <>
+                                            {course.enrolment_policy === 'advisory' && (
+                                                <p className="text-xs text-[#94a3b8]">
+                                                    You&apos;ll be asked to confirm you meet the prerequisites before
+                                                    you&apos;re enrolled.
+                                                </p>
+                                            )}
+                                            {course.enrolment_policy === 'application' && (
+                                                <p className="text-xs text-[#94a3b8]">
+                                                    Requires an admin to review and approve your application before
+                                                    you&apos;re enrolled.
+                                                </p>
+                                            )}
+                                        </>
+                                    )}
+
+                                    {enrolError && <Alert variant="error" message={enrolError} />}
                                 </div>
 
                                 {/* Includes */}
@@ -294,6 +360,25 @@ export function CourseDetailPage() {
 
                 </div>
             </div>
+
+            {showAdvisoryModal && (
+                <AdvisoryEnrolModal
+                    course={course}
+                    onClose={() => setShowAdvisoryModal(false)}
+                    onEnrolled={() => {
+                        setShowAdvisoryModal(false);
+                        setEnrolled(true);
+                    }}
+                />
+            )}
+
+            {showApplicationModal && (
+                <ApplicationModal
+                    course={course}
+                    onClose={() => setShowApplicationModal(false)}
+                    onSubmitted={() => setShowApplicationModal(false)}
+                />
+            )}
         </div>
     );
 }

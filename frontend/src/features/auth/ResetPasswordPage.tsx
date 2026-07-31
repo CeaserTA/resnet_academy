@@ -6,7 +6,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Alert } from '@/components/ui/Alert';
-import { Card } from '@/components/ui/card';
+import { Card } from '@/components/ui/Card';
 import { ApiError } from '@/lib/api/client';
 import { resetPassword } from '@/features/auth/api';
 

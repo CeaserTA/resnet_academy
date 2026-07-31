@@ -49,7 +49,7 @@ const course: Course = {
     updated_at: '',
 };
 
-it('renders the course title, level, category, and instructor', () => {
+it('renders the course title, level, category, and price', () => {
     render(
         <MemoryRouter>
             <CourseCard course={course} />
@@ -59,5 +59,6 @@ it('renders the course title, level, category, and instructor', () => {
     expect(screen.getByText('Introduction to Laravel')).toBeInTheDocument();
     expect(screen.getByText('Beginner')).toBeInTheDocument();
     expect(screen.getByText('Web Development')).toBeInTheDocument();
-    expect(screen.getByText('Jane Doe')).toBeInTheDocument();
+    expect(screen.getByText('UGX 50,000')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'View Course' })).toHaveAttribute('href', '/courses/1');
 });

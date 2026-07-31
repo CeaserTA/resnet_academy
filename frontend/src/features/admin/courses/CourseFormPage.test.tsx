@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { it, expect, vi, beforeEach } from 'vitest';
@@ -69,6 +69,12 @@ beforeEach(() => {
     updateCourseMock.mockClear();
 });
 
+/** `Select` is a Radix combobox now, not a native `<select>` — open it, then click the option. */
+async function selectRadixOption(user: UserEvent, labelText: string, optionText: string) {
+    await user.click(screen.getByRole('combobox', { name: labelText }));
+    await user.click(await screen.findByRole('option', { name: optionText }));
+}
+
 it('clicking save immediately with no changes still submits', async () => {
     const user = userEvent.setup();
     renderPage();
@@ -103,7 +109,7 @@ it('changing the level auto-updates the default policy and still saves', async (
     renderPage();
 
     await screen.findByLabelText('Title');
-    await user.selectOptions(screen.getByLabelText('Level'), 'advanced');
+    await selectRadixOption(user, 'Level', 'Advanced');
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
 
     expect(await screen.findByText('Course list')).toBeInTheDocument();
@@ -143,7 +149,7 @@ it('overriding the policy and adding application questions saves them', async ()
 
     await screen.findByLabelText('Title');
     await user.click(screen.getByRole('checkbox', { name: 'Override default policy' }));
-    await user.selectOptions(screen.getByLabelText('Enrollment policy'), 'application');
+    await selectRadixOption(user, 'Enrollment policy', 'Application — admin reviews and approves');
     await user.click(screen.getByRole('button', { name: 'Add question' }));
     await user.type(screen.getByLabelText('Question 1'), 'Why do you want to take this course?');
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
