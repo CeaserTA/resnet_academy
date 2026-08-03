@@ -1,19 +1,13 @@
+import { useNavigate } from 'react-router';
 import { Button } from '@/components/ui/Button';
 import { ChevronRight } from 'lucide-react';
 
 interface HeroProps {
-    onGetStartedClick: () => void;
-    onBrowseCoursesClick?: () => void;
+    onJoinCohortClick: () => void;
 }
 
-export function Hero({ onGetStartedClick, onBrowseCoursesClick }: HeroProps) {
-    const handleBrowseCourses = () => {
-        if (onBrowseCoursesClick) {
-            onBrowseCoursesClick();
-        } else {
-            document.getElementById('courses')?.scrollIntoView({ behavior: 'smooth' });
-        }
-    };
+export function Hero({ onJoinCohortClick }: HeroProps) {
+    const navigate = useNavigate();
 
     return (
         /* Full-width light-blue background — no inner padding on the section so the
@@ -23,13 +17,8 @@ export function Hero({ onGetStartedClick, onBrowseCoursesClick }: HeroProps) {
 
                 {/* ── Left: text block ── */}
                 <div className="flex flex-col justify-center py-16 px-0 lg:py-24 lg:pl-8 xl:pl-0">
-                    {/* Eyebrow badge */}
-                    <span className="inline-flex w-fit items-center rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-white">
-                        ResNet Academy
-                    </span>
-
-                    <h1 className="mt-5 text-4xl font-bold leading-tight tracking-tight text-ink-900 sm:text-5xl xl:text-6xl">
-                        Achieve your career goals<br className="hidden sm:block" /> with ResNet Academy
+                    <h1 className="text-4xl font-bold leading-tight tracking-tight text-ink-900 sm:text-5xl xl:text-6xl">
+                        Learn. Build. Launch.
                     </h1>
 
                     <p className="mt-5 max-w-lg text-lg leading-8 text-[#334155]">
@@ -42,19 +31,19 @@ export function Hero({ onGetStartedClick, onBrowseCoursesClick }: HeroProps) {
                         <Button
                             variant="primary"
                             size="lg"
-                            onClick={onGetStartedClick}
+                            onClick={onJoinCohortClick}
                             className="bg-blue-600 hover:bg-blue-700 sm:w-auto"
                         >
-                            Get Started — it's free
+                            Join Cohort
                             <ChevronRight className="ml-1 size-4" aria-hidden="true" />
                         </Button>
                         <Button
                             variant="outline"
                             size="lg"
-                            onClick={handleBrowseCourses}
+                            onClick={() => navigate('/courses#cohorts')}
                             className="border-blue-600 text-blue-700 hover:bg-blue-100 sm:w-auto"
                         >
-                            Browse Courses
+                            View Cohorts
                         </Button>
                     </div>
                 </div>

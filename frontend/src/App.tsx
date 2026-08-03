@@ -11,6 +11,7 @@ import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage';
 import { VerifyEmailNoticePage } from '@/features/auth/VerifyEmailNoticePage';
 import { CourseDetailPage } from '@/features/catalogue/CourseDetailPage';
+import { CataloguePage } from '@/features/catalogue/CataloguePage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { CourseListPage } from '@/features/admin/courses/CourseListPage';
 import { CourseFormPage } from '@/features/admin/courses/CourseFormPage';
@@ -52,6 +53,7 @@ function App() {
                     )
                 }
             />
+            <Route path="courses" element={<CataloguePage />} />
             <Route path="courses/:id" element={<CourseDetailPage />} />
             <Route path="about" element={<AboutPage />} />
             <Route path="contact" element={<ContactPage />} />

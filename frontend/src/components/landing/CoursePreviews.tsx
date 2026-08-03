@@ -1,20 +1,14 @@
-﻿import { Spinner } from '@/components/ui/Spinner';
+﻿import { Link } from 'react-router';
+import { Button } from '@/components/ui/Button';
+import { Spinner } from '@/components/ui/Spinner';
 import { CourseCard } from '@/features/catalogue/CourseCard';
+import { courseImageMap, courseDurationMap } from '@/features/catalogue/courseImages';
 import { useCourses } from '@/features/catalogue/useCourses';
-
-/** Maps a course slug to its local image in /public/images/. */
-const courseImageMap: Record<string, string> = {
-  'web-foundations': '/images/web_foundations.jpg',
-  'dynamic-web': '/images/dynamic_web.jpg',
-  'full-stack': '/images/full_stack.jpg',
-  'search-engine-optimization': '/images/SEO.jpg',
-  'progressive-web-app-development': '/images/PWA.jpg',
-  'vuejs-and-laravel': '/images/VUE.JS_LARAVEL.jpg',
-};
 
 export function CoursePreviews() {
   const { data, isLoading } = useCourses({ status: 'published' });
-  const courses = data?.data ?? [];
+  // Show first 3 on the homepage; full list is on /courses
+  const courses = (data?.data ?? []).slice(0, 3);
 
   return (
     <section id="courses" className="border-t border-[#e8ecf1] bg-[#eff6ff] px-4 py-14 sm:px-6 lg:px-8">
@@ -42,14 +36,27 @@ export function CoursePreviews() {
         )}
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {courses.map((course) => (
-            <CourseCard
-              key={course.id}
-              course={course}
-              imageSrc={courseImageMap[course.slug]}
-            />
-          ))}
+          {courses.map((course) => {
+            const meta = courseDurationMap[course.slug];
+            return (
+              <CourseCard
+                key={course.id}
+                course={course}
+                imageSrc={courseImageMap[course.slug]}
+                duration={meta?.duration}
+                format={meta?.format}
+              />
+            );
+          })}
         </div>
+
+        {!isLoading && courses.length > 0 && (
+          <div className="mt-10 flex justify-center">
+            <Button variant="outline" size="lg" asChild>
+              <Link to="/courses">View all courses</Link>
+            </Button>
+          </div>
+        )}
       </div>
     </section>
   );

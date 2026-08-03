@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api/client';
-import type { Category, Course, PaginatedResponse } from '@/lib/api/types';
+import type { Category, Course, Module, PaginatedResponse } from '@/lib/api/types';
 
 export interface CourseFilters {
     category_id?: number;
@@ -23,5 +23,10 @@ export async function fetchCourse(id: number): Promise<Course> {
 
 export async function fetchCategories(): Promise<Category[]> {
     const { data } = await apiClient.get<{ data: Category[] }>('/categories');
+    return data.data;
+}
+
+export async function fetchCourseModules(courseId: number): Promise<Module[]> {
+    const { data } = await apiClient.get<{ data: Module[] }>(`/courses/${courseId}/modules`);
     return data.data;
 }
