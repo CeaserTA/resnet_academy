@@ -3,7 +3,9 @@ import { MemoryRouter } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { it, expect, vi } from 'vitest';
 import { MyCoursesPage } from '@/features/enrolment/MyCoursesPage';
-import type { Course, Enrolment, Module, PaginatedResponse, ProgressDashboardRow } from '@/lib/api/types';
+import { fetchProgressDashboard } from '@/features/progress/api';
+import { fetchMyReviews } from '@/features/reviews/api';
+import type { Course, CourseReview, Enrolment, Module, PaginatedResponse, ProgressDashboardRow } from '@/lib/api/types';
 
 const { enrolment, modules, progressRows } = vi.hoisted(() => {
     const course: Course = {
@@ -102,6 +104,11 @@ vi.mock('@/features/courseStructure/api', () => ({
     fetchModules: vi.fn().mockResolvedValue(modules),
 }));
 
+vi.mock('@/features/reviews/api', () => ({
+    fetchMyReviews: vi.fn().mockResolvedValue([]),
+    submitCourseReview: vi.fn(),
+}));
+
 function renderPage() {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
@@ -142,4 +149,69 @@ it('shows the course thumbnail image when one is set', async () => {
     });
 
     enrolment.course.thumbnail_url = null;
+});
+
+const completedProgressRows: ProgressDashboardRow[] = [
+    {
+        course: { id: 1, title: 'Intro to Testing' },
+        status: 'completed',
+        percent_complete: 100,
+        modules: [],
+        certificate: { certificate_number: 'CERT-1', certificate_url: null },
+    },
+];
+
+it('shows a "Rate this course" link once a course is completed and not yet reviewed', async () => {
+    vi.mocked(fetchProgressDashboard).mockResolvedValueOnce(completedProgressRows);
+    vi.mocked(fetchMyReviews).mockResolvedValueOnce([]);
+
+    renderPage();
+
+    expect(await screen.findByRole('button', { name: 'Rate this course' })).toBeInTheDocument();
+});
+
+it('hides the review link once a pending review already exists, but offers to edit a rejected one', async () => {
+    vi.mocked(fetchProgressDashboard).mockResolvedValueOnce(completedProgressRows);
+    vi.mocked(fetchMyReviews).mockResolvedValueOnce([
+        {
+            id: 1,
+            rating: 5,
+            review_text: null,
+            status: 'pending',
+            admin_notes: null,
+            is_featured: false,
+            student: null,
+            course: { id: 1, title: 'Intro to Testing' } as CourseReview['course'],
+            reviewer: null,
+            created_at: '2026-01-01T00:00:00Z',
+            reviewed_at: null,
+        },
+    ]);
+
+    renderPage();
+    await screen.findByText('Intro to Testing');
+
+    expect(screen.queryByRole('button', { name: 'Rate this course' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit your review' })).not.toBeInTheDocument();
+
+    vi.mocked(fetchProgressDashboard).mockResolvedValueOnce(completedProgressRows);
+    vi.mocked(fetchMyReviews).mockResolvedValueOnce([
+        {
+            id: 1,
+            rating: 2,
+            review_text: null,
+            status: 'rejected',
+            admin_notes: null,
+            is_featured: false,
+            student: null,
+            course: { id: 1, title: 'Intro to Testing' } as CourseReview['course'],
+            reviewer: null,
+            created_at: '2026-01-01T00:00:00Z',
+            reviewed_at: '2026-01-02T00:00:00Z',
+        },
+    ]);
+
+    renderPage();
+
+    expect(await screen.findByRole('button', { name: 'Edit your review' })).toBeInTheDocument();
 });

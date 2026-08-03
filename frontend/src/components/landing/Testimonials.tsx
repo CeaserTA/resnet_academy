@@ -1,36 +1,30 @@
-﻿// TODO: Replace placeholder quotes with real student testimonials
+import { StarRating } from '@/components/ui/StarRating';
+import { useFeaturedReviews } from '@/features/reviews/useReviews';
 
-const testimonials = [
-  {
-    initials: 'AM',
-    name: 'Amina Mukasa',
-    role: 'Frontend Development Graduate',
-    quote:
-      'I built my first responsive website in just six weeks, and now I feel confident enough to start applying for frontend roles in Kampala.',
-    avatarBg: 'bg-[#eff6ff]',
-    avatarText: 'text-blue-700',
-  },
-  {
-    initials: 'BJ',
-    name: 'Brian Juma',
-    role: 'Backend Development Graduate',
-    quote:
-      'The backend track helped me understand Laravel, build APIs, and present a real project during interviews. It was the boost I needed to earn my first contract.',
-    avatarBg: 'bg-amber-50',
-    avatarText: 'text-amber-700',
-  },
-  {
-    initials: 'CN',
-    name: 'Catherine Nanyonga',
-    role: 'Specialized Skills Participant',
-    quote:
-      'Learning SEO, analytics, and database optimization in one course gave me practical skills I could use immediately on client work and freelance projects.',
-    avatarBg: 'bg-emerald-50',
-    avatarText: 'text-emerald-700',
-  },
+const AVATAR_STYLES = [
+  { bg: 'bg-[#eff6ff]', text: 'text-blue-700' },
+  { bg: 'bg-amber-50', text: 'text-amber-700' },
+  { bg: 'bg-emerald-50', text: 'text-emerald-700' },
 ];
 
+function initialsFor(name: string): string {
+  return (
+    name
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join('') || '?'
+  );
+}
+
 export function Testimonials() {
+  const { data: reviews } = useFeaturedReviews();
+
+  if (!reviews || reviews.length === 0) {
+    return null;
+  }
+
   return (
     <section id="testimonials" className="border-t border-[#e8ecf1] bg-[#fafbfc] px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
@@ -50,31 +44,38 @@ export function Testimonials() {
 
         {/* 3-column grid */}
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {testimonials.map(({ initials, name, role, quote, avatarBg, avatarText }) => (
-            <div
-              key={name}
-              className="rounded-2xl border border-[#e8ecf1] bg-white p-6 transition-colors duration-200 hover:border-blue-200"
-            >
-              {/* Avatar + name row */}
-              <div className="flex items-center gap-3">
-                {/* TODO: replace with <img> once real photos are available */}
-                <div
-                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${avatarBg} ${avatarText}`}
-                >
-                  {initials}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-ink-900">{name}</p>
-                  <p className="text-xs text-[#94a3b8]">{role}</p>
-                </div>
-              </div>
+          {reviews.map((review, index) => {
+            const name = review.student?.name ?? 'Resnet student';
+            const style = AVATAR_STYLES[index % AVATAR_STYLES.length];
 
-              {/* Quote */}
-              <blockquote className="mt-4 text-sm leading-7 text-[#64748b]">
-                "{quote}"
-              </blockquote>
-            </div>
-          ))}
+            return (
+              <div
+                key={review.id}
+                className="rounded-2xl border border-[#e8ecf1] bg-white p-6 transition-colors duration-200 hover:border-blue-200"
+              >
+                {/* Avatar + name row */}
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${style.bg} ${style.text}`}
+                  >
+                    {initialsFor(name)}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-ink-900">{name}</p>
+                    {review.course && <p className="text-xs text-[#94a3b8]">{review.course.title}</p>}
+                  </div>
+                </div>
+
+                <div className="mt-3">
+                  <StarRating value={review.rating} readOnly size="sm" />
+                </div>
+
+                {review.review_text && (
+                  <blockquote className="mt-3 text-sm leading-7 text-[#64748b]">"{review.review_text}"</blockquote>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>

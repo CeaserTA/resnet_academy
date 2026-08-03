@@ -5,7 +5,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { it, expect, vi } from 'vitest';
 import { CoursePlayerPage } from '@/features/learning/CoursePlayerPage';
 import { AuthProvider } from '@/lib/auth/AuthContext';
-import type { Course, Module, ModuleProgressEntry, ProgressDashboardRow, User } from '@/lib/api/types';
+import { fetchModules } from '@/features/courseStructure/api';
+import { fetchCourseProgress } from '@/features/learning/api';
+import { fetchProgressDashboard } from '@/features/progress/api';
+import { fetchMyReviews } from '@/features/reviews/api';
+import type { Course, CourseReview, Module, ModuleProgressEntry, ProgressDashboardRow, User } from '@/lib/api/types';
 
 const { course, modules, progress, progressRows, student } = vi.hoisted(() => {
     const course: Course = {
@@ -154,6 +158,11 @@ vi.mock('@/features/auth/api', () => ({
     fetchCurrentUser: vi.fn().mockResolvedValue(student),
 }));
 
+vi.mock('@/features/reviews/api', () => ({
+    fetchMyReviews: vi.fn().mockResolvedValue([]),
+    submitCourseReview: vi.fn(),
+}));
+
 function renderPlayer() {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
@@ -216,4 +225,83 @@ it('collapses and re-expands a module’s resource list', async () => {
 
     await user.click(screen.getByRole('button', { name: /View 1 Resource/ }));
     expect(screen.getAllByText('Welcome')).toHaveLength(2);
+});
+
+const completedModules: Module[] = [
+    {
+        id: 3,
+        course_id: 1,
+        title: 'Module 1',
+        description: null,
+        order_index: 1,
+        scheduled_start_at: null,
+        deleted_at: null,
+        group_ids: [],
+        status: 'completed',
+        items: [
+            {
+                item_type: 'resource',
+                id: 30,
+                module_id: 3,
+                type: 'reading',
+                title: 'Finale',
+                description: null,
+                is_required: true,
+                order_index: 1,
+                is_complete: true,
+                details: {},
+            },
+        ],
+    },
+];
+
+const completedProgress: ModuleProgressEntry[] = [
+    { module_id: 3, module_title: 'Module 1', order_index: 1, status: 'completed', unlocked_at: null, completed_at: '2026-01-01T00:00:00Z' },
+];
+
+const completedProgressRows: ProgressDashboardRow[] = [
+    {
+        course: { id: 1, title: 'Intro to Testing' },
+        status: 'completed',
+        percent_complete: 100,
+        modules: [],
+        certificate: { certificate_number: 'CERT-1', certificate_url: null },
+    },
+];
+
+it('shows a Rate & Review prompt once the course is complete and not yet reviewed', async () => {
+    vi.mocked(fetchModules).mockResolvedValueOnce(completedModules);
+    vi.mocked(fetchCourseProgress).mockResolvedValueOnce(completedProgress);
+    vi.mocked(fetchProgressDashboard).mockResolvedValueOnce(completedProgressRows);
+    vi.mocked(fetchMyReviews).mockResolvedValueOnce([]);
+
+    renderPlayer();
+
+    expect(await screen.findByRole('button', { name: /Rate & Review this course/ })).toBeInTheDocument();
+});
+
+it('hides the Rate & Review prompt once a review has already been submitted', async () => {
+    vi.mocked(fetchModules).mockResolvedValueOnce(completedModules);
+    vi.mocked(fetchCourseProgress).mockResolvedValueOnce(completedProgress);
+    vi.mocked(fetchProgressDashboard).mockResolvedValueOnce(completedProgressRows);
+    vi.mocked(fetchMyReviews).mockResolvedValueOnce([
+        {
+            id: 1,
+            rating: 5,
+            review_text: null,
+            status: 'pending',
+            admin_notes: null,
+            is_featured: false,
+            student: null,
+            course: { id: 1, title: 'Intro to Testing' } as CourseReview['course'],
+            reviewer: null,
+            created_at: '2026-01-01T00:00:00Z',
+            reviewed_at: null,
+        },
+    ]);
+
+    renderPlayer();
+
+    expect(await screen.findByText("You've completed this course!")).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Rate & Review this course/ })).not.toBeInTheDocument();
 });

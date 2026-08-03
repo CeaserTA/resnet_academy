@@ -4,7 +4,6 @@ import { BookX } from 'lucide-react';
 import { useCategories, useCourses } from '@/features/catalogue/useCourses';
 import { CourseCard } from '@/features/catalogue/CourseCard';
 import { HeroSection } from '@/features/catalogue/HeroSection';
-import { TestimonialsSection } from '@/features/catalogue/TestimonialsSection';
 import { FaqSection } from '@/features/catalogue/FaqSection';
 import { Select } from '@/components/ui/Select';
 import { Spinner } from '@/components/ui/Spinner';
@@ -88,7 +87,6 @@ export function CataloguePage() {
                 </div>
             </div>
 
-            <TestimonialsSection />
             <FaqSection />
         </div>
     );

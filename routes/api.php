@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\CertificateController;
 use App\Http\Controllers\Api\V1\ConversationController;
 use App\Http\Controllers\Api\V1\CourseApplicationController;
 use App\Http\Controllers\Api\V1\CourseController;
+use App\Http\Controllers\Api\V1\CourseReviewController;
 use App\Http\Controllers\Api\V1\EnrolmentController;
 use App\Http\Controllers\Api\V1\EnrolmentImportController;
 use App\Http\Controllers\Api\V1\EvaluationAttemptController;
@@ -52,6 +53,9 @@ Route::prefix('v1')->group(function (): void {
     Route::get('/courses/{course}/modules', [ModuleController::class, 'index']);
     Route::get('/resources/{resource}', [ResourceController::class, 'show']);
 
+    // Public reviews (approved only) — landing page testimonials, no auth required.
+    Route::get('/reviews', [CourseReviewController::class, 'publicIndex']);
+
     // Certificate verification (architecture.md §5.4) — public, no auth: anyone holding a
     // printed certificate can confirm it's genuine.
     Route::get('/certificates/verify/{certificateNumber}', [CertificateController::class, 'verify']);
@@ -80,6 +84,13 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/course-applications', [CourseApplicationController::class, 'store']);
         Route::post('/course-applications/{application}/approve', [CourseApplicationController::class, 'approve']);
         Route::post('/course-applications/{application}/reject', [CourseApplicationController::class, 'reject']);
+
+        Route::get('/me/reviews', [CourseReviewController::class, 'mine']);
+        Route::post('/courses/{course}/reviews', [CourseReviewController::class, 'store']);
+        Route::get('/admin/reviews', [CourseReviewController::class, 'index']);
+        Route::post('/admin/reviews/{review}/approve', [CourseReviewController::class, 'approve']);
+        Route::post('/admin/reviews/{review}/reject', [CourseReviewController::class, 'reject']);
+        Route::post('/admin/reviews/{review}/feature', [CourseReviewController::class, 'feature']);
 
         Route::post('/orders/{order}/payment-submissions', [PaymentSubmissionController::class, 'store']);
 

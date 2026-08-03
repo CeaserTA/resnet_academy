@@ -8,6 +8,7 @@ import {
     GraduationCap,
     LifeBuoy,
     Plus,
+    Star,
     Upload,
     UserCheck,
     Users,
@@ -79,6 +80,7 @@ export function AdminDashboardPage() {
             tone: 'success',
         },
         { icon: LifeBuoy, label: 'Open tickets', value: data.open_tickets, tone: 'warning' },
+        { icon: Star, label: 'Pending reviews', value: data.pending_reviews, tone: 'warning' },
         { icon: AlertTriangle, label: 'At-risk students', value: data.at_risk_students, tone: 'danger' },
     ];
 

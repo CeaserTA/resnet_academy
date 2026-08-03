@@ -33,6 +33,7 @@ import { AuditLogPage } from '@/features/analytics/AuditLogPage';
 import { AccountPage } from '@/features/account/AccountPage';
 import { PaymentsPage } from '@/features/admin/payments/PaymentsPage';
 import { ApplicationsPage } from '@/features/admin/applications/ApplicationsPage';
+import { ReviewsPage } from '@/features/admin/reviews/ReviewsPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
 function App() {
@@ -101,6 +102,14 @@ function App() {
                     element={
                         <ProtectedRoute roles={['admin']}>
                             <ApplicationsPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="admin/reviews"
+                    element={
+                        <ProtectedRoute roles={['admin']}>
+                            <ReviewsPage />
                         </ProtectedRoute>
                     }
                 />

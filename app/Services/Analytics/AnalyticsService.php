@@ -7,6 +7,7 @@ namespace App\Services\Analytics;
 use App\Enums\EnrolmentStatus;
 use App\Enums\ModuleProgressStatus;
 use App\Enums\OrderStatus;
+use App\Enums\ReviewStatus;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Models\Assignment;
@@ -14,6 +15,7 @@ use App\Models\AssignmentSubmission;
 use App\Models\AuditLog;
 use App\Models\Certificate;
 use App\Models\Course;
+use App\Models\CourseReview;
 use App\Models\EngagementEvent;
 use App\Models\Enrolment;
 use App\Models\ModuleProgress;
@@ -295,6 +297,7 @@ final class AnalyticsService
                 ->map(fn (object $row) => ['currency' => $row->currency, 'total' => (float) $row->total])
                 ->values(),
             'open_tickets' => Ticket::query()->whereIn('status', [TicketStatus::Open, TicketStatus::InProgress])->count(),
+            'pending_reviews' => CourseReview::query()->where('status', ReviewStatus::Pending)->count(),
             'at_risk_students' => $atRiskCount,
             'recent_audit_logs' => AuditLog::query()->with('actor')->latest('id')->limit(8)->get(),
         ];

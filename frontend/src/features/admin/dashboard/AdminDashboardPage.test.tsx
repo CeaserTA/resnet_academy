@@ -20,6 +20,7 @@ const { summary } = vi.hoisted(() => {
         certificates_issued: 12,
         revenue_by_currency: [{ currency: 'UGX', total: 500000 }],
         open_tickets: 3,
+        pending_reviews: 2,
         at_risk_students: 4,
         recent_audit_logs: [
             {

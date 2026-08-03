@@ -1,10 +1,12 @@
 ﻿import { useState } from 'react';
 import { Link } from 'react-router';
-import { ArrowRight, Award, BookOpen, Compass, CreditCard, LogOut } from 'lucide-react';
+import { ArrowRight, Award, BookOpen, Compass, CreditCard, LogOut, Star } from 'lucide-react';
 import { useMyEnrolments, useSubmitPayment, useWithdrawEnrolment } from '@/features/enrolment/useEnrolments';
 import { useMyCourseApplications } from '@/features/courseApplications/useCourseApplications';
 import { useCourseSequence } from '@/features/learning/useCourseSequence';
 import { useProgressDashboard } from '@/features/progress/useProgress';
+import { ReviewFormModal } from '@/features/reviews/ReviewFormModal';
+import { useMyReviews } from '@/features/reviews/useReviews';
 import { Spinner } from '@/components/ui/Spinner';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -23,7 +25,7 @@ import {
 } from '@/lib/statusBadge';
 import { findNextIncompleteItem, itemLinkFor } from '@/lib/courseSequence';
 import { ApiError } from '@/lib/api/client';
-import type { Enrolment, Order, ProgressDashboardRow } from '@/lib/api/types';
+import type { CourseReview, Enrolment, Order, ProgressDashboardRow } from '@/lib/api/types';
 
 const MAX_RECEIPT_BYTES = 5 * 1024 * 1024;
 
@@ -134,17 +136,21 @@ function MakePaymentModal({ order, onClose }: { order: Order; onClose: () => voi
 function EnrolmentCard({
     enrolment,
     progress,
+    review,
     confirmingWithdrawId,
     withdrawIsPending,
     onWithdraw,
     onPay,
+    onReview,
 }: {
     enrolment: Enrolment;
     progress: ProgressDashboardRow | undefined;
+    review: CourseReview | undefined;
     confirmingWithdrawId: number | null;
     withdrawIsPending: boolean;
     onWithdraw: (enrolmentId: number) => void;
     onPay: (order: Order) => void;
+    onReview: () => void;
 }) {
     const status = enrolmentStatusDisplay(enrolment.status);
     const order = enrolment.order;
@@ -207,6 +213,17 @@ function EnrolmentCard({
                             {progress.certificate.certificate_url ? 'Download certificate' : 'Certificate generating…'}
                         </a>
                     )}
+
+                    {progress.certificate && (!review || review.status === 'rejected') && (
+                        <button
+                            type="button"
+                            onClick={onReview}
+                            className="mt-1 inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
+                        >
+                            <Star className="size-4" aria-hidden="true" />
+                            {review ? 'Edit your review' : 'Rate this course'}
+                        </button>
+                    )}
                 </div>
             )}
 
@@ -263,9 +280,11 @@ export function MyCoursesPage() {
     const { data, isLoading } = useMyEnrolments();
     const { data: applications } = useMyCourseApplications();
     const { data: progressRows } = useProgressDashboard();
+    const { data: myReviews } = useMyReviews();
     const withdrawEnrolment = useWithdrawEnrolment();
     const [confirmingWithdrawId, setConfirmingWithdrawId] = useState<number | null>(null);
     const [payingOrder, setPayingOrder] = useState<Order | null>(null);
+    const [reviewingCourse, setReviewingCourse] = useState<{ id: number; title: string } | null>(null);
 
     const handleWithdraw = (enrolmentId: number) => {
         if (confirmingWithdrawId !== enrolmentId) {
@@ -283,6 +302,7 @@ export function MyCoursesPage() {
 
     const enrolments = data?.data ?? [];
     const progressByCourseId = new Map((progressRows ?? []).map((row) => [row.course.id, row]));
+    const reviewByCourseId = new Map((myReviews ?? []).flatMap((review) => (review.course ? [[review.course.id, review] as const] : [])));
     const openApplications = (applications ?? []).filter((application) => application.status !== 'approved');
 
     return (
@@ -357,16 +377,26 @@ export function MyCoursesPage() {
                             key={enrolment.id}
                             enrolment={enrolment}
                             progress={progressByCourseId.get(enrolment.course.id)}
+                            review={reviewByCourseId.get(enrolment.course.id)}
                             confirmingWithdrawId={confirmingWithdrawId}
                             withdrawIsPending={withdrawEnrolment.isPending}
                             onWithdraw={handleWithdraw}
                             onPay={setPayingOrder}
+                            onReview={() => setReviewingCourse({ id: enrolment.course.id, title: enrolment.course.title })}
                         />
                     ))}
                 </div>
             )}
 
             {payingOrder && <MakePaymentModal order={payingOrder} onClose={() => setPayingOrder(null)} />}
+
+            {reviewingCourse && (
+                <ReviewFormModal
+                    course={reviewingCourse}
+                    existingReview={reviewByCourseId.get(reviewingCourse.id)}
+                    onClose={() => setReviewingCourse(null)}
+                />
+            )}
         </div>
     );
 }

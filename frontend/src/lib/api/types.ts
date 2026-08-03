@@ -6,6 +6,7 @@ export type EnrolmentStatus = 'confirmed' | 'withdrawn';
 export type EnrolmentSource = 'self' | 'admin_bulk';
 export type EnrolmentPolicy = 'open' | 'advisory' | 'application';
 export type CourseApplicationStatus = 'pending' | 'approved' | 'rejected';
+export type ReviewStatus = 'pending' | 'approved' | 'rejected';
 export type OrderStatus = 'pending' | 'partial' | 'paid';
 export type PaymentSubmissionStatus = 'pending' | 'confirmed' | 'rejected';
 
@@ -112,6 +113,20 @@ export interface CourseApplication {
     alternative_proof_text: string | null;
     recommended_courses: Course[];
     applied_at: string;
+    reviewed_at: string | null;
+}
+
+export interface CourseReview {
+    id: number;
+    rating: number;
+    review_text: string | null;
+    status: ReviewStatus;
+    admin_notes: string | null;
+    is_featured: boolean;
+    student: { id: number; name: string } | null;
+    course: Course | null;
+    reviewer: { id: number; name: string } | null;
+    created_at: string;
     reviewed_at: string | null;
 }
 
@@ -614,6 +629,7 @@ export interface DashboardSummary {
     certificates_issued: number;
     revenue_by_currency: CurrencyTotal[];
     open_tickets: number;
+    pending_reviews: number;
     at_risk_students: number;
     recent_audit_logs: AuditLogEntry[];
 }

@@ -27,6 +27,7 @@ import type {
     ForumPostReportStatus,
     OrderStatus,
     PaymentSubmissionStatus,
+    ReviewStatus,
     TicketStatus,
     UserRole,
     UserStatus,
@@ -104,6 +105,16 @@ const courseApplicationStatusMap: Record<CourseApplicationStatus, StatusDisplay>
 
 export function courseApplicationStatusDisplay(status: CourseApplicationStatus): StatusDisplay {
     return courseApplicationStatusMap[status];
+}
+
+const reviewStatusMap: Record<ReviewStatus, StatusDisplay> = {
+    pending: { label: 'Pending', tone: 'warning', icon: Clock },
+    approved: { label: 'Approved', tone: 'success', icon: CheckCircle2 },
+    rejected: { label: 'Rejected', tone: 'danger', icon: XCircle },
+};
+
+export function reviewStatusDisplay(status: ReviewStatus): StatusDisplay {
+    return reviewStatusMap[status];
 }
 
 const courseProgressStatusMap: Record<CourseProgressStatus, StatusDisplay> = {
