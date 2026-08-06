@@ -5,11 +5,12 @@ import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 
 interface LandingHeaderProps {
+    isAuthenticated?: boolean;
     onLoginClick: () => void;
     onSignupClick: () => void;
 }
 
-export function LandingHeader({ onLoginClick, onSignupClick }: LandingHeaderProps) {
+export function LandingHeader({ isAuthenticated = false, onLoginClick, onSignupClick }: LandingHeaderProps) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
 
@@ -68,32 +69,46 @@ export function LandingHeader({ onLoginClick, onSignupClick }: LandingHeaderProp
 
                 {/* Desktop Auth Buttons */}
                 <div className="hidden gap-3 lg:flex">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-900 hover:underline"
-                        onClick={onLoginClick}
-                    >
-                        Log in
-                    </Button>
-                    <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={onSignupClick}
-                    >
-                        Sign up
-                    </Button>
+                    {isAuthenticated ? (
+                        <Button variant="primary" size="sm" asChild>
+                            <Link to="/dashboard">Go to dashboard</Link>
+                        </Button>
+                    ) : (
+                        <>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-900 hover:underline"
+                                onClick={onLoginClick}
+                            >
+                                Log in
+                            </Button>
+                            <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={onSignupClick}
+                            >
+                                Sign up
+                            </Button>
+                        </>
+                    )}
                 </div>
 
-                {/* Mobile Menu Toggle + Sign Up Button */}
+                {/* Mobile Menu Toggle + Primary Button */}
                 <div className="flex items-center gap-2 lg:hidden">
-                    <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={onSignupClick}
-                    >
-                        Sign up
-                    </Button>
+                    {isAuthenticated ? (
+                        <Button variant="primary" size="sm" asChild>
+                            <Link to="/dashboard">Dashboard</Link>
+                        </Button>
+                    ) : (
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={onSignupClick}
+                        >
+                            Sign up
+                        </Button>
+                    )}
                     <button
                         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                         className="rounded-md p-2 text-ink-600 hover:bg-surface-100"
@@ -128,19 +143,21 @@ export function LandingHeader({ onLoginClick, onSignupClick }: LandingHeaderProp
                                 {label}
                             </NavLink>
                         ))}
-                        <div className="border-t border-[#e8ecf1] pt-3">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="w-full"
-                                onClick={() => {
-                                    onLoginClick();
-                                    setMobileMenuOpen(false);
-                                }}
-                            >
-                                Log in
-                            </Button>
-                        </div>
+                        {!isAuthenticated && (
+                            <div className="border-t border-[#e8ecf1] pt-3">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full"
+                                    onClick={() => {
+                                        onLoginClick();
+                                        setMobileMenuOpen(false);
+                                    }}
+                                >
+                                    Log in
+                                </Button>
+                            </div>
+                        )}
                     </nav>
                 </div>
             )}

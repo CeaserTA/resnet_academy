@@ -111,7 +111,10 @@ export interface CourseApplication {
     answers: string[] | null;
     portfolio_url: string | null;
     alternative_proof_text: string | null;
+    rejection_reason: string | null;
+    dismissed_at: string | null;
     recommended_courses: Course[];
+    reviewer: { id: number; name: string; role: UserRole } | null;
     applied_at: string;
     reviewed_at: string | null;
 }

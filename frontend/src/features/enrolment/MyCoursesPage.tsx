@@ -2,9 +2,10 @@
 import { Link } from 'react-router';
 import { ArrowRight, Award, BookOpen, Compass, CreditCard, LogOut, Star } from 'lucide-react';
 import { useMyEnrolments, useSubmitPayment, useWithdrawEnrolment } from '@/features/enrolment/useEnrolments';
-import { useMyCourseApplications } from '@/features/courseApplications/useCourseApplications';
+import { useDismissCourseApplication, useMyCourseApplications } from '@/features/courseApplications/useCourseApplications';
 import { useCourseSequence } from '@/features/learning/useCourseSequence';
 import { useProgressDashboard } from '@/features/progress/useProgress';
+import { ApplicationStatusCard } from '@/features/enrolment/ApplicationStatusCard';
 import { ReviewFormModal } from '@/features/reviews/ReviewFormModal';
 import { useMyReviews } from '@/features/reviews/useReviews';
 import { Spinner } from '@/components/ui/Spinner';
@@ -17,15 +18,13 @@ import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import {
-    courseApplicationStatusDisplay,
     courseProgressStatusDisplay,
     enrolmentStatusDisplay,
-    orderStatusDisplay,
     paymentSubmissionStatusDisplay,
 } from '@/lib/statusBadge';
 import { findNextIncompleteItem, itemLinkFor } from '@/lib/courseSequence';
 import { ApiError } from '@/lib/api/client';
-import type { CourseReview, Enrolment, Order, ProgressDashboardRow } from '@/lib/api/types';
+import type { CourseReview, Enrolment, ProgressDashboardRow } from '@/lib/api/types';
 
 const MAX_RECEIPT_BYTES = 5 * 1024 * 1024;
 
@@ -33,28 +32,45 @@ function formatAmount(amount: string | number, currency: string): string {
     return new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 }).format(Number(amount));
 }
 
-function MakePaymentModal({ order, onClose }: { order: Order; onClose: () => void }) {
+/**
+ * Opened from the page level (not a specific card), so it always starts by asking which course
+ * the payment is for — unless there's only one payable course, in which case that's pointless and
+ * it jumps straight to the form.
+ */
+function MakePaymentModal({ enrolments, onClose }: { enrolments: Enrolment[]; onClose: () => void }) {
     const submitPayment = useSubmitPayment();
-    const [amount, setAmount] = useState(order.remaining_balance.toString());
+    const [selected, setSelected] = useState<Enrolment | null>(() => (enrolments.length === 1 ? enrolments[0] : null));
+    const [amount, setAmount] = useState(() =>
+        enrolments.length === 1 ? enrolments[0].order!.remaining_balance.toString() : '',
+    );
     const [receipt, setReceipt] = useState<File | null>(null);
     const [error, setError] = useState<string | null>(null);
 
+    const handleSelect = (enrolment: Enrolment) => {
+        setSelected(enrolment);
+        setAmount(enrolment.order!.remaining_balance.toString());
+    };
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const selected = e.target.files?.[0];
-        if (!selected) {
+        const file = e.target.files?.[0];
+        if (!file) {
             return;
         }
 
-        if (selected.size > MAX_RECEIPT_BYTES) {
+        if (file.size > MAX_RECEIPT_BYTES) {
             setError('That file is over 5MB. Choose a smaller one.');
             return;
         }
 
         setError(null);
-        setReceipt(selected);
+        setReceipt(file);
     };
 
     const handleSubmit = async () => {
+        if (!selected?.order) {
+            return;
+        }
+
         setError(null);
 
         const numericAmount = Number(amount);
@@ -63,7 +79,7 @@ function MakePaymentModal({ order, onClose }: { order: Order; onClose: () => voi
             setError('Enter an amount greater than zero.');
             return;
         }
-        if (numericAmount > order.remaining_balance) {
+        if (numericAmount > selected.order.remaining_balance) {
             setError("You can't pay more than the remaining balance for this course.");
             return;
         }
@@ -73,18 +89,43 @@ function MakePaymentModal({ order, onClose }: { order: Order; onClose: () => voi
         }
 
         try {
-            await submitPayment.mutateAsync({ orderId: order.id, amount: numericAmount, receipt });
+            await submitPayment.mutateAsync({ orderId: selected.order.id, amount: numericAmount, receipt });
             onClose();
         } catch (err) {
             setError(err instanceof ApiError ? err.message : 'Could not submit the payment. Try again.');
         }
     };
 
+    if (!selected) {
+        return (
+            <Modal isOpen onClose={onClose} title="Make a payment">
+                <div className="flex flex-col gap-2">
+                    <p className="text-sm text-ink-600">Choose which course you&apos;re paying for.</p>
+                    {enrolments.map((enrolment) => (
+                        <button
+                            key={enrolment.id}
+                            type="button"
+                            onClick={() => handleSelect(enrolment)}
+                            className="flex items-center justify-between rounded-md border border-surface-100 px-3 py-2.5 text-left text-sm hover:bg-surface-50"
+                        >
+                            <span className="font-medium text-ink-900">{enrolment.course.title}</span>
+                            <span className="text-ink-600">
+                                {formatAmount(enrolment.order!.remaining_balance, enrolment.order!.currency)}
+                            </span>
+                        </button>
+                    ))}
+                </div>
+            </Modal>
+        );
+    }
+
+    const order = selected.order!;
+
     return (
         <Modal
             isOpen
             onClose={onClose}
-            title="Make a payment"
+            title={`Pay for ${selected.course.title}`}
             footer={
                 <>
                     <Button variant="ghost" onClick={onClose}>
@@ -97,6 +138,16 @@ function MakePaymentModal({ order, onClose }: { order: Order; onClose: () => voi
             }
         >
             <div className="flex flex-col gap-4">
+                {enrolments.length > 1 && (
+                    <button
+                        type="button"
+                        onClick={() => setSelected(null)}
+                        className="self-start text-sm text-blue-600 hover:underline"
+                    >
+                        ← Choose a different course
+                    </button>
+                )}
+
                 {error && <Alert variant="error" message={error} />}
 
                 <p className="text-sm text-ink-600">
@@ -129,6 +180,38 @@ function MakePaymentModal({ order, onClose }: { order: Order; onClose: () => voi
     );
 }
 
+function WithdrawConfirmModal({ enrolment, onClose }: { enrolment: Enrolment; onClose: () => void }) {
+    const withdrawEnrolment = useWithdrawEnrolment();
+
+    const handleConfirm = async () => {
+        await withdrawEnrolment.mutateAsync(enrolment.id);
+        onClose();
+    };
+
+    return (
+        <Modal
+            isOpen
+            onClose={onClose}
+            title={`Withdraw from ${enrolment.course.title}?`}
+            footer={
+                <>
+                    <Button variant="ghost" onClick={onClose}>
+                        Cancel
+                    </Button>
+                    <Button variant="destructive" onClick={handleConfirm} isLoading={withdrawEnrolment.isPending}>
+                        Withdraw
+                    </Button>
+                </>
+            }
+        >
+            <p className="text-sm text-ink-600">
+                You&apos;ll lose access to this course, and this can&apos;t be undone from your dashboard — contact
+                support if you change your mind.
+            </p>
+        </Modal>
+    );
+}
+
 /**
  * Its own component (not inlined in the `.map()` below) because the Continue link needs
  * `useCourseSequence`, and hooks can only be called from a component, not a callback.
@@ -137,24 +220,22 @@ function EnrolmentCard({
     enrolment,
     progress,
     review,
-    confirmingWithdrawId,
-    withdrawIsPending,
     onWithdraw,
-    onPay,
     onReview,
 }: {
     enrolment: Enrolment;
     progress: ProgressDashboardRow | undefined;
     review: CourseReview | undefined;
-    confirmingWithdrawId: number | null;
-    withdrawIsPending: boolean;
-    onWithdraw: (enrolmentId: number) => void;
-    onPay: (order: Order) => void;
+    onWithdraw: () => void;
     onReview: () => void;
 }) {
+    // `enrolment.status` (confirmed/withdrawn) is the sole authoritative "is this student in the
+    // course" badge. `order.status` (pending/partial/paid) is a separate, orthogonal concept —
+    // payment progress, not membership — so it's surfaced only in the "Amount owed" section below,
+    // never as a second competing badge up here (that's what caused a card to show e.g. both
+    // "Withdrawn" and "Pending" at once).
     const status = enrolmentStatusDisplay(enrolment.status);
     const order = enrolment.order;
-    const orderStatus = order ? orderStatusDisplay(order.status) : null;
     const pendingSubmission = order?.pending_submission ?? null;
     const pendingSubmissionStatus = pendingSubmission ? paymentSubmissionStatusDisplay(pendingSubmission.status) : null;
     const progressStatus = progress ? courseProgressStatusDisplay(progress.status) : null;
@@ -178,7 +259,6 @@ function EnrolmentCard({
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between">
                         <Badge label={status.label} tone={status.tone} icon={status.icon} />
-                        {orderStatus && <Badge label={orderStatus.label} tone={orderStatus.tone} icon={orderStatus.icon} />}
                     </div>
                     <h3 className="mt-1 truncate text-lg">{enrolment.course.title}</h3>
                     <p className="mt-1 text-sm text-ink-600">
@@ -241,37 +321,20 @@ function EnrolmentCard({
                             />
                         </div>
                     ) : (
-                        <>
-                            <p className="text-sm text-ink-600">
-                                Amount owed:{' '}
-                                <span className="font-medium text-ink-900">
-                                    {formatAmount(order.remaining_balance, order.currency)}
-                                </span>
-                            </p>
-                            <Button
-                                variant="secondary"
-                                onClick={() => onPay(order)}
-                                className="w-full justify-center px-2 py-1 text-sm"
-                            >
-                                <CreditCard className="size-4" aria-hidden="true" />
-                                Make a payment
-                            </Button>
-                        </>
+                        <p className="text-sm text-ink-600">
+                            Amount owed:{' '}
+                            <span className="font-medium text-ink-900">
+                                {formatAmount(order.remaining_balance, order.currency)}
+                            </span>
+                        </p>
                     )}
                 </div>
             )}
 
-            {enrolment.status === 'confirmed' && (
-                <Button
-                    variant={confirmingWithdrawId === enrolment.id ? 'destructive' : 'ghost'}
-                    onClick={() => onWithdraw(enrolment.id)}
-                    isLoading={withdrawIsPending}
-                    className="mt-3 w-full justify-start px-2 py-1 text-sm"
-                >
-                    <LogOut className="size-4" aria-hidden="true" />
-                    {confirmingWithdrawId === enrolment.id ? 'Confirm withdrawal?' : 'Withdraw'}
-                </Button>
-            )}
+            <Button variant="ghost" onClick={onWithdraw} className="mt-3 w-full justify-start px-2 py-1 text-sm">
+                <LogOut className="size-4" aria-hidden="true" />
+                Withdraw
+            </Button>
         </Card>
     );
 }
@@ -281,114 +344,113 @@ export function MyCoursesPage() {
     const { data: applications } = useMyCourseApplications();
     const { data: progressRows } = useProgressDashboard();
     const { data: myReviews } = useMyReviews();
-    const withdrawEnrolment = useWithdrawEnrolment();
-    const [confirmingWithdrawId, setConfirmingWithdrawId] = useState<number | null>(null);
-    const [payingOrder, setPayingOrder] = useState<Order | null>(null);
+    const dismissApplication = useDismissCourseApplication();
+    const [withdrawingEnrolment, setWithdrawingEnrolment] = useState<Enrolment | null>(null);
+    const [isMakingPayment, setIsMakingPayment] = useState(false);
     const [reviewingCourse, setReviewingCourse] = useState<{ id: number; title: string } | null>(null);
-
-    const handleWithdraw = (enrolmentId: number) => {
-        if (confirmingWithdrawId !== enrolmentId) {
-            setConfirmingWithdrawId(enrolmentId);
-            return;
-        }
-
-        withdrawEnrolment.mutate(enrolmentId);
-        setConfirmingWithdrawId(null);
-    };
 
     if (isLoading) {
         return <Spinner />;
     }
 
-    const enrolments = data?.data ?? [];
+    // Withdrawn enrolments are dropped from the dashboard entirely rather than shown with a
+    // "Withdrawn" badge — useWithdrawEnrolment() invalidates this query on success, so combined
+    // with this filter a withdrawn card disappears as soon as the refetch lands, no manual
+    // refresh needed.
+    const activeEnrolments = (data?.data ?? []).filter((enrolment) => enrolment.status !== 'withdrawn');
+    const payableEnrolments = activeEnrolments.filter(
+        (enrolment) => enrolment.order && enrolment.order.remaining_balance > 0 && !enrolment.order.pending_submission,
+    );
     const progressByCourseId = new Map((progressRows ?? []).map((row) => [row.course.id, row]));
     const reviewByCourseId = new Map((myReviews ?? []).flatMap((review) => (review.course ? [[review.course.id, review] as const] : [])));
-    const openApplications = (applications ?? []).filter((application) => application.status !== 'approved');
+    // Most recent first. The backend's visibleForDashboard() already excludes approved
+    // applications and expired/dismissed/acted-on rejections, so no further filtering is needed
+    // here. TODO: once a student can have 3+ pending applications at once, collapse them into a
+    // summary row instead of listing every card individually.
+    const sortedApplications = (applications ?? [])
+        .slice()
+        .sort((a, b) => new Date(b.applied_at).getTime() - new Date(a.applied_at).getTime());
+    // Reassurance copy only makes sense while every listed application is still undecided — once
+    // any of them has been approved/rejected, that "no need to check back" line would sit right
+    // next to a resolved item, which reads as a bug.
+    const allApplicationsPending = sortedApplications.every((application) => application.status === 'pending');
 
     return (
         <div>
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl">My courses</h1>
-                <Link to="/courses">
-                    <Button variant="secondary">
-                        <Compass className="size-4" aria-hidden="true" />
-                        Browse catalogue
-                    </Button>
-                </Link>
+                <div className="flex gap-2">
+                    {payableEnrolments.length > 0 && (
+                        <Button variant="secondary" onClick={() => setIsMakingPayment(true)}>
+                            <CreditCard className="size-4" aria-hidden="true" />
+                            Make a payment
+                        </Button>
+                    )}
+                    <Link to="/#courses">
+                        <Button variant="secondary">
+                            <Compass className="size-4" aria-hidden="true" />
+                            Browse catalogue
+                        </Button>
+                    </Link>
+                </div>
             </div>
 
-            {openApplications.length > 0 && (
+            {sortedApplications.length > 0 && (
                 <div className="mt-6">
-                    <h2 className="text-lg text-ink-900">Applications awaiting review</h2>
+                    <h2 className="text-lg text-ink-900">{allApplicationsPending ? 'Applications' : 'Application updates'}</h2>
                     <p className="text-sm text-ink-600">
-                        You&apos;ll be notified once an admin makes a decision — no need to check back.
+                        {allApplicationsPending
+                            ? "You'll be notified once an admin makes a decision — no need to check back."
+                            : 'Track the status of your course applications.'}
                     </p>
                     <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        {openApplications.map((application) => {
-                            const status = courseApplicationStatusDisplay(application.status);
-
-                            return (
-                                <Card key={application.id} className="border-dashed bg-surface-50">
-                                    <div className="flex items-center justify-between">
-                                        <Badge label={status.label} tone={status.tone} icon={status.icon} />
-                                    </div>
-                                    <h3 className="mt-3 text-lg">{application.course.title}</h3>
-                                    <p className="mt-1 text-sm text-ink-600">
-                                        Applied {new Date(application.applied_at).toLocaleDateString()}
-                                    </p>
-
-                                    {application.status === 'rejected' && application.recommended_courses.length > 0 && (
-                                        <div className="mt-3 flex flex-col gap-1 border-t border-surface-100 pt-3 text-sm">
-                                            <p className="text-ink-600">Consider starting with:</p>
-                                            {application.recommended_courses.map((recommended) => (
-                                                <Link
-                                                    key={recommended.id}
-                                                    to={`/courses/${recommended.id}`}
-                                                    className="text-blue-600 hover:underline"
-                                                >
-                                                    {recommended.title}
-                                                </Link>
-                                            ))}
-                                        </div>
-                                    )}
-                                </Card>
-                            );
-                        })}
+                        {sortedApplications.map((application) => (
+                            <ApplicationStatusCard
+                                key={application.id}
+                                application={application}
+                                onDismiss={() => dismissApplication.mutate(application.id)}
+                            />
+                        ))}
                     </div>
                 </div>
             )}
 
-            {enrolments.length === 0 ? (
+            {activeEnrolments.length > 0 && <h2 className="mt-6 text-lg text-ink-900">Active Learning</h2>}
+
+            {activeEnrolments.length === 0 ? (
                 <EmptyState
                     icon={BookOpen}
                     title="You haven’t enrolled in any courses yet"
                     description="Browse the catalogue to find your first course."
                     action={
-                        <Link to="/courses">
+                        <Link to="/#courses">
                             <Button>Browse the catalogue</Button>
                         </Link>
                     }
                     className="mt-6"
                 />
             ) : (
-                <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {enrolments.map((enrolment) => (
+                <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {activeEnrolments.map((enrolment) => (
                         <EnrolmentCard
                             key={enrolment.id}
                             enrolment={enrolment}
                             progress={progressByCourseId.get(enrolment.course.id)}
                             review={reviewByCourseId.get(enrolment.course.id)}
-                            confirmingWithdrawId={confirmingWithdrawId}
-                            withdrawIsPending={withdrawEnrolment.isPending}
-                            onWithdraw={handleWithdraw}
-                            onPay={setPayingOrder}
+                            onWithdraw={() => setWithdrawingEnrolment(enrolment)}
                             onReview={() => setReviewingCourse({ id: enrolment.course.id, title: enrolment.course.title })}
                         />
                     ))}
                 </div>
             )}
 
-            {payingOrder && <MakePaymentModal order={payingOrder} onClose={() => setPayingOrder(null)} />}
+            {isMakingPayment && (
+                <MakePaymentModal enrolments={payableEnrolments} onClose={() => setIsMakingPayment(false)} />
+            )}
+
+            {withdrawingEnrolment && (
+                <WithdrawConfirmModal enrolment={withdrawingEnrolment} onClose={() => setWithdrawingEnrolment(null)} />
+            )}
 
             {reviewingCourse && (
                 <ReviewFormModal

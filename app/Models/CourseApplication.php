@@ -23,6 +23,8 @@ final class CourseApplication extends Model
         'answers',
         'portfolio_url',
         'alternative_proof_text',
+        'rejection_reason',
+        'dismissed_at',
         'reviewed_by',
         'reviewed_at',
         'recommended_course_ids',
@@ -33,6 +35,7 @@ final class CourseApplication extends Model
         'answers' => 'array',
         'recommended_course_ids' => 'array',
         'reviewed_at' => 'datetime',
+        'dismissed_at' => 'datetime',
     ];
 
     /**

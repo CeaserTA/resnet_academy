@@ -1,13 +1,16 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { it, expect, vi } from 'vitest';
 import { MyCoursesPage } from '@/features/enrolment/MyCoursesPage';
+import { fetchMyEnrolments, withdrawEnrolment } from '@/features/enrolment/api';
+import { dismissCourseApplication, fetchMyCourseApplications } from '@/features/courseApplications/api';
 import { fetchProgressDashboard } from '@/features/progress/api';
 import { fetchMyReviews } from '@/features/reviews/api';
-import type { Course, CourseReview, Enrolment, Module, PaginatedResponse, ProgressDashboardRow } from '@/lib/api/types';
+import type { Course, CourseApplication, CourseReview, Enrolment, Module, PaginatedResponse, ProgressDashboardRow } from '@/lib/api/types';
 
-const { enrolment, modules, progressRows } = vi.hoisted(() => {
+const { course, enrolment, modules, progressRows } = vi.hoisted(() => {
     const course: Course = {
         id: 1,
         title: 'Intro to Testing',
@@ -88,12 +91,13 @@ vi.mock('@/features/enrolment/api', () => ({
                 links: { first: null, last: null, prev: null, next: null },
             }),
     ),
-    withdrawEnrolment: vi.fn(),
+    withdrawEnrolment: vi.fn().mockResolvedValue({}),
     submitPayment: vi.fn(),
 }));
 
 vi.mock('@/features/courseApplications/api', () => ({
     fetchMyCourseApplications: vi.fn().mockResolvedValue([]),
+    dismissCourseApplication: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock('@/features/progress/api', () => ({
@@ -214,4 +218,200 @@ it('hides the review link once a pending review already exists, but offers to ed
     renderPage();
 
     expect(await screen.findByRole('button', { name: 'Edit your review' })).toBeInTheDocument();
+});
+
+function makeApplication(overrides: Partial<CourseApplication>): CourseApplication {
+    return {
+        id: 1,
+        status: 'pending',
+        student: null as unknown as CourseApplication['student'],
+        course: { ...course, id: 2, title: 'Search Engine Optimisation' },
+        answers: null,
+        portfolio_url: null,
+        alternative_proof_text: null,
+        rejection_reason: null,
+        dismissed_at: null,
+        recommended_courses: [],
+        reviewer: null,
+        applied_at: '2026-08-01T00:00:00Z',
+        reviewed_at: null,
+        ...overrides,
+    };
+}
+
+it('shows the "Applications" heading and reassurance copy while an application is pending', async () => {
+    vi.mocked(fetchMyCourseApplications).mockResolvedValueOnce([makeApplication({ id: 1, status: 'pending' })]);
+
+    renderPage();
+
+    expect(await screen.findByText('Applications')).toBeInTheDocument();
+    expect(screen.getByText(/no need to check back/)).toBeInTheDocument();
+});
+
+it('shows the "Application updates" heading once every application is resolved', async () => {
+    vi.mocked(fetchMyCourseApplications).mockResolvedValueOnce([
+        makeApplication({ id: 1, status: 'rejected', rejection_reason: 'Not a fit yet.' }),
+    ]);
+
+    renderPage();
+
+    expect(await screen.findByText('Application updates')).toBeInTheDocument();
+    expect(screen.getByText('Track the status of your course applications.')).toBeInTheDocument();
+    expect(screen.queryByText(/no need to check back/)).not.toBeInTheDocument();
+});
+
+it('does not show the reassurance copy when applications are in mixed states', async () => {
+    vi.mocked(fetchMyCourseApplications).mockResolvedValueOnce([
+        makeApplication({ id: 1, status: 'pending' }),
+        makeApplication({ id: 2, status: 'rejected', rejection_reason: 'Not a fit yet.', course: { ...course, id: 3, title: 'Other Course' } }),
+    ]);
+
+    renderPage();
+
+    expect(await screen.findByText('Application updates')).toBeInTheDocument();
+    expect(screen.getByText('Track the status of your course applications.')).toBeInTheDocument();
+    expect(screen.queryByText(/no need to check back/)).not.toBeInTheDocument();
+});
+
+it('lists applications most-recent-first', async () => {
+    vi.mocked(fetchMyCourseApplications).mockResolvedValueOnce([
+        makeApplication({ id: 1, status: 'pending', applied_at: '2026-07-01T00:00:00Z', course: { ...course, id: 2, title: 'Older Application' } }),
+        makeApplication({ id: 2, status: 'pending', applied_at: '2026-08-01T00:00:00Z', course: { ...course, id: 3, title: 'Newer Application' } }),
+    ]);
+
+    renderPage();
+
+    const titles = (await screen.findAllByText(/Application$/)).map((el) => el.textContent);
+    expect(titles).toEqual(['Newer Application', 'Older Application']);
+});
+
+function makeOrder(status: 'pending' | 'partial' | 'paid'): NonNullable<Enrolment['order']> {
+    return {
+        id: 1,
+        course_id: 1,
+        student: null,
+        course: null,
+        amount: '100000.00',
+        amount_paid: '0.00',
+        remaining_balance: 100000,
+        currency: 'UGX',
+        status,
+        payment_method: null,
+        provider_ref: null,
+        paid_at: null,
+        created_at: '2026-01-01T00:00:00Z',
+        pending_submission: null,
+        payment_submissions: [],
+    };
+}
+
+it('shows only the enrolment-status badge, not a competing order-status badge, when confirmed', async () => {
+    vi.mocked(fetchMyEnrolments).mockResolvedValueOnce({
+        data: [{ ...enrolment, status: 'confirmed', order: makeOrder('pending') }],
+        meta: { current_page: 1, last_page: 1, per_page: 15, total: 1 },
+        links: { first: null, last: null, prev: null, next: null },
+    });
+
+    renderPage();
+
+    expect(await screen.findByText('Confirmed')).toBeInTheDocument();
+    expect(screen.queryByText('Pending')).not.toBeInTheDocument();
+});
+
+it('hides a withdrawn enrolment from the dashboard entirely', async () => {
+    vi.mocked(fetchMyEnrolments).mockResolvedValueOnce({
+        data: [{ ...enrolment, status: 'withdrawn', order: makeOrder('pending') }],
+        meta: { current_page: 1, last_page: 1, per_page: 15, total: 1 },
+        links: { first: null, last: null, prev: null, next: null },
+    });
+
+    renderPage();
+
+    expect(await screen.findByText(/haven.t enrolled in any courses yet/)).toBeInTheDocument();
+    expect(screen.queryByText('Withdrawn')).not.toBeInTheDocument();
+    expect(screen.queryByText('Intro to Testing')).not.toBeInTheDocument();
+});
+
+it('opens a confirm dialog before withdrawing, and only withdraws once confirmed', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Withdraw' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Withdraw from Intro to Testing?')).toBeInTheDocument();
+    expect(withdrawEnrolment).not.toHaveBeenCalled();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Withdraw' }));
+
+    await waitFor(() => {
+        expect(withdrawEnrolment).toHaveBeenCalledWith(1);
+    });
+});
+
+it('shows the "Make a payment" button only when a course has an outstanding balance', async () => {
+    renderPage();
+
+    await screen.findByText('Intro to Testing');
+    expect(screen.queryByRole('button', { name: 'Make a payment' })).not.toBeInTheDocument();
+});
+
+it('skips the course picker and opens the payment form directly when only one course has a balance', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchMyEnrolments).mockResolvedValueOnce({
+        data: [{ ...enrolment, order: makeOrder('pending') }],
+        meta: { current_page: 1, last_page: 1, per_page: 15, total: 1 },
+        links: { first: null, last: null, prev: null, next: null },
+    });
+
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Make a payment' }));
+
+    expect(await screen.findByLabelText(/Amount to pay/)).toBeInTheDocument();
+    expect(screen.queryByText(/Choose which course/)).not.toBeInTheDocument();
+});
+
+it('opens a course picker for Make a payment when multiple courses have a balance', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchMyEnrolments).mockResolvedValueOnce({
+        data: [
+            { ...enrolment, id: 1, order: makeOrder('pending') },
+            { ...enrolment, id: 2, course: { ...course, id: 5, title: 'Second Course' }, order: makeOrder('pending') },
+        ],
+        meta: { current_page: 1, last_page: 1, per_page: 15, total: 2 },
+        links: { first: null, last: null, prev: null, next: null },
+    });
+
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Make a payment' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Intro to Testing')).toBeInTheDocument();
+    expect(within(dialog).getByText('Second Course')).toBeInTheDocument();
+
+    await user.click(within(dialog).getByText('Second Course'));
+
+    expect(await screen.findByLabelText(/Amount to pay/)).toBeInTheDocument();
+    expect(screen.getByText('← Choose a different course')).toBeInTheDocument();
+});
+
+it('removes a dismissed application card immediately, before the request resolves', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchMyCourseApplications).mockResolvedValueOnce([
+        makeApplication({ id: 1, status: 'rejected', rejection_reason: 'Not a fit yet.' }),
+    ]);
+    // Never resolves within the test — proves the card disappears optimistically, not after the
+    // mutation settles.
+    vi.mocked(dismissCourseApplication).mockReturnValueOnce(new Promise(() => {}));
+
+    renderPage();
+
+    expect(await screen.findByText('Search Engine Optimisation')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }));
+
+    await waitFor(() => {
+        expect(screen.queryByText('Search Engine Optimisation')).not.toBeInTheDocument();
+    });
 });

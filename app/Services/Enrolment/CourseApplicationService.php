@@ -10,10 +10,12 @@ use App\Enums\EnrolmentSource;
 use App\Enums\EnrolmentStatus;
 use App\Models\Course;
 use App\Models\CourseApplication;
+use App\Models\Enrolment;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
 use App\Services\Notifications\NotificationDispatcher;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -23,6 +25,13 @@ use Illuminate\Validation\ValidationException;
  */
 final class CourseApplicationService
 {
+    /**
+     * A rejected application stays on the student's dashboard for this many days after the
+     * decision, mirroring `AnalyticsService::AT_RISK_INACTIVITY_DAYS`'s constant-on-the-service
+     * pattern.
+     */
+    private const REJECTION_VISIBILITY_DAYS = 14;
+
     public function __construct(
         private readonly AuditLogger $auditLogger,
         private readonly NotificationDispatcher $notificationDispatcher,
@@ -66,11 +75,19 @@ final class CourseApplicationService
         return $application;
     }
 
-    public function approve(CourseApplication $application, User $admin): CourseApplication
+    /**
+     * $reviewer is an admin, or an instructor teaching the course (enforced by
+     * `CourseApplicationPolicy`) — whichever acts first on a pending application wins.
+     */
+    public function approve(CourseApplication $application, User $reviewer): CourseApplication
     {
+        if ($application->status !== CourseApplicationStatus::Pending) {
+            throw ValidationException::withMessages(['status' => 'This application has already been decided.']);
+        }
+
         $application->update([
             'status' => CourseApplicationStatus::Approved,
-            'reviewed_by' => $admin->id,
+            'reviewed_by' => $reviewer->id,
             'reviewed_at' => Carbon::now(),
         ]);
 
@@ -80,8 +97,12 @@ final class CourseApplicationService
             action: 'course_application.approved',
             entityType: 'course_application',
             entityId: $application->id,
-            actorId: $admin->id,
-            meta: ['course_id' => $application->course_id, 'student_id' => $application->student_id],
+            actorId: $reviewer->id,
+            meta: [
+                'course_id' => $application->course_id,
+                'student_id' => $application->student_id,
+                'decided_by_role' => $reviewer->role->value,
+            ],
         );
 
         $this->notificationDispatcher->notify(
@@ -99,21 +120,30 @@ final class CourseApplicationService
     /**
      * @param  array<int, int>  $recommendedCourseIds
      */
-    public function reject(CourseApplication $application, User $admin, array $recommendedCourseIds = []): CourseApplication
+    public function reject(CourseApplication $application, User $reviewer, array $recommendedCourseIds = [], ?string $rejectionReason = null): CourseApplication
     {
+        if ($application->status !== CourseApplicationStatus::Pending) {
+            throw ValidationException::withMessages(['status' => 'This application has already been decided.']);
+        }
+
         $application->update([
             'status' => CourseApplicationStatus::Rejected,
-            'reviewed_by' => $admin->id,
+            'reviewed_by' => $reviewer->id,
             'reviewed_at' => Carbon::now(),
             'recommended_course_ids' => $recommendedCourseIds !== [] ? $recommendedCourseIds : null,
+            'rejection_reason' => $rejectionReason,
         ]);
 
         $this->auditLogger->log(
             action: 'course_application.rejected',
             entityType: 'course_application',
             entityId: $application->id,
-            actorId: $admin->id,
-            meta: ['course_id' => $application->course_id, 'student_id' => $application->student_id],
+            actorId: $reviewer->id,
+            meta: [
+                'course_id' => $application->course_id,
+                'student_id' => $application->student_id,
+                'decided_by_role' => $reviewer->role->value,
+            ],
         );
 
         $this->notificationDispatcher->notify(
@@ -125,6 +155,60 @@ final class CourseApplicationService
                 : null,
             relatedEntityType: 'course_application',
             relatedEntityId: $application->id,
+        );
+
+        return $application->fresh();
+    }
+
+    /**
+     * Drives the "Applications" section of the student dashboard: every pending application, plus
+     * rejected ones that haven't been dismissed, haven't expired, and whose recommended course(s)
+     * the student hasn't already acted on. Nothing is ever deleted — this only narrows what the
+     * dashboard query returns; the full history stays queryable elsewhere.
+     *
+     * @return Collection<int, CourseApplication>
+     */
+    public function visibleForDashboard(User $student): Collection
+    {
+        $applications = CourseApplication::query()
+            ->where('student_id', $student->id)
+            ->where(function ($query): void {
+                $query->where('status', CourseApplicationStatus::Pending)
+                    ->orWhere(function ($query): void {
+                        $query->where('status', CourseApplicationStatus::Rejected)
+                            ->whereNull('dismissed_at')
+                            ->where('reviewed_at', '>=', Carbon::now()->subDays(self::REJECTION_VISIBILITY_DAYS));
+                    });
+            })
+            ->with(['course.category', 'course.instructors', 'reviewer'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $recommendedCourseIds = $applications
+            ->flatMap(fn (CourseApplication $application): array => $application->recommended_course_ids ?? [])
+            ->unique();
+
+        $startedCourseIds = Enrolment::query()
+            ->where('student_id', $student->id)
+            ->whereIn('course_id', $recommendedCourseIds)
+            ->pluck('course_id');
+
+        return $applications->reject(
+            fn (CourseApplication $application): bool => $application->status === CourseApplicationStatus::Rejected
+                && collect($application->recommended_course_ids ?? [])->intersect($startedCourseIds)->isNotEmpty(),
+        )->values();
+    }
+
+    public function dismiss(CourseApplication $application, User $student): CourseApplication
+    {
+        $application->update(['dismissed_at' => Carbon::now()]);
+
+        $this->auditLogger->log(
+            action: 'course_application.dismissed',
+            entityType: 'course_application',
+            entityId: $application->id,
+            actorId: $student->id,
+            meta: ['course_id' => $application->course_id],
         );
 
         return $application->fresh();

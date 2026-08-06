@@ -84,6 +84,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/course-applications', [CourseApplicationController::class, 'store']);
         Route::post('/course-applications/{application}/approve', [CourseApplicationController::class, 'approve']);
         Route::post('/course-applications/{application}/reject', [CourseApplicationController::class, 'reject']);
+        Route::post('/course-applications/{application}/dismiss', [CourseApplicationController::class, 'dismiss']);
 
         Route::get('/me/reviews', [CourseReviewController::class, 'mine']);
         Route::post('/courses/{course}/reviews', [CourseReviewController::class, 'store']);

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Textarea } from '@/components/ui/Textarea';
 import { cn } from '@/lib/utils';
 import { useCourses } from '@/features/catalogue/useCourses';
 import {
@@ -14,6 +15,7 @@ import {
 } from '@/features/courseApplications/useCourseApplications';
 import { courseApplicationStatusDisplay } from '@/lib/statusBadge';
 import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
+import { useAuth } from '@/lib/auth/AuthContext';
 import type { CourseApplication, CourseApplicationStatus } from '@/lib/api/types';
 
 type Tab = 'all' | 'rejected' | 'approved';
@@ -42,6 +44,14 @@ function ViewApplicationModal({ application, onClose }: { application: CourseApp
                     <span className="text-ink-600">Applied</span>
                     <span className="text-ink-900">{new Date(application.applied_at).toLocaleString()}</span>
                 </div>
+                {application.reviewer && (
+                    <div className="flex items-center justify-between gap-4">
+                        <span className="text-ink-600">Reviewed by</span>
+                        <span className="text-ink-900">
+                            {application.reviewer.name} ({application.reviewer.role})
+                        </span>
+                    </div>
+                )}
 
                 {(application.course.application_questions ?? []).map((question, index) => (
                     <div key={index} className="border-t border-surface-100 pt-3">
@@ -74,13 +84,18 @@ function RejectApplicationModal({ application, onClose }: { application: CourseA
     const { data: beginnerCourses } = useCourses({ level: 'beginner' });
     const rejectApplication = useRejectCourseApplication();
     const [recommendedIds, setRecommendedIds] = useState<number[]>([]);
+    const [rejectionReason, setRejectionReason] = useState('');
 
     const toggleCourse = (id: number) => {
         setRecommendedIds((current) => (current.includes(id) ? current.filter((c) => c !== id) : [...current, id]));
     };
 
     const handleConfirm = async () => {
-        await rejectApplication.mutateAsync({ id: application.id, recommendedCourseIds: recommendedIds });
+        await rejectApplication.mutateAsync({
+            id: application.id,
+            recommendedCourseIds: recommendedIds,
+            rejectionReason: rejectionReason.trim() || undefined,
+        });
         onClose();
     };
 
@@ -101,6 +116,14 @@ function RejectApplicationModal({ application, onClose }: { application: CourseA
             }
         >
             <div className="flex flex-col gap-3 text-sm">
+                <Textarea
+                    label="Reason (shown to the student)"
+                    rows={3}
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    placeholder="e.g. This course requires prior experience in web fundamentals."
+                />
+
                 <p className="text-ink-600">
                     Optionally recommend beginner courses to point this student toward instead.
                 </p>
@@ -123,7 +146,11 @@ function RejectApplicationModal({ application, onClose }: { application: CourseA
 }
 
 export function ApplicationsPage() {
-    usePageHeader('Applications', 'Course applications, pending first.');
+    const { user } = useAuth();
+    usePageHeader(
+        'Applications',
+        user?.role === 'instructor' ? 'Applications for your courses, pending first.' : 'Course applications, pending first.',
+    );
     const { data, isLoading } = useCourseApplications();
     const approveApplication = useApproveCourseApplication();
 

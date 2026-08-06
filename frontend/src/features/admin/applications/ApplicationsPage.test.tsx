@@ -4,7 +4,32 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { it, expect, vi } from 'vitest';
 import { ApplicationsPage } from '@/features/admin/applications/ApplicationsPage';
 import { PageHeaderProvider } from '@/lib/pageHeader/PageHeaderContext';
-import type { CourseApplication } from '@/lib/api/types';
+import { AuthProvider } from '@/lib/auth/AuthContext';
+import { fetchCurrentUser } from '@/features/auth/api';
+import { rejectCourseApplication } from '@/features/courseApplications/api';
+import type { CourseApplication, User, UserRole } from '@/lib/api/types';
+
+function makeUser(id: number, role: UserRole, name: string): User {
+    return {
+        id,
+        role,
+        name,
+        first_name: null,
+        last_name: null,
+        email: `${name.toLowerCase().replace(/\s+/g, '.')}@example.com`,
+        phone: null,
+        avatar_url: null,
+        bio: null,
+        country: null,
+        city: null,
+        postal_code: null,
+        tax_id: null,
+        status: 'active',
+        email_verified_at: '2026-01-01T00:00:00Z',
+        last_login_at: null,
+        created_at: '2026-01-01T00:00:00Z',
+    };
+}
 
 function makeStudent(id: number, name: string): CourseApplication['student'] {
     return {
@@ -65,7 +90,9 @@ const { MOCK_APPLICATIONS } = vi.hoisted(() => {
             answers: ['Because I want to level up.'],
             portfolio_url: null,
             alternative_proof_text: null,
+            rejection_reason: null,
             recommended_courses: [],
+            reviewer: null,
             applied_at: '2026-07-18T09:12:00Z',
             reviewed_at: null,
         },
@@ -77,7 +104,9 @@ const { MOCK_APPLICATIONS } = vi.hoisted(() => {
             answers: ['I have a portfolio.'],
             portfolio_url: null,
             alternative_proof_text: null,
+            rejection_reason: null,
             recommended_courses: [],
+            reviewer: { id: 9, name: 'Jane Instructor', role: 'instructor' },
             applied_at: '2026-07-15T11:05:00Z',
             reviewed_at: '2026-07-16T09:00:00Z',
         },
@@ -89,7 +118,9 @@ const { MOCK_APPLICATIONS } = vi.hoisted(() => {
             answers: ['Not much experience yet.'],
             portfolio_url: null,
             alternative_proof_text: null,
+            rejection_reason: null,
             recommended_courses: [],
+            reviewer: { id: 1, name: 'Resnet Admin', role: 'admin' },
             applied_at: '2026-07-16T10:20:00Z',
             reviewed_at: '2026-07-17T09:00:00Z',
         },
@@ -115,14 +146,22 @@ vi.mock('@/features/catalogue/api', () => ({
     fetchCourses: vi.fn().mockResolvedValue({ data: [] }),
 }));
 
-function renderPage() {
+vi.mock('@/features/auth/api', () => ({
+    fetchCurrentUser: vi.fn().mockResolvedValue(makeUser(1, 'admin', 'Resnet Admin')),
+}));
+
+function renderPage(role: UserRole = 'admin') {
+    vi.mocked(fetchCurrentUser).mockResolvedValueOnce(makeUser(1, role, role === 'admin' ? 'Resnet Admin' : 'Jane Instructor'));
+
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
     return render(
         <QueryClientProvider client={queryClient}>
-            <PageHeaderProvider>
-                <ApplicationsPage />
-            </PageHeaderProvider>
+            <AuthProvider>
+                <PageHeaderProvider>
+                    <ApplicationsPage />
+                </PageHeaderProvider>
+            </AuthProvider>
         </QueryClientProvider>,
     );
 }
@@ -173,4 +212,34 @@ it('opens the reject modal with a beginner-course recommendation picker', async 
 
     expect(await screen.findByText("Reject Amara Kintu's application")).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Confirm reject' })).toBeInTheDocument();
+});
+
+it('submits the entered rejection reason along with the reject decision', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Reject Amara Kintu' }));
+    await user.type(
+        await screen.findByLabelText('Reason (shown to the student)'),
+        'This course requires prior experience.',
+    );
+    await user.click(screen.getByRole('button', { name: 'Confirm reject' }));
+
+    expect(rejectCourseApplication).toHaveBeenCalledWith(1, [], 'This course requires prior experience.');
+});
+
+it('still allows an instructor to approve/reject applications', async () => {
+    renderPage('instructor');
+
+    expect(await screen.findByRole('button', { name: 'Approve Amara Kintu' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reject Amara Kintu' })).toBeInTheDocument();
+});
+
+it('shows who reviewed a decided application in the view modal', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: 'View Priya Shah' }));
+
+    expect(await screen.findByText('Jane Instructor (instructor)')).toBeInTheDocument();
 });

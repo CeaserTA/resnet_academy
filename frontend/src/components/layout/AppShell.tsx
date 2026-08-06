@@ -51,12 +51,13 @@ function navItemsForRole(role: string): NavItem[] {
             { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
             { to: '/admin/courses', label: 'My courses', icon: BookOpen },
             ...communicationItems,
+            { to: '/admin/applications', label: 'Applications', icon: FileCheck },
         ];
     }
 
     return [
         { to: '/dashboard', label: 'My courses', icon: LayoutDashboard, end: true },
-        { to: '/courses', label: 'Browse catalogue', icon: BookOpen },
+        { to: '/#courses', label: 'Browse catalogue', icon: BookOpen },
         ...communicationItems,
     ];
 }

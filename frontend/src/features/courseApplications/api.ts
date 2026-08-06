@@ -28,9 +28,19 @@ export async function approveCourseApplication(id: number): Promise<CourseApplic
     return data.data;
 }
 
-export async function rejectCourseApplication(id: number, recommendedCourseIds: number[] = []): Promise<CourseApplication> {
+export async function rejectCourseApplication(
+    id: number,
+    recommendedCourseIds: number[] = [],
+    rejectionReason?: string,
+): Promise<CourseApplication> {
     const { data } = await apiClient.post<{ data: CourseApplication }>(`/course-applications/${id}/reject`, {
         recommended_course_ids: recommendedCourseIds,
+        rejection_reason: rejectionReason,
     });
+    return data.data;
+}
+
+export async function dismissCourseApplication(id: number): Promise<CourseApplication> {
+    const { data } = await apiClient.post<{ data: CourseApplication }>(`/course-applications/${id}/dismiss`);
     return data.data;
 }
