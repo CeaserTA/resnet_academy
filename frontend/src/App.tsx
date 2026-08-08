@@ -31,6 +31,7 @@ import { ForumPage } from '@/features/communication/ForumPage';
 import { ForumModerationPage } from '@/features/communication/ForumModerationPage';
 import { AuditLogPage } from '@/features/analytics/AuditLogPage';
 import { AccountPage } from '@/features/account/AccountPage';
+import { ProfileCompletionPage } from '@/features/profile/ProfileCompletionPage';
 import { PaymentsPage } from '@/features/admin/payments/PaymentsPage';
 import { ApplicationsPage } from '@/features/admin/applications/ApplicationsPage';
 import { ReviewsPage } from '@/features/admin/reviews/ReviewsPage';
@@ -77,6 +78,8 @@ function App() {
                 <Route path="verify-email" element={<VerifyEmailNoticePage />} />
                 <Route path="dashboard" element={<DashboardPage />} />
                 <Route path="account" element={<AccountPage />} />
+                <Route path="profile/complete" element={<ProfileCompletionPage />} />
+                <Route path="profile/edit" element={<ProfileCompletionPage />} />
 
                 <Route
                     path="admin/courses"

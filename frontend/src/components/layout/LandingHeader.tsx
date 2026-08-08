@@ -46,7 +46,7 @@ export function LandingHeader({ isAuthenticated = false, onLoginClick, onSignupC
                     className="flex items-center gap-2 font-display text-lg font-semibold text-blue-600"
                 >
                     <GraduationCap className="size-6 text-blue-600" aria-hidden="true" />
-                    <span className="hidden sm:inline">Resnet LMS</span>
+                    <span className="hidden sm:inline">Resnet Academy</span>
                 </Link>
 
                 {/* Desktop Navigation */}

@@ -2,12 +2,13 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { it, expect, vi } from 'vitest';
+import { it, expect, vi, beforeEach } from 'vitest';
 import { MyCoursesPage } from '@/features/enrolment/MyCoursesPage';
 import { fetchMyEnrolments, withdrawEnrolment } from '@/features/enrolment/api';
 import { dismissCourseApplication, fetchMyCourseApplications } from '@/features/courseApplications/api';
 import { fetchProgressDashboard } from '@/features/progress/api';
 import { fetchMyReviews } from '@/features/reviews/api';
+import { profileApi } from '@/lib/api/profileApi';
 import type { Course, CourseApplication, CourseReview, Enrolment, Module, PaginatedResponse, ProgressDashboardRow } from '@/lib/api/types';
 
 const { course, enrolment, modules, progressRows } = vi.hoisted(() => {
@@ -112,6 +113,20 @@ vi.mock('@/features/reviews/api', () => ({
     fetchMyReviews: vi.fn().mockResolvedValue([]),
     submitCourseReview: vi.fn(),
 }));
+
+vi.mock('@/lib/api/profileApi', () => ({
+    profileApi: {
+        getStatus: vi.fn().mockResolvedValue({
+            percentage: 100,
+            missing: [],
+            completed: ['first_name', 'last_name', 'phone', 'country', 'city', 'highest_qualification'],
+        }),
+    },
+}));
+
+beforeEach(() => {
+    vi.clearAllMocks();
+});
 
 function renderPage() {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -415,3 +430,76 @@ it('removes a dismissed application card immediately, before the request resolve
         expect(screen.queryByText('Search Engine Optimisation')).not.toBeInTheDocument();
     });
 });
+
+/**
+ * Task 14.1: Profile Completion Card Display Tests
+ * Validates Requirements: 3.1, 3.5
+ */
+
+it('renders ProfileCompletionCard when profile percentage is less than 100', async () => {
+    vi.mocked(profileApi.getStatus).mockResolvedValueOnce({
+        percentage: 60,
+        missing: ['phone', 'country'],
+        completed: ['first_name', 'last_name', 'city', 'highest_qualification'],
+    });
+
+    renderPage();
+
+    expect(await screen.findByText('Complete your profile')).toBeInTheDocument();
+    expect(screen.getByText('60%')).toBeInTheDocument();
+});
+
+it('does not render ProfileCompletionCard when profile is complete', async () => {
+    vi.mocked(profileApi.getStatus).mockResolvedValueOnce({
+        percentage: 100,
+        missing: [],
+        completed: ['first_name', 'last_name', 'phone', 'country', 'city', 'highest_qualification'],
+    });
+
+    renderPage();
+
+    await screen.findByText('My courses');
+
+    expect(screen.queryByText('Complete your profile')).not.toBeInTheDocument();
+});
+
+it('hides ProfileCompletionCard on API error', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(profileApi.getStatus).mockRejectedValueOnce(new Error('Network error'));
+
+    renderPage();
+
+    await screen.findByText('My courses');
+
+    expect(screen.queryByText('Complete your profile')).not.toBeInTheDocument();
+    expect(consoleSpy).toHaveBeenCalledWith('Failed to fetch profile status:', expect.any(Error));
+
+    consoleSpy.mockRestore();
+});
+
+it('positions ProfileCompletionCard at the top before other content', async () => {
+    vi.mocked(profileApi.getStatus).mockResolvedValueOnce({
+        percentage: 50,
+        missing: ['phone', 'country', 'city'],
+        completed: ['first_name', 'last_name', 'highest_qualification'],
+    });
+
+    renderPage();
+
+    await screen.findByText('Complete your profile');
+
+    const container = screen.getByText('Complete your profile').closest('div');
+    const myCoursesHeading = screen.getByText('My courses');
+
+    // ProfileCompletionCard should appear before the "My courses" heading in DOM order
+    expect(container?.compareDocumentPosition(myCoursesHeading)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+});
+
+it('calls profileApi.getStatus on component mount', async () => {
+    renderPage();
+
+    await screen.findByText('My courses');
+
+    expect(profileApi.getStatus).toHaveBeenCalledTimes(1);
+});
+

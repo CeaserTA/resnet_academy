@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { ArrowRight, Award, BookOpen, Compass, CreditCard, LogOut, Star } from 'lucide-react';
 import { useMyEnrolments, useSubmitPayment, useWithdrawEnrolment } from '@/features/enrolment/useEnrolments';
@@ -8,6 +8,8 @@ import { useProgressDashboard } from '@/features/progress/useProgress';
 import { ApplicationStatusCard } from '@/features/enrolment/ApplicationStatusCard';
 import { ReviewFormModal } from '@/features/reviews/ReviewFormModal';
 import { useMyReviews } from '@/features/reviews/useReviews';
+import { ProfileCompletionCard } from '@/features/profile/ProfileCompletionCard';
+import { profileApi, type ProfileStatus } from '@/lib/api/profileApi';
 import { Spinner } from '@/components/ui/Spinner';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -348,6 +350,23 @@ export function MyCoursesPage() {
     const [withdrawingEnrolment, setWithdrawingEnrolment] = useState<Enrolment | null>(null);
     const [isMakingPayment, setIsMakingPayment] = useState(false);
     const [reviewingCourse, setReviewingCourse] = useState<{ id: number; title: string } | null>(null);
+    const [profileStatus, setProfileStatus] = useState<ProfileStatus | null>(null);
+
+    // Fetch profile status on component mount
+    useEffect(() => {
+        const fetchProfileStatus = async () => {
+            try {
+                const status = await profileApi.getStatus();
+                setProfileStatus(status);
+            } catch (error) {
+                // Gracefully handle API errors by hiding the card and logging the error
+                console.error('Failed to fetch profile status:', error);
+                setProfileStatus(null);
+            }
+        };
+
+        fetchProfileStatus();
+    }, []);
 
     if (isLoading) {
         return <Spinner />;
@@ -377,6 +396,17 @@ export function MyCoursesPage() {
 
     return (
         <div>
+            {/* Requirement 3.1, 3.5: Render ProfileCompletionCard prominently at top when percentage < 100 */}
+            {profileStatus && profileStatus.percentage < 100 && (
+                <div className="mb-6">
+                    <ProfileCompletionCard
+                        percentage={profileStatus.percentage}
+                        missingFields={profileStatus.missing}
+                        completedFields={profileStatus.completed}
+                    />
+                </div>
+            )}
+
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl">My courses</h1>
                 <div className="flex gap-2">

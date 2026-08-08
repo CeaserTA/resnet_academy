@@ -154,6 +154,7 @@ export interface ApiErrorBody {
         code: string;
         message: string;
         fields: Record<string, string[]> | null;
+        missing_fields?: string[];
     };
 }
 

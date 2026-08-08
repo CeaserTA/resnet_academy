@@ -248,3 +248,81 @@ it('denies dismissing another student\'s application', function (): void {
 
     $this->actingAs($other)->postJson("/api/v1/course-applications/{$application->id}/dismiss")->assertForbidden();
 });
+
+// Progressive Student Profile Completion - Middleware Integration Tests (Task 8.2)
+it('blocks course application submission when profile is incomplete', function (): void {
+    $student = User::factory()->student()->create([
+        'name' => 'John Doe',
+        'email' => 'john@example.com',
+        'phone' => null, // Missing required field
+        'country' => null, // Missing required field
+        'city' => null, // Missing required field
+        'highest_qualification' => null, // Missing required field
+    ]);
+    $course = Course::factory()->create(['enrolment_policy' => CourseEnrolmentPolicy::Application]);
+
+    $response = $this->actingAs($student)->postJson('/api/v1/course-applications', [
+        'course_id' => $course->id,
+    ]);
+
+    $response->assertForbidden();
+    $response->assertJson([
+        'error' => [
+            'code' => 'profile_incomplete',
+            'message' => 'Please complete your profile before applying for this course.',
+            'missing_fields' => ['phone', 'country', 'city', 'highest_qualification'],
+        ],
+    ]);
+    $this->assertDatabaseMissing('course_applications', [
+        'student_id' => $student->id,
+        'course_id' => $course->id,
+    ]);
+});
+
+it('allows course application submission when profile is complete', function (): void {
+    $student = User::factory()->student()->create([
+        'name' => 'Jane Smith',
+        'email' => 'jane@example.com',
+        'phone' => '+1234567890',
+        'country' => 'United States',
+        'city' => 'New York',
+        'highest_qualification' => 'Bachelor\'s Degree',
+    ]);
+    $course = Course::factory()->create([
+        'enrolment_policy' => CourseEnrolmentPolicy::Application,
+        'application_questions' => ['Why do you want to take this course?'],
+    ]);
+
+    $response = $this->actingAs($student)->postJson('/api/v1/course-applications', [
+        'course_id' => $course->id,
+        'answers' => ['I want to advance my career.'],
+    ]);
+
+    $response->assertCreated();
+    $this->assertDatabaseHas('course_applications', [
+        'student_id' => $student->id,
+        'course_id' => $course->id,
+        'status' => 'pending',
+    ]);
+});
+
+it('provides detailed missing fields in error response for incomplete profile', function (): void {
+    $student = User::factory()->student()->create([
+        'name' => 'Bob Johnson',
+        'email' => 'bob@example.com',
+        'phone' => '+1234567890',
+        'country' => 'Canada',
+        'city' => null, // Missing
+        'highest_qualification' => null, // Missing
+    ]);
+    $course = Course::factory()->create(['enrolment_policy' => CourseEnrolmentPolicy::Application]);
+
+    $response = $this->actingAs($student)->postJson('/api/v1/course-applications', [
+        'course_id' => $course->id,
+    ]);
+
+    $response->assertForbidden();
+    $missingFields = $response->json('error.missing_fields');
+    expect($missingFields)->toBe(['city', 'highest_qualification']);
+    expect($missingFields)->not->toContain('phone', 'country', 'name', 'email');
+});

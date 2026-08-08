@@ -33,6 +33,7 @@ use App\Http\Controllers\Api\V1\ModuleController;
 use App\Http\Controllers\Api\V1\ModuleItemController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\PaymentSubmissionController;
+use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\ProgressController;
 use App\Http\Controllers\Api\V1\QuestionBankController;
 use App\Http\Controllers\Api\V1\QuestionController;
@@ -71,8 +72,13 @@ Route::prefix('v1')->group(function (): void {
 
         Route::get('/me/data-export', [AccountController::class, 'export']);
         Route::post('/me/avatar', [AccountController::class, 'updateAvatar']);
+        Route::post('/account/avatar', [AccountController::class, 'updateAvatar']); // Alias for profile completion feature
         Route::patch('/me/profile', [AccountController::class, 'updateProfile']);
         Route::post('/me/change-password', [AccountController::class, 'changePassword']);
+
+        // Profile completion status and update endpoints (Progressive Student Profile Completion)
+        Route::get('/profile/status', [ProfileController::class, 'status']);
+        Route::put('/profile', [ProfileController::class, 'update']);
 
         Route::get('/enrolments', [EnrolmentController::class, 'index']);
         Route::post('/enrolments', [EnrolmentController::class, 'store']);
@@ -81,7 +87,7 @@ Route::prefix('v1')->group(function (): void {
 
         Route::get('/course-applications', [CourseApplicationController::class, 'index']);
         Route::get('/course-applications/me', [CourseApplicationController::class, 'mine']);
-        Route::post('/course-applications', [CourseApplicationController::class, 'store']);
+        Route::post('/course-applications', [CourseApplicationController::class, 'store'])->middleware('profile.complete');
         Route::post('/course-applications/{application}/approve', [CourseApplicationController::class, 'approve']);
         Route::post('/course-applications/{application}/reject', [CourseApplicationController::class, 'reject']);
         Route::post('/course-applications/{application}/dismiss', [CourseApplicationController::class, 'dismiss']);
