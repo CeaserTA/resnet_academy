@@ -26,6 +26,18 @@ final class UserFactory extends Factory
             'email_verified_at' => now(),
             'password_hash' => self::$password ??= Hash::make('password'),
             'status' => UserStatus::Active,
+            // Progressive Student Profile Completion - Default complete profile
+            'phone' => fake()->phoneNumber(),
+            'country' => fake()->country(),
+            'city' => fake()->city(),
+            'highest_qualification' => fake()->randomElement([
+                'High School',
+                'Diploma',
+                'Bachelor\'s Degree',
+                'Master\'s Degree',
+                'Doctorate',
+                'Other',
+            ]),
         ];
     }
 
@@ -49,5 +61,18 @@ final class UserFactory extends Factory
     public function student(): static
     {
         return $this->state(fn (array $attributes) => ['role' => UserRole::Student]);
+    }
+
+    /**
+     * Indicate that the user has an incomplete profile (for testing progressive completion).
+     */
+    public function incompleteProfile(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'phone' => null,
+            'country' => null,
+            'city' => null,
+            'highest_qualification' => null,
+        ]);
     }
 }

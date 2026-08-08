@@ -15,6 +15,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentSubmissionStatus;
 use App\Enums\QuestionType;
 use App\Enums\ResourceProgressStatus;
+use App\Enums\ReviewStatus;
 use App\Enums\ScormStandard;
 use App\Enums\SubmissionStatus;
 use App\Enums\TicketStatus;
@@ -30,6 +31,7 @@ use App\Models\Certificate;
 use App\Models\Conversation;
 use App\Models\Course;
 use App\Models\CourseChangeLog;
+use App\Models\CourseReview;
 use App\Models\EngagementEvent;
 use App\Models\Enrolment;
 use App\Models\Evaluation;
@@ -120,6 +122,7 @@ final class DatabaseSeeder extends Seeder
         $orders = $this->seedOrders($enrolments);
         $this->seedPaymentSubmissions($orders, $admins);
         $this->seedCertificates($enrolments);
+        $this->seedCourseReviews($enrolments, $admins);
 
         $this->seedMessaging($allUsers);
         $this->seedTickets($students, $staff, $courses);
@@ -725,6 +728,30 @@ final class DatabaseSeeder extends Seeder
                 'student_id' => $enrolment->student_id,
                 'course_id' => $enrolment->course_id,
                 'issued_at' => now(),
+            ]);
+        }
+    }
+
+    /**
+     * A review needs a `Certificate` to exist for the pair (see `CourseReviewService::submit()`),
+     * so this reuses the same enrolments `seedCertificates()` already issued one for.
+     */
+    private function seedCourseReviews(Collection $enrolments, Collection $admins): void
+    {
+        $statuses = [ReviewStatus::Pending, ReviewStatus::Approved, ReviewStatus::Approved, ReviewStatus::Rejected];
+
+        foreach ($enrolments->take(8) as $i => $enrolment) {
+            $status = $statuses[$i % count($statuses)];
+
+            CourseReview::factory()->create([
+                'student_id' => $enrolment->student_id,
+                'course_id' => $enrolment->course_id,
+                'rating' => fake()->numberBetween(3, 5),
+                'status' => $status,
+                'is_featured' => $status === ReviewStatus::Approved && $i % 2 === 0,
+                'admin_notes' => $status === ReviewStatus::Rejected ? fake()->sentence(6) : null,
+                'reviewed_by' => $status !== ReviewStatus::Pending ? $admins[$i % $admins->count()]->id : null,
+                'reviewed_at' => $status !== ReviewStatus::Pending ? now() : null,
             ]);
         }
     }

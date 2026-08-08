@@ -26,7 +26,12 @@ final class CourseApplicationResource extends JsonResource
             'answers' => $this->answers,
             'portfolio_url' => $this->portfolio_url,
             'alternative_proof_text' => $this->alternative_proof_text,
+            'rejection_reason' => $this->rejection_reason,
+            'dismissed_at' => $this->dismissed_at?->toIso8601String(),
             'recommended_courses' => CourseResource::collection($this->resource->recommendedCourses()),
+            'reviewer' => $this->whenLoaded('reviewer', fn () => $this->reviewer
+                ? ['id' => $this->reviewer->id, 'name' => $this->reviewer->name, 'role' => $this->reviewer->role->value]
+                : null),
             'applied_at' => $this->created_at->toIso8601String(),
             'reviewed_at' => $this->reviewed_at?->toIso8601String(),
         ];

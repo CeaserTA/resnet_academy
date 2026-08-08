@@ -119,6 +119,14 @@ final class Course extends Model
     }
 
     /**
+     * @return HasMany<CourseReview, $this>
+     */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(CourseReview::class);
+    }
+
+    /**
      * @return HasMany<GroupsCohort, $this>
      */
     public function groups(): HasMany

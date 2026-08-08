@@ -28,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'verified' => EnsureEmailIsVerified::class,
+            'profile.complete' => \App\Http\Middleware\EnsureProfileComplete::class,
         ]);
 
         // The 'login' named route is a POST-only JSON endpoint (this is an API-only backend —

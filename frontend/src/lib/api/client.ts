@@ -36,12 +36,14 @@ export class ApiError extends Error {
     readonly code: string;
     readonly status: number;
     readonly fields: Record<string, string[]> | null;
+    readonly missing_fields?: string[];
 
-    constructor(status: number, code: string, message: string, fields: Record<string, string[]> | null) {
+    constructor(status: number, code: string, message: string, fields: Record<string, string[]> | null, missingFields?: string[]) {
         super(message);
         this.status = status;
         this.code = code;
         this.fields = fields;
+        this.missing_fields = missingFields;
     }
 
     fieldError(field: string): string | undefined {
@@ -54,7 +56,7 @@ function toApiError(error: AxiosError<ApiErrorBody>): ApiError {
     const body = error.response?.data;
 
     if (body?.error) {
-        return new ApiError(status, body.error.code, body.error.message, body.error.fields);
+        return new ApiError(status, body.error.code, body.error.message, body.error.fields, body.error.missing_fields);
     }
 
     return new ApiError(status, 'network_error', error.message, null);

@@ -68,7 +68,7 @@ export function AdvisoryEnrolModal({
                     <Button
                         variant="secondary"
                         className="flex-1 justify-center"
-                        onClick={() => navigate('/courses?level=beginner')}
+                        onClick={() => navigate('/#courses')}
                     >
                         Browse Beginner Courses
                     </Button>

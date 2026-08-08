@@ -72,3 +72,35 @@ it('denies an unauthenticated request from uploading an avatar', function (): vo
     $this->post('/api/v1/me/avatar', ['avatar' => fakeImageUpload()], ['Accept' => 'application/json'])
         ->assertUnauthorized();
 });
+
+it('allows avatar upload via the /api/v1/account/avatar alias endpoint', function (): void {
+    Storage::fake('r2', ['url' => 'https://cdn.test']);
+    $student = User::factory()->student()->create();
+
+    $response = $this->actingAs($student)->post('/api/v1/account/avatar', [
+        'avatar' => fakeImageUpload(),
+    ]);
+
+    $response->assertOk();
+    $student->refresh();
+
+    expect($student->avatar_url)->toStartWith('profiles/');
+    Storage::disk('r2')->assertExists($student->avatar_url);
+    expect($response->json('data.avatar_url'))->toStartWith('http');
+});
+
+it('accepts GIF image format for avatar uploads', function (): void {
+    Storage::fake('r2');
+    $student = User::factory()->student()->create();
+
+    // Create a fake GIF file
+    $gifContent = base64_decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+    $gifFile = UploadedFile::fake()->createWithContent('avatar.gif', $gifContent);
+
+    $response = $this->actingAs($student)->post('/api/v1/account/avatar', [
+        'avatar' => $gifFile,
+    ]);
+
+    $response->assertOk();
+    expect($student->fresh()->avatar_url)->toStartWith('profiles/');
+});

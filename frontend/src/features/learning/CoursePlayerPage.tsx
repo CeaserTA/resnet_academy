@@ -9,6 +9,7 @@ import {
     Circle,
     Lock,
     MessageCircle,
+    Star,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -20,6 +21,8 @@ import { CircularProgress } from '@/components/ui/CircularProgress';
 import { useCourse } from '@/features/catalogue/useCourses';
 import { useCoursePlayer } from '@/features/learning/useLearning';
 import { useProgressDashboard } from '@/features/progress/useProgress';
+import { ReviewFormModal } from '@/features/reviews/ReviewFormModal';
+import { useMyReviews } from '@/features/reviews/useReviews';
 import { describeLockedModule, findNextIncompleteItem, flattenModuleItems, itemLinkFor } from '@/lib/courseSequence';
 import { assignmentDueBadge } from '@/lib/statusBadge';
 import { cn } from '@/lib/utils';
@@ -45,7 +48,9 @@ export function CoursePlayerPage() {
     const { data: course } = useCourse(courseId);
     const { modules, progress } = useCoursePlayer(courseId);
     const { data: progressRows } = useProgressDashboard();
+    const { data: myReviews } = useMyReviews();
     const [manualToggles, setManualToggles] = useState<Record<number, boolean>>({});
+    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
     if (modules.isLoading || progress.isLoading) {
         return <Spinner />;
@@ -57,7 +62,10 @@ export function CoursePlayerPage() {
     const sortedModules = (modules.data ?? []).slice().sort((a, b) => a.order_index - b.order_index);
     const progressByModuleId = new Map((progress.data ?? []).map((entry) => [entry.module_id, entry]));
     const nextIncompleteItem = findNextIncompleteItem(flattenModuleItems(modules.data ?? []));
-    const overallPercent = progressRows?.find((row) => row.course.id === courseId)?.percent_complete ?? 0;
+    const progressRow = progressRows?.find((row) => row.course.id === courseId);
+    const overallPercent = progressRow?.percent_complete ?? 0;
+    const hasCompletedCourse = !!progressRow?.certificate;
+    const myReview = myReviews?.find((review) => review.course?.id === courseId);
 
     const nextIncompleteModuleId = sortedModules.find((module) =>
         module.items.some(
@@ -114,7 +122,15 @@ export function CoursePlayerPage() {
                     </Link>
                 </div>
             ) : sortedModules.length > 0 ? (
-                <Alert variant="success" message="You've completed this course!" className="mt-4" />
+                <div className="mt-4 flex items-center justify-between gap-3">
+                    <Alert variant="success" message="You've completed this course!" className="flex-1" />
+                    {hasCompletedCourse && !myReview && (
+                        <Button variant="secondary" onClick={() => setIsReviewModalOpen(true)} className="shrink-0">
+                            <Star className="size-4" aria-hidden="true" />
+                            Rate & Review this course
+                        </Button>
+                    )}
+                </div>
             ) : null}
 
             <div className="mt-6 flex flex-col gap-3">
@@ -245,6 +261,10 @@ export function CoursePlayerPage() {
                     );
                 })}
             </div>
+
+            {isReviewModalOpen && course && (
+                <ReviewFormModal course={course} onClose={() => setIsReviewModalOpen(false)} />
+            )}
         </div>
     );
 }
