@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router';
+import { Routes, Route, Navigate, useLocation } from 'react-router';
 import { AppShell } from '@/components/layout/AppShell';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -32,12 +32,19 @@ import { ForumPage } from '@/features/communication/ForumPage';
 import { ForumModerationPage } from '@/features/communication/ForumModerationPage';
 import { AuditLogPage } from '@/features/analytics/AuditLogPage';
 import { AccountPage } from '@/features/account/AccountPage';
+import { ProfileCompletionPage } from '@/features/profile/ProfileCompletionPage';
 import { PaymentsPage } from '@/features/admin/payments/PaymentsPage';
 import { ApplicationsPage } from '@/features/admin/applications/ApplicationsPage';
+import { ReviewsPage } from '@/features/admin/reviews/ReviewsPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
 function App() {
     const { user, isLoading } = useAuth();
+    const location = useLocation();
+    // "Browse catalogue" links for signed-in students point at "/#courses" — the landing page is
+    // otherwise off-limits once authenticated (redirected to the dashboard), so this hash is the
+    // one exception that lets an already-logged-in student still reach the course section there.
+    const wantsCourseSection = location.hash === '#courses';
 
     return (
         <Routes>
@@ -46,7 +53,7 @@ function App() {
                 element={
                     isLoading ? (
                         <div />
-                    ) : user ? (
+                    ) : user && !wantsCourseSection ? (
                         <Navigate to="/dashboard" replace />
                     ) : (
                         <LandingPage />
@@ -73,6 +80,8 @@ function App() {
                 <Route path="verify-email" element={<VerifyEmailNoticePage />} />
                 <Route path="dashboard" element={<DashboardPage />} />
                 <Route path="account" element={<AccountPage />} />
+                <Route path="profile/complete" element={<ProfileCompletionPage />} />
+                <Route path="profile/edit" element={<ProfileCompletionPage />} />
 
                 <Route
                     path="admin/courses"
@@ -101,8 +110,16 @@ function App() {
                 <Route
                     path="admin/applications"
                     element={
-                        <ProtectedRoute roles={['admin']}>
+                        <ProtectedRoute roles={['admin', 'instructor']}>
                             <ApplicationsPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="admin/reviews"
+                    element={
+                        <ProtectedRoute roles={['admin']}>
+                            <ReviewsPage />
                         </ProtectedRoute>
                     }
                 />

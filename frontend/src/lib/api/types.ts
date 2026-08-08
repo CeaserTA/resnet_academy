@@ -6,6 +6,7 @@ export type EnrolmentStatus = 'confirmed' | 'withdrawn';
 export type EnrolmentSource = 'self' | 'admin_bulk';
 export type EnrolmentPolicy = 'open' | 'advisory' | 'application';
 export type CourseApplicationStatus = 'pending' | 'approved' | 'rejected';
+export type ReviewStatus = 'pending' | 'approved' | 'rejected';
 export type OrderStatus = 'pending' | 'partial' | 'paid';
 export type PaymentSubmissionStatus = 'pending' | 'confirmed' | 'rejected';
 
@@ -21,6 +22,10 @@ export interface User {
     bio: string | null;
     country: string | null;
     city: string | null;
+    highest_qualification: string | null;
+    occupation: string | null;
+    linkedin_profile: string | null;
+    portfolio_website: string | null;
     postal_code: string | null;
     tax_id: string | null;
     status: UserStatus;
@@ -111,8 +116,25 @@ export interface CourseApplication {
     answers: string[] | null;
     portfolio_url: string | null;
     alternative_proof_text: string | null;
+    rejection_reason: string | null;
+    dismissed_at: string | null;
     recommended_courses: Course[];
+    reviewer: { id: number; name: string; role: UserRole } | null;
     applied_at: string;
+    reviewed_at: string | null;
+}
+
+export interface CourseReview {
+    id: number;
+    rating: number;
+    review_text: string | null;
+    status: ReviewStatus;
+    admin_notes: string | null;
+    is_featured: boolean;
+    student: { id: number; name: string } | null;
+    course: Course | null;
+    reviewer: { id: number; name: string } | null;
+    created_at: string;
     reviewed_at: string | null;
 }
 
@@ -137,6 +159,7 @@ export interface ApiErrorBody {
         code: string;
         message: string;
         fields: Record<string, string[]> | null;
+        missing_fields?: string[];
     };
 }
 
@@ -615,6 +638,7 @@ export interface DashboardSummary {
     certificates_issued: number;
     revenue_by_currency: CurrencyTotal[];
     open_tickets: number;
+    pending_reviews: number;
     at_risk_students: number;
     recent_audit_logs: AuditLogEntry[];
 }

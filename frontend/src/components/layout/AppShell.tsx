@@ -10,6 +10,7 @@ import {
     LifeBuoy,
     MessageSquare,
     Search,
+    Star,
     Users,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -38,6 +39,7 @@ function navItemsForRole(role: string): NavItem[] {
             { to: '/admin/courses', label: 'Courses', icon: BookOpen },
             ...communicationItems,
             { to: '/admin/applications', label: 'Applications', icon: FileCheck },
+            { to: '/admin/reviews', label: 'Reviews', icon: Star },
             { to: '/admin/payments', label: 'Payments', icon: CreditCard },
             { to: '/admin/users', label: 'Team', icon: Users },
             { to: '/admin/audit-log', label: 'Audit log', icon: ClipboardList },
@@ -49,12 +51,13 @@ function navItemsForRole(role: string): NavItem[] {
             { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
             { to: '/admin/courses', label: 'My courses', icon: BookOpen },
             ...communicationItems,
+            { to: '/admin/applications', label: 'Applications', icon: FileCheck },
         ];
     }
 
     return [
         { to: '/dashboard', label: 'My courses', icon: LayoutDashboard, end: true },
-        { to: '/courses', label: 'Browse catalogue', icon: BookOpen },
+        { to: '/#courses', label: 'Browse catalogue', icon: BookOpen },
         ...communicationItems,
     ];
 }

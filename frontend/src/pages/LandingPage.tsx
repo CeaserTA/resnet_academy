@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { LandingHeader } from '@/components/layout/LandingHeader';
+import { useAuth } from '@/lib/auth/AuthContext';
 import { Hero } from '@/components/landing/Hero';
 import { CoursePreviews } from '@/components/landing/CoursePreviews';
 import { CohortSection } from '@/components/landing/CohortSection';
@@ -11,15 +12,23 @@ import { AuthModal, type AuthMode } from '@/components/landing/AuthModal';
 type ModalState = AuthMode | null;
 
 export function LandingPage() {
+    const { user } = useAuth();
     const [modalState, setModalState] = useState<ModalState>(null);
 
     const handleLoginClick = () => setModalState('login');
     const handleSignupClick = () => setModalState('signup');
     const closeModal = () => setModalState(null);
 
+    useEffect(() => {
+        if (window.location.hash === '#courses') {
+            document.getElementById('courses')?.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, []);
+
     return (
         <div>
             <LandingHeader
+                isAuthenticated={!!user}
                 onLoginClick={handleLoginClick}
                 onSignupClick={handleSignupClick}
             />

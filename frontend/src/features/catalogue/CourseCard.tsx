@@ -70,7 +70,7 @@ export function CourseCard({ course, imageSrc, duration, format }: CourseCardPro
             {/* ── Card body ── */}
             <CardHeader className="space-y-1.5 px-5 pb-0 pt-4">
                 {course.category && (
-                    <span className="inline-flex w-fit items-center rounded-full bg-blue-600 px-2.5 py-0.5 text-xs font-medium text-white">
+                    <span className="inline-flex w-fit items-center rounded-full bg-blue-600 px-2 py-0.5 text-[11px] font-medium text-white">
                         {course.category.name}
                     </span>
                 )}
