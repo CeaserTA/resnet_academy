@@ -250,36 +250,49 @@ function EnrolmentCard({
 
     return (
         <Card>
-            <Link to={`/learn/courses/${enrolment.course.id}`} className="flex gap-3">
-                <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-md bg-blue-50 text-blue-600">
+            <Link to={`/learn/courses/${enrolment.course.id}`} className="block">
+                {/* Course thumbnail — wider aspect ratio */}
+                <div className="aspect-video w-full overflow-hidden rounded-lg bg-blue-50">
                     {enrolment.course.thumbnail_url ? (
-                        <img src={enrolment.course.thumbnail_url} alt="" className="size-full object-cover" />
+                        <img
+                            src={enrolment.course.thumbnail_url}
+                            alt=""
+                            className="h-full w-full object-cover transition duration-300 hover:scale-105"
+                        />
                     ) : (
-                        <BookOpen className="size-6" aria-hidden="true" />
+                        <div className="flex h-full items-center justify-center text-blue-300">
+                            <BookOpen className="size-8" aria-hidden="true" />
+                        </div>
                     )}
                 </div>
-                <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between">
+
+                <div className="mt-3">
+                    <div className="flex items-center justify-between gap-2">
                         <Badge label={status.label} tone={status.tone} icon={status.icon} />
+                        {orderStatus && (
+                            <Badge label={orderStatus.label} tone={orderStatus.tone} icon={orderStatus.icon} />
+                        )}
                     </div>
-                    <h3 className="mt-1 truncate text-lg">{enrolment.course.title}</h3>
-                    <p className="mt-1 text-sm text-ink-600">
+                    <h3 className="mt-2 text-base font-semibold text-ink-900 line-clamp-1">
+                        {enrolment.course.title}
+                    </h3>
+                    <p className="mt-0.5 text-xs text-ink-600">
                         Enrolled {new Date(enrolment.applied_at).toLocaleDateString()}
                     </p>
                 </div>
             </Link>
 
             {progress && (
-                <div className="mt-4 flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
+                <div className="mt-4 flex flex-col gap-2.5">
+                    <div className="flex items-center justify-between gap-2">
                         <Badge label={progressStatus!.label} tone={progressStatus!.tone} icon={progressStatus!.icon} />
-                        <span className="font-mono text-xs text-ink-600">{progress.percent_complete}%</span>
+                        <span className="font-mono text-xs font-medium text-ink-900">{progress.percent_complete}%</span>
                     </div>
                     <ProgressBar percent={progress.percent_complete} />
 
-                    <Link to={continueHref}>
-                        <Button variant="secondary" className="w-full justify-center px-2 py-1 text-sm">
-                            Continue
+                    <Link to={continueHref} className="mt-1">
+                        <Button variant="primary" className="w-full justify-center">
+                            Continue learning
                             <ArrowRight className="size-4" aria-hidden="true" />
                         </Button>
                     </Link>
@@ -289,7 +302,7 @@ function EnrolmentCard({
                             href={progress.certificate.certificate_url ?? undefined}
                             target="_blank"
                             rel="noreferrer"
-                            className="mt-1 inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
+                            className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:underline"
                         >
                             <Award className="size-4" aria-hidden="true" />
                             {progress.certificate.certificate_url ? 'Download certificate' : 'Certificate generating…'}

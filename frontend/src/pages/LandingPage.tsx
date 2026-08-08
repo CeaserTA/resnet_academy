@@ -3,6 +3,7 @@ import { LandingHeader } from '@/components/layout/LandingHeader';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { Hero } from '@/components/landing/Hero';
 import { CoursePreviews } from '@/components/landing/CoursePreviews';
+import { CohortSection } from '@/components/landing/CohortSection';
 import { Features } from '@/components/landing/Features';
 import { Testimonials } from '@/components/landing/Testimonials';
 import { Footer } from '@/components/landing/Footer';
@@ -35,11 +36,14 @@ export function LandingPage() {
             <main>
                 {/* Hero Section */}
                 <Hero
-                    onGetStartedClick={handleSignupClick}
+                    onJoinCohortClick={handleSignupClick}
                 />
 
                 {/* Course Previews Section */}
                 <CoursePreviews />
+
+                {/* Cohort Schedule Section */}
+                <CohortSection />
 
                 {/* Features Section */}
                 <Features />

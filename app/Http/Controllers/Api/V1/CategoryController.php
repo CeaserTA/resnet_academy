@@ -16,7 +16,9 @@ final class CategoryController extends Controller
 {
     public function index(): AnonymousResourceCollection
     {
-        return CategoryResource::collection(Category::query()->orderBy('name')->get());
+        return CategoryResource::collection(
+            Category::query()->withCount('courses')->orderBy('name')->get()
+        );
     }
 
     public function store(StoreCategoryRequest $request): CategoryResource

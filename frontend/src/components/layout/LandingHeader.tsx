@@ -26,6 +26,7 @@ export function LandingHeader({ isAuthenticated = false, onLoginClick, onSignupC
 
     const navLinks = [
         { label: 'Home', to: '/' },
+        { label: 'Browse Courses', to: '/courses' },
         { label: 'About', to: '/about' },
         { label: 'Contact', to: '/contact' },
     ];

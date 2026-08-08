@@ -39,6 +39,7 @@ export interface Category {
     name: string;
     slug: string;
     parent_id: number | null;
+    courses_count?: number;
     created_at: string;
 }
 

@@ -19,6 +19,7 @@ final class CategoryResource extends JsonResource
             'name' => $this->name,
             'slug' => $this->slug,
             'parent_id' => $this->parent_id,
+            'courses_count' => $this->whenCounted('courses'),
             'created_at' => $this->created_at->toIso8601String(),
         ];
     }
