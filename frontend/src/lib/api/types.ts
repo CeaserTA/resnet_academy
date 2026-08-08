@@ -22,6 +22,10 @@ export interface User {
     bio: string | null;
     country: string | null;
     city: string | null;
+    highest_qualification: string | null;
+    occupation: string | null;
+    linkedin_profile: string | null;
+    portfolio_website: string | null;
     postal_code: string | null;
     tax_id: string | null;
     status: UserStatus;

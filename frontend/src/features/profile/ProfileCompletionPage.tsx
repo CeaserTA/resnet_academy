@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { AlertCircle, Camera, Check } from 'lucide-react';
+import { Camera, Check } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -76,17 +76,22 @@ export function ProfileCompletionPage() {
     // Requirement 4.3: Pre-populate form fields with existing user data
     useEffect(() => {
         if (user) {
+            // Split the user's name into first_name and last_name for pre-population
+            const nameParts = (user.name || '').trim().split(' ');
+            const firstName = user.first_name || nameParts[0] || '';
+            const lastName = user.last_name || (nameParts.length > 1 ? nameParts.slice(1).join(' ') : '');
+
             setFormData({
-                first_name: user.first_name ?? '',
-                last_name: user.last_name ?? '',
+                first_name: firstName,
+                last_name: lastName,
                 phone: user.phone ?? '',
                 country: user.country ?? '',
                 city: user.city ?? '',
-                highest_qualification: '',
+                highest_qualification: user.highest_qualification ?? '',
                 bio: user.bio ?? '',
-                occupation: '',
-                linkedin_profile: '',
-                portfolio_website: '',
+                occupation: user.occupation ?? '',
+                linkedin_profile: user.linkedin_profile ?? '',
+                portfolio_website: user.portfolio_website ?? '',
             });
 
             // Fetch profile status to get completion percentage
@@ -98,7 +103,10 @@ export function ProfileCompletionPage() {
 
     // Requirement 13.2: Update progress bar dynamically as fields are completed
     useEffect(() => {
-        const requiredFields = ['first_name', 'phone', 'country', 'city', 'highest_qualification'];
+        // Backend ProfileService checks: name, email, phone, country, city, highest_qualification
+        // name and email are from the user object (always present after auth)
+        // So we only need to check: phone, country, city, highest_qualification
+        const requiredFields = ['phone', 'country', 'city', 'highest_qualification'];
         const completedFields = requiredFields.filter((field) => {
             const value = formData[field as keyof ProfileFormState];
             return value !== null && value !== undefined && String(value).trim() !== '';
@@ -112,9 +120,6 @@ export function ProfileCompletionPage() {
     // Requirement 14.1: Validate required fields on blur
     const validateField = (name: string, value: string): string | undefined => {
         switch (name) {
-            case 'first_name':
-                if (!value.trim()) return 'First name is required';
-                break;
             case 'phone':
                 // Requirement 8.1, 8.2: Phone validation
                 if (!value.trim()) return 'Phone number is required';
@@ -168,13 +173,22 @@ export function ProfileCompletionPage() {
     const handleChange = (field: keyof ProfileFormState, value: string) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
 
-        // Requirement 14.2: Real-time URL validation
+        // Requirement 14.2: Real-time URL validation (only validate if field has content)
         if (field === 'linkedin_profile' || field === 'portfolio_website') {
-            const error = validateField(field, value);
-            setValidationErrors((prev) => ({
-                ...prev,
-                [field]: error,
-            }));
+            if (value.trim() === '') {
+                // Clear error if field is empty (optional fields)
+                setValidationErrors((prev) => ({
+                    ...prev,
+                    [field]: undefined,
+                }));
+            } else {
+                // Validate URL format if field has content
+                const error = validateField(field, value);
+                setValidationErrors((prev) => ({
+                    ...prev,
+                    [field]: error,
+                }));
+            }
         }
     };
 
@@ -211,7 +225,9 @@ export function ProfileCompletionPage() {
 
     // Requirement 14.4, 14.5: Determine if form is valid for submission
     const isFormValid = (): boolean => {
-        const requiredFields = ['first_name', 'phone', 'country', 'city', 'highest_qualification'];
+        // Backend ProfileService checks: name (from auth), email (from auth), phone, country, city, highest_qualification
+        // Frontend only needs to validate: phone, country, city, highest_qualification
+        const requiredFields = ['phone', 'country', 'city', 'highest_qualification'];
 
         // Check all required fields have values
         for (const field of requiredFields) {
@@ -229,11 +245,12 @@ export function ProfileCompletionPage() {
             }
         }
 
-        // Check optional URL fields don't have errors
-        if (formData.linkedin_profile && !isValidUrl(formData.linkedin_profile)) {
+        // Check optional URL fields don't have errors (only validate if filled)
+        // LinkedIn and Portfolio are optional - they only block if filled with invalid format
+        if (formData.linkedin_profile?.trim() && !isValidUrl(formData.linkedin_profile)) {
             return false;
         }
-        if (formData.portfolio_website && !isValidUrl(formData.portfolio_website)) {
+        if (formData.portfolio_website?.trim() && !isValidUrl(formData.portfolio_website)) {
             return false;
         }
 
@@ -247,7 +264,7 @@ export function ProfileCompletionPage() {
         setSubmitSuccess(false);
 
         // Mark all required fields as touched to show validation errors
-        const requiredFields = ['first_name', 'phone', 'country', 'city', 'highest_qualification'];
+        const requiredFields = ['phone', 'country', 'city', 'highest_qualification'];
         setTouched(new Set(requiredFields));
 
         // Validate all fields
@@ -276,8 +293,35 @@ export function ProfileCompletionPage() {
                 }
             }
 
+            // Prepare data for submission - clean up empty optional fields
+            const submitData: Partial<ProfileFormState> = {
+                first_name: formData.first_name.trim() || user?.name || '',
+                last_name: formData.last_name.trim() || undefined,
+                phone: formData.phone.trim(),
+                country: formData.country.trim(),
+                city: formData.city.trim(),
+                highest_qualification: formData.highest_qualification,
+            };
+
+            // Only include optional fields if they have values
+            if (formData.bio.trim()) {
+                submitData.bio = formData.bio.trim();
+            }
+            if (formData.occupation.trim()) {
+                submitData.occupation = formData.occupation.trim();
+            }
+            if (formData.linkedin_profile.trim()) {
+                submitData.linkedin_profile = formData.linkedin_profile.trim();
+            }
+            if (formData.portfolio_website.trim()) {
+                submitData.portfolio_website = formData.portfolio_website.trim();
+            }
+
+            // Debug: Log what we're sending
+            console.log('Submitting profile data:', submitData);
+
             // Update profile
-            await profileApi.updateProfile(formData);
+            await profileApi.updateProfile(submitData as ProfileFormState);
             await refetch();
 
             setSubmitSuccess(true);
@@ -294,7 +338,9 @@ export function ProfileCompletionPage() {
             }, 1500);
         } catch (err) {
             // Requirement 4.6, 8.8: Display specific validation error messages
+            console.error('Profile update error:', err);
             if (err instanceof ApiError && err.fields) {
+                console.error('Validation errors from backend:', err.fields);
                 const fieldErrors: ValidationErrors = {};
                 Object.entries(err.fields).forEach(([field, messages]) => {
                     fieldErrors[field as keyof ValidationErrors] = messages[0];
@@ -369,22 +415,6 @@ export function ProfileCompletionPage() {
                         </div>
 
                         <div className="space-y-4">
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                <Input
-                                    label="First Name"
-                                    value={formData.first_name}
-                                    onChange={(e) => handleChange('first_name', e.target.value)}
-                                    onBlur={() => handleBlur('first_name')}
-                                    error={touched.has('first_name') ? validationErrors.first_name : undefined}
-                                    required
-                                />
-                                <Input
-                                    label="Last Name"
-                                    value={formData.last_name}
-                                    onChange={(e) => handleChange('last_name', e.target.value)}
-                                />
-                            </div>
-
                             <Input
                                 label="Phone Number"
                                 value={formData.phone}
@@ -436,6 +466,19 @@ export function ProfileCompletionPage() {
                         </div>
 
                         <div className="space-y-4">
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <Input
+                                    label="First Name"
+                                    value={formData.first_name}
+                                    onChange={(e) => handleChange('first_name', e.target.value)}
+                                />
+                                <Input
+                                    label="Last Name"
+                                    value={formData.last_name}
+                                    onChange={(e) => handleChange('last_name', e.target.value)}
+                                />
+                            </div>
+
                             <Input
                                 label="Occupation"
                                 value={formData.occupation}

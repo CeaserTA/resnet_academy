@@ -16,10 +16,10 @@ final class UpdateProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'first_name' => ['required', 'string', 'max:75'],
+            'first_name' => ['nullable', 'string', 'max:75'],
             'last_name' => ['nullable', 'string', 'max:75'],
             'phone' => ['sometimes', 'string', 'regex:/^[0-9\s\-\+]+$/', 'min:8', 'max:20'],
-            'bio' => ['sometimes', 'string', 'max:1000'],
+            'bio' => ['nullable', 'string', 'max:1000'],
             'country' => ['nullable', 'filled', 'string', 'max:100'],
             'city' => ['nullable', 'filled', 'string', 'max:100'],
             'postal_code' => ['nullable', 'string', 'max:20'],
@@ -29,9 +29,9 @@ final class UpdateProfileRequest extends FormRequest
                 'string',
                 'in:High School,Diploma,Bachelor\'s Degree,Master\'s Degree,Doctorate,Other'
             ],
-            'occupation' => ['sometimes', 'string', 'max:150'],
-            'linkedin_profile' => ['sometimes', 'url', 'max:500'],
-            'portfolio_website' => ['sometimes', 'url', 'max:500'],
+            'occupation' => ['nullable', 'string', 'max:150'],
+            'linkedin_profile' => ['nullable', 'url', 'max:500'],
+            'portfolio_website' => ['nullable', 'url', 'max:500'],
         ];
     }
 }
