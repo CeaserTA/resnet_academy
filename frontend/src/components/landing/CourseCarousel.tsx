@@ -14,11 +14,6 @@ export function CourseCarousel({ courses }: CourseCarouselProps) {
     const [emblaRef, emblaApi] = useEmblaCarousel({
         align: 'start',
         slidesToScroll: 1,
-        breakpoints: {
-            // ≥1024px → 3 visible (handled via CSS width below)
-            // ≥640px  → 2 visible
-            // <640px  → 1 visible
-        },
     });
 
     const [canScrollPrev, setCanScrollPrev] = useState(false);
@@ -50,7 +45,7 @@ export function CourseCarousel({ courses }: CourseCarouselProps) {
     const scrollTo = useCallback((index: number) => emblaApi?.scrollTo(index), [emblaApi]);
 
     return (
-        <div className="relative">
+        <div className="flex flex-col gap-6">
             {/* Viewport — Embla requires overflow:hidden on this element */}
             <div className="overflow-hidden" ref={emblaRef}>
                 <div className="flex gap-5">
@@ -59,8 +54,6 @@ export function CourseCarousel({ courses }: CourseCarouselProps) {
                         return (
                             <div
                                 key={course.id}
-                                // min-w-0 prevents flex children from overflowing
-                                // Width: 1 card on mobile, 2 on sm, 3 on lg
                                 className="min-w-0 shrink-0 grow-0 basis-full sm:basis-[calc(50%-10px)] lg:basis-[calc(33.333%-14px)]"
                             >
                                 <CourseCard
@@ -75,55 +68,57 @@ export function CourseCarousel({ courses }: CourseCarouselProps) {
                 </div>
             </div>
 
-            {/* Prev / Next buttons */}
-            <button
-                onClick={scrollPrev}
-                disabled={!canScrollPrev}
-                aria-label="Previous"
-                className={cn(
-                    'absolute -left-5 top-1/2 -translate-y-1/2 z-10',
-                    'flex h-10 w-10 items-center justify-center rounded-full',
-                    'border border-[#e8ecf1] bg-white shadow-md',
-                    'transition hover:bg-blue-50 hover:border-blue-300',
-                    'disabled:opacity-30 disabled:cursor-not-allowed',
-                )}
-            >
-                <ChevronLeft className="size-5 text-ink-700" aria-hidden="true" />
-            </button>
+            {/* Controls row: arrows on left, dots in the middle (or centered together) */}
+            <div className="flex items-center justify-center gap-4">
+                {/* Prev button */}
+                <button
+                    onClick={scrollPrev}
+                    disabled={!canScrollPrev}
+                    aria-label="Previous"
+                    className={cn(
+                        'flex h-9 w-9 items-center justify-center rounded-full',
+                        'border border-[#e8ecf1] bg-white shadow-sm',
+                        'transition hover:border-blue-400 hover:bg-blue-50',
+                        'disabled:opacity-30 disabled:cursor-not-allowed',
+                    )}
+                >
+                    <ChevronLeft className="size-4 text-[#475569]" aria-hidden="true" />
+                </button>
 
-            <button
-                onClick={scrollNext}
-                disabled={!canScrollNext}
-                aria-label="Next"
-                className={cn(
-                    'absolute -right-5 top-1/2 -translate-y-1/2 z-10',
-                    'flex h-10 w-10 items-center justify-center rounded-full',
-                    'border border-[#e8ecf1] bg-white shadow-md',
-                    'transition hover:bg-blue-50 hover:border-blue-300',
-                    'disabled:opacity-30 disabled:cursor-not-allowed',
+                {/* Dot indicators */}
+                {scrollSnaps.length > 1 && (
+                    <div className="flex items-center gap-2">
+                        {scrollSnaps.map((_, index) => (
+                            <button
+                                key={index}
+                                onClick={() => scrollTo(index)}
+                                aria-label={`Go to slide group ${index + 1}`}
+                                className={cn(
+                                    'h-2 rounded-full transition-all duration-300',
+                                    index === selectedIndex
+                                        ? 'w-6 bg-blue-600'
+                                        : 'w-2 bg-[#cbd5e1] hover:bg-blue-300',
+                                )}
+                            />
+                        ))}
+                    </div>
                 )}
-            >
-                <ChevronRight className="size-5 text-ink-700" aria-hidden="true" />
-            </button>
 
-            {/* Dot indicators */}
-            {scrollSnaps.length > 1 && (
-                <div className="mt-6 flex justify-center gap-2">
-                    {scrollSnaps.map((_, index) => (
-                        <button
-                            key={index}
-                            onClick={() => scrollTo(index)}
-                            aria-label={`Go to slide ${index + 1}`}
-                            className={cn(
-                                'h-2 rounded-full transition-all duration-300',
-                                index === selectedIndex
-                                    ? 'w-6 bg-blue-600'
-                                    : 'w-2 bg-[#cbd5e1] hover:bg-blue-300',
-                            )}
-                        />
-                    ))}
-                </div>
-            )}
+                {/* Next button */}
+                <button
+                    onClick={scrollNext}
+                    disabled={!canScrollNext}
+                    aria-label="Next"
+                    className={cn(
+                        'flex h-9 w-9 items-center justify-center rounded-full',
+                        'border border-[#e8ecf1] bg-white shadow-sm',
+                        'transition hover:border-blue-400 hover:bg-blue-50',
+                        'disabled:opacity-30 disabled:cursor-not-allowed',
+                    )}
+                >
+                    <ChevronRight className="size-4 text-[#475569]" aria-hidden="true" />
+                </button>
+            </div>
         </div>
     );
 }
