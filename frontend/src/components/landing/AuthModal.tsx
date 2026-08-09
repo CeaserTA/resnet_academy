@@ -79,7 +79,7 @@ export function AuthModal({ open, mode, onModeChange, onClose }: AuthModalProps)
           <div className="flex items-start justify-between gap-4">
             <div>
               <Dialog.Title className="text-2xl font-semibold text-ink-900">
-                {isSignup ? 'Create your account' : 'Log in to Resnet LMS'}
+                {isSignup ? 'Create your account' : 'Log in to Resnet Academy'}
               </Dialog.Title>
               <Dialog.Description className="mt-2 text-sm leading-6 text-[#64748b]">
                 {isSignup

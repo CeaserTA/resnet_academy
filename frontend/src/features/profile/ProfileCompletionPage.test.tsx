@@ -44,16 +44,18 @@ const createTestUser = (overrides?: Partial<User>): User => ({
     country: null,
     city: null,
     highest_qualification: null,
-    bio: null,
     occupation: null,
     linkedin_profile: null,
     portfolio_website: null,
+    bio: null,
     avatar_url: null,
     role: 'student',
     status: 'active',
     email_verified_at: '2024-01-01T00:00:00.000Z',
     created_at: '2024-01-01T00:00:00.000Z',
-    updated_at: '2024-01-01T00:00:00.000Z',
+    postal_code: null,
+    tax_id: null,
+    last_login_at: null,
     ...overrides,
 });
 
@@ -93,7 +95,7 @@ async function fillProfileForm(user: ReturnType<typeof userEvent.setup>) {
     await user.type(phoneInput, '+1 234 567 8900');
     await user.type(countryInput, 'United States');
     await user.type(cityInput, 'New York');
-    
+
     // Open the Radix UI select and click option
     const qualificationSelect = screen.getByRole('combobox', { name: /highest qualification/i });
     await user.click(qualificationSelect);

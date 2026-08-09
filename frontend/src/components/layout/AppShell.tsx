@@ -102,7 +102,7 @@ function TopBar() {
             ) : (
                 <Link to="/dashboard" className="flex shrink-0 items-center gap-2 font-display font-semibold text-blue-600">
                     <GraduationCap className="size-5" aria-hidden="true" />
-                    Resnet LMS
+                    Resnet Academy
                 </Link>
             )}
 
@@ -146,7 +146,7 @@ export function AppShell(): ReactNode {
                     className="mb-4 flex items-center gap-2 px-3 font-display text-lg font-semibold text-surface-0"
                 >
                     <GraduationCap className="size-6" aria-hidden="true" />
-                    Resnet LMS
+                    Resnet Academy
                 </Link>
 
                 <nav className="flex flex-1 flex-col gap-1">

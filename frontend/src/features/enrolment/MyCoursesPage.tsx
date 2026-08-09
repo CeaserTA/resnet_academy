@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
-import { ArrowRight, Award, BookOpen, Compass, CreditCard, LogOut, Star } from 'lucide-react';
+import { ArrowRight, Award, BookOpen, Compass, CreditCard, LogOut, Star, TrendingUp } from 'lucide-react';
 import { useMyEnrolments, useSubmitPayment, useWithdrawEnrolment } from '@/features/enrolment/useEnrolments';
 import { useDismissCourseApplication, useMyCourseApplications } from '@/features/courseApplications/useCourseApplications';
 import { useCourseSequence } from '@/features/learning/useCourseSequence';
@@ -269,8 +269,8 @@ function EnrolmentCard({
                 <div className="mt-3">
                     <div className="flex items-center justify-between gap-2">
                         <Badge label={status.label} tone={status.tone} icon={status.icon} />
-                        {orderStatus && (
-                            <Badge label={orderStatus.label} tone={orderStatus.tone} icon={orderStatus.icon} />
+                        {pendingSubmissionStatus && (
+                            <Badge label={pendingSubmissionStatus.label} tone={pendingSubmissionStatus.tone} icon={pendingSubmissionStatus.icon} />
                         )}
                     </div>
                     <h3 className="mt-2 text-base font-semibold text-ink-900 line-clamp-1">
@@ -354,6 +354,87 @@ function EnrolmentCard({
     );
 }
 
+// ─── Overview widget ──────────────────────────────────────────────────────────
+//
+// Shows a compact summary strip at the top of the student dashboard:
+//   • courses in progress
+//   • average completion % across all active enrolments
+//   • upcoming deadlines (TODO: assignment due_at is not surfaced in GET /enrolments
+//     or GET /me/progress — it lives inside module items fetched per-course via
+//     GET /courses/:id/modules. A future enhancement should add a
+//     GET /me/upcoming-deadlines endpoint or include due_at in the progress
+//     dashboard response so this section can be populated without N+1 fetches.)
+//
+interface OverviewWidgetProps {
+    activeEnrolments: Enrolment[];
+    progressRows: ProgressDashboardRow[];
+}
+
+function OverviewWidget({ activeEnrolments, progressRows }: OverviewWidgetProps) {
+    // Nothing to show until enrolments load
+    if (activeEnrolments.length === 0) return null;
+
+    const inProgress = progressRows.filter((r) => r.status === 'in_progress').length;
+    const completed = progressRows.filter((r) => r.status === 'completed').length;
+
+    const avgCompletion =
+        progressRows.length > 0
+            ? Math.round(
+                progressRows.reduce((sum, r) => sum + r.percent_complete, 0) /
+                progressRows.length,
+            )
+            : 0;
+
+    return (
+        <div className="mb-6 overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
+            <div className="flex flex-wrap divide-x divide-surface-100">
+                {/* Stat — enrolled */}
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-5 py-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-ink-600">Enrolled</p>
+                    <p className="text-2xl font-bold text-ink-900">{activeEnrolments.length}</p>
+                    <p className="text-xs text-ink-600">
+                        {inProgress} in progress · {completed} completed
+                    </p>
+                </div>
+
+                {/* Stat — avg completion */}
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-5 py-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-ink-600">Avg. completion</p>
+                    <div className="flex items-end gap-2">
+                        <p className="text-2xl font-bold text-blue-600">{avgCompletion}%</p>
+                        <TrendingUp className="mb-1 size-4 text-blue-400" aria-hidden="true" />
+                    </div>
+                    {/* Mini progress bar */}
+                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-surface-100">
+                        <div
+                            className="h-full rounded-full bg-blue-600 transition-all duration-500"
+                            style={{ width: `${avgCompletion}%` }}
+                            role="presentation"
+                        />
+                    </div>
+                </div>
+
+                {/* Upcoming deadlines — placeholder until a dedicated endpoint exists.
+                    Assignment due_at values are only available after fetching each course's
+                    module items individually (GET /courses/:id/modules), which would require
+                    N additional requests. Skipping for now; revisit when
+                    GET /me/upcoming-deadlines is available. */}
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-5 py-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-ink-600">Upcoming deadlines</p>
+                    <p className="mt-1 text-sm text-ink-600 italic">
+                        No deadline data yet
+                    </p>
+                    <p className="text-xs text-ink-300">
+                        Available once per-course data loads
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export function MyCoursesPage() {
     const { data, isLoading } = useMyEnrolments();
     const { data: applications } = useMyCourseApplications();
@@ -419,6 +500,12 @@ export function MyCoursesPage() {
                     />
                 </div>
             )}
+
+            {/* Overview summary strip — courses in progress, avg completion, upcoming deadlines */}
+            <OverviewWidget
+                activeEnrolments={activeEnrolments}
+                progressRows={progressRows ?? []}
+            />
 
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl">My courses</h1>

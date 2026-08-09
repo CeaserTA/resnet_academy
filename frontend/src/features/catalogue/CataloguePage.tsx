@@ -14,7 +14,7 @@ import { Footer } from '@/components/landing/Footer';
 import { AuthModal, type AuthMode } from '@/components/landing/AuthModal';
 import { useCategories, useCourseModules, useCourses } from '@/features/catalogue/useCourses';
 import { CourseCarousel } from '@/components/landing/CourseCarousel';
-import { courseImageMap, courseDurationMap } from '@/features/catalogue/courseImages';
+import { courseImageMap } from '@/features/catalogue/courseImages';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { cn } from '@/lib/utils';

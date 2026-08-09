@@ -52,7 +52,7 @@ export function LoginPage() {
         <div className="mx-auto flex max-w-md flex-col gap-6 px-4 py-16">
             <div className="text-center">
                 <h1 className="text-2xl">Log in</h1>
-                <p className="mt-1 text-sm text-ink-600">Welcome back to Resnet LMS.</p>
+                <p className="mt-1 text-sm text-ink-600">Welcome back to Resnet Academy.</p>
             </div>
 
             <Card>

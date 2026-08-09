@@ -129,11 +129,11 @@ export function Footer({ onLoginClick, onSignupClick }: FooterProps) {
             <div>
               <Link
                 to="/"
-                aria-label="ResNet LMS home"
+                aria-label="Resnet Academy home"
                 className="inline-flex items-center gap-2 text-lg font-semibold text-[#0f172a] transition-colors duration-200 hover:text-[#3b82f6] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3b82f6]"
               >
                 <GraduationCap className="size-6 text-[#3b82f6]" aria-hidden="true" />
-                Resnet LMS
+                Resnet Academy
               </Link>
 
               <p className="mt-3 max-w-xs text-sm leading-6 text-[#475569]">
@@ -219,7 +219,7 @@ export function Footer({ onLoginClick, onSignupClick }: FooterProps) {
           {/* ── Bottom bar ── */}
           <div className="mt-8 flex flex-col items-center gap-3 border-t border-blue-100 pt-5 sm:flex-row sm:justify-between">
             <p className="text-center text-sm text-[#94a3b8] sm:text-left">
-              © {new Date().getFullYear()} Resnet LMS. All rights reserved.
+              © {new Date().getFullYear()} Resnet Academy. All rights reserved.
             </p>
             <nav aria-label="Legal links">
               <ul className="flex gap-5">

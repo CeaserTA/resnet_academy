@@ -81,7 +81,7 @@ function QuickActionCard({ action }: { action: QuickAction }) {
 }
 
 export function AdminDashboardPage() {
-    usePageHeader('Dashboard', 'A system-wide look at Resnet LMS.');
+    usePageHeader('Dashboard', 'A system-wide look at Resnet Academy.');
     const { data, isLoading } = useDashboardSummary();
     const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
 

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { CheckCircle2, Clock, FolderOpen, Send, Upload } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';
@@ -82,7 +82,7 @@ function ExistingSubmission({
                 <div className="rounded-lg border border-success-600/20 bg-success-600/5 p-4">
                     <p className="text-sm font-semibold text-ink-900">
                         Score: {submission.final_score ?? submission.raw_score} points
-                        {submission.is_late && submission.late_penalty_percent > 0 && (
+                        {submission.is_late && Number(submission.late_penalty_percent) > 0 && (
                             <span className="ml-1 text-xs text-warning-600">
                                 ({submission.late_penalty_percent}% late penalty applied)
                             </span>

@@ -304,16 +304,16 @@ export function ProfileCompletionPage() {
             };
 
             // Only include optional fields if they have values
-            if (formData.bio.trim()) {
+            if (formData.bio?.trim()) {
                 submitData.bio = formData.bio.trim();
             }
-            if (formData.occupation.trim()) {
+            if (formData.occupation?.trim()) {
                 submitData.occupation = formData.occupation.trim();
             }
-            if (formData.linkedin_profile.trim()) {
+            if (formData.linkedin_profile?.trim()) {
                 submitData.linkedin_profile = formData.linkedin_profile.trim();
             }
-            if (formData.portfolio_website.trim()) {
+            if (formData.portfolio_website?.trim()) {
                 submitData.portfolio_website = formData.portfolio_website.trim();
             }
 

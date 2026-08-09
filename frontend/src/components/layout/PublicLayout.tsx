@@ -12,7 +12,7 @@ export function PublicLayout() {
                 <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
                     <Link to="/" className="flex items-center gap-2 font-display text-lg font-semibold text-blue-600">
                         <GraduationCap className="size-6" aria-hidden="true" />
-                        Resnet LMS
+                        Resnet Academy
                     </Link>
 
                     <nav className="flex items-center gap-3">
