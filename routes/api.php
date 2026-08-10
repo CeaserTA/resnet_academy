@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\V1\EnrolmentController;
 use App\Http\Controllers\Api\V1\EnrolmentImportController;
 use App\Http\Controllers\Api\V1\EvaluationAttemptController;
 use App\Http\Controllers\Api\V1\EvaluationController;
+use App\Http\Controllers\Api\V1\ForumController;
 use App\Http\Controllers\Api\V1\ForumPostController;
 use App\Http\Controllers\Api\V1\ForumPostReportController;
 use App\Http\Controllers\Api\V1\ForumTagController;
@@ -198,6 +199,9 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/tickets/{ticket}', [TicketController::class, 'show']);
         Route::patch('/tickets/{ticket}', [TicketController::class, 'update']);
         Route::post('/tickets/{ticket}/messages', [TicketMessageController::class, 'store']);
+
+        // Forums index — unified view of all forums from enrolled courses
+        Route::get('/forums', [ForumController::class, 'index']);
 
         // Course forums (FR-18) — threaded discussions/replies/search/tags, plus moderation
         // (report/pin/lock/solve).

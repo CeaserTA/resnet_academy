@@ -84,62 +84,62 @@ export function CoursePlayerPage() {
     }
 
     return (
-        <div className="mx-auto max-w-3xl">
+        <div className="mx-auto max-w-5xl">
             <Breadcrumbs items={[{ label: 'My Courses', to: '/dashboard' }, { label: course?.title ?? '' }]} />
 
-            <div className="mt-2 flex items-center justify-between gap-4">
-                <h1 className="text-2xl">{course?.title}</h1>
-                <div className="flex items-center gap-3">
+            <div className="mt-2 flex items-center justify-between gap-3">
+                <h1 className="text-xl font-bold">{course?.title}</h1>
+                <div className="flex items-center gap-2">
                     <Link to={`/courses/${courseId}/forum`}>
-                        <Button variant="secondary">
+                        <Button variant="secondary" className="text-sm">
                             <MessageCircle className="size-4" aria-hidden="true" />
                             Forum
                         </Button>
                     </Link>
                     {sortedModules.length > 0 && (
-                        <div className="flex items-center gap-3 rounded-lg border border-surface-100 bg-surface-0 px-4 py-2.5">
+                        <div className="flex items-center gap-2 rounded-lg border border-surface-100 bg-surface-0 px-3 py-2">
                             <div>
-                                <p className="text-xs text-ink-600">Overall Progress</p>
-                                <p className="text-xl font-medium text-ink-900">{Math.round(overallPercent)}%</p>
+                                <p className="text-xs text-ink-600">Progress</p>
+                                <p className="text-lg font-semibold text-ink-900">{Math.round(overallPercent)}%</p>
                             </div>
-                            <CircularProgress percent={overallPercent} size={44} showLabel={false} />
+                            <CircularProgress percent={overallPercent} size={36} showLabel={false} />
                         </div>
                     )}
                 </div>
             </div>
 
             {nextIncompleteItem ? (
-                <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-blue-600/30 bg-blue-50 p-4">
+                <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-blue-600/30 bg-blue-50 p-3">
                     <div className="min-w-0">
-                        <p className="text-sm text-blue-600">Continue where you left off</p>
-                        <p className="truncate font-medium text-ink-900">{nextIncompleteItem.title}</p>
+                        <p className="text-xs font-medium text-blue-600">Continue where you left off</p>
+                        <p className="truncate text-sm font-medium text-ink-900">{nextIncompleteItem.title}</p>
                     </div>
                     <Link to={itemLinkFor(nextIncompleteItem, courseId)}>
-                        <Button>
+                        <Button size="sm">
                             Continue
                             <ArrowRight className="size-4" aria-hidden="true" />
                         </Button>
                     </Link>
                 </div>
             ) : sortedModules.length > 0 ? (
-                <div className="mt-4 flex items-center justify-between gap-3">
+                <div className="mt-3 flex items-center justify-between gap-2">
                     <Alert variant="success" message="You've completed this course!" className="flex-1" />
                     {hasCompletedCourse && !myReview && (
-                        <Button variant="secondary" onClick={() => setIsReviewModalOpen(true)} className="shrink-0">
+                        <Button variant="secondary" onClick={() => setIsReviewModalOpen(true)} className="shrink-0 text-sm">
                             <Star className="size-4" aria-hidden="true" />
-                            Rate & Review this course
+                            Rate & Review
                         </Button>
                     )}
                 </div>
             ) : null}
 
-            <div className="mt-6 flex flex-col gap-3">
+            <div className="mt-4 flex flex-col gap-2">
                 {sortedModules.map((module, index) => {
                     const status = statusFor(module.id);
                     const display = statusDisplay[status];
                     const isLocked = status === 'locked';
                     const lockedReason = isLocked ? describeLockedModule(module, sortedModules, progressByModuleId) : null;
-                    const isExpanded = manualToggles[module.id] ?? module.id === nextIncompleteModuleId;
+                    const isExpanded = manualToggles[module.id] ?? false; // Collapsed by default
                     const action = actionForModule(module, status);
 
                     return (
@@ -153,22 +153,22 @@ export function CoursePlayerPage() {
                         >
                             <div
                                 className={cn(
-                                    'absolute -left-4 top-5 flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-medium ring-4 ring-surface-50',
+                                    'absolute -left-3 top-4 flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ring-4 ring-surface-50',
                                     status === 'completed' && 'bg-success-600 text-white',
                                     status === 'in_progress' && 'bg-blue-600 text-white',
                                     (status === 'not_started' || status === 'locked') && 'bg-surface-100 text-ink-600',
                                 )}
                             >
                                 {status === 'completed' ? (
-                                    <CheckCircle2 className="size-5" aria-hidden="true" />
+                                    <CheckCircle2 className="size-4" aria-hidden="true" />
                                 ) : isLocked ? (
-                                    <Lock className="size-4" aria-hidden="true" />
+                                    <Lock className="size-3.5" aria-hidden="true" />
                                 ) : (
                                     index + 1
                                 )}
                             </div>
 
-                            <div className="flex items-center gap-4 pl-2">
+                            <div className="flex items-center gap-3 pl-1">
                                 <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2">
                                         <Badge label={display.label.toUpperCase()} tone={display.tone} icon={display.icon} />
@@ -176,21 +176,24 @@ export function CoursePlayerPage() {
                                             Module {String(index + 1).padStart(2, '0')}
                                         </span>
                                     </div>
-                                    <h3 className="mt-1 text-lg">{module.title}</h3>
-                                    {module.description && (
-                                        <p className="mt-1 text-sm text-ink-600">{module.description}</p>
+                                    <h3 className="mt-1 text-base font-semibold">{module.title}</h3>
+                                    {module.description && !isExpanded && (
+                                        <p className="mt-0.5 text-sm text-ink-600 line-clamp-1">{module.description}</p>
+                                    )}
+                                    {isExpanded && module.description && (
+                                        <p className="mt-0.5 text-sm text-ink-600">{module.description}</p>
                                     )}
                                     {lockedReason && <p className="mt-1 text-sm text-ink-600">{lockedReason}</p>}
                                 </div>
 
                                 {!isLocked && action.item ? (
                                     <Link to={itemLinkFor(action.item, courseId)} className="shrink-0">
-                                        <Button variant={status === 'completed' ? 'secondary' : 'primary'}>
+                                        <Button variant={status === 'completed' ? 'secondary' : 'primary'} size="sm">
                                             {action.label}
                                         </Button>
                                     </Link>
                                 ) : (
-                                    <Button variant="ghost" disabled className="shrink-0">
+                                    <Button variant="ghost" disabled className="shrink-0" size="sm">
                                         Locked
                                     </Button>
                                 )}
@@ -201,34 +204,36 @@ export function CoursePlayerPage() {
                                     <button
                                         type="button"
                                         onClick={() => setManualToggles((prev) => ({ ...prev, [module.id]: !isExpanded }))}
-                                        className="mt-3 flex items-center gap-1 border-t border-surface-100 pt-3 text-sm font-medium text-blue-600"
+                                        className="mt-2 flex w-full items-center justify-between border-t border-surface-100 pt-2 text-sm font-medium text-blue-600"
                                     >
-                                        {isExpanded ? (
-                                            <ChevronUp className="size-4" aria-hidden="true" />
-                                        ) : (
-                                            <ChevronDown className="size-4" aria-hidden="true" />
-                                        )}
-                                        View {module.items.length} Resource{module.items.length === 1 ? '' : 's'}
+                                        <span className="flex items-center gap-1">
+                                            {isExpanded ? (
+                                                <ChevronUp className="size-4" aria-hidden="true" />
+                                            ) : (
+                                                <ChevronDown className="size-4" aria-hidden="true" />
+                                            )}
+                                            {module.items.length} Resource{module.items.length === 1 ? '' : 's'}
+                                        </span>
                                     </button>
 
                                     {isExpanded && (
-                                        <ul className="mt-1 flex flex-col gap-2">
+                                        <ul className="mt-1.5 flex flex-col gap-1.5">
                                             {module.items.map((item) => (
                                                 <li key={`${item.item_type}-${item.id}`}>
                                                     <Link
                                                         to={itemLinkFor(item, courseId)}
-                                                        className="flex items-center justify-between rounded-md bg-surface-50 px-3 py-2.5 hover:bg-surface-100"
+                                                        className="flex items-center justify-between rounded-md bg-surface-50 px-2.5 py-2 hover:bg-surface-100"
                                                     >
                                                         <span className="flex items-center gap-2 text-sm text-ink-900">
                                                             {item.is_complete ? (
                                                                 <CheckCircle2
-                                                                    className="size-4 text-success-600"
+                                                                    className="size-4 shrink-0 text-success-600"
                                                                     aria-hidden="true"
                                                                 />
                                                             ) : (
-                                                                <Circle className="size-4 text-ink-300" aria-hidden="true" />
+                                                                <Circle className="size-4 shrink-0 text-ink-300" aria-hidden="true" />
                                                             )}
-                                                            {item.title}
+                                                            <span className="truncate">{item.title}</span>
                                                             {item.item_type === 'assignment' && item.due_at && (() => {
                                                                 const urgency = assignmentDueBadge(item.due_at, item.is_complete);
 
@@ -249,7 +254,7 @@ export function CoursePlayerPage() {
                                                                 <span className="text-xs text-ink-600">(optional)</span>
                                                             )}
                                                         </span>
-                                                        <ChevronRight className="size-4 text-ink-300" aria-hidden="true" />
+                                                        <ChevronRight className="size-4 shrink-0 text-ink-300" aria-hidden="true" />
                                                     </Link>
                                                 </li>
                                             ))}

@@ -22,6 +22,7 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 import {
     courseProgressStatusDisplay,
     enrolmentStatusDisplay,
+    orderStatusDisplay,
     paymentSubmissionStatusDisplay,
 } from '@/lib/statusBadge';
 import { findNextIncompleteItem, itemLinkFor } from '@/lib/courseSequence';
@@ -240,6 +241,7 @@ function EnrolmentCard({
     const order = enrolment.order;
     const pendingSubmission = order?.pending_submission ?? null;
     const pendingSubmissionStatus = pendingSubmission ? paymentSubmissionStatusDisplay(pendingSubmission.status) : null;
+    const orderStatus = order ? orderStatusDisplay(order.status) : null;
     const progressStatus = progress ? courseProgressStatusDisplay(progress.status) : null;
 
     const { flatItems } = useCourseSequence(enrolment.course.id);

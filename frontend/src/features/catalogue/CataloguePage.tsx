@@ -44,7 +44,7 @@ function levelLabel(level: Course['level']): string {
 function OngoingCohortCard({ course }: { course: Course }) {
     const { data: modules, isLoading } = useCourseModules(course.id);
     const instructor = course.instructors[0] ?? null;
-    const image = courseImageMap[course.slug] ?? course.thumbnail_url ?? null;
+    const image = course.thumbnail_url ?? courseImageMap[course.slug] ?? null;
 
     return (
         <div className="overflow-hidden rounded-2xl border border-[#e8ecf1] bg-white shadow-sm lg:flex">
@@ -174,7 +174,7 @@ function OngoingCohortCard({ course }: { course: Course }) {
 
 function UpcomingCohortCard({ course }: { course: Course }) {
     const instructor = course.instructors[0] ?? null;
-    const image = courseImageMap[course.slug] ?? course.thumbnail_url ?? null;
+    const image = course.thumbnail_url ?? courseImageMap[course.slug] ?? null;
 
     return (
         <div className="flex flex-col overflow-hidden rounded-2xl border border-[#e8ecf1] bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">

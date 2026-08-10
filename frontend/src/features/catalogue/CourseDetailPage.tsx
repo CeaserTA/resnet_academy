@@ -17,11 +17,12 @@ import { ApiError } from '@/lib/api/client';
 // ─── Local image fallback map ────────────────────────────────────────────────
 // Used when course.thumbnail_url is null (R2 upload not yet configured).
 // TODO: remove once all courses have real uploaded thumbnails.
+// NOTE: Remove entries here once a course has uploaded thumbnail_url in database.
 const courseImageMap: Record<string, string> = {
     'web-foundations': '/images/web_foundations.jpg',
     'dynamic-web': '/images/dynamic_web.jpg',
     'full-stack': '/images/full_stack.jpg',
-    'search-engine-optimization': '/images/SEO.jpg',
+    // 'search-engine-optimization' removed - now uses uploaded thumbnail from database
     'progressive-web-app-development': '/images/PWA.jpg',
     'vuejs-and-laravel': '/images/VUE.JS_LARAVEL.jpg',
 };

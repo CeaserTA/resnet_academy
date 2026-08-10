@@ -41,7 +41,8 @@ interface CourseCardProps {
 // ─── component ───────────────────────────────────────────────────────────────
 
 export function CourseCard({ course, imageSrc, duration, format }: CourseCardProps) {
-    const image = imageSrc ?? course.thumbnail_url ?? null;
+    // Database thumbnail takes priority over static fallback map
+    const image = course.thumbnail_url ?? imageSrc ?? null;
     const price = formatPrice(course.price, course.currency);
     const durationLine = duration && format ? `${duration} • ${format}` : duration ?? null;
 

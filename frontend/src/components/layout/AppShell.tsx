@@ -8,6 +8,7 @@ import {
     GraduationCap,
     LayoutDashboard,
     LifeBuoy,
+    MessagesSquare,
     MessageSquare,
     Search,
     Star,
@@ -57,6 +58,7 @@ function navItemsForRole(role: string): NavItem[] {
 
     return [
         { to: '/dashboard', label: 'My courses', icon: LayoutDashboard, end: true },
+        { to: '/forums', label: 'Forums', icon: MessagesSquare },
         { to: '/#courses', label: 'Browse catalogue', icon: BookOpen },
         ...communicationItems,
     ];
@@ -93,11 +95,11 @@ function TopBar() {
     const search = usePageSearchValue();
 
     return (
-        <header className="flex shrink-0 items-center justify-between gap-4 border-b border-surface-100 bg-surface-0 px-4 py-3 sm:px-6">
+        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-surface-100 bg-surface-0 px-3 py-2 sm:px-4">
             {header ? (
                 <div className="min-w-0 shrink-0">
-                    <h1 className="text-lg text-ink-900">{header.title}</h1>
-                    {header.subtitle && <p className="text-sm text-ink-600">{header.subtitle}</p>}
+                    <h1 className="text-base font-semibold text-ink-900">{header.title}</h1>
+                    {header.subtitle && <p className="text-xs text-ink-600">{header.subtitle}</p>}
                 </div>
             ) : (
                 <Link to="/dashboard" className="flex shrink-0 items-center gap-2 font-display font-semibold text-blue-600">
@@ -115,7 +117,7 @@ function TopBar() {
                             onChange={(e) => search.onChange(e.target.value)}
                             placeholder={search.placeholder}
                             aria-label={search.placeholder ?? 'Search'}
-                            className="w-full rounded-md border border-surface-100 bg-surface-0 py-2 pl-9 pr-3 text-sm text-ink-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                            className="w-full rounded-md border border-surface-100 bg-surface-0 py-1.5 pl-9 pr-3 text-sm text-ink-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
                         />
                     </div>
                 )}
@@ -140,16 +142,16 @@ export function AppShell(): ReactNode {
 
     return (
         <div className="flex h-screen overflow-hidden">
-            <aside className="hidden w-64 flex-col gap-1 overflow-y-auto bg-blue-700 p-4 lg:flex">
+            <aside className="hidden w-56 flex-col gap-0.5 overflow-y-auto bg-blue-700 p-3 lg:flex">
                 <Link
                     to="/dashboard"
-                    className="mb-4 flex items-center gap-2 px-3 font-display text-lg font-semibold text-surface-0"
+                    className="mb-3 flex items-center gap-2 px-2 font-display text-lg font-semibold text-surface-0"
                 >
                     <GraduationCap className="size-6" aria-hidden="true" />
                     Resnet LMS
                 </Link>
 
-                <nav className="flex flex-1 flex-col gap-1">
+                <nav className="flex flex-1 flex-col gap-0.5">
                     <NavLinks items={items} />
                 </nav>
             </aside>
@@ -158,7 +160,7 @@ export function AppShell(): ReactNode {
                 <PageHeaderProvider>
                     <TopBar />
 
-                    <main className="flex-1 overflow-y-auto bg-surface-50 p-4 pb-20 sm:p-6 lg:pb-6">
+                    <main className="flex-1 overflow-y-auto bg-surface-50 p-3 pb-16 sm:p-4 lg:pb-4">
                         <Outlet />
                     </main>
                 </PageHeaderProvider>
