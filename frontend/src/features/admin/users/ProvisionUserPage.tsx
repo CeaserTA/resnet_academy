@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
+import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Spinner } from '@/components/ui/Spinner';
 import { Badge } from '@/components/ui/Badge';
@@ -164,11 +165,12 @@ export function ProvisionUserPage() {
     }, [users, search]);
 
     return (
-        <div className="mx-auto max-w-4xl">
+        <div className="mx-auto max-w-4xl space-y-4">
+            {/* Page header + add button */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl">Team</h1>
-                    <p className="mt-1 text-sm text-ink-600">Every user in the system, and their role.</p>
+                    <h1 className="text-lg font-semibold text-ink-900">Team</h1>
+                    <p className="text-xs text-ink-400">Every user in the system, and their role.</p>
                 </div>
                 <Button onClick={() => setIsAddingUser(true)}>
                     <Plus className="size-4" aria-hidden="true" />
@@ -176,14 +178,15 @@ export function ProvisionUserPage() {
                 </Button>
             </div>
 
-            <div className="mt-4 flex gap-1 border-b border-surface-100">
+            {/* Segmented role tab bar */}
+            <div className="flex items-center gap-0.5 rounded-lg border border-surface-100 bg-surface-50 p-0.5 self-start">
                 {ROLE_TABS.map(([value, label]) => (
                     <button
                         key={value}
                         onClick={() => setRoleTab(value)}
                         className={cn(
-                            'border-b-2 px-3 py-2 text-sm font-medium',
-                            roleTab === value ? 'border-blue-600 text-blue-600' : 'border-transparent text-ink-600',
+                            'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                            roleTab === value ? 'bg-blue-600 text-white shadow-sm' : 'text-ink-600 hover:text-ink-900',
                         )}
                     >
                         {label}
@@ -191,7 +194,7 @@ export function ProvisionUserPage() {
                 ))}
             </div>
 
-            <div className="mt-6">
+            <div>
                 {isLoading && <Spinner className="mt-3" />}
 
                 {!isLoading && filteredUsers.length === 0 && (
@@ -206,55 +209,66 @@ export function ProvisionUserPage() {
                 )}
 
                 {!isLoading && filteredUsers.length > 0 && (
-                    <div className="overflow-x-auto rounded-lg border border-surface-100 bg-surface-0">
-                        <table className="w-full text-sm">
-                            <thead className="bg-surface-100 text-left">
-                                <tr>
-                                    <th className="px-4 py-2 font-medium text-ink-600">Name</th>
-                                    <th className="px-4 py-2 font-medium text-ink-600">Role</th>
-                                    <th className="px-4 py-2 font-medium text-ink-600">Status</th>
-                                    <th className="px-4 py-2" />
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredUsers.map((member, index) => {
-                                    const role = userRoleDisplay(member.role);
-                                    const status = userStatusDisplay(member.status);
-                                    const isSelf = member.id === currentUser?.id;
+                    <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
+                        {/* Column headers */}
+                        <div className="grid grid-cols-[minmax(180px,1fr)_130px_minmax(140px,1fr)_60px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
+                            <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Name</span>
+                            <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Role</span>
+                            <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Status</span>
+                            <span />
+                        </div>
 
-                                    return (
-                                        <tr key={member.id} className={index % 2 === 1 ? 'bg-surface-50' : undefined}>
-                                            <td className="px-4 py-3">
-                                                <p className="text-ink-900">{member.name}</p>
-                                                <p className="text-xs text-ink-600">{member.email}</p>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <Badge label={role.label} tone={role.tone} icon={role.icon} />
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <div className="flex flex-wrap items-center gap-1.5">
-                                                    <Badge label={status.label} tone={status.tone} icon={status.icon} />
-                                                    {!member.last_login_at && member.role !== 'student' && (
-                                                        <Badge label="Invited" tone="neutral" icon={Mail} />
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3 text-right">
-                                                <Button
-                                                    variant="ghost"
-                                                    className="px-2 py-1"
-                                                    onClick={() => setManagingUser(member)}
-                                                    disabled={isSelf}
-                                                    aria-label={`Manage ${member.name}`}
-                                                >
-                                                    <Settings2 className="size-4" aria-hidden="true" />
-                                                </Button>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                        {/* Rows */}
+                        <ul className="divide-y divide-surface-100">
+                            {filteredUsers.map((member) => {
+                                const role = userRoleDisplay(member.role);
+                                const status = userStatusDisplay(member.status);
+                                const isSelf = member.id === currentUser?.id;
+
+                                return (
+                                    <li
+                                        key={member.id}
+                                        className="grid grid-cols-[minmax(180px,1fr)_130px_minmax(140px,1fr)_60px] items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-50"
+                                    >
+                                        {/* Name */}
+                                        <div className="flex min-w-0 items-center gap-2">
+                                            <Avatar
+                                                name={member.name}
+                                                size="sm"
+                                                className="size-7 shrink-0 text-xs"
+                                            />
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm text-ink-900">{member.name}</p>
+                                                <p className="truncate text-xs text-ink-400">{member.email}</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Role */}
+                                        <Badge label={role.label} tone={role.tone} icon={role.icon} />
+
+                                        {/* Status */}
+                                        <div className="flex flex-wrap items-center gap-1.5">
+                                            <Badge label={status.label} tone={status.tone} icon={status.icon} />
+                                            {!member.last_login_at && member.role !== 'student' && (
+                                                <Badge label="Invited" tone="neutral" icon={Mail} />
+                                            )}
+                                        </div>
+
+                                        {/* Actions */}
+                                        <div className="flex justify-end">
+                                            <button
+                                                onClick={() => setManagingUser(member)}
+                                                disabled={isSelf}
+                                                aria-label={`Manage ${member.name}`}
+                                                className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-surface-100 hover:text-ink-900 disabled:pointer-events-none disabled:opacity-40"
+                                            >
+                                                <Settings2 className="size-4" aria-hidden="true" />
+                                            </button>
+                                        </div>
+                                    </li>
+                                );
+                            })}
+                        </ul>
                     </div>
                 )}
             </div>

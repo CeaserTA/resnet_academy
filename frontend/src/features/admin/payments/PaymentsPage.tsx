@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Check, CheckCircle2, CreditCard, Eye, Image as ImageIcon, ReceiptText, X } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
+import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
@@ -189,15 +190,22 @@ export function PaymentsPage() {
     const orders = data?.data ?? [];
 
     return (
-        <div>
-            <div className="flex gap-1 border-b border-surface-100">
+        <div className="space-y-4">
+            {/* Page header */}
+            <div>
+                <h1 className="text-lg font-semibold text-ink-900">Payments</h1>
+                <p className="text-xs text-ink-400">Every order across every student.</p>
+            </div>
+
+            {/* Segmented tab bar */}
+            <div className="flex items-center gap-0.5 rounded-lg border border-surface-100 bg-surface-50 p-0.5 self-start">
                 {TABS.map(([value, label]) => (
                     <button
                         key={value}
                         onClick={() => setTab(value)}
                         className={cn(
-                            'border-b-2 px-3 py-2 text-sm font-medium',
-                            tab === value ? 'border-blue-600 text-blue-600' : 'border-transparent text-ink-600',
+                            'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                            tab === value ? 'bg-blue-600 text-white shadow-sm' : 'text-ink-600 hover:text-ink-900',
                         )}
                     >
                         {label}
@@ -212,142 +220,152 @@ export function PaymentsPage() {
             )}
 
             {!isLoading && orders.length > 0 && (
-                <div className="mt-6 overflow-x-auto rounded-lg border border-surface-100 bg-surface-0">
-                    <table className="w-full text-sm">
-                        <thead className="sticky top-0 bg-surface-100 text-left">
-                            <tr>
-                                <th className="px-4 py-2 font-medium text-ink-600">Student</th>
-                                {tab === 'pending' && (
-                                    <>
-                                        <th className="px-4 py-2 text-right font-medium text-ink-600">Amount owed</th>
-                                        <th className="px-4 py-2 text-right font-medium text-ink-600">Amount submitted</th>
-                                        <th className="px-4 py-2 font-medium text-ink-600">Receipt</th>
-                                        <th className="px-4 py-2 font-medium text-ink-600">Status</th>
-                                    </>
-                                )}
-                                {tab === 'partial' && (
-                                    <>
-                                        <th className="px-4 py-2 text-right font-medium text-ink-600">Amount owed</th>
-                                        <th className="px-4 py-2 text-right font-medium text-ink-600">Amount paid</th>
-                                        <th className="px-4 py-2 text-right font-medium text-ink-600">Remaining balance</th>
-                                    </>
-                                )}
-                                {tab === 'paid' && (
-                                    <>
-                                        <th className="px-4 py-2 text-right font-medium text-ink-600">Amount</th>
-                                        <th className="px-4 py-2 font-medium text-ink-600">Payments</th>
-                                    </>
-                                )}
-                                <th className="px-4 py-2" />
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {orders.map((order, index) => {
-                                const orderStatus = orderStatusDisplay(order.status);
-                                const submission = order.pending_submission;
-                                const submissionStatus = submission ? paymentSubmissionStatusDisplay(submission.status) : null;
+                <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
+                    {/* Column headers — vary by tab */}
+                    {tab === 'pending' && (
+                        <div className="grid grid-cols-[minmax(180px,1fr)_120px_140px_60px_110px_80px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
+                            <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Student</span>
+                            <span className="text-xs font-medium uppercase tracking-wide text-ink-600 text-right">Amount owed</span>
+                            <span className="text-xs font-medium uppercase tracking-wide text-ink-600 text-right">Amount submitted</span>
+                            <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Receipt</span>
+                            <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Status</span>
+                            <span />
+                        </div>
+                    )}
+                    {tab === 'partial' && (
+                        <div className="grid grid-cols-[minmax(180px,1fr)_120px_120px_130px_80px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
+                            <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Student</span>
+                            <span className="text-xs font-medium uppercase tracking-wide text-ink-600 text-right">Amount owed</span>
+                            <span className="text-xs font-medium uppercase tracking-wide text-ink-600 text-right">Amount paid</span>
+                            <span className="text-xs font-medium uppercase tracking-wide text-ink-600 text-right">Remaining</span>
+                            <span />
+                        </div>
+                    )}
+                    {tab === 'paid' && (
+                        <div className="grid grid-cols-[minmax(180px,1fr)_120px_minmax(120px,1fr)_80px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
+                            <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Student</span>
+                            <span className="text-xs font-medium uppercase tracking-wide text-ink-600 text-right">Amount</span>
+                            <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Payments</span>
+                            <span />
+                        </div>
+                    )}
 
-                                return (
-                                    <tr key={order.id} className={index % 2 === 1 ? 'bg-surface-50' : undefined}>
-                                        <td className="px-4 py-3">
-                                            <p className="font-medium text-ink-900">{order.student?.name ?? '—'}</p>
-                                            <p className="text-xs text-ink-600">{order.student?.email}</p>
-                                        </td>
+                    {/* Rows */}
+                    <ul className="divide-y divide-surface-100">
+                        {orders.map((order) => {
+                            const orderStatus = orderStatusDisplay(order.status);
+                            const submission = order.pending_submission;
+                            const submissionStatus = submission ? paymentSubmissionStatusDisplay(submission.status) : null;
 
-                                        {tab === 'pending' && (
+                            return (
+                                <li
+                                    key={order.id}
+                                    className={cn(
+                                        'items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-50',
+                                        tab === 'pending' && 'grid grid-cols-[minmax(180px,1fr)_120px_140px_60px_110px_80px]',
+                                        tab === 'partial' && 'grid grid-cols-[minmax(180px,1fr)_120px_120px_130px_80px]',
+                                        tab === 'paid' && 'grid grid-cols-[minmax(180px,1fr)_120px_minmax(120px,1fr)_80px]',
+                                    )}
+                                >
+                                    {/* Student */}
+                                    <div className="flex min-w-0 items-center gap-2">
+                                        {order.student ? (
                                             <>
-                                                <td className="px-4 py-3 text-right font-mono">{formatAmount(order.amount, order.currency)}</td>
-                                                <td className="px-4 py-3 text-right font-mono">
-                                                    {submission ? formatAmount(submission.amount, order.currency) : '—'}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <ReceiptCell order={order} />
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    {submissionStatus ? (
-                                                        <Badge
-                                                            label={submissionStatus.label}
-                                                            tone={submissionStatus.tone}
-                                                            icon={submissionStatus.icon}
-                                                        />
-                                                    ) : (
-                                                        <Badge label="Awaiting payment" tone="neutral" icon={orderStatus.icon} />
-                                                    )}
-                                                </td>
+                                                <Avatar
+                                                    name={order.student.name}
+                                                    size="sm"
+                                                    className="size-7 shrink-0 text-xs"
+                                                />
+                                                <div className="min-w-0">
+                                                    <p className="truncate text-sm font-medium text-ink-900">{order.student.name}</p>
+                                                    <p className="truncate text-xs text-ink-400">{order.student.email}</p>
+                                                </div>
                                             </>
+                                        ) : (
+                                            <span className="text-sm text-ink-400">—</span>
                                         )}
+                                    </div>
 
-                                        {tab === 'partial' && (
-                                            <>
-                                                <td className="px-4 py-3 text-right font-mono">{formatAmount(order.amount, order.currency)}</td>
-                                                <td className="px-4 py-3 text-right font-mono">
-                                                    {formatAmount(order.amount_paid, order.currency)}
-                                                </td>
-                                                <td className="px-4 py-3 text-right font-mono">
-                                                    {formatAmount(order.remaining_balance, order.currency)}
-                                                </td>
-                                            </>
-                                        )}
-
-                                        {tab === 'paid' && (
-                                            <>
-                                                <td className="px-4 py-3 text-right font-mono">{formatAmount(order.amount, order.currency)}</td>
-                                                <td className="px-4 py-3">
-                                                    <span className="flex items-center gap-1.5 text-success-600">
-                                                        <CheckCircle2 className="size-4" aria-hidden="true" />
-                                                        Payments completed
-                                                    </span>
-                                                </td>
-                                            </>
-                                        )}
-
-                                        <td className="px-4 py-3">
-                                            <div className="flex justify-end gap-1">
-                                                {submission && (
-                                                    <>
-                                                        <Button
-                                                            variant="ghost"
-                                                            className="px-2 py-1"
-                                                            onClick={() => confirmSubmission.mutate(submission.id)}
-                                                            aria-label={`Confirm payment for order #${order.id}`}
-                                                        >
-                                                            <Check className="size-4 text-success-600" aria-hidden="true" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            className="px-2 py-1"
-                                                            onClick={() => rejectSubmission.mutate(submission.id)}
-                                                            aria-label={`Reject payment for order #${order.id}`}
-                                                        >
-                                                            <X className="size-4 text-danger-600" aria-hidden="true" />
-                                                        </Button>
-                                                    </>
-                                                )}
-                                                <Button
-                                                    variant="ghost"
-                                                    className="px-2 py-1"
-                                                    onClick={() => setViewingOrder(order)}
-                                                    aria-label={`View order #${order.id}`}
-                                                >
-                                                    <Eye className="size-4" aria-hidden="true" />
-                                                </Button>
-                                                {tab !== 'paid' && !submission && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        className="px-2 py-1"
-                                                        onClick={() => setReviewingOrder(order)}
-                                                        aria-label={`Review payment for order #${order.id}`}
-                                                    >
-                                                        <ReceiptText className="size-4" aria-hidden="true" />
-                                                    </Button>
+                                    {tab === 'pending' && (
+                                        <>
+                                            <p className="text-right font-mono text-sm">{formatAmount(order.amount, order.currency)}</p>
+                                            <p className="text-right font-mono text-sm">
+                                                {submission ? formatAmount(submission.amount, order.currency) : '—'}
+                                            </p>
+                                            <ReceiptCell order={order} />
+                                            <div>
+                                                {submissionStatus ? (
+                                                    <Badge
+                                                        label={submissionStatus.label}
+                                                        tone={submissionStatus.tone}
+                                                        icon={submissionStatus.icon}
+                                                    />
+                                                ) : (
+                                                    <Badge label="Awaiting payment" tone="neutral" icon={orderStatus.icon} />
                                                 )}
                                             </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
+                                        </>
+                                    )}
+
+                                    {tab === 'partial' && (
+                                        <>
+                                            <p className="text-right font-mono text-sm">{formatAmount(order.amount, order.currency)}</p>
+                                            <p className="text-right font-mono text-sm">{formatAmount(order.amount_paid, order.currency)}</p>
+                                            <p className="text-right font-mono text-sm">{formatAmount(order.remaining_balance, order.currency)}</p>
+                                        </>
+                                    )}
+
+                                    {tab === 'paid' && (
+                                        <>
+                                            <p className="text-right font-mono text-sm">{formatAmount(order.amount, order.currency)}</p>
+                                            <span className="flex items-center gap-1.5 text-sm text-success-600">
+                                                <CheckCircle2 className="size-4" aria-hidden="true" />
+                                                Payments completed
+                                            </span>
+                                        </>
+                                    )}
+
+                                    {/* Actions */}
+                                    <div className="flex items-center justify-end gap-1">
+                                        {submission && (
+                                            <>
+                                                <button
+                                                    onClick={() => confirmSubmission.mutate(submission.id)}
+                                                    aria-label={`Confirm payment for order #${order.id}`}
+                                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-surface-100 hover:text-ink-900"
+                                                >
+                                                    <Check className="size-4 text-success-600" aria-hidden="true" />
+                                                </button>
+                                                <button
+                                                    onClick={() => rejectSubmission.mutate(submission.id)}
+                                                    aria-label={`Reject payment for order #${order.id}`}
+                                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-danger-600/10 hover:text-danger-600"
+                                                >
+                                                    <X className="size-4" aria-hidden="true" />
+                                                </button>
+                                            </>
+                                        )}
+                                        <button
+                                            onClick={() => setViewingOrder(order)}
+                                            aria-label={`View order #${order.id}`}
+                                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-surface-100 hover:text-ink-900"
+                                        >
+                                            <Eye className="size-4" aria-hidden="true" />
+                                        </button>
+                                        {tab !== 'paid' && !submission && (
+                                            <button
+                                                onClick={() => setReviewingOrder(order)}
+                                                aria-label={`Review payment for order #${order.id}`}
+                                                className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-surface-100 hover:text-ink-900"
+                                            >
+                                                <ReceiptText className="size-4" aria-hidden="true" />
+                                            </button>
+                                        )}
+                                    </div>
+                                </li>
+                            );
+                        })}
+                    </ul>
                 </div>
             )}
 
