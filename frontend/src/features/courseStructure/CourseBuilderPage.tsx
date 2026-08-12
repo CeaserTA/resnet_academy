@@ -228,8 +228,6 @@ export function CourseBuilderPage() {
                     <AtRiskStudentsTable courseId={courseId} students={analytics.at_risk_students} />
                 </div>
             )}
-                </>
-            )}
 
             {/* ── New module modal ─────────────────────────────────────────── */}
             <Modal isOpen={isAddingModule} onClose={() => setIsAddingModule(false)} title="New module">
