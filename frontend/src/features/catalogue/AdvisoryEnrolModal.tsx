@@ -15,10 +15,12 @@ export function AdvisoryEnrolModal({
     course,
     onClose,
     onEnrolled,
+    sectionId,
 }: {
     course: Course;
     onClose: () => void;
     onEnrolled: () => void;
+    sectionId?: number;
 }) {
     const navigate = useNavigate();
     const enrol = useEnrol();
@@ -30,7 +32,7 @@ export function AdvisoryEnrolModal({
     const handleEnrol = async () => {
         setError(null);
         try {
-            await enrol.mutateAsync(course.id);
+            await enrol.mutateAsync({ courseId: course.id, sectionId });
             onEnrolled();
         } catch (err) {
             setError(err instanceof ApiError ? err.message : 'Could not enrol. Try again.');

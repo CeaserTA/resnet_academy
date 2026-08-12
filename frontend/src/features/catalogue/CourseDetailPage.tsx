@@ -19,6 +19,8 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Alert } from '@/components/ui/Alert';
 import { useCourse, useCourseModules } from '@/features/catalogue/useCourses';
 import { courseImageMap } from '@/features/catalogue/courseImages';
+import { useStudentSections } from '@/features/catalogue/useStudentSections';
+import { SectionPicker } from '@/features/catalogue/SectionPicker';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useEnrol } from '@/features/enrolment/useEnrolments';
 import { useMyCourseApplications } from '@/features/courseApplications/useCourseApplications';
@@ -167,7 +169,8 @@ export function CourseDetailPage() {
     const { user } = useAuth();
     const enrol = useEnrol();
     const { data: myApplications } = useMyCourseApplications(user?.role === 'student');
-
+    const { openSections, isLoading: sectionsLoading } = useStudentSections(courseId);
+    const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
     const [enrolError, setEnrolError] = useState<string | null>(null);
     const [enrolled, setEnrolled] = useState(false);
     const [showAdvisoryModal, setShowAdvisoryModal] = useState(false);
@@ -202,6 +205,12 @@ export function CourseDetailPage() {
         (application) => application.course.id === course.id && application.status === 'pending',
     );
 
+    // Section gating:
+    // - While sectionsLoading, hasSections is unknown → keep CTA blocked
+    // - Once loaded, block CTA only when there ARE open sections and none selected
+    const hasSections = !sectionsLoading && openSections.length > 0;
+    const ctaBlocked = sectionsLoading || (hasSections && selectedSectionId === null);
+
     const handleEnrol = async () => {
         if (!user) {
             navigate('/login', { state: { from: { pathname: `/courses/${course.id}` } } });
@@ -211,7 +220,7 @@ export function CourseDetailPage() {
         if (course.enrolment_policy === 'application') { setShowApplicationModal(true); return; }
         setEnrolError(null);
         try {
-            await enrol.mutateAsync(course.id);
+            await enrol.mutateAsync({ courseId: course.id, sectionId: selectedSectionId ?? undefined });
             setEnrolled(true);
         } catch (error) {
             setEnrolError(error instanceof ApiError ? error.message : 'Could not enrol. Try again.');
@@ -434,7 +443,30 @@ export function CourseDetailPage() {
                                 </p>
                                 <p className="mt-0.5 text-xs text-[#94a3b8]">One-time payment · lifetime access</p>
 
-                                {/* CTA — preserves all enrolment policy logic */}
+                                {/* Section picker — shown while loading or when open sections exist */}
+                                {(sectionsLoading || hasSections) && (
+                                    sectionsLoading ? (
+                                        <div
+                                            className="mt-5 border-t border-[#e8ecf1] pt-5"
+                                            data-testid="sections-loading"
+                                            aria-busy="true"
+                                        >
+                                            <div className="h-3 w-24 animate-pulse rounded bg-[#e8ecf1]" />
+                                            <div className="mt-3 space-y-2">
+                                                <div className="h-16 w-full animate-pulse rounded-xl bg-[#e8ecf1]" />
+                                                <div className="h-16 w-full animate-pulse rounded-xl bg-[#e8ecf1]" />
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <SectionPicker
+                                            sections={openSections}
+                                            selectedId={selectedSectionId}
+                                            onSelect={setSelectedSectionId}
+                                        />
+                                    )
+                                )}
+
+                                {/* CTA */}
                                 <div className="mt-5 flex flex-col gap-3">
                                     {enrolled ? (
                                         <Badge label="Enrolled" tone="success" icon={CircleCheck} className="self-start" />
@@ -446,6 +478,7 @@ export function CourseDetailPage() {
                                             className="w-full"
                                             onClick={handleEnrol}
                                             isLoading={enrol.isPending}
+                                            disabled={ctaBlocked}
                                         >
                                             {course.enrolment_policy === 'application' ? 'Apply to enrol' : 'Enrol now'}
                                         </Button>
@@ -504,6 +537,7 @@ export function CourseDetailPage() {
             {showAdvisoryModal && (
                 <AdvisoryEnrolModal
                     course={course}
+                    sectionId={selectedSectionId ?? undefined}
                     onClose={() => setShowAdvisoryModal(false)}
                     onEnrolled={() => { setShowAdvisoryModal(false); setEnrolled(true); }}
                 />
@@ -512,6 +546,7 @@ export function CourseDetailPage() {
             {showApplicationModal && (
                 <ApplicationModal
                     course={course}
+                    sectionId={selectedSectionId ?? undefined}
                     onClose={() => setShowApplicationModal(false)}
                     onSubmitted={() => setShowApplicationModal(false)}
                 />

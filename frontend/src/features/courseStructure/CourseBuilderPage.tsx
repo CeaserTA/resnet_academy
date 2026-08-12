@@ -16,6 +16,8 @@ import { TrashedModulesSection } from '@/features/courseStructure/TrashedModules
 import { useCourseAnalytics } from '@/features/analytics/useAnalytics';
 import { AtRiskStudentsTable } from '@/features/analytics/AtRiskStudentsTable';
 import { EnrollmentTable } from '@/features/analytics/EnrollmentTable';
+import { SectionsManagePage } from '@/features/sections/SectionsManagePage';
+import { useUsers } from '@/features/admin/users/useAdminUsers';
 
 /**
  * Course builder redesign: Course Analytics stat cards stacked vertically at the top, then the
@@ -23,7 +25,7 @@ import { EnrollmentTable } from '@/features/analytics/EnrollmentTable';
  * At-Risk Students — all pulling from one `useCourseAnalytics()` call. Announcements moved to the
  * notification bell (`AnnouncementComposer`) and Groups were dropped from the UI entirely — both
  * confirmed with the user. The standalone `/admin/courses/:id/analytics` page is retired in favor
- * of this.
+ * of this. Now includes Sections tab for managing course cohorts.
  */
 export function CourseBuilderPage() {
     const { id } = useParams();
@@ -31,9 +33,11 @@ export function CourseBuilderPage() {
     const { data: course } = useCourse(courseId);
     const { data: modules, isLoading } = useModules(courseId);
     const { data: analytics, isLoading: isLoadingAnalytics } = useCourseAnalytics(courseId);
+    const { data: instructors = [] } = useUsers('instructor');
     const createModule = useCreateModule(courseId);
     const deleteModule = useDeleteModule(courseId);
 
+    const [activeTab, setActiveTab] = useState<'modules' | 'sections' | 'analytics'>('modules');
     const [isAddingModule, setIsAddingModule] = useState(false);
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -81,75 +85,129 @@ export function CourseBuilderPage() {
 
             <h1 className="mt-2 text-2xl">{course?.title ?? 'Course'}</h1>
 
-            <div className="mt-6 flex flex-col gap-3">
-                <h2 className="text-lg text-ink-900">Course Analytics</h2>
-
-                {isLoadingAnalytics && <Spinner />}
-
-                {analytics && (
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                        <StatCard label="Enrolled students" value={analytics.total_students} tone="progress" />
-                        <StatCard
-                            label="Completion rate"
-                            value={`${analytics.completion_rate}%`}
-                            sub={`${analytics.completed_students} of ${analytics.total_students} completed`}
-                            tone="success"
-                        />
-                        <StatCard label="At-risk students" value={analytics.at_risk_students.length} tone="danger" />
-                    </div>
-                )}
+            {/* Tabs */}
+            <div className="mt-6 flex gap-4 border-b border-surface-100">
+                <button
+                    onClick={() => setActiveTab('modules')}
+                    className={`px-4 py-2 text-sm font-medium transition-colors ${
+                        activeTab === 'modules'
+                            ? 'border-b-2 border-blue-600 text-blue-600'
+                            : 'text-ink-600 hover:text-ink-900'
+                    }`}
+                >
+                    Modules
+                </button>
+                <button
+                    onClick={() => setActiveTab('sections')}
+                    className={`px-4 py-2 text-sm font-medium transition-colors ${
+                        activeTab === 'sections'
+                            ? 'border-b-2 border-blue-600 text-blue-600'
+                            : 'text-ink-600 hover:text-ink-900'
+                    }`}
+                >
+                    Sections
+                </button>
+                <button
+                    onClick={() => setActiveTab('analytics')}
+                    className={`px-4 py-2 text-sm font-medium transition-colors ${
+                        activeTab === 'analytics'
+                            ? 'border-b-2 border-blue-600 text-blue-600'
+                            : 'text-ink-600 hover:text-ink-900'
+                    }`}
+                >
+                    Analytics
+                </button>
             </div>
 
-            <Card className="mt-6">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-lg text-ink-900">Module Management</h2>
-                    <Button onClick={() => setIsAddingModule(true)}>
-                        <Plus className="size-4" aria-hidden="true" />
-                        New Module
-                    </Button>
-                </div>
+            {/* Modules Tab */}
+            {activeTab === 'modules' && (
+                <>
+                    <Card className="mt-6">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-lg text-ink-900">Module Management</h2>
+                            <Button onClick={() => setIsAddingModule(true)}>
+                                <Plus className="size-4" aria-hidden="true" />
+                                New Module
+                            </Button>
+                        </div>
 
-                <div className="mt-4">
-                    {isLoading && <Spinner />}
+                        <div className="mt-4">
+                            {isLoading && <Spinner />}
 
-                    {!isLoading && sortedModules.length === 0 && (
-                        <EmptyState icon={BookOpen} title="No modules yet" description="Add your first module above." />
-                    )}
+                            {!isLoading && sortedModules.length === 0 && (
+                                <EmptyState icon={BookOpen} title="No modules yet" description="Add your first module above." />
+                            )}
 
-                    {!isLoading && sortedModules.length > 0 && (
-                        <div className="overflow-x-auto rounded-lg border border-surface-100">
-                            <table className="w-full text-sm">
-                                <thead className="bg-surface-100 text-left">
-                                    <tr>
-                                        <th className="px-4 py-2 font-medium text-ink-600">Module Name</th>
-                                        <th className="px-4 py-2 font-medium text-ink-600">Status</th>
-                                        <th className="px-4 py-2 text-right font-medium text-ink-600">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {sortedModules.map((module, index) => (
-                                        <ModuleTableRow
-                                            key={module.id}
-                                            index={index}
-                                            module={module}
-                                            courseId={courseId}
-                                            onDelete={() => deleteModule.mutate(module.id)}
-                                        />
-                                    ))}
-                                </tbody>
-                            </table>
+                            {!isLoading && sortedModules.length > 0 && (
+                                <div className="overflow-x-auto rounded-lg border border-surface-100">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-surface-100 text-left">
+                                            <tr>
+                                                <th className="px-4 py-2 font-medium text-ink-600">Module Name</th>
+                                                <th className="px-4 py-2 font-medium text-ink-600">Status</th>
+                                                <th className="px-4 py-2 text-right font-medium text-ink-600">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {sortedModules.map((module, index) => (
+                                                <ModuleTableRow
+                                                    key={module.id}
+                                                    index={index}
+                                                    module={module}
+                                                    courseId={courseId}
+                                                    onDelete={() => deleteModule.mutate(module.id)}
+                                                />
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    </Card>
+
+                    <TrashedModulesSection courseId={courseId} />
+                </>
+            )}
+
+            {/* Sections Tab */}
+            {activeTab === 'sections' && (
+                <Card className="mt-6">
+                    <SectionsManagePage
+                        courseId={courseId}
+                        instructors={instructors.map((i) => ({ id: i.id, name: i.name }))}
+                    />
+                </Card>
+            )}
+
+            {/* Analytics Tab */}
+            {activeTab === 'analytics' && (
+                <>
+                    <div className="mt-6 flex flex-col gap-3">
+                        <h2 className="text-lg text-ink-900">Course Analytics</h2>
+
+                        {isLoadingAnalytics && <Spinner />}
+
+                        {analytics && (
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                <StatCard label="Enrolled students" value={analytics.total_students} tone="progress" />
+                                <StatCard
+                                    label="Completion rate"
+                                    value={`${analytics.completion_rate}%`}
+                                    sub={`${analytics.completed_students} of ${analytics.total_students} completed`}
+                                    tone="success"
+                                />
+                                <StatCard label="At-risk students" value={analytics.at_risk_students.length} tone="danger" />
+                            </div>
+                        )}
+                    </div>
+
+                    {analytics && (
+                        <div className="mt-6 flex flex-col gap-6">
+                            <EnrollmentTable roster={analytics.roster} />
+                            <AtRiskStudentsTable courseId={courseId} students={analytics.at_risk_students} />
                         </div>
                     )}
-                </div>
-            </Card>
-
-            <TrashedModulesSection courseId={courseId} />
-
-            {analytics && (
-                <div className="mt-6 flex flex-col gap-6">
-                    <EnrollmentTable roster={analytics.roster} />
-                    <AtRiskStudentsTable courseId={courseId} students={analytics.at_risk_students} />
-                </div>
+                </>
             )}
 
             <Modal isOpen={isAddingModule} onClose={() => setIsAddingModule(false)} title="New module">

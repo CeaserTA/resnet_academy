@@ -1,13 +1,15 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 export default defineConfig({
     plugins: [react(), tailwindcss()],
     resolve: {
         alias: {
-            '@': path.resolve(__dirname, './src'),
+            '@': __dirname + 'src',
         },
     },
     server: {
@@ -18,5 +20,10 @@ export default defineConfig({
         environment: 'jsdom',
         globals: true,
         setupFiles: ['./src/test/setup.ts'],
+        pool: 'forks',
+        forkOptions: {
+            // Worker startup on Windows with many imports can exceed the default 60s.
+            execTimeout: 120_000,
+        },
     },
 });

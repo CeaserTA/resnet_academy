@@ -19,6 +19,7 @@ final class StoreCourseApplicationRequest extends FormRequest
     {
         return [
             'course_id' => ['required', 'integer', Rule::exists('courses', 'id')->where('status', 'published')],
+            'section_id' => ['nullable', 'integer', 'exists:course_sections,id'],
             'answers' => ['nullable', 'array'],
             'answers.*' => ['string', 'max:2000'],
             'portfolio_url' => ['nullable', 'url', 'max:500'],

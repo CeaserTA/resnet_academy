@@ -1,12 +1,15 @@
 /**
  * Maps a course slug → local image path in /public/images/.
  * Used by both CoursePreviews (homepage) and CataloguePage.
+ * 
+ * NOTE: Only use this for courses that don't have thumbnail_url in the database.
+ * Database thumbnail_url takes priority - remove entries here once uploaded.
  */
 export const courseImageMap: Record<string, string> = {
     'web-foundations': '/images/web_foundations.jpg',
     'dynamic-web': '/images/dynamic_web.jpg',
     'full-stack': '/images/full_stack.jpg',
-    'search-engine-optimization': '/images/SEO.jpg',
+    // 'search-engine-optimization' removed - now uses uploaded thumbnail from database
     'progressive-web-app-development': '/images/PWA.jpg',
     'vuejs-and-laravel': '/images/VUE.JS_LARAVEL.jpg',
     'data-analytics-with-google-analytics': '/images/data-analytics.jpg',

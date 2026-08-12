@@ -15,10 +15,12 @@ export function ApplicationModal({
     course,
     onClose,
     onSubmitted,
+    sectionId,
 }: {
     course: Course;
     onClose: () => void;
     onSubmitted: () => void;
+    sectionId?: number;
 }) {
     const submitApplication = useSubmitCourseApplication();
     const navigate = useNavigate();
@@ -48,6 +50,7 @@ export function ApplicationModal({
         try {
             await submitApplication.mutateAsync({
                 course_id: course.id,
+                section_id: sectionId,
                 answers,
                 portfolio_url: portfolioUrl.trim() || undefined,
                 alternative_proof_text: alternativeProof.trim() || undefined,

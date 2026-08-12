@@ -30,6 +30,7 @@ import { TicketsPage } from '@/features/communication/TicketsPage';
 import { TicketRedirect } from '@/features/communication/TicketRedirect';
 import { ForumPage } from '@/features/communication/ForumPage';
 import { ForumModerationPage } from '@/features/communication/ForumModerationPage';
+import { ForumsIndexPage } from '@/features/forums/ForumsIndexPage';
 import { AuditLogPage } from '@/features/analytics/AuditLogPage';
 import { AccountPage } from '@/features/account/AccountPage';
 import { ProfileCompletionPage } from '@/features/profile/ProfileCompletionPage';
@@ -225,6 +226,7 @@ function App() {
                 <Route path="messages/:id" element={<MessagesPage />} />
                 <Route path="tickets" element={<TicketsPage />} />
                 <Route path="tickets/:id" element={<TicketRedirect />} />
+                <Route path="forums" element={<ForumsIndexPage />} />
                 <Route path="courses/:id/forum" element={<ForumPage />} />
                 <Route
                     path="courses/:id/forum/moderation"
