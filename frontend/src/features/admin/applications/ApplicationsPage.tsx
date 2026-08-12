@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Check, Eye, Info, X } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
+import { Avatar } from '@/components/ui/Avatar';
 import { Spinner } from '@/components/ui/Spinner';
 import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Textarea } from '@/components/ui/Textarea';
 import { cn } from '@/lib/utils';
@@ -163,8 +164,17 @@ export function ApplicationsPage() {
         .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
 
     return (
-        <div>
-            <div className="flex gap-1 border-b border-surface-100">
+        <div className="space-y-4">
+            {/* Page header */}
+            <div>
+                <h1 className="text-lg font-semibold text-ink-900">Applications</h1>
+                <p className="text-xs text-ink-400">
+                    {user?.role === 'instructor' ? 'Applications for your courses, pending first.' : 'Course applications, pending first.'}
+                </p>
+            </div>
+
+            {/* Segmented tab bar */}
+            <div className="flex items-center gap-0.5 rounded-lg border border-surface-100 bg-surface-50 p-0.5 self-start">
                 {(
                     [
                         ['all', 'All'],
@@ -176,8 +186,8 @@ export function ApplicationsPage() {
                         key={value}
                         onClick={() => setTab(value)}
                         className={cn(
-                            'border-b-2 px-3 py-2 text-sm font-medium',
-                            tab === value ? 'border-blue-600 text-blue-600' : 'border-transparent text-ink-600',
+                            'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                            tab === value ? 'bg-blue-600 text-white shadow-sm' : 'text-ink-600 hover:text-ink-900',
                         )}
                     >
                         {label}
@@ -192,75 +202,82 @@ export function ApplicationsPage() {
             )}
 
             {!isLoading && applications.length > 0 && (
-                <div className="mt-6 overflow-x-auto rounded-lg border border-surface-100 bg-surface-0">
-                    <table className="w-full text-sm">
-                        <thead className="sticky top-0 bg-surface-100 text-left">
-                            <tr>
-                                <th className="px-4 py-2 font-medium text-ink-600">Student</th>
-                                <th className="px-4 py-2 font-medium text-ink-600">Course</th>
-                                <th className="px-4 py-2 font-medium text-ink-600">Status</th>
-                                <th className="px-4 py-2 text-right font-medium text-ink-600">Applied</th>
-                                <th className="px-4 py-2" />
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {applications.map((application, index) => {
-                                const status = courseApplicationStatusDisplay(application.status);
+                <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
+                    {/* Column headers */}
+                    <div className="grid grid-cols-[minmax(180px,1fr)_minmax(140px,1fr)_120px_110px_80px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
+                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Student</span>
+                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Course</span>
+                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Status</span>
+                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600 text-right">Applied</span>
+                        <span />
+                    </div>
 
-                                return (
-                                    <tr key={application.id} className={index % 2 === 1 ? 'bg-surface-50' : undefined}>
-                                        <td className="px-4 py-3">
-                                            <p className="font-medium text-ink-900">{application.student.name}</p>
-                                            <p className="text-xs text-ink-600">{application.student.email}</p>
-                                        </td>
-                                        <td className="px-4 py-3 text-ink-600">{application.course.title}</td>
-                                        <td className="px-4 py-3">
-                                            <Badge label={status.label} tone={status.tone} icon={status.icon} />
-                                        </td>
-                                        <td className="px-4 py-3 text-right font-mono text-xs text-ink-600">
-                                            {new Date(application.applied_at).toLocaleDateString()}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex justify-end gap-1">
-                                                {application.status === 'pending' && (
-                                                    <>
-                                                        <Button
-                                                            variant="ghost"
-                                                            className="px-2 py-1"
-                                                            onClick={() => approveApplication.mutate(application.id)}
-                                                            isLoading={
-                                                                approveApplication.isPending &&
-                                                                approveApplication.variables === application.id
-                                                            }
-                                                            aria-label={`Approve ${application.student.name}`}
-                                                        >
-                                                            <Check className="size-4 text-success-600" aria-hidden="true" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            className="px-2 py-1"
-                                                            onClick={() => setRejectingApplication(application)}
-                                                            aria-label={`Reject ${application.student.name}`}
-                                                        >
-                                                            <X className="size-4 text-danger-600" aria-hidden="true" />
-                                                        </Button>
-                                                    </>
-                                                )}
-                                                <Button
-                                                    variant="ghost"
-                                                    className="px-2 py-1"
-                                                    onClick={() => setViewingApplication(application)}
-                                                    aria-label={`View ${application.student.name}`}
+                    {/* Rows */}
+                    <ul className="divide-y divide-surface-100">
+                        {applications.map((application) => {
+                            const status = courseApplicationStatusDisplay(application.status);
+
+                            return (
+                                <li
+                                    key={application.id}
+                                    className="grid grid-cols-[minmax(180px,1fr)_minmax(140px,1fr)_120px_110px_80px] items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-50"
+                                >
+                                    {/* Student */}
+                                    <div className="flex min-w-0 items-center gap-2">
+                                        <Avatar
+                                            name={application.student.name}
+                                            size="sm"
+                                            className="size-7 shrink-0 text-xs"
+                                        />
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-medium text-ink-900">{application.student.name}</p>
+                                            <p className="truncate text-xs text-ink-400">{application.student.email}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Course */}
+                                    <p className="truncate text-sm text-ink-600">{application.course.title}</p>
+
+                                    {/* Status */}
+                                    <Badge label={status.label} tone={status.tone} icon={status.icon} />
+
+                                    {/* Applied */}
+                                    <p className="text-right font-mono text-xs text-ink-400">
+                                        {new Date(application.applied_at).toLocaleDateString()}
+                                    </p>
+
+                                    {/* Actions */}
+                                    <div className="flex items-center justify-end gap-1">
+                                        {application.status === 'pending' && (
+                                            <>
+                                                <button
+                                                    onClick={() => approveApplication.mutate(application.id)}
+                                                    aria-label={`Approve ${application.student.name}`}
+                                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-surface-100 hover:text-ink-900"
                                                 >
-                                                    <Eye className="size-4" aria-hidden="true" />
-                                                </Button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
+                                                    <Check className="size-4 text-success-600" aria-hidden="true" />
+                                                </button>
+                                                <button
+                                                    onClick={() => setRejectingApplication(application)}
+                                                    aria-label={`Reject ${application.student.name}`}
+                                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-danger-600/10 hover:text-danger-600"
+                                                >
+                                                    <X className="size-4" aria-hidden="true" />
+                                                </button>
+                                            </>
+                                        )}
+                                        <button
+                                            onClick={() => setViewingApplication(application)}
+                                            aria-label={`View ${application.student.name}`}
+                                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-surface-100 hover:text-ink-900"
+                                        >
+                                            <Eye className="size-4" aria-hidden="true" />
+                                        </button>
+                                    </div>
+                                </li>
+                            );
+                        })}
+                    </ul>
                 </div>
             )}
 

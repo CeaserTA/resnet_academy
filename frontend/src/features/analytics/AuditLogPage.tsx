@@ -19,10 +19,15 @@ export function AuditLogPage() {
     const logs = data?.data ?? [];
 
     return (
-        <div>
-            <h1 className="text-2xl">Audit log</h1>
+        <div className="space-y-4">
+            {/* Page header */}
+            <div>
+                <h1 className="text-lg font-semibold text-ink-900">Audit log</h1>
+                <p className="text-xs text-ink-400">Track who changed what, and when.</p>
+            </div>
 
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {/* Filters */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Input
                     label="Filter by entity type"
                     placeholder="e.g. enrolment, user, assignment_submission"
@@ -44,30 +49,32 @@ export function AuditLogPage() {
             )}
 
             {!isLoading && logs.length > 0 && (
-                <div className="mt-6 overflow-x-auto rounded-lg border border-surface-100 bg-surface-0">
-                    <table className="w-full text-sm">
-                        <thead className="sticky top-0 bg-surface-100 text-left">
-                            <tr>
-                                <th className="px-4 py-2 font-medium text-ink-600">Event</th>
-                                <th className="px-4 py-2 text-right font-medium text-ink-600">When</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {logs.map((log, index) => (
-                                <tr key={log.id} className={index % 2 === 1 ? 'bg-surface-50' : undefined}>
-                                    <td className="px-4 py-3">
-                                        <p className="text-ink-900">{describeAuditLogEntry(log)}</p>
-                                        <p className="mt-0.5 font-mono text-xs text-ink-600">
-                                            {log.action} · {log.entity_type} #{log.entity_id}
-                                        </p>
-                                    </td>
-                                    <td className="px-4 py-3 text-right font-mono text-xs text-ink-600">
-                                        {new Date(log.created_at).toLocaleString()}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
+                    {/* Column headers */}
+                    <div className="grid grid-cols-[1fr_160px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
+                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Event</span>
+                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600 text-right">When</span>
+                    </div>
+
+                    {/* Rows */}
+                    <ul className="divide-y divide-surface-100">
+                        {logs.map((log) => (
+                            <li
+                                key={log.id}
+                                className="grid grid-cols-[1fr_160px] items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-50"
+                            >
+                                <div>
+                                    <p className="text-sm text-ink-900">{describeAuditLogEntry(log)}</p>
+                                    <p className="mt-0.5 font-mono text-xs text-ink-400">
+                                        {log.action} · {log.entity_type} #{log.entity_id}
+                                    </p>
+                                </div>
+                                <p className="text-right font-mono text-xs text-ink-400">
+                                    {new Date(log.created_at).toLocaleString()}
+                                </p>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
             )}
         </div>

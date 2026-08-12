@@ -1,6 +1,17 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { CalendarCheck, ChevronDown, ChevronRight, ClipboardList, Clock, FileCheck2, FileEdit, ListChecks, Pencil, Trash2 } from 'lucide-react';
+import {
+    CalendarCheck,
+    ChevronDown,
+    ChevronRight,
+    Clock,
+    ClipboardList,
+    FileCheck2,
+    FileEdit,
+    ListChecks,
+    Pencil,
+    Trash2,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -14,97 +25,114 @@ import {
     useDeleteAssignment,
     useDeleteEvaluation,
 } from '@/features/assessment/useAssessment';
+import { cn } from '@/lib/utils';
 import type { Module, ModuleItem } from '@/lib/api/types';
 import type { ResourcePayload } from '@/features/courseStructure/api';
 import type { AssignmentPayload, EvaluationPayload } from '@/features/assessment/api';
+
+// ─── Resource type labels ─────────────────────────────────────────────────────
 
 const resourceTypeLabels: Record<string, string> = {
     video: 'Video',
     document: 'Document',
     reading: 'Reading',
-    external_link: 'External link',
+    external_link: 'Link',
     scorm: 'SCORM',
-    live_session: 'Live session',
+    live_session: 'Live',
     downloadable_file: 'Download',
 };
 
 type AddingForm = 'resource' | 'assignment' | 'evaluation' | null;
 
-function ItemRow({ item, onDelete }: { item: ModuleItem; onDelete: () => void }) {
-    if (item.item_type === 'assignment') {
-        return (
-            <div className="flex items-center justify-between rounded-md bg-surface-50 px-3 py-2">
-                <div className="flex items-center gap-2">
-                    <Badge label="Assignment" tone="progress" icon={FileCheck2} />
-                    <span className="text-sm text-ink-900">{item.title}</span>
-                    {!item.is_required && <span className="text-xs text-ink-600">(optional)</span>}
-                </div>
-                <div className="flex items-center gap-1">
-                    <Link to={`/admin/assignments/${item.id}`}>
-                        <Button variant="ghost" className="px-2 py-1" aria-label={`Grade submissions for ${item.title}`}>
-                            <Pencil className="size-4" aria-hidden="true" />
-                        </Button>
-                    </Link>
-                    <Button variant="ghost" className="px-2 py-1" onClick={onDelete} aria-label={`Delete ${item.title}`}>
-                        <Trash2 className="size-4" aria-hidden="true" />
-                    </Button>
-                </div>
-            </div>
-        );
-    }
+// ─── Icon button helper ───────────────────────────────────────────────────────
 
-    if (item.item_type === 'evaluation') {
-        return (
-            <div className="flex items-center justify-between rounded-md bg-surface-50 px-3 py-2">
-                <div className="flex items-center gap-2">
-                    <Badge label="Evaluation" tone="progress" icon={ClipboardList} />
-                    <span className="text-sm text-ink-900">{item.title}</span>
-                    {!item.is_required && <span className="text-xs text-ink-600">(optional)</span>}
-                </div>
-                <div className="flex items-center gap-1">
-                    <Link to={`/admin/evaluations/${item.id}`}>
-                        <Button variant="ghost" className="px-2 py-1" aria-label={`Grade attempts for ${item.title}`}>
-                            <Pencil className="size-4" aria-hidden="true" />
-                        </Button>
-                    </Link>
-                    <Button variant="ghost" className="px-2 py-1" onClick={onDelete} aria-label={`Delete ${item.title}`}>
-                        <Trash2 className="size-4" aria-hidden="true" />
-                    </Button>
-                </div>
-            </div>
-        );
-    }
+function IconBtn({
+    label,
+    onClick,
+    danger = false,
+    children,
+}: {
+    label: string;
+    onClick: () => void;
+    danger?: boolean;
+    children: React.ReactNode;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            aria-label={label}
+            className={cn(
+                'flex items-center justify-center rounded-lg p-1.5 transition-colors',
+                danger
+                    ? 'text-ink-400 hover:bg-danger-600/10 hover:text-danger-600'
+                    : 'text-ink-400 hover:bg-surface-100 hover:text-ink-900',
+            )}
+        >
+            {children}
+        </button>
+    );
+}
+
+// ─── Item row ─────────────────────────────────────────────────────────────────
+
+function ItemRow({ item, onDelete }: { item: ModuleItem; onDelete: () => void }) {
+    const typeLabel =
+        item.item_type === 'assignment'
+            ? 'Assignment'
+            : item.item_type === 'evaluation'
+                ? 'Evaluation'
+                : (resourceTypeLabels[item.type] ?? item.type);
+
+    const tone = item.item_type === 'resource' ? 'neutral' : 'progress';
+    const icon = item.item_type === 'assignment' ? FileCheck2 : item.item_type === 'evaluation' ? ClipboardList : undefined;
+
+    const editHref =
+        item.item_type === 'assignment'
+            ? `/admin/assignments/${item.id}`
+            : item.item_type === 'evaluation'
+                ? `/admin/evaluations/${item.id}`
+                : null;
+
+    const attendanceHref =
+        item.item_type === 'resource' && item.type === 'live_session'
+            ? `/admin/resources/${item.id}/attendance`
+            : null;
 
     return (
-        <div className="flex items-center justify-between rounded-md bg-surface-50 px-3 py-2">
-            <div className="flex items-center gap-2">
-                <Badge label={resourceTypeLabels[item.type] ?? item.type} tone="progress" />
-                <span className="text-sm text-ink-900">{item.title}</span>
-                {!item.is_required && <span className="text-xs text-ink-600">(optional)</span>}
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-surface-100 bg-surface-50 px-3 py-2">
+            <div className="flex min-w-0 items-center gap-2">
+                <Badge label={typeLabel} tone={tone} icon={icon} />
+                <span className="truncate text-sm text-ink-900">{item.title}</span>
+                {!item.is_required && (
+                    <span className="shrink-0 text-xs text-ink-300">optional</span>
+                )}
             </div>
-            <div className="flex items-center gap-1">
-                {item.type === 'live_session' && (
-                    <Link to={`/admin/resources/${item.id}/attendance`}>
-                        <Button variant="ghost" className="px-2 py-1" aria-label={`View attendance for ${item.title}`}>
-                            <CalendarCheck className="size-4" aria-hidden="true" />
-                        </Button>
+            <div className="flex shrink-0 items-center gap-0.5">
+                {attendanceHref && (
+                    <Link to={attendanceHref}>
+                        <IconBtn label={`Attendance for ${item.title}`} onClick={() => { }}>
+                            <CalendarCheck className="size-3.5" aria-hidden="true" />
+                        </IconBtn>
                     </Link>
                 )}
-                <Button variant="ghost" className="px-2 py-1" onClick={onDelete} aria-label={`Delete ${item.title}`}>
-                    <Trash2 className="size-4" aria-hidden="true" />
-                </Button>
+                {editHref && (
+                    <Link to={editHref}>
+                        <IconBtn label={`Grade ${item.title}`} onClick={() => { }}>
+                            <Pencil className="size-3.5" aria-hidden="true" />
+                        </IconBtn>
+                    </Link>
+                )}
+                <IconBtn label={`Delete ${item.title}`} onClick={onDelete} danger>
+                    <Trash2 className="size-3.5" aria-hidden="true" />
+                </IconBtn>
             </div>
         </div>
     );
 }
 
-/**
- * One row of the "Module Management" table (course builder redesign) — same state/handlers
- * `ModuleCard` used to own, just rendered as `<tr>` + a conditional expanded `<tr>` instead of a
- * `<Card>`. The three action icons open the existing add-forms in a `Modal` instead of expanding
- * inline; expanding the row (chevron or clicking the title) still shows the existing item list
- * and lets you delete them or the module itself, so none of that capability is lost.
- */
+// ─── Module table row ─────────────────────────────────────────────────────────
+
 export function ModuleTableRow({
     index,
     module,
@@ -130,25 +158,19 @@ export function ModuleTableRow({
         await createResource.mutateAsync({ moduleId: module.id, payload });
         setAddingForm(null);
     };
-
     const handleCreateAssignment = async (payload: AssignmentPayload) => {
         await createAssignment.mutateAsync({ moduleId: module.id, payload });
         setAddingForm(null);
     };
-
     const handleCreateEvaluation = async (payload: EvaluationPayload) => {
         await createEvaluation.mutateAsync({ moduleId: module.id, payload });
         setAddingForm(null);
     };
 
     const deleteItem = (item: ModuleItem) => {
-        if (item.item_type === 'assignment') {
-            deleteAssignment.mutate(item.id);
-        } else if (item.item_type === 'evaluation') {
-            deleteEvaluation.mutate(item.id);
-        } else {
-            deleteResource.mutate(item.id);
-        }
+        if (item.item_type === 'assignment') deleteAssignment.mutate(item.id);
+        else if (item.item_type === 'evaluation') deleteEvaluation.mutate(item.id);
+        else deleteResource.mutate(item.id);
     };
 
     const opensInFuture = module.scheduled_start_at && new Date(module.scheduled_start_at) > new Date();
@@ -161,7 +183,8 @@ export function ModuleTableRow({
 
     return (
         <>
-            <tr className={index % 2 === 1 ? 'bg-surface-50' : undefined}>
+            {/* ── Summary row ────────────────────────────────────────────── */}
+            <tr className="hover:bg-surface-50">
                 <td className="px-4 py-3">
                     <button
                         onClick={() => setIsOpen((v) => !v)}
@@ -169,83 +192,82 @@ export function ModuleTableRow({
                         aria-expanded={isOpen}
                         aria-label={isOpen ? `Collapse ${module.title}` : `Expand ${module.title}`}
                     >
-                        {isOpen ? (
-                            <ChevronDown className="size-4 shrink-0 text-ink-600" aria-hidden="true" />
-                        ) : (
-                            <ChevronRight className="size-4 shrink-0 text-ink-600" aria-hidden="true" />
-                        )}
-                        <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-blue-600/10 text-xs font-medium text-blue-600">
+                        {isOpen
+                            ? <ChevronDown className="size-3.5 shrink-0 text-ink-400" aria-hidden="true" />
+                            : <ChevronRight className="size-3.5 shrink-0 text-ink-400" aria-hidden="true" />
+                        }
+                        {/* Module number chip */}
+                        <span className="flex size-5 shrink-0 items-center justify-center rounded bg-blue-600/10 text-xs font-semibold text-blue-600">
                             {index + 1}
                         </span>
-                        <span className="text-sm text-ink-900">{module.title}</span>
+                        <span className="text-sm font-medium text-ink-900">{module.title}</span>
+                        <span className="text-xs text-ink-400">
+                            · {module.items.length} item{module.items.length !== 1 ? 's' : ''}
+                        </span>
                     </button>
                 </td>
+
                 <td className="px-4 py-3">
                     {opensInFuture ? (
-                        <Badge label={`Opens ${new Date(module.scheduled_start_at as string).toLocaleDateString()}`} tone="warning" icon={Clock} />
+                        <Badge
+                            label={`Opens ${new Date(module.scheduled_start_at as string).toLocaleDateString()}`}
+                            tone="warning"
+                            icon={Clock}
+                        />
                     ) : (
                         <Badge label="Active" tone="success" />
                     )}
                 </td>
+
                 <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                        <Button
-                            variant="ghost"
-                            className="px-2 py-1"
-                            onClick={() => setAddingForm('resource')}
-                            aria-label={`Add a resource to ${module.title}`}
-                        >
-                            <FileEdit className="size-4" aria-hidden="true" />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            className="px-2 py-1"
-                            onClick={() => setAddingForm('assignment')}
-                            aria-label={`Add an assignment to ${module.title}`}
-                        >
-                            <FileCheck2 className="size-4" aria-hidden="true" />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            className="px-2 py-1"
-                            onClick={() => setAddingForm('evaluation')}
-                            aria-label={`Add an evaluation to ${module.title}`}
-                        >
-                            <ListChecks className="size-4" aria-hidden="true" />
-                        </Button>
-                        <Button variant="ghost" className="px-2 py-1" onClick={handleDeleteModule} aria-label={`Delete ${module.title}`}>
-                            <Trash2 className="size-4" aria-hidden="true" />
-                        </Button>
+                    <div className="flex items-center justify-end gap-0.5">
+                        <IconBtn label={`Add resource to ${module.title}`} onClick={() => setAddingForm('resource')}>
+                            <FileEdit className="size-3.5" aria-hidden="true" />
+                        </IconBtn>
+                        <IconBtn label={`Add assignment to ${module.title}`} onClick={() => setAddingForm('assignment')}>
+                            <FileCheck2 className="size-3.5" aria-hidden="true" />
+                        </IconBtn>
+                        <IconBtn label={`Add evaluation to ${module.title}`} onClick={() => setAddingForm('evaluation')}>
+                            <ListChecks className="size-3.5" aria-hidden="true" />
+                        </IconBtn>
+                        <IconBtn label={`Delete ${module.title}`} onClick={handleDeleteModule} danger>
+                            <Trash2 className="size-3.5" aria-hidden="true" />
+                        </IconBtn>
                     </div>
                 </td>
             </tr>
 
+            {/* ── Expanded items row ────────────────────────────────────── */}
             {isOpen && (
-                <tr className={index % 2 === 1 ? 'bg-surface-50' : undefined}>
-                    <td colSpan={3} className="px-4 pb-3">
-                        <div className="flex flex-col gap-2 rounded-md border border-surface-100 p-3">
-                            {module.items.length === 0 && <p className="text-sm text-ink-600">No content yet.</p>}
-
-                            {module.items.map((item) => (
-                                <ItemRow key={`${item.item_type}-${item.id}`} item={item} onDelete={() => deleteItem(item)} />
-                            ))}
+                <tr>
+                    <td colSpan={3} className="bg-surface-50 px-4 pb-3 pt-1">
+                        <div className="flex flex-col gap-1.5 rounded-xl border border-surface-100 bg-surface-0 p-3">
+                            {module.items.length === 0 ? (
+                                <p className="py-2 text-center text-xs text-ink-400">
+                                    No content yet — use the icons above to add resources, assignments, or evaluations.
+                                </p>
+                            ) : (
+                                module.items.map((item) => (
+                                    <ItemRow
+                                        key={`${item.item_type}-${item.id}`}
+                                        item={item}
+                                        onDelete={() => deleteItem(item)}
+                                    />
+                                ))
+                            )}
                         </div>
                     </td>
                 </tr>
             )}
 
-            <Modal
-                isOpen={addingForm === 'resource'}
-                onClose={() => setAddingForm(null)}
-                title={`Add a resource to ${module.title}`}
-                className="max-w-2xl"
-            >
+            {/* ── Add-content modals ────────────────────────────────────── */}
+            <Modal isOpen={addingForm === 'resource'} onClose={() => setAddingForm(null)} title={`Add resource — ${module.title}`} className="max-w-2xl">
                 <ResourceForm onSubmit={handleCreateResource} onCancel={() => setAddingForm(null)} />
             </Modal>
-            <Modal isOpen={addingForm === 'assignment'} onClose={() => setAddingForm(null)} title={`Add an assignment to ${module.title}`}>
+            <Modal isOpen={addingForm === 'assignment'} onClose={() => setAddingForm(null)} title={`Add assignment — ${module.title}`}>
                 <AssignmentQuickForm onSubmit={handleCreateAssignment} onCancel={() => setAddingForm(null)} />
             </Modal>
-            <Modal isOpen={addingForm === 'evaluation'} onClose={() => setAddingForm(null)} title={`Add an evaluation to ${module.title}`}>
+            <Modal isOpen={addingForm === 'evaluation'} onClose={() => setAddingForm(null)} title={`Add evaluation — ${module.title}`}>
                 <EvaluationQuickForm onSubmit={handleCreateEvaluation} onCancel={() => setAddingForm(null)} />
             </Modal>
         </>

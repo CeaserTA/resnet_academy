@@ -133,8 +133,8 @@ export const Select = forwardRef<HTMLInputElement, SelectProps>(
                         id={triggerId}
                         aria-labelledby={labelId}
                         className={cn(
-                            'flex h-10 w-full items-center justify-between rounded-md border border-surface-100 bg-surface-0 px-3 py-2 text-sm text-ink-900 shadow-sm',
-                            'focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2',
+                            'flex h-10 w-full items-center justify-between rounded-lg border border-surface-100 bg-surface-0 px-3 py-2 text-sm text-ink-900 shadow-sm',
+                            'focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2',
                             className,
                         )}
                         aria-label={props['aria-label'] ?? label}
@@ -156,18 +156,18 @@ export const Select = forwardRef<HTMLInputElement, SelectProps>(
                             <RadixSelect.Viewport className="p-1">
                                 {normalizedOptions.length > 0
                                     ? normalizedOptions.map((option) => (
-                                          <RadixSelect.Item
-                                              key={option.value}
-                                              value={option.value}
-                                              disabled={option.disabled}
-                                              className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[disabled]:pointer-events-none data-[highlighted]:bg-surface-100 data-[state=checked]:bg-surface-100"
-                                          >
-                                              <RadixSelect.ItemText>{option.label}</RadixSelect.ItemText>
-                                              <RadixSelect.ItemIndicator className="ml-auto">
-                                                  <Check className="h-4 w-4" />
-                                              </RadixSelect.ItemIndicator>
-                                          </RadixSelect.Item>
-                                      ))
+                                        <RadixSelect.Item
+                                            key={option.value}
+                                            value={option.value}
+                                            disabled={option.disabled}
+                                            className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[disabled]:pointer-events-none data-[highlighted]:bg-surface-100 data-[state=checked]:bg-surface-100"
+                                        >
+                                            <RadixSelect.ItemText>{option.label}</RadixSelect.ItemText>
+                                            <RadixSelect.ItemIndicator className="ml-auto">
+                                                <Check className="h-4 w-4" />
+                                            </RadixSelect.ItemIndicator>
+                                        </RadixSelect.Item>
+                                    ))
                                     : children}
                             </RadixSelect.Viewport>
                         </RadixSelect.Content>

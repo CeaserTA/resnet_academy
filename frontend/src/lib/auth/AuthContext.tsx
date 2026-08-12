@@ -47,6 +47,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const logout = async () => {
         await logoutRequest();
+        // Clear per-session UI state so modals (e.g. profile completion) re-appear on next login
+        sessionStorage.removeItem('profile_completion_modal_dismissed');
         queryClient.setQueryData(CURRENT_USER_QUERY_KEY, null);
     };
 
