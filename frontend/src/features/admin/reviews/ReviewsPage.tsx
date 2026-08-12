@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Check, Eye, Info, Star, X } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
+import { Avatar } from '@/components/ui/Avatar';
 import { Spinner } from '@/components/ui/Spinner';
 import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { StarRating } from '@/components/ui/StarRating';
 import { Textarea } from '@/components/ui/Textarea';
@@ -113,8 +114,15 @@ export function ReviewsPage() {
         .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
 
     return (
-        <div>
-            <div className="flex gap-1 border-b border-surface-100">
+        <div className="space-y-4">
+            {/* Page header */}
+            <div>
+                <h1 className="text-lg font-semibold text-ink-900">Reviews</h1>
+                <p className="text-xs text-ink-400">Course reviews, pending first.</p>
+            </div>
+
+            {/* Segmented tab bar */}
+            <div className="flex items-center gap-0.5 rounded-lg border border-surface-100 bg-surface-50 p-0.5 self-start">
                 {(
                     [
                         ['all', 'All'],
@@ -127,8 +135,8 @@ export function ReviewsPage() {
                         key={value}
                         onClick={() => setTab(value)}
                         className={cn(
-                            'border-b-2 px-3 py-2 text-sm font-medium',
-                            tab === value ? 'border-blue-600 text-blue-600' : 'border-transparent text-ink-600',
+                            'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                            tab === value ? 'bg-blue-600 text-white shadow-sm' : 'text-ink-600 hover:text-ink-900',
                         )}
                     >
                         {label}
@@ -143,99 +151,111 @@ export function ReviewsPage() {
             )}
 
             {!isLoading && reviews.length > 0 && (
-                <div className="mt-6 overflow-x-auto rounded-lg border border-surface-100 bg-surface-0">
-                    <table className="w-full text-sm">
-                        <thead className="sticky top-0 bg-surface-100 text-left">
-                            <tr>
-                                <th className="px-4 py-2 font-medium text-ink-600">Student</th>
-                                <th className="px-4 py-2 font-medium text-ink-600">Course</th>
-                                <th className="px-4 py-2 font-medium text-ink-600">Rating</th>
-                                <th className="px-4 py-2 font-medium text-ink-600">Review</th>
-                                <th className="px-4 py-2 font-medium text-ink-600">Status</th>
-                                <th className="px-4 py-2 text-right font-medium text-ink-600">Submitted</th>
-                                <th className="px-4 py-2" />
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {reviews.map((review, index) => {
-                                const status = reviewStatusDisplay(review.status);
+                <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
+                    {/* Column headers */}
+                    <div className="grid grid-cols-[minmax(160px,1fr)_minmax(140px,1fr)_100px_minmax(120px,2fr)_110px_100px_80px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
+                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Student</span>
+                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Course</span>
+                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Rating</span>
+                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Review</span>
+                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Status</span>
+                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600 text-right">Submitted</span>
+                        <span />
+                    </div>
 
-                                return (
-                                    <tr key={review.id} className={index % 2 === 1 ? 'bg-surface-50' : undefined}>
-                                        <td className="px-4 py-3">
-                                            <p className="font-medium text-ink-900">{review.student?.name}</p>
-                                        </td>
-                                        <td className="px-4 py-3 text-ink-600">{review.course?.title}</td>
-                                        <td className="px-4 py-3">
-                                            <StarRating value={review.rating} readOnly size="sm" />
-                                        </td>
-                                        <td className="max-w-xs truncate px-4 py-3 text-ink-600">
-                                            {review.review_text || '—'}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <Badge label={status.label} tone={status.tone} icon={status.icon} />
-                                        </td>
-                                        <td className="px-4 py-3 text-right font-mono text-xs text-ink-600">
-                                            {new Date(review.created_at).toLocaleDateString()}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex justify-end gap-1">
-                                                {review.status === 'pending' && (
-                                                    <>
-                                                        <Button
-                                                            variant="ghost"
-                                                            className="px-2 py-1"
-                                                            onClick={() => approveReview.mutate(review.id)}
-                                                            isLoading={approveReview.isPending && approveReview.variables === review.id}
-                                                            aria-label={`Approve ${review.student?.name}'s review`}
-                                                        >
-                                                            <Check className="size-4 text-success-600" aria-hidden="true" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            className="px-2 py-1"
-                                                            onClick={() => setRejectingReview(review)}
-                                                            aria-label={`Reject ${review.student?.name}'s review`}
-                                                        >
-                                                            <X className="size-4 text-danger-600" aria-hidden="true" />
-                                                        </Button>
-                                                    </>
-                                                )}
-                                                {review.status === 'approved' && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        className="px-2 py-1"
-                                                        onClick={() =>
-                                                            setFeatured.mutate({ id: review.id, isFeatured: !review.is_featured })
-                                                        }
-                                                        isLoading={setFeatured.isPending && setFeatured.variables?.id === review.id}
-                                                        aria-label={
-                                                            review.is_featured
-                                                                ? `Unfeature ${review.student?.name}'s review`
-                                                                : `Feature ${review.student?.name}'s review`
-                                                        }
-                                                    >
-                                                        <Star
-                                                            className={cn('size-4', review.is_featured ? 'fill-amber-500 text-amber-500' : 'text-ink-600')}
-                                                            aria-hidden="true"
-                                                        />
-                                                    </Button>
-                                                )}
-                                                <Button
-                                                    variant="ghost"
-                                                    className="px-2 py-1"
-                                                    onClick={() => setViewingReview(review)}
-                                                    aria-label={`View ${review.student?.name}'s review`}
+                    {/* Rows */}
+                    <ul className="divide-y divide-surface-100">
+                        {reviews.map((review) => {
+                            const status = reviewStatusDisplay(review.status);
+
+                            return (
+                                <li
+                                    key={review.id}
+                                    className="grid grid-cols-[minmax(160px,1fr)_minmax(140px,1fr)_100px_minmax(120px,2fr)_110px_100px_80px] items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-50"
+                                >
+                                    {/* Student */}
+                                    <div className="flex min-w-0 items-center gap-2">
+                                        {review.student ? (
+                                            <>
+                                                <Avatar
+                                                    name={review.student.name}
+                                                    size="sm"
+                                                    className="size-7 shrink-0 text-xs"
+                                                />
+                                                <p className="truncate text-sm font-medium text-ink-900">{review.student.name}</p>
+                                            </>
+                                        ) : (
+                                            <span className="text-sm text-ink-400">—</span>
+                                        )}
+                                    </div>
+
+                                    {/* Course */}
+                                    <p className="truncate text-sm text-ink-600">{review.course?.title}</p>
+
+                                    {/* Rating */}
+                                    <StarRating value={review.rating} readOnly size="sm" />
+
+                                    {/* Review text */}
+                                    <p className="truncate text-sm text-ink-600">{review.review_text || '—'}</p>
+
+                                    {/* Status */}
+                                    <Badge label={status.label} tone={status.tone} icon={status.icon} />
+
+                                    {/* Submitted */}
+                                    <p className="text-right font-mono text-xs text-ink-400">
+                                        {new Date(review.created_at).toLocaleDateString()}
+                                    </p>
+
+                                    {/* Actions */}
+                                    <div className="flex items-center justify-end gap-1">
+                                        {review.status === 'pending' && (
+                                            <>
+                                                <button
+                                                    onClick={() => approveReview.mutate(review.id)}
+                                                    aria-label={`Approve ${review.student?.name}'s review`}
+                                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-surface-100 hover:text-ink-900"
                                                 >
-                                                    <Eye className="size-4" aria-hidden="true" />
-                                                </Button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
+                                                    <Check className="size-4 text-success-600" aria-hidden="true" />
+                                                </button>
+                                                <button
+                                                    onClick={() => setRejectingReview(review)}
+                                                    aria-label={`Reject ${review.student?.name}'s review`}
+                                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-danger-600/10 hover:text-danger-600"
+                                                >
+                                                    <X className="size-4" aria-hidden="true" />
+                                                </button>
+                                            </>
+                                        )}
+                                        {review.status === 'approved' && (
+                                            <button
+                                                onClick={() =>
+                                                    setFeatured.mutate({ id: review.id, isFeatured: !review.is_featured })
+                                                }
+                                                aria-label={
+                                                    review.is_featured
+                                                        ? `Unfeature ${review.student?.name}'s review`
+                                                        : `Feature ${review.student?.name}'s review`
+                                                }
+                                                className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-surface-100 hover:text-ink-900"
+                                            >
+                                                <Star
+                                                    className={cn('size-4', review.is_featured ? 'fill-amber-500 text-amber-500' : '')}
+                                                    aria-hidden="true"
+                                                />
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={() => setViewingReview(review)}
+                                            aria-label={`View ${review.student?.name}'s review`}
+                                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-surface-100 hover:text-ink-900"
+                                        >
+                                            <Eye className="size-4" aria-hidden="true" />
+                                        </button>
+                                    </div>
+                                </li>
+                            );
+                        })}
+                    </ul>
                 </div>
             )}
 

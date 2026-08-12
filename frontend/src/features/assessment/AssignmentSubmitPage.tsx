@@ -1,114 +1,121 @@
 import { useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
-import { CheckCircle2, Clock, FolderOpen, Send, Upload } from 'lucide-react';
-import { Card } from '@/components/ui/Card';
+import {
+    Award,
+    CheckCircle2,
+    Clock,
+    FileText,
+    FolderOpen,
+    Send,
+    Upload,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';
 import { Alert } from '@/components/ui/Alert';
 import { Spinner } from '@/components/ui/Spinner';
+import { ProgressBar } from '@/components/ui/ProgressBar';
 import { useCourse } from '@/features/catalogue/useCourses';
 import { ApiError } from '@/lib/api/client';
 import { useAssignment, useAssignmentSubmissions, useSubmitAssignment } from '@/features/assessment/useAssessment';
 import { useMyEnrolments } from '@/features/enrolment/useEnrolments';
 import type { AssignmentSubmission } from '@/lib/api/types';
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatDate(iso: string) {
-    return new Date(iso).toLocaleString(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    });
+    return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 }
 
-const statusTone: Record<string, 'neutral' | 'progress' | 'success' | 'warning'> = {
-    submitted: 'progress',
-    graded: 'success',
-};
+// ─── Existing submission panel ────────────────────────────────────────────────
 
-// ─── Existing submission card ─────────────────────────────────────────────────
+function ExistingSubmission({ submission, onResubmit }: { submission: AssignmentSubmission; onResubmit: () => void }) {
+    const isGraded = submission.status === 'graded';
+    const score = submission.final_score ?? submission.raw_score;
 
-function ExistingSubmission({
-    submission,
-    onResubmit,
-}: {
-    submission: AssignmentSubmission;
-    onResubmit: () => void;
-}) {
     return (
-        <Card className="mt-6 flex flex-col gap-4">
-            <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                    <CheckCircle2 className="size-5 text-success-600" aria-hidden="true" />
-                    <h2 className="text-base font-semibold text-ink-900">
-                        Attempt #{submission.attempt_number} submitted
-                    </h2>
+        <div className="flex flex-col gap-4">
+            {/* Status header */}
+            <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
+                <div className="flex items-center justify-between gap-3 border-b border-surface-100 bg-surface-50 px-4 py-3">
+                    <div className="flex items-center gap-2">
+                        <CheckCircle2 className="size-4 text-success-600" aria-hidden="true" />
+                        <p className="text-sm font-semibold text-ink-900">
+                            Attempt #{submission.attempt_number}
+                        </p>
+                    </div>
+                    <Badge
+                        label={isGraded ? 'Graded' : 'Submitted'}
+                        tone={isGraded ? 'success' : 'progress'}
+                    />
                 </div>
-                <Badge
-                    label={submission.status === 'graded' ? 'Graded' : 'Submitted'}
-                    tone={statusTone[submission.status] ?? 'neutral'}
-                />
+                <div className="px-4 py-3">
+                    <p className="text-xs text-ink-400">
+                        Submitted {formatDate(submission.submitted_at)}
+                        {submission.is_late && <span className="ml-2 text-amber-600">(late)</span>}
+                    </p>
+                </div>
             </div>
 
-            <p className="text-sm text-ink-600">
-                Submitted {formatDate(submission.submitted_at)}
-                {submission.is_late && (
-                    <span className="ml-2 text-warning-600">(late)</span>
-                )}
-            </p>
-
-            {/* What was submitted */}
-            {submission.text_content && (
-                <div className="rounded-lg border border-surface-100 bg-surface-50 p-4">
-                    <p className="mb-1 text-xs font-medium uppercase tracking-wide text-ink-600">Your answer</p>
-                    <p className="whitespace-pre-wrap text-sm text-ink-900">{submission.text_content}</p>
+            {/* Grade result */}
+            {isGraded && score !== null && (
+                <div className="overflow-hidden rounded-xl border border-success-600/20 bg-success-600/5 shadow-sm">
+                    <div className="border-b border-success-600/10 bg-success-600/8 px-4 py-3">
+                        <div className="flex items-center gap-2">
+                            <Award className="size-4 text-success-600" aria-hidden="true" />
+                            <p className="text-sm font-semibold text-ink-900">Your grade</p>
+                        </div>
+                    </div>
+                    <div className="px-4 py-3">
+                        <p className="text-2xl font-bold text-success-600">{score} pts</p>
+                        {submission.is_late && Number(submission.late_penalty_percent) > 0 && (
+                            <p className="mt-0.5 text-xs text-amber-600">
+                                {submission.late_penalty_percent}% late penalty applied
+                            </p>
+                        )}
+                        {submission.feedback && (
+                            <p className="mt-3 text-sm text-ink-600 border-t border-success-600/10 pt-3">
+                                {submission.feedback}
+                            </p>
+                        )}
+                    </div>
                 </div>
             )}
+
+            {/* Submitted content */}
+            {submission.text_content && (
+                <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
+                    <div className="border-b border-surface-100 bg-surface-50 px-4 py-2.5">
+                        <p className="text-xs font-medium uppercase tracking-wide text-ink-600">Your answer</p>
+                    </div>
+                    <p className="whitespace-pre-wrap px-4 py-3 text-sm text-ink-900 leading-relaxed">
+                        {submission.text_content}
+                    </p>
+                </div>
+            )}
+
             {submission.file_url && (
                 <a
                     href={submission.file_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:underline"
+                    className="inline-flex items-center gap-2 rounded-xl border border-surface-100 bg-surface-0 px-4 py-3 text-sm text-blue-600 shadow-sm hover:bg-surface-50 hover:underline"
                 >
-                    <FolderOpen className="size-4" aria-hidden="true" />
+                    <FolderOpen className="size-4 shrink-0" aria-hidden="true" />
                     View submitted file
                 </a>
             )}
 
-            {/* Grade / feedback */}
-            {submission.status === 'graded' && (
-                <div className="rounded-lg border border-success-600/20 bg-success-600/5 p-4">
-                    <p className="text-sm font-semibold text-ink-900">
-                        Score: {submission.final_score ?? submission.raw_score} points
-                        {submission.is_late && Number(submission.late_penalty_percent) > 0 && (
-                            <span className="ml-1 text-xs text-warning-600">
-                                ({submission.late_penalty_percent}% late penalty applied)
-                            </span>
-                        )}
-                    </p>
-                    {submission.feedback && (
-                        <p className="mt-2 text-sm text-ink-600">{submission.feedback}</p>
-                    )}
-                </div>
-            )}
-
-            {/* Resubmit — backend always allows another attempt */}
-            <Button variant="secondary" onClick={onResubmit}>
+            <Button variant="secondary" size="sm" onClick={onResubmit} className="self-start">
                 Submit another attempt
             </Button>
-        </Card>
+        </div>
     );
 }
 
 // ─── Submission form ──────────────────────────────────────────────────────────
 
-function SubmissionForm({
-    assignmentId,
-    submissionType,
-    onSuccess,
-}: {
+function SubmissionForm({ assignmentId, submissionType, onSuccess }: {
     assignmentId: number;
     submissionType: string;
     onSuccess: () => void;
@@ -126,18 +133,9 @@ function SubmissionForm({
         e.preventDefault();
         setError(null);
 
-        if (submissionType === 'file' && !file) {
-            setError('Choose a file to submit.');
-            return;
-        }
-        if (submissionType === 'text' && !textContent.trim()) {
-            setError('Enter an answer before submitting.');
-            return;
-        }
-        if (submissionType === 'both' && !file && !textContent.trim()) {
-            setError('Attach a file or enter a written answer.');
-            return;
-        }
+        if (submissionType === 'file' && !file) { setError('Choose a file to submit.'); return; }
+        if (submissionType === 'text' && !textContent.trim()) { setError('Enter an answer before submitting.'); return; }
+        if (submissionType === 'both' && !file && !textContent.trim()) { setError('Attach a file or enter a written answer.'); return; }
 
         try {
             await submit.mutateAsync({
@@ -146,14 +144,9 @@ function SubmissionForm({
             });
             onSuccess();
         } catch (err) {
-            // Surface the actual API error message, not a generic fallback
             if (err instanceof ApiError) {
-                if (err.fields) {
-                    const first = Object.values(err.fields)[0]?.[0];
-                    setError(first ?? err.message);
-                } else {
-                    setError(err.message);
-                }
+                const first = err.fields ? Object.values(err.fields)[0]?.[0] : undefined;
+                setError(first ?? err.message);
             } else {
                 setError('Something went wrong. Try again.');
             }
@@ -161,42 +154,38 @@ function SubmissionForm({
     };
 
     return (
-        <Card className="mt-6">
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                <div className="flex items-center gap-2">
-                    <Upload className="size-5 text-blue-600" aria-hidden="true" />
-                    <h2 className="text-lg font-semibold text-ink-900">Your submission</h2>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+            {error && <Alert variant="error" message={error} />}
+
+            <div className="overflow-hidden rounded-xl border border-dashed border-surface-100 bg-surface-50">
+                <div className="border-b border-surface-100 bg-surface-0 px-4 py-3">
+                    <div className="flex items-center gap-2">
+                        <Upload className="size-4 text-blue-600" aria-hidden="true" />
+                        <p className="text-sm font-semibold text-ink-900">Your submission</p>
+                    </div>
                 </div>
 
-                {error && <Alert variant="error" message={error} />}
-
-                <div className="flex flex-col gap-4 rounded-lg border border-dashed border-surface-100 bg-surface-50 p-4">
+                <div className="flex flex-col gap-4 p-4">
                     {needsFile && (
                         <div>
                             <p className="text-sm font-medium text-ink-900">
                                 {submissionType === 'both'
-                                    ? 'Attach a file (or answer in the text box below)'
-                                    : 'Upload your file for this assignment'}
+                                    ? 'Attach a file (optional if you answer below)'
+                                    : 'Upload your file'}
                             </p>
-                            <p className="mt-0.5 text-xs text-ink-600">
-                                Max file size: 20 MB. Any file type accepted.
-                            </p>
-                            <div className="mt-3 flex items-center gap-3">
+                            <p className="mt-0.5 text-xs text-ink-400">Max 20 MB · Any file type</p>
+                            <div className="mt-2 flex items-center gap-3">
                                 <input
                                     ref={fileInputRef}
                                     type="file"
                                     className="hidden"
                                     onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                                 />
-                                <Button
-                                    type="button"
-                                    variant="secondary"
-                                    onClick={() => fileInputRef.current?.click()}
-                                >
-                                    <FolderOpen className="size-4" aria-hidden="true" />
+                                <Button type="button" size="sm" variant="secondary" onClick={() => fileInputRef.current?.click()}>
+                                    <FolderOpen className="size-3.5" aria-hidden="true" />
                                     Choose file
                                 </Button>
-                                <span className="text-sm text-ink-600">
+                                <span className="text-xs text-ink-400">
                                     {file ? file.name : 'No file chosen'}
                                 </span>
                             </div>
@@ -206,24 +195,20 @@ function SubmissionForm({
                     {needsText && (
                         <Textarea
                             label="Written answer"
-                            rows={7}
+                            rows={8}
                             value={textContent}
                             onChange={(e) => setTextContent(e.target.value)}
                             placeholder="Type your answer here…"
                         />
                     )}
                 </div>
+            </div>
 
-                <Button
-                    type="submit"
-                    isLoading={submit.isPending}
-                    className="w-full justify-center"
-                >
-                    <Send className="size-4" aria-hidden="true" />
-                    {submit.isPending ? 'Submitting…' : 'Submit Assignment'}
-                </Button>
-            </form>
-        </Card>
+            <Button type="submit" isLoading={submit.isPending} className="w-full justify-center">
+                <Send className="size-4" aria-hidden="true" />
+                {submit.isPending ? 'Submitting…' : 'Submit assignment'}
+            </Button>
+        </form>
     );
 }
 
@@ -238,57 +223,34 @@ export function AssignmentSubmitPage() {
     const { data: course } = useCourse(courseId);
     const { data: assignment, isLoading: assignmentLoading } = useAssignment(assignmentId);
     const { data: enrolmentsPage, isLoading: enrolmentsLoading } = useMyEnrolments();
-    const { data: submissions, isLoading: submissionsLoading } = useAssignmentSubmissions(
-        assignmentId,
-        !!assignment,
-    );
+    const { data: submissions, isLoading: submissionsLoading } = useAssignmentSubmissions(assignmentId, !!assignment);
 
-    // Allow re-showing the form after seeing an existing submission
     const [showResubmitForm, setShowResubmitForm] = useState(false);
     const [justSubmitted, setJustSubmitted] = useState(false);
 
-    // ── Loading ──
     if (assignmentLoading || enrolmentsLoading) {
-        return (
-            <div className="flex min-h-[40vh] items-center justify-center">
-                <Spinner />
-            </div>
-        );
+        return <div className="flex min-h-[40vh] items-center justify-center"><Spinner /></div>;
     }
 
-    // ── Assignment not found ──
     if (!assignment) {
         return (
-            <div className="mx-auto max-w-2xl px-4 py-12 text-center">
+            <div className="mx-auto max-w-xl py-12 text-center">
                 <p className="text-ink-600">Assignment not found.</p>
-                <Link to="/dashboard" className="mt-4 inline-block text-sm text-blue-600 hover:underline">
+                <Link to="/dashboard" className="mt-3 inline-block text-sm text-blue-600 hover:underline">
                     Back to my courses
                 </Link>
             </div>
         );
     }
 
-    // ── Enrolment check ──
-    // courseId comes from ?course=X query param. If missing (bookmarked link,
-    // notification deep-link, etc.) we skip the check rather than blocking
-    // a potentially valid student — the backend Policy will still reject an
-    // unauthorised submit attempt, so security is not compromised.
     const enrolments = enrolmentsPage?.data ?? [];
-    const isEnrolled = !courseId || enrolments.some(
-        (e) => e.course?.id === courseId && e.status === 'confirmed',
-    );
+    const isEnrolled = !courseId || enrolments.some((e) => e.course?.id === courseId && e.status === 'confirmed');
 
     if (!isEnrolled) {
         return (
-            <div className="mx-auto max-w-2xl px-4 py-12">
-                <Alert
-                    variant="error"
-                    message="You need to be enrolled in this course to submit this assignment."
-                />
-                <Link
-                    to={`/courses/${courseId}`}
-                    className="mt-4 inline-flex items-center gap-1.5 text-sm text-blue-600 hover:underline"
-                >
+            <div className="mx-auto max-w-xl py-12">
+                <Alert variant="error" message="You need to be enrolled in this course to submit this assignment." />
+                <Link to={`/courses/${courseId}`} className="mt-3 inline-flex items-center gap-1.5 text-sm text-blue-600 hover:underline">
                     ← View course and enrol
                 </Link>
             </div>
@@ -296,97 +258,142 @@ export function AssignmentSubmitPage() {
     }
 
     const isOverdue = assignment.due_at !== null && new Date(assignment.due_at) < new Date();
-
-    // Latest submission (most recent attempt)
     const latestSubmission: AssignmentSubmission | null =
-        !submissionsLoading && submissions && submissions.length > 0
-            ? submissions[0]
-            : null;
-
+        !submissionsLoading && submissions && submissions.length > 0 ? submissions[0] : null;
     const hasExistingSubmission = !!latestSubmission && !showResubmitForm && !justSubmitted;
 
+    // Completion progress for the progress bar
+    const attemptCount = submissions?.length ?? 0;
+
     return (
-        <div className="mx-auto max-w-2xl px-4 py-8">
+        <div className="mx-auto max-w-5xl space-y-4">
+
             {/* Breadcrumb */}
-            <nav aria-label="Breadcrumb" className="mb-4 flex items-center gap-1.5 text-sm text-ink-600">
-                <Link to="/dashboard" className="hover:text-blue-600">My Courses</Link>
+            <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-ink-400">
+                <Link to="/dashboard" className="hover:text-blue-600">My courses</Link>
                 {course && (
                     <>
                         <span aria-hidden="true">/</span>
-                        <Link to={`/learn/courses/${courseId}`} className="hover:text-blue-600">
-                            {course.title}
-                        </Link>
+                        <Link to={`/learn/courses/${courseId}`} className="hover:text-blue-600">{course.title}</Link>
                     </>
                 )}
                 <span aria-hidden="true">/</span>
-                <span className="text-ink-900">{assignment.title}</span>
+                <span className="text-ink-600">{assignment.title}</span>
             </nav>
 
-            {/* Header */}
-            <div className="flex flex-wrap items-start gap-3">
-                <h1 className="text-2xl font-bold text-ink-900">{assignment.title}</h1>
-                {isOverdue && !justSubmitted && (
-                    <Badge label="Past due" tone="warning" icon={Clock} />
-                )}
-            </div>
+            {/* Two-column layout */}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start">
 
-            {assignment.due_at && (
-                <p className="mt-1 text-sm text-ink-600">
-                    Due {formatDate(assignment.due_at)}
-                    {!assignment.allow_late && isOverdue && (
-                        <span className="ml-2 text-danger-600 font-medium">· Late submissions not accepted</span>
+                {/* LEFT — assignment details (1/3) */}
+                <div className="flex flex-col gap-3">
+
+                    {/* Assignment info card */}
+                    <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
+                        <div className="border-b border-surface-100 bg-surface-50 px-4 py-3">
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                    <FileText className="size-4 text-blue-600 shrink-0" aria-hidden="true" />
+                                    <h1 className="text-sm font-semibold text-ink-900 leading-tight">{assignment.title}</h1>
+                                </div>
+                                {isOverdue && !justSubmitted && (
+                                    <Badge label="Past due" tone="warning" icon={Clock} />
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-3 p-4">
+                            {/* Due date */}
+                            {assignment.due_at && (
+                                <div className="flex items-start justify-between gap-2 text-xs">
+                                    <span className="text-ink-400">Due</span>
+                                    <span className={isOverdue ? 'font-medium text-danger-600' : 'text-ink-900'}>
+                                        {formatDate(assignment.due_at)}
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* Max score */}
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="text-ink-400">Max score</span>
+                                <span className="font-semibold text-ink-900">{assignment.max_score} pts</span>
+                            </div>
+
+                            {/* Submission type */}
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="text-ink-400">Type</span>
+                                <span className="capitalize text-ink-900">{assignment.submission_type.replace('_', ' ')}</span>
+                            </div>
+
+                            {/* Attempts */}
+                            {attemptCount > 0 && (
+                                <div className="flex items-center justify-between text-xs">
+                                    <span className="text-ink-400">Attempts</span>
+                                    <span className="text-ink-900">{attemptCount}</span>
+                                </div>
+                            )}
+
+                            {/* Late policy note */}
+                            {!assignment.allow_late && (
+                                <p className="rounded-lg bg-danger-600/5 px-3 py-2 text-xs text-danger-600">
+                                    Late submissions are not accepted.
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Instructions */}
+                    {assignment.instructions && (
+                        <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
+                            <div className="border-b border-surface-100 bg-surface-50 px-4 py-2.5">
+                                <p className="text-xs font-medium uppercase tracking-wide text-ink-600">Instructions</p>
+                            </div>
+                            <p className="whitespace-pre-wrap px-4 py-3 text-sm text-ink-900 leading-relaxed">
+                                {assignment.instructions}
+                            </p>
+                        </div>
                     )}
-                </p>
-            )}
+                </div>
 
-            {assignment.instructions && (
-                <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-ink-900">
-                    {assignment.instructions}
-                </p>
-            )}
+                {/* RIGHT — submission area (2/3) */}
+                <div className="lg:col-span-2 flex flex-col gap-3">
 
-            {/* Max score */}
-            <p className="mt-2 text-sm text-ink-600">
-                Max score: <span className="font-medium text-ink-900">{assignment.max_score} points</span>
-            </p>
+                    {/* Success */}
+                    {justSubmitted && (
+                        <Alert
+                            variant="success"
+                            message="Submission received. Your instructor will review and grade it — you'll see the score here once it's done."
+                        />
+                    )}
 
-            {/* Blocked: late submission not allowed */}
-            {isOverdue && !assignment.allow_late && !latestSubmission && (
-                <Alert
-                    variant="error"
-                    message="The deadline has passed and late submissions are not accepted for this assignment."
-                    className="mt-6"
-                />
-            )}
+                    {/* Blocked: overdue + no late submissions */}
+                    {isOverdue && !assignment.allow_late && !latestSubmission && (
+                        <Alert
+                            variant="error"
+                            message="The deadline has passed and late submissions are not accepted."
+                        />
+                    )}
 
-            {/* Success confirmation */}
-            {justSubmitted && (
-                <Alert
-                    variant="success"
-                    message="Submission received. Your instructor will review and grade it — you'll see the score here once it's done."
-                    className="mt-6"
-                />
-            )}
+                    {/* Existing submission */}
+                    {hasExistingSubmission && latestSubmission && (
+                        <ExistingSubmission
+                            submission={latestSubmission}
+                            onResubmit={() => setShowResubmitForm(true)}
+                        />
+                    )}
 
-            {/* Existing submission view */}
-            {hasExistingSubmission && latestSubmission && (
-                <ExistingSubmission
-                    submission={latestSubmission}
-                    onResubmit={() => setShowResubmitForm(true)}
-                />
-            )}
-
-            {/* Submission form */}
-            {!hasExistingSubmission && !justSubmitted && !(isOverdue && !assignment.allow_late) && (
-                <SubmissionForm
-                    assignmentId={assignmentId}
-                    submissionType={assignment.submission_type}
-                    onSuccess={() => {
-                        setShowResubmitForm(false);
-                        setJustSubmitted(true);
-                    }}
-                />
-            )}
+                    {/* Submission form */}
+                    {!hasExistingSubmission && !justSubmitted && !(isOverdue && !assignment.allow_late) && (
+                        <SubmissionForm
+                            assignmentId={assignmentId}
+                            submissionType={assignment.submission_type}
+                            onSuccess={() => {
+                                setShowResubmitForm(false);
+                                setJustSubmitted(true);
+                            }}
+                        />
+                    )}
+                </div>
+            </div>
         </div>
     );
 }
