@@ -372,7 +372,7 @@ The implementation follows a Laravel backend + React frontend architecture, reus
   - Verify existing users with null fields are handled gracefully
   - Ask the user if questions arise or if manual E2E testing is needed
 
-- [-] 19. Write E2E tests for complete profile completion flow
+- [ ] 19. Write E2E tests for complete profile completion flow
   - [x]* 19.1 Write Playwright E2E test for profile completion flow
     - Test new user sees profile completion card on dashboard
     - Test clicking "Complete Profile" navigates to form

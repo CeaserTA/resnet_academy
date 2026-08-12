@@ -8,4 +8,5 @@ enum EnrolmentStatus: string
 {
     case Confirmed = 'confirmed';
     case Withdrawn = 'withdrawn';
+    case Waitlisted = 'waitlisted';
 }

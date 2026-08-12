@@ -41,23 +41,47 @@ final class CourseApplicationService
     /**
      * @param  array<int, string>  $answers
      */
-    public function apply(User $student, Course $course, array $answers, ?string $portfolioUrl, ?string $alternativeProofText): CourseApplication
+    public function apply(User $student, Course $course, array $answers, ?string $portfolioUrl, ?string $alternativeProofText, ?int $sectionId = null): CourseApplication
     {
         if ($course->enrolment_policy !== CourseEnrolmentPolicy::Application) {
             throw ValidationException::withMessages(['course_id' => 'This course does not require an application.']);
         }
 
-        if ($course->enrolments()->where('student_id', $student->id)->where('status', EnrolmentStatus::Confirmed)->exists()) {
-            throw ValidationException::withMessages(['course_id' => 'You are already enrolled in this course.']);
+        // Check for existing confirmed enrollment (section-aware)
+        $existingEnrolmentQuery = $course->enrolments()
+            ->where('student_id', $student->id)
+            ->where('status', EnrolmentStatus::Confirmed);
+
+        if ($sectionId !== null) {
+            $existingEnrolmentQuery->where('section_id', $sectionId);
+        } else {
+            $existingEnrolmentQuery->whereNull('section_id');
         }
 
-        if ($course->applications()->where('student_id', $student->id)->where('status', CourseApplicationStatus::Pending)->exists()) {
-            throw ValidationException::withMessages(['course_id' => 'You already have a pending application for this course.']);
+        if ($existingEnrolmentQuery->exists()) {
+            throw ValidationException::withMessages(['course_id' => 'You are already enrolled in this course/section.']);
+        }
+
+        // Check for existing pending application for this specific (course, section) combination
+        // Allow multiple pending applications across different sections
+        $existingApplicationQuery = $course->applications()
+            ->where('student_id', $student->id)
+            ->where('status', CourseApplicationStatus::Pending);
+
+        if ($sectionId !== null) {
+            $existingApplicationQuery->where('section_id', $sectionId);
+        } else {
+            $existingApplicationQuery->whereNull('section_id');
+        }
+
+        if ($existingApplicationQuery->exists()) {
+            throw ValidationException::withMessages(['course_id' => 'You already have a pending application for this course/section.']);
         }
 
         $application = CourseApplication::create([
             'student_id' => $student->id,
             'course_id' => $course->id,
+            'section_id' => $sectionId,
             'status' => CourseApplicationStatus::Pending,
             'answers' => $answers,
             'portfolio_url' => $portfolioUrl,
@@ -69,7 +93,7 @@ final class CourseApplicationService
             entityType: 'course_application',
             entityId: $application->id,
             actorId: $student->id,
-            meta: ['course_id' => $course->id],
+            meta: ['course_id' => $course->id, 'section_id' => $sectionId],
         );
 
         return $application;
@@ -78,6 +102,8 @@ final class CourseApplicationService
     /**
      * $reviewer is an admin, or an instructor teaching the course (enforced by
      * `CourseApplicationPolicy`) — whichever acts first on a pending application wins.
+     * 
+     * After successful enrollment, auto-cancel any other pending applications for the same course_id.
      */
     public function approve(CourseApplication $application, User $reviewer): CourseApplication
     {
@@ -91,7 +117,13 @@ final class CourseApplicationService
             'reviewed_at' => Carbon::now(),
         ]);
 
-        $this->enrolmentService->enrol($application->student, $application->course, EnrolmentSource::Self);
+        // Enroll the student (may be confirmed or waitlisted depending on section capacity)
+        $this->enrolmentService->enrol(
+            $application->student,
+            $application->course,
+            EnrolmentSource::Self,
+            $application->section_id
+        );
 
         $this->auditLogger->log(
             action: 'course_application.approved',
@@ -100,6 +132,7 @@ final class CourseApplicationService
             actorId: $reviewer->id,
             meta: [
                 'course_id' => $application->course_id,
+                'section_id' => $application->section_id,
                 'student_id' => $application->student_id,
                 'decided_by_role' => $reviewer->role->value,
             ],
@@ -114,7 +147,46 @@ final class CourseApplicationService
             relatedEntityId: $application->id,
         );
 
+        // Auto-cancel other pending applications for the same course
+        $this->autoCancelOtherApplications($application);
+
         return $application->fresh();
+    }
+
+    /**
+     * Auto-cancel other pending applications for the same course after approval.
+     * A student should not hold an enrollment in one section while pending on another.
+     */
+    private function autoCancelOtherApplications(CourseApplication $approvedApplication): void
+    {
+        $otherPendingApplications = CourseApplication::query()
+            ->where('student_id', $approvedApplication->student_id)
+            ->where('course_id', $approvedApplication->course_id)
+            ->where('id', '!=', $approvedApplication->id)
+            ->where('status', CourseApplicationStatus::Pending)
+            ->get();
+
+        foreach ($otherPendingApplications as $application) {
+            $application->update([
+                'status' => CourseApplicationStatus::Rejected,
+                'reviewed_by' => $approvedApplication->reviewed_by,
+                'reviewed_at' => Carbon::now(),
+                'rejection_reason' => 'Auto-cancelled because you were enrolled in another section of this course.',
+            ]);
+
+            $this->auditLogger->log(
+                action: 'course_application.auto_cancelled_on_enrollment',
+                entityType: 'course_application',
+                entityId: $application->id,
+                actorId: $approvedApplication->student_id,
+                meta: [
+                    'course_id' => $application->course_id,
+                    'section_id' => $application->section_id,
+                    'approved_application_id' => $approvedApplication->id,
+                    'approved_section_id' => $approvedApplication->section_id,
+                ],
+            );
+        }
     }
 
     /**

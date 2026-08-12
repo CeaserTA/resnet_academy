@@ -38,6 +38,7 @@ final class Course extends Model
         'current_version',
         'confirmation_delay_hours',
         'schedule_start_date',
+        'sections_required',
         'created_by',
     ];
 
@@ -51,6 +52,7 @@ final class Course extends Model
         'status' => CourseStatus::class,
         'price' => 'decimal:2',
         'schedule_start_date' => 'date',
+        'sections_required' => 'boolean',
     ];
 
     /**
@@ -132,6 +134,14 @@ final class Course extends Model
     public function groups(): HasMany
     {
         return $this->hasMany(GroupsCohort::class, 'course_id');
+    }
+
+    /**
+     * @return HasMany<CourseSection, $this>
+     */
+    public function sections(): HasMany
+    {
+        return $this->hasMany(CourseSection::class);
     }
 
     /**

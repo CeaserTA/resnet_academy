@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\ConversationController;
 use App\Http\Controllers\Api\V1\CourseApplicationController;
 use App\Http\Controllers\Api\V1\CourseController;
 use App\Http\Controllers\Api\V1\CourseReviewController;
+use App\Http\Controllers\Api\V1\CourseSectionController;
 use App\Http\Controllers\Api\V1\EnrolmentController;
 use App\Http\Controllers\Api\V1\EnrolmentImportController;
 use App\Http\Controllers\Api\V1\EvaluationAttemptController;
@@ -70,6 +71,13 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/courses', [CourseController::class, 'store']);
         Route::patch('/courses/{course}', [CourseController::class, 'update']);
         Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
+
+        // Course sections (cohorts) — admin/instructor management of sections.
+        // index (GET) is in the public block above to allow guest/student access.
+        Route::post('/courses/{course}/sections', [CourseSectionController::class, 'store']);
+        Route::get('/sections/{section}', [CourseSectionController::class, 'show']);
+        Route::patch('/sections/{section}', [CourseSectionController::class, 'update']);
+        Route::delete('/sections/{section}', [CourseSectionController::class, 'destroy']);
 
         Route::get('/me/data-export', [AccountController::class, 'export']);
         Route::post('/me/avatar', [AccountController::class, 'updateAvatar']);

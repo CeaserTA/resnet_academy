@@ -43,9 +43,19 @@ final class ProgressEngine
      * the previous applicable module is completed — both conditions, always. Run on-demand
      * (course view) and on a schedule (architecture.md §5.2), so it must be safe to call
      * repeatedly and idempotently.
+     * 
+     * With course sections: if student is enrolled in a section and module has unlock_offset_days,
+     * use section.start_date + offset instead of scheduled_start_at.
      */
     public function evaluateCourseUnlocks(User $student, Course $course): void
     {
+        // Get the student's enrollment for this course to check for section_id
+        $enrolment = $course->enrolments()
+            ->where('student_id', $student->id)
+            ->where('status', \App\Enums\EnrolmentStatus::Confirmed)
+            ->first();
+
+        $section = $enrolment?->section;
         $previousCompleted = true;
 
         foreach ($this->applicableModules($student, $course) as $module) {
@@ -54,7 +64,8 @@ final class ProgressEngine
                 ['status' => ModuleProgressStatus::Locked],
             );
 
-            $scheduleReached = $module->scheduled_start_at === null || $module->scheduled_start_at->isPast();
+            // Determine if schedule has been reached based on section vs self-paced
+            $scheduleReached = $this->isModuleScheduleReached($module, $section);
 
             if ($progress->status === ModuleProgressStatus::Locked && $scheduleReached && $previousCompleted) {
                 $progress->update([
@@ -67,6 +78,24 @@ final class ProgressEngine
 
             $previousCompleted = $progress->status === ModuleProgressStatus::Completed;
         }
+    }
+
+    /**
+     * Determine if a module's schedule requirement has been met.
+     * 
+     * - If enrolled in a section AND module has unlock_offset_days: check (section.start_date + offset) <= now
+     * - Otherwise: check scheduled_start_at is null or has passed
+     */
+    private function isModuleScheduleReached(Module $module, ?\App\Models\CourseSection $section): bool
+    {
+        // Section-relative scheduling takes precedence if both section and offset exist
+        if ($section !== null && $module->unlock_offset_days !== null) {
+            $unlockDate = $section->start_date->addDays($module->unlock_offset_days);
+            return $unlockDate->isPast() || $unlockDate->isToday();
+        }
+
+        // Fall back to absolute scheduled_start_at for self-paced courses
+        return $module->scheduled_start_at === null || $module->scheduled_start_at->isPast();
     }
 
     /**

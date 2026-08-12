@@ -25,10 +25,12 @@ final class Module extends Model
         'description',
         'order_index',
         'scheduled_start_at',
+        'unlock_offset_days',
     ];
 
     protected $casts = [
         'scheduled_start_at' => 'datetime',
+        'unlock_offset_days' => 'integer',
     ];
 
     /**

@@ -48,9 +48,14 @@ final class EnrolmentController extends Controller
             throw ValidationException::withMessages(['course_id' => 'This course requires an application — you can’t enrol directly.']);
         }
 
-        $enrolment = $this->enrolmentService->enrol($request->user(), $course, EnrolmentSource::Self);
+        $enrolment = $this->enrolmentService->enrol(
+            $request->user(),
+            $course,
+            EnrolmentSource::Self,
+            $request->validated('section_id')
+        );
 
-        return (new EnrolmentResource($enrolment->load(['course.category', 'order.paymentSubmissions'])))
+        return (new EnrolmentResource($enrolment->load(['course.category', 'order.paymentSubmissions', 'section'])))
             ->response()
             ->setStatusCode(201);
     }

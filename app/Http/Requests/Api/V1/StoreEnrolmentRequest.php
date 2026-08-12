@@ -22,8 +22,8 @@ final class StoreEnrolmentRequest extends FormRequest
                 'required',
                 'integer',
                 Rule::exists('courses', 'id')->where('status', 'published'),
-                Rule::unique('enrolments')->where('student_id', $this->user()->id),
             ],
+            'section_id' => ['nullable', 'integer', 'exists:course_sections,id'],
         ];
     }
 }
