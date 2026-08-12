@@ -15,6 +15,7 @@ export async function fetchMyCourseApplications(): Promise<CourseApplication[]> 
 
 export async function submitCourseApplication(payload: {
     course_id: number;
+    section_id?: number;
     answers?: string[];
     portfolio_url?: string;
     alternative_proof_text?: string;
