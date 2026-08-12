@@ -491,7 +491,7 @@ export function MyCoursesPage() {
     return (
         <div className="space-y-5">
 
-            {/* Profile completion modal — shown once per session */}
+            {/* Profile completion modal — shown once per session when profile is incomplete */}
             {showProfileModal && profileStatus && (
                 <ProfileCompletionModal profileStatus={profileStatus} onClose={handleCloseProfileModal} />
             )}
