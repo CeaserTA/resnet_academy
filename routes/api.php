@@ -54,6 +54,8 @@ Route::prefix('v1')->group(function (): void {
     Route::get('/courses', [CourseController::class, 'index']);
     Route::get('/courses/{course}', [CourseController::class, 'show']);
     Route::get('/courses/{course}/modules', [ModuleController::class, 'index']);
+    Route::get('/courses/{course}/sections', [CourseSectionController::class, 'index']);
+    Route::get('/sections/public', [CourseSectionController::class, 'public']); // Public cohorts for landing/catalogue pages
     Route::get('/resources/{resource}', [ResourceController::class, 'show']);
 
     // Public reviews (approved only) — landing page testimonials, no auth required.

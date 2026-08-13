@@ -13,6 +13,8 @@ import { LandingHeader } from '@/components/layout/LandingHeader';
 import { Footer } from '@/components/landing/Footer';
 import { AuthModal, type AuthMode } from '@/components/landing/AuthModal';
 import { useCategories, useCourseModules, useCourses } from '@/features/catalogue/useCourses';
+import { usePublicSections } from '@/features/sections/useSections';
+import type { PublicSection } from '@/features/sections/types';
 import { CourseCarousel } from '@/components/landing/CourseCarousel';
 import { courseImageMap } from '@/features/catalogue/courseImages';
 import { Spinner } from '@/components/ui/Spinner';
@@ -41,10 +43,10 @@ function levelLabel(level: Course['level']): string {
 
 // ─── Ongoing cohort — large featured card ────────────────────────────────────
 
-function OngoingCohortCard({ course }: { course: Course }) {
-    const { data: modules, isLoading } = useCourseModules(course.id);
-    const instructor = course.instructors[0] ?? null;
-    const image = course.thumbnail_url ?? courseImageMap[course.slug] ?? null;
+function OngoingCohortCard({ section }: { section: PublicSection }) {
+    const { data: modules, isLoading } = useCourseModules(section.course.id);
+    const instructor = section.primary_instructor || section.course.instructors[0] || null;
+    const image = section.course.thumbnail_url ?? courseImageMap[section.course.slug] ?? null;
 
     return (
         <div className="overflow-hidden rounded-2xl border border-[#e8ecf1] bg-white shadow-sm lg:flex">
@@ -54,7 +56,7 @@ function OngoingCohortCard({ course }: { course: Course }) {
                     {image ? (
                         <img
                             src={image}
-                            alt={course.title}
+                            alt={section.course.title}
                             className="h-full w-full object-cover"
                         />
                     ) : (
@@ -74,59 +76,70 @@ function OngoingCohortCard({ course }: { course: Course }) {
             <div className="flex flex-col gap-5 p-6 lg:p-8">
                 {/* Header */}
                 <div>
-                    {course.category && (
+                    {section.course.category && (
                         <span className="inline-flex items-center rounded-full bg-blue-600 px-2.5 py-0.5 text-xs font-medium text-white">
-                            {course.category.name}
+                            {section.course.category.name}
                         </span>
                     )}
                     <h3 className="mt-2 text-xl font-bold text-ink-900 sm:text-2xl">
-                        {course.title}
+                        {section.course.title}
                     </h3>
-                    {course.description && (
+                    <p className="mt-1 text-sm font-medium text-blue-600">{section.name}</p>
+                    {section.course.description && (
                         <p className="mt-1 text-sm leading-6 text-[#64748b] line-clamp-2">
-                            {course.description}
+                            {section.course.description}
                         </p>
                     )}
                 </div>
 
                 {/* Meta row */}
                 <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
-                    {course.schedule_start_date && (
-                        <div className="flex items-start gap-2">
-                            <CalendarDays className="mt-0.5 size-4 shrink-0 text-blue-500" aria-hidden="true" />
-                            <div>
-                                <dt className="text-xs font-medium uppercase tracking-wide text-[#94a3b8]">Started</dt>
-                                <dd className="text-ink-700">{formatDate(course.schedule_start_date)}</dd>
-                            </div>
+                    <div className="flex items-start gap-2">
+                        <CalendarDays className="mt-0.5 size-4 shrink-0 text-blue-500" aria-hidden="true" />
+                        <div>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-[#94a3b8]">Started</dt>
+                            <dd className="text-ink-700">{formatDate(section.start_date)}</dd>
                         </div>
-                    )}
+                    </div>
                     <div className="flex items-start gap-2">
                         <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-blue-500" aria-hidden="true" />
                         <div>
                             <dt className="text-xs font-medium uppercase tracking-wide text-[#94a3b8]">Level</dt>
-                            <dd className="text-ink-700">{levelLabel(course.level)}</dd>
+                            <dd className="text-ink-700">{levelLabel(section.course.level)}</dd>
                         </div>
                     </div>
-                    {/* ⚠️ Gap: no duration or delivery-mode field on the Course model yet.
-                        Add `duration_weeks` and `delivery_mode` (enum: online|physical|hybrid)
-                        to the courses table when that data is available. */}
                     <div className="flex items-start gap-2">
                         <Clock className="mt-0.5 size-4 shrink-0 text-blue-500" aria-hidden="true" />
                         <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-[#94a3b8]">Mode</dt>
-                            <dd className="text-[#94a3b8] italic">Not specified</dd>
+                            <dt className="text-xs font-medium uppercase tracking-wide text-[#94a3b8]">Ends</dt>
+                            <dd className="text-ink-700">{formatDate(section.end_date)}</dd>
                         </div>
                     </div>
                     {instructor && (
                         <div className="flex items-start gap-2">
                             <User className="mt-0.5 size-4 shrink-0 text-blue-500" aria-hidden="true" />
                             <div>
-                                <dt className="text-xs font-medium uppercase tracking-wide text-[#94a3b8]">Mentor</dt>
+                                <dt className="text-xs font-medium uppercase tracking-wide text-[#94a3b8]">Instructor</dt>
                                 <dd className="text-ink-700">{instructor.name}</dd>
                             </div>
                         </div>
                     )}
                 </dl>
+
+                {/* Seat availability */}
+                {section.capacity !== null && section.enrolled_count !== undefined && (
+                    <div className="flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm">
+                        <User className="size-4 shrink-0 text-blue-600" aria-hidden="true" />
+                        <span className="font-medium text-blue-900">
+                            {section.enrolled_count} / {section.capacity} enrolled
+                            {section.seats_available !== null && section.seats_available > 0 && (
+                                <span className="ml-1 text-blue-700">
+                                    ({section.seats_available} seats left)
+                                </span>
+                            )}
+                        </span>
+                    </div>
+                )}
 
                 {/* Course units */}
                 <div>
@@ -159,7 +172,7 @@ function OngoingCohortCard({ course }: { course: Course }) {
                 {/* CTA */}
                 <div className="mt-auto pt-2">
                     <Link
-                        to={`/courses/${course.id}`}
+                        to={`/courses/${section.course.id}`}
                         className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
                     >
                         View Course
@@ -172,16 +185,16 @@ function OngoingCohortCard({ course }: { course: Course }) {
 
 // ─── Upcoming cohort — compact card ──────────────────────────────────────────
 
-function UpcomingCohortCard({ course }: { course: Course }) {
-    const instructor = course.instructors[0] ?? null;
-    const image = course.thumbnail_url ?? courseImageMap[course.slug] ?? null;
+function UpcomingCohortCard({ section }: { section: PublicSection }) {
+    const instructor = section.primary_instructor || section.course.instructors[0] || null;
+    const image = section.course.thumbnail_url ?? courseImageMap[section.course.slug] ?? null;
 
     return (
         <div className="flex flex-col overflow-hidden rounded-2xl border border-[#e8ecf1] bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
             {/* Image */}
             <div className="relative aspect-video w-full overflow-hidden bg-[#eff6ff]">
                 {image ? (
-                    <img src={image} alt={course.title} className="h-full w-full object-cover" />
+                    <img src={image} alt={section.course.title} className="h-full w-full object-cover" />
                 ) : (
                     <div className="flex h-full w-full items-center justify-center text-blue-200">
                         <BookOpen className="size-10" aria-hidden="true" />
@@ -194,28 +207,22 @@ function UpcomingCohortCard({ course }: { course: Course }) {
 
             {/* Body */}
             <div className="flex flex-1 flex-col gap-3 p-4">
-                {course.category && (
+                {section.course.category && (
                     <span className="inline-flex w-fit items-center rounded-full bg-blue-600 px-2.5 py-0.5 text-xs font-medium text-white">
-                        {course.category.name}
+                        {section.course.category.name}
                     </span>
                 )}
-                <h3 className="text-sm font-semibold leading-snug text-ink-900">{course.title}</h3>
+                <h3 className="text-sm font-semibold leading-snug text-ink-900">{section.course.title}</h3>
+                <p className="text-xs font-medium text-blue-600">{section.name}</p>
 
                 <dl className="space-y-1.5 text-xs text-[#64748b]">
-                    {course.schedule_start_date && (
-                        <div className="flex items-center gap-1.5">
-                            <CalendarDays className="size-3.5 shrink-0 text-blue-400" aria-hidden="true" />
-                            <span>Starts {formatDate(course.schedule_start_date)}</span>
-                        </div>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                        <CalendarDays className="size-3.5 shrink-0 text-blue-400" aria-hidden="true" />
+                        <span>Starts {formatDate(section.start_date)}</span>
+                    </div>
                     <div className="flex items-center gap-1.5">
                         <CheckCircle2 className="size-3.5 shrink-0 text-blue-400" aria-hidden="true" />
-                        <span>{levelLabel(course.level)}</span>
-                    </div>
-                    {/* ⚠️ Gap: delivery_mode not in schema yet */}
-                    <div className="flex items-center gap-1.5">
-                        <Clock className="size-3.5 shrink-0 text-blue-400" aria-hidden="true" />
-                        <span className="italic text-[#94a3b8]">Mode TBC</span>
+                        <span>{levelLabel(section.course.level)}</span>
                     </div>
                     {instructor && (
                         <div className="flex items-center gap-1.5">
@@ -223,10 +230,22 @@ function UpcomingCohortCard({ course }: { course: Course }) {
                             <span>{instructor.name}</span>
                         </div>
                     )}
+                    {section.capacity !== null && section.seats_available !== null && (
+                        <div className="flex items-center gap-1.5">
+                            <Clock className="size-3.5 shrink-0 text-blue-400" aria-hidden="true" />
+                            {section.is_full ? (
+                                <span className="font-medium text-amber-700">Full</span>
+                            ) : section.seats_available <= 5 ? (
+                                <span className="font-medium text-amber-700">Only {section.seats_available} seats left</span>
+                            ) : (
+                                <span>{section.seats_available} seats available</span>
+                            )}
+                        </div>
+                    )}
                 </dl>
 
                 <Link
-                    to={`/courses/${course.id}`}
+                    to={`/courses/${section.course.id}`}
                     className="mt-auto inline-flex w-full items-center justify-center rounded-md border border-blue-600 px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-50"
                 >
                     Register Now
@@ -238,14 +257,21 @@ function UpcomingCohortCard({ course }: { course: Course }) {
 
 // ─── Cohort Schedule section ──────────────────────────────────────────────────
 
-function CohortSchedule({ courses }: { courses: Course[] }) {
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
+function CohortSchedule() {
+    const { data, isLoading } = usePublicSections();
+    const sections = data ?? [];
 
-    // Only courses that actually have a schedule_start_date
-    const scheduled = courses.filter((c) => c.schedule_start_date !== null);
+    if (isLoading) {
+        return (
+            <section id="cohorts" className="border-t border-[#e8ecf1] bg-[#f8fafc] px-4 py-16 sm:px-6 lg:px-8">
+                <div className="mx-auto max-w-7xl flex justify-center">
+                    <Spinner />
+                </div>
+            </section>
+        );
+    }
 
-    if (scheduled.length === 0) {
+    if (sections.length === 0) {
         return (
             <section id="cohorts" className="border-t border-[#e8ecf1] bg-[#f8fafc] px-4 py-16 sm:px-6 lg:px-8">
                 <div className="mx-auto max-w-7xl">
@@ -263,8 +289,8 @@ function CohortSchedule({ courses }: { courses: Course[] }) {
         );
     }
 
-    const ongoing = scheduled.filter((c) => new Date(c.schedule_start_date!) <= now);
-    const upcoming = scheduled.filter((c) => new Date(c.schedule_start_date!) > now);
+    const ongoing = sections.filter((s) => s.status === 'in_progress');
+    const upcoming = sections.filter((s) => s.status === 'open');
 
     return (
         <section id="cohorts" className="border-t border-[#e8ecf1] bg-[#f8fafc] px-4 py-16 sm:px-6 lg:px-8">
@@ -286,8 +312,8 @@ function CohortSchedule({ courses }: { courses: Course[] }) {
                             Ongoing Cohorts
                         </h3>
                         <div className="space-y-6">
-                            {ongoing.map((course) => (
-                                <OngoingCohortCard key={course.id} course={course} />
+                            {ongoing.map((section) => (
+                                <OngoingCohortCard key={section.id} section={section} />
                             ))}
                         </div>
                     </div>
@@ -301,8 +327,8 @@ function CohortSchedule({ courses }: { courses: Course[] }) {
                             Upcoming Cohorts
                         </h3>
                         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                            {upcoming.map((course) => (
-                                <UpcomingCohortCard key={course.id} course={course} />
+                            {upcoming.map((section) => (
+                                <UpcomingCohortCard key={section.id} section={section} />
                             ))}
                         </div>
                     </div>
@@ -518,7 +544,7 @@ export function CataloguePage() {
                 </div>
 
                 {/* ── Section 3: Cohort Schedule ───────────────────────────────── */}
-                {!isLoading && <CohortSchedule courses={allCourses} />}
+                {!isLoading && <CohortSchedule />}
             </main>
 
             <Footer

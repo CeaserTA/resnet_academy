@@ -252,7 +252,7 @@ final class CourseApplicationService
                             ->where('reviewed_at', '>=', Carbon::now()->subDays(self::REJECTION_VISIBILITY_DAYS));
                     });
             })
-            ->with(['course.category', 'course.instructors', 'reviewer'])
+            ->with(['course.category', 'course.instructors', 'reviewer', 'section'])
             ->orderBy('created_at', 'desc')
             ->get();
 

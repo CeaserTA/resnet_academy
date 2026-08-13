@@ -70,11 +70,34 @@ final class CourseSection extends Model
     }
 
     /**
+     * Get actual enrolled count (confirmed enrollments).
+     */
+    public function getEnrolledCountAttribute(): int
+    {
+        return $this->enrolments()->whereIn('status', [
+            \App\Enums\EnrolmentStatus::Confirmed,
+            \App\Enums\EnrolmentStatus::Waitlisted,
+        ])->count();
+    }
+
+    /**
+     * Get available seats remaining.
+     */
+    public function getSeatsAvailableAttribute(): ?int
+    {
+        if ($this->capacity === null) {
+            return null; // Unlimited capacity
+        }
+
+        return max(0, $this->capacity - $this->enrolled_count);
+    }
+
+    /**
      * Check if this section has reached capacity.
      */
     public function isFull(): bool
     {
-        return $this->capacity !== null && $this->seats_taken >= $this->capacity;
+        return $this->capacity !== null && $this->enrolled_count >= $this->capacity;
     }
 
     /**

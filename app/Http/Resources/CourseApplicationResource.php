@@ -23,6 +23,9 @@ final class CourseApplicationResource extends JsonResource
             'status' => $this->status->value,
             'student' => new UserResource($this->whenLoaded('student')),
             'course' => new CourseResource($this->whenLoaded('course')),
+            'section' => $this->whenLoaded('section', fn () => $this->section
+                ? ['id' => $this->section->id, 'name' => $this->section->name, 'status' => $this->section->status->value]
+                : null),
             'answers' => $this->answers,
             'portfolio_url' => $this->portfolio_url,
             'alternative_proof_text' => $this->alternative_proof_text,

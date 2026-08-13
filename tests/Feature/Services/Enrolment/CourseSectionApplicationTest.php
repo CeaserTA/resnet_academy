@@ -442,4 +442,41 @@ final class CourseSectionApplicationTest extends TestCase
             'actor_id' => $student->id,
         ]);
     }
+
+    public function test_visible_for_dashboard_eager_loads_section_relationship(): void
+    {
+        $student = User::factory()->create();
+        $course = Course::factory()->create([
+            'enrolment_policy' => CourseEnrolmentPolicy::Application,
+        ]);
+        $section = CourseSection::factory()->create([
+            'course_id' => $course->id,
+            'status' => CourseSectionStatus::Open,
+            'name' => 'Spring 2026',
+        ]);
+
+        CourseApplication::factory()->create([
+            'student_id' => $student->id,
+            'course_id' => $course->id,
+            'section_id' => $section->id,
+            'status' => CourseApplicationStatus::Pending,
+        ]);
+
+        // Clear any previous queries
+        \DB::enableQueryLog();
+        \DB::flushQueryLog();
+
+        $visible = $this->applicationService->visibleForDashboard($student);
+
+        $queries = \DB::getQueryLog();
+
+        // Should have loaded section in the initial query
+        $this->assertCount(1, $visible);
+        
+        // Access section relationship - should not trigger additional query if eager-loaded
+        $firstApplication = $visible->first();
+        $this->assertNotNull($firstApplication->section);
+        $this->assertTrue($firstApplication->relationLoaded('section'));
+        $this->assertEquals('Spring 2026', $firstApplication->section->name);
+    }
 }

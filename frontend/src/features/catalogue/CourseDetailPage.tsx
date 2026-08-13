@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import {
     ArrowLeft,
@@ -175,6 +175,17 @@ export function CourseDetailPage() {
     const [enrolled, setEnrolled] = useState(false);
     const [showAdvisoryModal, setShowAdvisoryModal] = useState(false);
     const [showApplicationModal, setShowApplicationModal] = useState(false);
+    const [applicationSubmitted, setApplicationSubmitted] = useState(false);
+
+    // Auto-dismiss application submitted alert after 5 seconds
+    useEffect(() => {
+        if (applicationSubmitted) {
+            const timer = setTimeout(() => {
+                setApplicationSubmitted(false);
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [applicationSubmitted]);
 
     if (isLoading) {
         return (
@@ -206,10 +217,12 @@ export function CourseDetailPage() {
     );
 
     // Section gating:
-    // - While sectionsLoading, hasSections is unknown → keep CTA blocked
-    // - Once loaded, block CTA only when there ARE open sections and none selected
+    // - While sectionsLoading, block to avoid state flicker
+    // - If sections_required=true and sections exist: block until one is selected
+    // - If sections_required=false: never block (sections are optional)
     const hasSections = !sectionsLoading && openSections.length > 0;
-    const ctaBlocked = sectionsLoading || (hasSections && selectedSectionId === null);
+    const requiresSection = course.sections_required && hasSections;
+    const ctaBlocked = sectionsLoading || (requiresSection && selectedSectionId === null);
 
     const handleEnrol = async () => {
         if (!user) {
@@ -340,6 +353,17 @@ export function CourseDetailPage() {
                 </div>
             </div>
 
+            {/* ── Application submitted confirmation ──────────────────────────── */}
+            {applicationSubmitted && (
+                <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
+                    <Alert
+                        variant="success"
+                        message="Application submitted! Check your dashboard to track its status."
+                        onDismiss={() => setApplicationSubmitted(false)}
+                    />
+                </div>
+            )}
+
             {/* ── BODY ────────────────────────────────────────────────────────── */}
             <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
                 <div className="grid gap-10 lg:grid-cols-3">
@@ -445,25 +469,29 @@ export function CourseDetailPage() {
 
                                 {/* Section picker — shown while loading or when open sections exist */}
                                 {(sectionsLoading || hasSections) && (
-                                    sectionsLoading ? (
-                                        <div
-                                            className="mt-5 border-t border-[#e8ecf1] pt-5"
-                                            data-testid="sections-loading"
-                                            aria-busy="true"
-                                        >
-                                            <div className="h-3 w-24 animate-pulse rounded bg-[#e8ecf1]" />
-                                            <div className="mt-3 space-y-2">
-                                                <div className="h-16 w-full animate-pulse rounded-xl bg-[#e8ecf1]" />
-                                                <div className="h-16 w-full animate-pulse rounded-xl bg-[#e8ecf1]" />
+                                    <div className="mt-5 border-t border-[#e8ecf1] pt-5">
+                                        {/* Helper text for optional sections */}
+                                        {!course.sections_required && hasSections && (
+                                            <p className="text-xs text-[#64748b] mb-2">
+                                                Optional: choose a section to join a cohort, or enroll self-paced below.
+                                            </p>
+                                        )}
+                                        {sectionsLoading ? (
+                                            <div data-testid="sections-loading" aria-busy="true">
+                                                <div className="h-3 w-24 animate-pulse rounded bg-[#e8ecf1]" />
+                                                <div className="mt-3 space-y-2">
+                                                    <div className="h-16 w-full animate-pulse rounded-xl bg-[#e8ecf1]" />
+                                                    <div className="h-16 w-full animate-pulse rounded-xl bg-[#e8ecf1]" />
+                                                </div>
                                             </div>
-                                        </div>
-                                    ) : (
-                                        <SectionPicker
-                                            sections={openSections}
-                                            selectedId={selectedSectionId}
-                                            onSelect={setSelectedSectionId}
-                                        />
-                                    )
+                                        ) : (
+                                            <SectionPicker
+                                                sections={openSections}
+                                                selectedId={selectedSectionId}
+                                                onSelect={setSelectedSectionId}
+                                            />
+                                        )}
+                                    </div>
                                 )}
 
                                 {/* CTA */}
@@ -548,7 +576,10 @@ export function CourseDetailPage() {
                     course={course}
                     sectionId={selectedSectionId ?? undefined}
                     onClose={() => setShowApplicationModal(false)}
-                    onSubmitted={() => setShowApplicationModal(false)}
+                    onSubmitted={() => {
+                        setShowApplicationModal(false);
+                        setApplicationSubmitted(true);
+                    }}
                 />
             )}
         </div>

@@ -1,11 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { createSection, deleteSection, fetchSections, updateSection, type CreateSectionInput } from './api';
+import { createSection, deleteSection, fetchSections, fetchPublicSections, updateSection, type CreateSectionInput } from './api';
 
 export function useSections(courseId: number) {
     return useQuery({
         queryKey: ['courses', courseId, 'sections'],
         queryFn: () => fetchSections(courseId),
         enabled: Number.isFinite(courseId),
+    });
+}
+
+export function usePublicSections() {
+    return useQuery({
+        queryKey: ['sections', 'public'],
+        queryFn: fetchPublicSections,
     });
 }
 

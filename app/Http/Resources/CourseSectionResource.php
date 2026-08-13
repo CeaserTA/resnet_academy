@@ -19,6 +19,16 @@ final class CourseSectionResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        // Use aggregate count if available (from withCount), otherwise calculate from loaded relation
+        $enrolledCount = $this->enrolled_count 
+            ?? ($this->relationLoaded('enrolments') 
+                ? $this->enrolments->whereIn('status', [EnrolmentStatus::Confirmed, EnrolmentStatus::Waitlisted])->count()
+                : null);
+
+        $seatsAvailable = $this->capacity !== null && $enrolledCount !== null
+            ? max(0, $this->capacity - $enrolledCount)
+            : null;
+
         return [
             'id' => $this->id,
             'course_id' => $this->course_id,
@@ -28,13 +38,12 @@ final class CourseSectionResource extends JsonResource
             'application_deadline' => $this->application_deadline?->toDateString(),
             'capacity' => $this->capacity,
             'seats_taken' => $this->seats_taken,
+            'enrolled_count' => $enrolledCount,
+            'seats_available' => $seatsAvailable,
             'status' => $this->status->value,
             'primary_instructor_id' => $this->primary_instructor_id,
             'primary_instructor' => $this->whenLoaded('primaryInstructor', fn () => new UserResource($this->primaryInstructor)),
-            'enrolled_count' => $this->when(
-                $this->relationLoaded('enrolments'),
-                fn () => $this->enrolments->where('status', EnrolmentStatus::Confirmed)->count()
-            ),
+            'course' => $this->whenLoaded('course', fn () => new CourseResource($this->course)),
             'waitlisted_count' => $this->when(
                 $this->relationLoaded('enrolments'),
                 fn () => $this->enrolments->where('status', EnrolmentStatus::Waitlisted)->count()

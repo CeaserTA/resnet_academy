@@ -21,6 +21,39 @@ final class CourseSectionController extends Controller
     ) {}
 
     /**
+     * Get publicly visible sections (open and in_progress) across all courses.
+     * Used for landing page and catalogue page cohort displays.
+     *
+     * No authentication required.
+     */
+    public function public(): AnonymousResourceCollection
+    {
+        $sections = CourseSection::query()
+            ->whereIn('status', ['open', 'in_progress'])
+            ->with([
+                'course.category',
+                'course.instructors',
+                'primaryInstructor',
+            ])
+            ->withCount([
+                'enrolments as enrolled_count' => function ($query) {
+                    $query->whereIn('status', ['confirmed', 'waitlisted']);
+                },
+            ])
+            ->orderByRaw("
+                CASE 
+                    WHEN status = 'in_progress' THEN 1
+                    WHEN status = 'open' THEN 2
+                    ELSE 3
+                END
+            ")
+            ->orderBy('start_date', 'asc')
+            ->get();
+
+        return CourseSectionResource::collection($sections);
+    }
+
+    /**
      * List all sections for a course.
      *
      * Public (unauthenticated) callers get a student-safe subset — name, dates, capacity,

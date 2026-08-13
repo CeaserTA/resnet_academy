@@ -38,6 +38,7 @@ function makeApplication(overrides: Partial<CourseApplication>): CourseApplicati
         status: 'pending',
         student: null as unknown as CourseApplication['student'],
         course: makeCourse(1, 'Search Engine Optimisation'),
+        section: null,
         answers: null,
         portfolio_url: null,
         alternative_proof_text: null,
@@ -103,4 +104,39 @@ it('does not show a dismiss control for a pending application', () => {
     renderCard(makeApplication({ status: 'pending' }), vi.fn());
 
     expect(screen.queryByRole('button', { name: 'Dismiss' })).not.toBeInTheDocument();
+});
+
+it('displays section name for cohort applications', () => {
+    renderCard(
+        makeApplication({
+            status: 'pending',
+            section: { id: 1, name: 'Summer 2026 Intensive', status: 'open' },
+        }),
+    );
+
+    expect(screen.getByText(/Section: Summer 2026 Intensive/)).toBeInTheDocument();
+});
+
+it('does not display section text for self-paced applications', () => {
+    renderCard(
+        makeApplication({
+            status: 'pending',
+            section: null,
+        }),
+    );
+
+    expect(screen.queryByText(/Section:/)).not.toBeInTheDocument();
+});
+
+it('displays section name for rejected cohort applications', () => {
+    renderCard(
+        makeApplication({
+            status: 'rejected',
+            section: { id: 2, name: 'Fall 2026', status: 'open' },
+            rejection_reason: 'Application not accepted.',
+        }),
+    );
+
+    expect(screen.getByText(/Section: Fall 2026/)).toBeInTheDocument();
+    expect(screen.getByText('Not accepted')).toBeInTheDocument();
 });

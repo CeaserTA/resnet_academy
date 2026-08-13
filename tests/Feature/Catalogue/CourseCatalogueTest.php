@@ -96,6 +96,26 @@ it('serializes the enrolment-gating boolean flags as real booleans, not 0/1', fu
     expect($response->json('data.application_require_portfolio_url'))->toBeTrue();
 });
 
+it('includes sections_required field in course API response', function (): void {
+    $courseWithRequired = Course::factory()->create(['sections_required' => true]);
+    $courseWithOptional = Course::factory()->create(['sections_required' => false]);
+
+    $response1 = $this->getJson("/api/v1/courses/{$courseWithRequired->id}");
+    $response1->assertOk();
+    expect($response1->json('data.sections_required'))->toBeTrue();
+
+    $response2 = $this->getJson("/api/v1/courses/{$courseWithOptional->id}");
+    $response2->assertOk();
+    expect($response2->json('data.sections_required'))->toBeFalse();
+
+    // Also verify it's in the catalogue list
+    $catalogueResponse = $this->getJson('/api/v1/courses');
+    $catalogueResponse->assertOk();
+    $catalogueData = $catalogueResponse->json('data');
+    expect($catalogueData)->not->toBeEmpty();
+    expect($catalogueData[0])->toHaveKey('sections_required');
+});
+
 it('uploads a course thumbnail to R2, stores the path, and resolves a full URL in the response', function (): void {
     Storage::fake('r2', ['url' => 'https://cdn.test']);
     $admin = User::factory()->admin()->create();

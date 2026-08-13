@@ -10,7 +10,7 @@ interface SectionRowProps {
 }
 
 export function SectionRow({ section, onEdit, onDelete }: SectionRowProps) {
-    const hasHistory = section.enrolled_count > 0 || section.waitlisted_count > 0 || section.applications_pending_count > 0;
+    const hasHistory = (section.enrolled_count ?? 0) > 0 || (section.waitlisted_count ?? 0) > 0 || (section.applications_pending_count ?? 0) > 0;
 
     const formatDate = (dateStr: string) => {
         return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -21,7 +21,7 @@ export function SectionRow({ section, onEdit, onDelete }: SectionRowProps) {
             return `${section.seats_taken} / Unlimited`;
         }
 
-        if (section.waitlisted_count > 0) {
+        if ((section.waitlisted_count ?? 0) > 0) {
             return `${section.seats_taken} / ${section.capacity} (${section.waitlisted_count} waitlisted)`;
         }
 
@@ -39,7 +39,7 @@ export function SectionRow({ section, onEdit, onDelete }: SectionRowProps) {
             </td>
             <td className="px-4 py-3 text-sm text-ink-700">{capacityDisplay()}</td>
             <td className="px-4 py-3 text-sm text-ink-700">
-                {section.applications_pending_count > 0 ? `${section.applications_pending_count} pending` : '—'}
+                {(section.applications_pending_count ?? 0) > 0 ? `${section.applications_pending_count} pending` : '—'}
             </td>
             <td className="px-4 py-3 text-sm text-ink-700">{section.primary_instructor?.name || '—'}</td>
             <td className="px-4 py-3">

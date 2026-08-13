@@ -1,0 +1,61 @@
+{
+  "data": [
+    {
+      "id": 1,
+      "status": "pending",
+      "course": {
+        "id": 2,
+        "title": "Customizable nextgeneration architecture",
+        "slug": "customizable-nextgeneration-architecture-8489",
+        "description": "Iure suscipit soluta minus consequatur...",
+        "level": "advanced",
+        "enrolment_policy": "application",
+        "advisory_require_attestation": false,
+        "application_questions": null,
+        "application_allow_alternative_proof": true,
+        "application_require_portfolio_url": false,
+        "thumbnail_url": null,
+        "prerequisites_text": null,
+        "price": "264584.35",
+        "currency": "UGX",
+        "status": "published",
+        "current_version": 1,
+        "confirmation_delay_hours": 24,
+        "schedule_start_date": null,
+        "category": null,
+        "instructors": [
+          {
+            "id": 5,
+            "role": "instructor",
+            "name": "Brad Balistreri",
+            "first_name": null,
+            "last_name": null,
+            "email": "ttorp@example.org",
+            "phone": "(480) 343-0826",
+            "avatar_url": null,
+            "bio": null,
+            "country": "Iran",
+            "city": "New Jeanneport",
+            "postal_code": null,
+            "tax_id": null,
+            "status": "active",
+            "email_verified_at": "2026-08-12T10:33:28+00:00",
+            "last_login_at": null,
+            "created_at": "2026-08-12T10:33:28+00:00"
+          }
+        ],
+        "created_at": "2026-08-13T09:56:19+00:00",
+        "updated_at": "2026-08-13T09:56:19+00:00"
+      },
+      "answers": ["Test answer 1", "Test answer 2"],
+      "portfolio_url": "https://example.com/portfolio",
+      "alternative_proof_text": "Test alternative proof",
+      "rejection_reason": null,
+      "dismissed_at": null,
+      "recommended_courses": [],
+      "reviewer": null,
+      "applied_at": "2026-08-13T09:56:20+00:00",
+      "reviewed_at": null
+    }
+  ]
+}

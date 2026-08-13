@@ -26,6 +26,7 @@ final class CourseResource extends JsonResource
             'application_questions' => $this->application_questions,
             'application_allow_alternative_proof' => $this->application_allow_alternative_proof,
             'application_require_portfolio_url' => $this->application_require_portfolio_url,
+            'sections_required' => $this->sections_required,
             'thumbnail_url' => app(MediaStorageService::class)->url($this->thumbnail_url),
             'prerequisites_text' => $this->prerequisites_text,
             'price' => $this->price,

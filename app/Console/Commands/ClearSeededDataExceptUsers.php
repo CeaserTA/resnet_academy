@@ -54,6 +54,8 @@ class ClearSeededDataExceptUsers extends Command
                 'orders',
                 
                 // Enrolments
+                'course_applications',
+                'course_sections',
                 'enrolments',
                 
                 // Progress tracking

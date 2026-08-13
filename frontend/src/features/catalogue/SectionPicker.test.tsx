@@ -34,9 +34,9 @@ function makeSection(overrides: Partial<CourseSection> = {}): CourseSection {
         status: CourseSectionStatus.Open,
         primary_instructor_id: undefined,
         primary_instructor: undefined,
-        enrolled_count: 10,
-        waitlisted_count: 0,
-        applications_pending_count: 0,
+        enrolled_count: undefined,       // Analytics fields optional for students/guests
+        waitlisted_count: undefined,
+        applications_pending_count: undefined,
         is_full: false,
         is_accepting_applications: true,
         created_at: '2026-01-01T00:00:00Z',
@@ -87,10 +87,12 @@ vi.mock('@/lib/auth/AuthContext', () => ({
     useAuth: () => ({ user: { id: 1, role: 'student', name: 'Test Student' }, isLoading: false }),
 }));
 
-// Mock useCourse so the page renders with our test course
+// Mock useCourse and useCourseModules so the page renders with our test course
 const mockUseCourse = vi.fn();
+const mockUseCourseModules = vi.fn(() => ({ data: [], isLoading: false }));
 vi.mock('@/features/catalogue/useCourses', () => ({
     useCourse: (...args: unknown[]) => mockUseCourse(...args),
+    useCourseModules: (...args: unknown[]) => mockUseCourseModules(...args),
 }));
 
 // Mock useMyCourseApplications — no pending applications

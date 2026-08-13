@@ -54,6 +54,7 @@ export interface Course {
     application_questions: string[] | null;
     application_allow_alternative_proof: boolean;
     application_require_portfolio_url: boolean;
+    sections_required: boolean;
     thumbnail_url: string | null;
     prerequisites_text: string | null;
     price: string;
@@ -113,6 +114,11 @@ export interface CourseApplication {
     status: CourseApplicationStatus;
     student: User;
     course: Course;
+    section: {
+        id: number;
+        name: string;
+        status: string;
+    } | null;
     answers: string[] | null;
     portfolio_url: string | null;
     alternative_proof_text: string | null;
