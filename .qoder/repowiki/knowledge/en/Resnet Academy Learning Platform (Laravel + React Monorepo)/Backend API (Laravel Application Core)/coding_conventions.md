@@ -1,0 +1,5 @@
+- Each domain entity has a matching Policy class under `Policies/` paired with its Model for authorization checks.
+- Controller actions accept typed request classes from `Http/Requests/Api/V1/` instead of raw `$request->input()` calls.
+- API responses are serialized through dedicated Resource classes under `Http/Resources/` rather than inline arrays.
+- Domain-specific enums live in `Enums/` and are used across Models, Services, and Requests to represent fixed state spaces.
+- Business logic is extracted into service classes grouped by domain folder under `Services/`, keeping Controllers thin.

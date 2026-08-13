@@ -1,0 +1,1 @@
+Laravel framework with Sanctum for SPA/API authentication; Scramble for OpenAPI generation; Eloquent ORM; queued job pipeline via Laravel queues.

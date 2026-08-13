@@ -1,0 +1,1 @@
+Laravel 12 with PHP 8.2, Sanctum for API auth, React + Vite for the SPA, Pest/PHPUnit for testing, Laravel Pint/Larastan for static analysis and formatting, dompdf for certificate PDFs, Resend for email delivery, and AWS S3 via Flysystem for file storage.

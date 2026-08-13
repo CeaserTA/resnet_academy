@@ -359,6 +359,8 @@ export interface QuestionBank {
 
 export interface Evaluation {
     id: number;
+    module_id: number;
+    course_id: number;
     title: string;
     description: string | null;
     pass_score: string;

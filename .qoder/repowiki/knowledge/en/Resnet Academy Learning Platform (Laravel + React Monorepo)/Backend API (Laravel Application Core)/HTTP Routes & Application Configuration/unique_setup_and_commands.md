@@ -1,0 +1,1 @@
+Requires `FRONTEND_URL` (and optionally `SANCTUM_STATEFUL_DOMAINS`) in `.env` so Sanctum stateful domains and CORS allow the SPA origin. Run `php artisan schedule:work` (or equivalent cron entry) to execute the three scheduled commands defined in `routes/console.php`.

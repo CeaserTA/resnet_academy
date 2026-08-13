@@ -2,22 +2,30 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     createAssignment,
     createEvaluation,
+    createQuestion,
+    createQuestionBank,
     deleteAssignment,
     deleteEvaluation,
+    deleteQuestion,
+    deleteQuestionBank,
     fetchAssignment,
     fetchAssignmentSubmissions,
     fetchAttempt,
     fetchEvaluation,
     fetchEvaluationAttempts,
     fetchGradebook,
+    fetchQuestionBanks,
     gradeAttempt,
     gradeSubmission,
     startAttempt,
     submitAssignment,
     submitAttempt,
+    updateEvaluation,
     type AssignmentPayload,
     type AttemptAnswerInput,
     type EvaluationPayload,
+    type QuestionPayload,
+    type UpdateEvaluationPayload,
 } from '@/features/assessment/api';
 
 export function useCreateAssignment(courseId: number) {
@@ -169,5 +177,67 @@ export function useGradebook(courseId: number) {
         queryKey: ['courses', courseId, 'gradebook'],
         queryFn: () => fetchGradebook(courseId),
         enabled: Number.isFinite(courseId),
+    });
+}
+
+// ─── Question Banks & Questions ─────────────────────────────────────────────────────────
+
+export function useQuestionBanks(courseId: number) {
+    return useQuery({
+        queryKey: ['courses', courseId, 'questionBanks'],
+        queryFn: () => fetchQuestionBanks(courseId),
+        enabled: Number.isFinite(courseId),
+    });
+}
+
+export function useCreateQuestionBank(courseId: number) {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (title: string) => createQuestionBank(courseId, title),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['courses', courseId, 'questionBanks'] }),
+    });
+}
+
+export function useDeleteQuestionBank(courseId: number) {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (bankId: number) => deleteQuestionBank(bankId),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['courses', courseId, 'questionBanks'] }),
+    });
+}
+
+export function useCreateQuestion(courseId: number) {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ bankId, payload }: { bankId: number; payload: QuestionPayload }) =>
+            createQuestion(bankId, payload),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['courses', courseId, 'questionBanks'] }),
+    });
+}
+
+export function useDeleteQuestion(courseId: number) {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (questionId: number) => deleteQuestion(questionId),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['courses', courseId, 'questionBanks'] }),
+    });
+}
+
+// ─── Evaluation Update (settings + question sync) ──────────────────────────────────────
+
+export function useUpdateEvaluation(courseId: number) {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ evaluationId, payload }: { evaluationId: number; payload: UpdateEvaluationPayload }) =>
+            updateEvaluation(evaluationId, payload),
+        onSuccess: (_data, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['evaluations', variables.evaluationId] });
+            queryClient.invalidateQueries({ queryKey: ['courses', courseId, 'modules'] });
+        },
     });
 }

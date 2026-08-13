@@ -1,0 +1,6 @@
+- Each feature lives in its own `src/features/<domain>/` folder co-locating page components, local hooks (`useXxx`), and an `api.ts` that encapsulates Axios calls for that domain.
+- Route-level authorization is enforced by wrapping route elements with `<ProtectedRoute roles={[...]} />` rather than checking permissions inside page components.
+- User session and auth actions are exposed through a single `AuthContext` (`useAuth`) consumed by layout and features instead of per-feature auth logic.
+- Reusable presentational pieces are extracted as small components under `src/components/ui` (Button, Input, Modal, Select, Card, etc.) and composed into feature pages.
+- Tests are colocated next to their source files using the `*.test.tsx` naming convention and run via Vitest with jsdom and the shared `src/test/setup.ts` bootstrap.
+- Styling uses Tailwind utility classes combined with `clsx`/`cn` from `@/lib/utils` for conditional class composition.

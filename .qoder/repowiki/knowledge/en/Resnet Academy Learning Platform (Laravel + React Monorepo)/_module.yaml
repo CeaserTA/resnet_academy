@@ -1,0 +1,60 @@
+schema_version: 1
+module_path: ""
+title: Resnet Academy Learning Platform (Laravel + React Monorepo)
+scope:
+    - README.md
+    - composer.json
+    - phpunit.xml
+    - phpstan.neon
+    - scripts/
+    - .agents/
+    - .claude/
+    - .kiro/
+    - .editorconfig
+    - .env.example
+    - .gitattributes
+    - .gitignore
+    - AVATAR_UPLOAD_IMPLEMENTATION.md
+    - BACKEND_VALIDATION_FIX.md
+    - BUG2_ACTUAL_API_RESPONSE.json
+    - BUG2_INVESTIGATION.md
+    - BUG2_ROOT_CAUSE_ANALYSIS.md
+    - BUGS_SUMMARY.md
+    - COURSE_ENROLLMENT_ARCHITECTURE_ANALYSIS.md
+    - COURSE_PAGE_LAYOUT_TIGHTENING.md
+    - COURSE_SECTIONS_BACKEND_IMPLEMENTATION_SUMMARY.md
+    - COURSE_SECTIONS_COMPLETE.md
+    - COURSE_SECTIONS_COMPONENT_ARCHITECTURE.md
+    - COURSE_SECTIONS_FRONTEND_IMPLEMENTATION_SUMMARY.md
+    - COURSE_SECTIONS_FRONTEND_PLAN.md
+    - COURSE_SECTIONS_MANAGEMENT_ANALYSIS.md
+    - COURSE_SECTIONS_TEST_RESULTS.md
+    - COURSE_SECTIONS_TEST_STATUS.md
+    - COURSE_SECTIONS_USER_GUIDE.md
+    - COURSE_SECTIONS_VERIFICATION_CHECKLIST.md
+    - COURSE_THUMBNAIL_FIX_SUMMARY.md
+    - COURSE_THUMBNAIL_IMAGE_MISMATCH_FIX.md
+    - DYNAMIC_COHORTS_IMPLEMENTATION_PLAN.md
+    - DYNAMIC_COHORTS_IMPLEMENTATION_SUMMARY.md
+    - E2E_TEST_IMPLEMENTATION_SUMMARY.md
+    - FORUMS_NAVIGATION_IMPLEMENTATION.md
+    - FORUMS_QUICK_START.md
+    - IMPLEMENTATION_COMPLETE.md
+    - PRODUCTION_READINESS.md
+    - PROFILE_COMPLETION_FIX.md
+    - PROFILE_COMPLETION_FIXES.md
+    - PROFILE_COMPLETION_FIX_V2.md
+    - REFACTOR_SUMMARY.md
+    - SECTIONS_REQUIRED_CTA_BUGFIX_SUMMARY.md
+    - TASK_8_MANUAL_QA_CHECKLIST.md
+    - TASK_9.1_SUMMARY.md
+    - artisan
+    - backup_before_sections_.sql
+    - check_env.php
+    - composer-install-debug.txt
+    - composer.lock
+    - skills-lock.json
+    - test_upload.php
+source_files: []
+depends_on: []
+related_to: []

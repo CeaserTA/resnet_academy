@@ -1,0 +1,1 @@
+Pest-based test suite covering the Laravel application's HTTP endpoints, services, models, and request validation across feature and unit directories mirroring the app's domain structure.

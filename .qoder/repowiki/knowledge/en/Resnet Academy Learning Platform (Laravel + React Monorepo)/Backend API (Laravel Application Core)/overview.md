@@ -1,0 +1,1 @@
+Laravel application core that wires HTTP routes and configuration to domain controllers, services, models, policies, jobs, and resources for a course/learning platform.

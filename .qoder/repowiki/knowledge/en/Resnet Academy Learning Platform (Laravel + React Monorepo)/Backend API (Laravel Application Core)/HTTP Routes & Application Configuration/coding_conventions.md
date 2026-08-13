@@ -1,0 +1,5 @@
+- API routes are grouped under `Route::prefix('v1')` and split into a public block followed by an `auth:sanctum`-protected block for authenticated writes.
+- SPA session-based auth routes live in `routes/web.php` under the shared `/api/v1` prefix and explicitly require the `web` middleware group so cookies and CSRF are processed.
+- Each feature area (courses, modules, assignments, evaluations, forums, tickets, notifications, etc.) is mapped to its own controller class in `App\Http\Controllers\Api\V1\*`, keeping route definitions as thin dispatch tables.
+- Configuration values are sourced exclusively from `env()` with sensible defaults, never hard-coded literals, so deployment changes go through `.env`.
+- Scheduled tasks are registered declaratively in `routes/console.php` using `Schedule::command(...)->everyFiveMinutes()/daily()` rather than external crontab entries.

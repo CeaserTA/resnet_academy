@@ -1,0 +1,1 @@
+React + Vite SPA for Resnet Academy, providing student, instructor, and admin interfaces for course browsing, learning, assessment, communication, and platform administration.

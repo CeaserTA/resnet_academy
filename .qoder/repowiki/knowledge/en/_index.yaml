@@ -1,0 +1,146 @@
+# 知识卡导出索引文件
+schema_version: 1
+locale: en-US
+branch: dev-ceaser
+nodes_managed: true
+exported_at: "2026-08-13T21:03:28Z"
+modules:
+    "":
+        dir_name: Resnet Academy Learning Platform (Laravel + React Monorepo)
+        title: Resnet Academy Learning Platform (Laravel + React Monorepo)
+        scope:
+            - README.md
+            - composer.json
+            - phpunit.xml
+            - phpstan.neon
+            - scripts/
+            - .agents/
+            - .claude/
+            - .kiro/
+            - .editorconfig
+            - .env.example
+            - .gitattributes
+            - .gitignore
+            - AVATAR_UPLOAD_IMPLEMENTATION.md
+            - BACKEND_VALIDATION_FIX.md
+            - BUG2_ACTUAL_API_RESPONSE.json
+            - BUG2_INVESTIGATION.md
+            - BUG2_ROOT_CAUSE_ANALYSIS.md
+            - BUGS_SUMMARY.md
+            - COURSE_ENROLLMENT_ARCHITECTURE_ANALYSIS.md
+            - COURSE_PAGE_LAYOUT_TIGHTENING.md
+            - COURSE_SECTIONS_BACKEND_IMPLEMENTATION_SUMMARY.md
+            - COURSE_SECTIONS_COMPLETE.md
+            - COURSE_SECTIONS_COMPONENT_ARCHITECTURE.md
+            - COURSE_SECTIONS_FRONTEND_IMPLEMENTATION_SUMMARY.md
+            - COURSE_SECTIONS_FRONTEND_PLAN.md
+            - COURSE_SECTIONS_MANAGEMENT_ANALYSIS.md
+            - COURSE_SECTIONS_TEST_RESULTS.md
+            - COURSE_SECTIONS_TEST_STATUS.md
+            - COURSE_SECTIONS_USER_GUIDE.md
+            - COURSE_SECTIONS_VERIFICATION_CHECKLIST.md
+            - COURSE_THUMBNAIL_FIX_SUMMARY.md
+            - COURSE_THUMBNAIL_IMAGE_MISMATCH_FIX.md
+            - DYNAMIC_COHORTS_IMPLEMENTATION_PLAN.md
+            - DYNAMIC_COHORTS_IMPLEMENTATION_SUMMARY.md
+            - E2E_TEST_IMPLEMENTATION_SUMMARY.md
+            - FORUMS_NAVIGATION_IMPLEMENTATION.md
+            - FORUMS_QUICK_START.md
+            - IMPLEMENTATION_COMPLETE.md
+            - PRODUCTION_READINESS.md
+            - PROFILE_COMPLETION_FIX.md
+            - PROFILE_COMPLETION_FIXES.md
+            - PROFILE_COMPLETION_FIX_V2.md
+            - REFACTOR_SUMMARY.md
+            - SECTIONS_REQUIRED_CTA_BUGFIX_SUMMARY.md
+            - TASK_8_MANUAL_QA_CHECKLIST.md
+            - TASK_9.1_SUMMARY.md
+            - artisan
+            - backup_before_sections_.sql
+            - check_env.php
+            - composer-install-debug.txt
+            - composer.lock
+            - skills-lock.json
+            - test_upload.php
+        source_files: []
+        children:
+            - backend_api
+            - database_schema
+            - frontend_app
+            - storage_runtime
+            - tests
+            - views_and_assets
+        depends_on: []
+        related_to: []
+    backend_api:
+        dir_name: Backend API (Laravel Application Core)
+        title: Backend API (Laravel Application Core)
+        scope:
+            - app/
+            - routes/
+            - config/
+        source_files: []
+        children:
+            - backend_api/routes_config
+        depends_on: []
+        related_to: []
+    backend_api/routes_config:
+        dir_name: HTTP Routes & Application Configuration
+        title: HTTP Routes & Application Configuration
+        scope:
+            - routes/
+            - config/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: frontend_app
+    database_schema:
+        dir_name: Database Schema, Migrations & Seed Data
+        title: Database Schema, Migrations & Seed Data
+        scope:
+            - database/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: tests
+    frontend_app:
+        dir_name: Resnet Academy Learning Platform Frontend
+        title: Resnet Academy Learning Platform Frontend
+        scope:
+            - frontend/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: backend_api/routes_config
+    storage_runtime:
+        dir_name: Application Storage Runtime (Files, Cache, Sessions, Views, Logs)
+        title: Application Storage Runtime (Files, Cache, Sessions, Views, Logs)
+        scope:
+            - storage/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
+    tests:
+        dir_name: Feature & Unit Test Suite (Pest)
+        title: Feature & Unit Test Suite (Pest)
+        scope:
+            - tests/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: database_schema
+    views_and_assets:
+        dir_name: Blade Views & Public Web Assets
+        title: Blade Views & Public Web Assets
+        scope:
+            - resources/
+            - public/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []

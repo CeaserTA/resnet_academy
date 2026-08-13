@@ -22,6 +22,7 @@ import { ResourceViewerPage } from '@/features/learning/ResourceViewerPage';
 import { AssignmentSubmitPage } from '@/features/assessment/AssignmentSubmitPage';
 import { AssignmentGradingPage } from '@/features/assessment/AssignmentGradingPage';
 import { EvaluationTakePage } from '@/features/assessment/EvaluationTakePage';
+import { EvaluationEditPage } from '@/features/assessment/EvaluationEditPage';
 import { EvaluationGradingPage } from '@/features/assessment/EvaluationGradingPage';
 import { GradebookPage } from '@/features/assessment/GradebookPage';
 import { AttendanceRosterPage } from '@/features/progress/AttendanceRosterPage';
@@ -174,6 +175,14 @@ function App() {
                 />
                 <Route
                     path="admin/evaluations/:id"
+                    element={
+                        <ProtectedRoute roles={['admin', 'instructor']}>
+                            <EvaluationEditPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="admin/evaluations/:id/grading"
                     element={
                         <ProtectedRoute roles={['admin', 'instructor']}>
                             <EvaluationGradingPage />

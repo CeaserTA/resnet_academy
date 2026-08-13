@@ -1,0 +1,6 @@
+- Each migration is an anonymous class returning `new class extends Migration { up(): void; down(): void }` with `declare(strict_types=1)` and uses `Schema::create` / `Schema::dropIfExists` paired in `up`/`down`.
+- Foreign keys are declared via `foreignId('column')->constrained('table', indexName: 'fk_<table>_<column>')` with explicit cascade/null-on-delete behavior instead of relying on defaults.
+- Indexes and unique constraints use explicit names (`idx_*`, `uq_*`) passed as the second argument to `index()`/`unique()`.
+- Enum columns store PHP enum values (e.g. `CourseStatus`, `UserRole`, `SubmissionStatus`) rather than raw strings, keeping type safety at the schema boundary.
+- Each Eloquent model has a corresponding `Database\Factories\*Factory` class under `database/factories/` that exposes named state methods (e.g. `admin()`, `instructor()`, `draft()`) composed via `$this->state(fn (array $a) => [...])`.
+- The `DatabaseSeeder` builds realistic cross-entity relationships by first seeding root entities (users, categories, courses) into collections, then iterating those collections to seed dependent records with deterministic cycling via modulo indexing.

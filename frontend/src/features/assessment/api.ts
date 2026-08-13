@@ -8,6 +8,9 @@ import type {
     EvaluationAttempt,
     Gradebook,
     PaginatedResponse,
+    Question,
+    QuestionBank,
+    QuestionType,
     StartAttemptResponse,
 } from '@/lib/api/types';
 
@@ -36,7 +39,32 @@ export interface EvaluationPayload {
     pass_score: number;
     max_attempts?: number;
     time_limit_minutes?: number;
+    randomize_questions?: boolean;
+    questions_per_attempt?: number;
+    available_from?: string;
+    available_until?: string;
     is_required?: boolean;
+    question_ids?: number[];
+}
+
+export interface UpdateEvaluationPayload {
+    title?: string;
+    description?: string | null;
+    pass_score?: number;
+    max_attempts?: number | null;
+    time_limit_minutes?: number | null;
+    randomize_questions?: boolean;
+    questions_per_attempt?: number | null;
+    available_from?: string | null;
+    available_until?: string | null;
+    is_required?: boolean;
+    order_index?: number;
+    question_ids?: number[] | null;
+}
+
+export async function updateEvaluation(evaluationId: number, payload: UpdateEvaluationPayload): Promise<Evaluation> {
+    const { data } = await apiClient.patch<{ data: Evaluation }>(`/evaluations/${evaluationId}`, payload);
+    return data.data;
 }
 
 export async function createEvaluation(moduleId: number, payload: EvaluationPayload): Promise<Evaluation> {
@@ -46,6 +74,38 @@ export async function createEvaluation(moduleId: number, payload: EvaluationPayl
 
 export async function deleteEvaluation(evaluationId: number): Promise<void> {
     await apiClient.delete(`/evaluations/${evaluationId}`);
+}
+
+// ─── Question Banks & Questions ─────────────────────────────────────────────────────────
+
+export async function fetchQuestionBanks(courseId: number): Promise<QuestionBank[]> {
+    const { data } = await apiClient.get<{ data: QuestionBank[] }>(`/courses/${courseId}/question-banks`);
+    return data.data;
+}
+
+export async function createQuestionBank(courseId: number, title: string): Promise<QuestionBank> {
+    const { data } = await apiClient.post<{ data: QuestionBank }>(`/courses/${courseId}/question-banks`, { title });
+    return data.data;
+}
+
+export async function deleteQuestionBank(bankId: number): Promise<void> {
+    await apiClient.delete(`/question-banks/${bankId}`);
+}
+
+export interface QuestionPayload {
+    type: QuestionType;
+    question_text: string;
+    points?: number;
+    options?: { option_text: string; is_correct?: boolean }[];
+}
+
+export async function createQuestion(bankId: number, payload: QuestionPayload): Promise<Question> {
+    const { data } = await apiClient.post<{ data: Question }>(`/question-banks/${bankId}/questions`, payload);
+    return data.data;
+}
+
+export async function deleteQuestion(questionId: number): Promise<void> {
+    await apiClient.delete(`/questions/${questionId}`);
 }
 
 export async function fetchAssignment(assignmentId: number): Promise<Assignment> {

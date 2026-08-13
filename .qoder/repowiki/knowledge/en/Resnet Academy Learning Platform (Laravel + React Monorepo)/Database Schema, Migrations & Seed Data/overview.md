@@ -1,0 +1,1 @@
+Laravel database schema definition for the Resnet Academy platform, including migrations, per-model factories, and a comprehensive seeder that populates realistic demo data across all tables.

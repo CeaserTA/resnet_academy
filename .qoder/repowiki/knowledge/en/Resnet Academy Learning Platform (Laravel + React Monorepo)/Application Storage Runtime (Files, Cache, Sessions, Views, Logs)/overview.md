@@ -1,0 +1,1 @@
+Runtime storage directory for the Laravel application, holding uploaded files, compiled view templates, cache data, session files, and log output.

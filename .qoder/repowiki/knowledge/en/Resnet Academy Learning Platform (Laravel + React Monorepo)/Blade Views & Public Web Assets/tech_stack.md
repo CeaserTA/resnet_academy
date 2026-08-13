@@ -1,0 +1,1 @@
+Laravel Blade templating engine with inline CSS for email/certificate rendering; Apache mod_rewrite rules in `.htaccess` for URL rewriting and header passthrough.

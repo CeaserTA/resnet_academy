@@ -1,0 +1,4 @@
+- Generated or transient runtime content lives under `storage/` and is excluded from version control via per-directory `.gitignore` files.
+- Compiled Blade templates in `storage/framework/views/` are stored as hashed PHP filenames rather than human-readable names.
+- Publicly accessible user uploads are placed under `storage/app/public/...` (e.g., `certificates/`, `payment-receipts/`) so they can be symlinked or served through a public URL prefix.
+- Private application data such as enrolment imports is kept under `storage/app/private/...` to keep it out of the web-accessible document root.

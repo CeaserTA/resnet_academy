@@ -1,0 +1,1 @@
+Holds Laravel Blade templates for the welcome page, PDF certificates, and enrolment confirmation emails, plus the public front controller and static assets served by the web server.

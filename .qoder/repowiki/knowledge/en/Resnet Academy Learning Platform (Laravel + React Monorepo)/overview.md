@@ -1,0 +1,1 @@
+Full-stack Laravel/React application for the Resnet Academy learning platform, combining a Laravel API backend, a React SPA frontend, shared database schema, Blade views, Pest tests, and runtime storage under one Composer-managed project.

@@ -1,0 +1,4 @@
+- PSR-4 autoloading maps `App\` to `app/`, `Database\Factories\` to `database/factories/`, `Database\Seeders\` to `database/seeders/`, and `Tests\` to `tests/`.
+- Test directories mirror the application domain structure so feature and unit tests sit alongside the code they exercise.
+- Development workflow is driven through Composer scripts (`setup`, `dev`, `test`) rather than ad-hoc shell commands.
+- Configuration and environment variables are managed via `.env` (copied from `.env.example`) and discovered automatically by Laravel on autoload dump.

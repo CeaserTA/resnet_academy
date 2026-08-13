@@ -21,21 +21,21 @@ final class EvaluationController extends Controller
     {
         $this->authorize('view', $evaluation);
 
-        return new EvaluationResource($evaluation->load('questions.options'));
+        return new EvaluationResource($evaluation->load('questions.options', 'module'));
     }
 
     public function store(StoreEvaluationRequest $request, Module $module): EvaluationResource
     {
         $evaluation = $this->evaluationManager->create($module, $request->validated());
 
-        return new EvaluationResource($evaluation->load('questions.options'));
+        return new EvaluationResource($evaluation->load('questions.options', 'module'));
     }
 
     public function update(UpdateEvaluationRequest $request, Evaluation $evaluation): EvaluationResource
     {
         $evaluation = $this->evaluationManager->update($evaluation, $request->validated());
 
-        return new EvaluationResource($evaluation->load('questions.options'));
+        return new EvaluationResource($evaluation->load('questions.options', 'module'));
     }
 
     public function destroy(Evaluation $evaluation): Response
