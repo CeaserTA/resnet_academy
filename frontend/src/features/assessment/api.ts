@@ -108,6 +108,24 @@ export async function deleteQuestion(questionId: number): Promise<void> {
     await apiClient.delete(`/questions/${questionId}`);
 }
 
+export async function importQuestionsCsv(bankId: number, file: File): Promise<{ imported: number }> {
+    const response = await postFormData<{ data: { imported: number } }>(
+        `/question-banks/${bankId}/import-csv`,
+        toFormData({ csv_file: file }),
+    );
+    return response.data;
+}
+
+export async function downloadQuestionsCsvTemplate(): Promise<void> {
+    const { data } = await apiClient.get<Blob>('/question-banks/csv-template', { responseType: 'blob' });
+    const url = URL.createObjectURL(data);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'sample_questions.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+}
+
 export async function fetchAssignment(assignmentId: number): Promise<Assignment> {
     const { data } = await apiClient.get<{ data: Assignment }>(`/assignments/${assignmentId}`);
     return data.data;

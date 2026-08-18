@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Banknote, ChevronDown, ChevronRight, Loader2, Plus, Trash2 } from 'lucide-react';
+import { Banknote, ChevronDown, ChevronRight, Loader2, Plus, Trash2, Upload } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Spinner } from '@/components/ui/Spinner';
 import { QuestionForm } from '@/features/assessment/QuestionForm';
+import { QuestionCsvImportModal } from '@/features/assessment/QuestionCsvImportModal';
 import {
     useCreateQuestion,
     useCreateQuestionBank,
@@ -14,7 +15,6 @@ import {
     useDeleteQuestionBank,
     useQuestionBanks,
 } from '@/features/assessment/useAssessment';
-import { cn } from '@/lib/utils';
 import type { Question, QuestionBank } from '@/lib/api/types';
 
 interface QuestionBankPanelProps {
@@ -187,6 +187,7 @@ function BankCard({
     const createQuestion = useCreateQuestion(courseId);
     const deleteQuestion = useDeleteQuestion(courseId);
     const showQuestionForm = creatingInBank === bank.id;
+    const [showImportModal, setShowImportModal] = useState(false);
 
     const handleCreateQuestion = async (data: {
         type: string;
@@ -239,6 +240,18 @@ function BankCard({
                     type="button"
                     onClick={(e) => {
                         e.stopPropagation();
+                        setShowImportModal(true);
+                    }}
+                    className="rounded-lg p-1.5 text-ink-400 transition hover:bg-surface-100 hover:text-blue-600"
+                    aria-label="Import questions from CSV"
+                    title="Import CSV"
+                >
+                    <Upload className="size-4" />
+                </button>
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.stopPropagation();
                         onDelete();
                     }}
                     disabled={isDeleting}
@@ -279,6 +292,15 @@ function BankCard({
                 onClose={() => setCreatingInBank(null)}
                 onSubmit={handleCreateQuestion}
                 isSubmitting={createQuestion.isPending}
+            />
+
+            {/* CSV import modal */}
+            <QuestionCsvImportModal
+                isOpen={showImportModal}
+                onClose={() => setShowImportModal(false)}
+                bankId={bank.id}
+                courseId={courseId}
+                bankTitle={bank.title}
             />
         </div>
     );

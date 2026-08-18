@@ -50,6 +50,7 @@ export function QuestionForm({ isOpen, onClose, onSubmit, isSubmitting }: Questi
     const [type, setType] = useState<QuestionType>('mcq_single');
     const [questionText, setQuestionText] = useState('');
     const [points, setPoints] = useState(1);
+    const [submitError, setSubmitError] = useState<string | null>(null);
     const [options, setOptions] = useState<OptionDraft[]>([
         { option_text: '', is_correct: true },
         { option_text: '', is_correct: false },
@@ -61,6 +62,7 @@ export function QuestionForm({ isOpen, onClose, onSubmit, isSubmitting }: Questi
         setType('mcq_single');
         setQuestionText('');
         setPoints(1);
+        setSubmitError(null);
         setOptions([
             { option_text: '', is_correct: true },
             { option_text: '', is_correct: false },
@@ -122,6 +124,7 @@ export function QuestionForm({ isOpen, onClose, onSubmit, isSubmitting }: Questi
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
+        setSubmitError(null);
 
         const payload: {
             type: QuestionType;
@@ -141,8 +144,14 @@ export function QuestionForm({ isOpen, onClose, onSubmit, isSubmitting }: Questi
             }));
         }
 
-        await onSubmit(payload);
-        resetForm();
+        try {
+            await onSubmit(payload);
+            resetForm();
+        } catch (err) {
+            setSubmitError(
+                err instanceof Error ? err.message : 'Failed to create question. Please try again.',
+            );
+        }
     };
 
     const isValid =
@@ -150,6 +159,16 @@ export function QuestionForm({ isOpen, onClose, onSubmit, isSubmitting }: Questi
         points > 0 &&
         (!hasOptions || options.every((o) => o.option_text.trim().length > 0)) &&
         (!hasOptions || options.some((o) => o.is_correct));
+
+    const invalidReason = !questionText.trim()
+        ? 'Enter the question text.'
+        : !(points > 0)
+          ? 'Points must be greater than 0.'
+          : hasOptions && !options.every((o) => o.option_text.trim().length > 0)
+            ? 'Every option needs text.'
+            : hasOptions && !options.some((o) => o.is_correct)
+              ? 'Mark at least one option as the correct answer.'
+              : null;
 
     return (
         <Modal
@@ -227,7 +246,6 @@ export function QuestionForm({ isOpen, onClose, onSubmit, isSubmitting }: Questi
                                     name="correct-option"
                                     checked={option.is_correct}
                                     onChange={() => toggleCorrect(index)}
-                                    disabled={type === 'true_false'}
                                     className="size-4 shrink-0 accent-blue-600"
                                     aria-label={`Mark option ${index + 1} as correct`}
                                 />
@@ -270,6 +288,16 @@ export function QuestionForm({ isOpen, onClose, onSubmit, isSubmitting }: Questi
                             </Button>
                         )}
                     </fieldset>
+                )}
+
+                {submitError && (
+                    <p className="rounded-md bg-danger-600/10 px-3 py-2 text-sm text-danger-600">
+                        {submitError}
+                    </p>
+                )}
+
+                {!isValid && (
+                    <p className="text-xs text-ink-500">{invalidReason}</p>
                 )}
             </form>
         </Modal>

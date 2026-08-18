@@ -174,6 +174,10 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/question-banks/{bank}/questions', [QuestionController::class, 'store']);
         Route::delete('/questions/{question}', [QuestionController::class, 'destroy']);
 
+        // CSV question import (zero-AI) — template download + bulk import per bank.
+        Route::get('/question-banks/csv-template', [QuestionBankController::class, 'csvTemplate']);
+        Route::post('/question-banks/{bank}/import-csv', [QuestionBankController::class, 'importCsv']);
+
         // Evaluations (FR-19/FR-20) — CRUD, then student attempts served in a separate,
         // answer-key-free shape (AttemptQuestionResource) via EvaluationAttemptController.
         Route::post('/modules/{module}/evaluations', [EvaluationController::class, 'store']);
