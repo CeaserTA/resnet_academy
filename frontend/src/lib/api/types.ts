@@ -363,6 +363,7 @@ export interface Evaluation {
     course_id: number;
     title: string;
     description: string | null;
+    instructions: string | null;
     pass_score: string;
     max_attempts: number | null;
     time_limit_minutes: number | null;
@@ -409,6 +410,59 @@ export interface StartAttemptResponse {
     attempt: EvaluationAttempt;
     questions: AttemptQuestion[];
     evaluation: { id: number; title: string; pass_score: string; time_limit_minutes: number | null };
+}
+
+/** Student-facing pre-start summary — metadata only, never questions or the answer key. */
+export interface EvaluationOverview {
+    id: number;
+    title: string;
+    description: string | null;
+    instructions: string | null;
+    pass_score: string;
+    time_limit_minutes: number | null;
+    max_attempts: number | null;
+    question_count: number;
+    total_points: number;
+    attempts_used: number;
+    attempts_remaining: number | null;
+    in_progress_attempt: { id: number; started_at: string } | null;
+}
+
+/** Read-only post-attempt breakdown — includes the answer key, served only for completed attempts. */
+export interface AttemptReviewOption {
+    id: number;
+    option_text: string;
+    is_correct: boolean;
+    selected: boolean;
+}
+
+export interface AttemptReviewQuestion {
+    question_id: number;
+    type: QuestionType;
+    question_text: string;
+    points: string;
+    points_awarded: string | null;
+    is_correct: boolean | null;
+    selected_option_ids: number[];
+    answer_text: string | null;
+    options: AttemptReviewOption[];
+}
+
+export interface AttemptReview {
+    attempt_id: number;
+    evaluation_id: number;
+    attempt_number: number;
+    status: EvaluationAttemptStatus;
+    summary: {
+        total_score: number;
+        max_score: number;
+        score_percent: string | null;
+        passed: boolean | null;
+        started_at: string;
+        submitted_at: string | null;
+        time_taken_seconds: number | null;
+    };
+    questions: AttemptReviewQuestion[];
 }
 
 export interface GradebookAssignmentColumn {

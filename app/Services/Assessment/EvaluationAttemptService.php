@@ -101,6 +101,14 @@ final class EvaluationAttemptService
      */
     public function submit(EvaluationAttempt $attempt, array $answers): EvaluationAttempt
     {
+        // Attempt results are strictly immutable once completed: a re-submit must never
+        // append or overwrite answers (it would also double-count in the gradebook).
+        abort_if(
+            $attempt->isCompleted(),
+            422,
+            'This attempt has already been submitted and can no longer be modified.',
+        );
+
         return DB::transaction(function () use ($attempt, $answers): EvaluationAttempt {
             $evaluation = $attempt->evaluation;
 

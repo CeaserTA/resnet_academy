@@ -4,8 +4,10 @@ import type {
     Assignment,
     AssignmentSubmission,
     AssignmentSubmissionType,
+    AttemptReview,
     Evaluation,
     EvaluationAttempt,
+    EvaluationOverview,
     Gradebook,
     PaginatedResponse,
     Question,
@@ -36,6 +38,7 @@ export async function deleteAssignment(assignmentId: number): Promise<void> {
 export interface EvaluationPayload {
     title: string;
     description?: string;
+    instructions?: string;
     pass_score: number;
     max_attempts?: number;
     time_limit_minutes?: number;
@@ -50,6 +53,7 @@ export interface EvaluationPayload {
 export interface UpdateEvaluationPayload {
     title?: string;
     description?: string | null;
+    instructions?: string | null;
     pass_score?: number;
     max_attempts?: number | null;
     time_limit_minutes?: number | null;
@@ -184,6 +188,20 @@ export async function fetchEvaluationAttempts(evaluationId: number): Promise<Eva
     return data.data;
 }
 
+/**
+ * Student view of the same attempts route — the backend returns only the caller's own
+ * attempts (unpaginated) for enrolled students, keeping review permanently accessible.
+ */
+export async function fetchMyEvaluationAttempts(evaluationId: number): Promise<EvaluationAttempt[]> {
+    const { data } = await apiClient.get<{ data: EvaluationAttempt[] }>(`/evaluations/${evaluationId}/attempts`);
+    return data.data;
+}
+
+export async function fetchEvaluationOverview(evaluationId: number): Promise<EvaluationOverview> {
+    const { data } = await apiClient.get<{ data: EvaluationOverview }>(`/evaluations/${evaluationId}/overview`);
+    return data.data;
+}
+
 export async function startAttempt(evaluationId: number): Promise<StartAttemptResponse> {
     const { data } = await apiClient.post<{ data: StartAttemptResponse }>(`/evaluations/${evaluationId}/attempts`);
     return data.data;
@@ -191,6 +209,11 @@ export async function startAttempt(evaluationId: number): Promise<StartAttemptRe
 
 export async function fetchAttempt(attemptId: number): Promise<EvaluationAttempt> {
     const { data } = await apiClient.get<{ data: EvaluationAttempt }>(`/attempts/${attemptId}`);
+    return data.data;
+}
+
+export async function fetchAttemptReview(attemptId: number): Promise<AttemptReview> {
+    const { data } = await apiClient.get<{ data: AttemptReview }>(`/attempts/${attemptId}/review`);
     return data.data;
 }
 

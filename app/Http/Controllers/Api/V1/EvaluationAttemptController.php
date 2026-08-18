@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\GradeEvaluationAttemptRequest;
 use App\Http\Requests\Api\V1\SubmitEvaluationAttemptRequest;
 use App\Http\Resources\AttemptQuestionResource;
+use App\Http\Resources\AttemptReviewResource;
 use App\Http\Resources\EvaluationAttemptResource;
 use App\Models\Evaluation;
 use App\Models\EvaluationAttempt;
@@ -22,13 +23,26 @@ final class EvaluationAttemptController extends Controller
 
     /**
      * Instructor/admin: every attempt on this evaluation, most recent first — the grading
-     * queue for manual (short-answer/essay) scoring pulls from here.
+     * queue for manual (short-answer/essay) scoring pulls from here. Students: only their
+     * own attempts — the persistent history that keeps post-attempt review accessible
+     * across sessions.
      */
-    public function index(Evaluation $evaluation): AnonymousResourceCollection
+    public function index(Request $request, Evaluation $evaluation): AnonymousResourceCollection
     {
-        $this->authorize('grade', $evaluation);
+        $user = $request->user();
 
-        $attempts = $evaluation->attempts()->with(['student', 'answers'])->latest('submitted_at')->paginate(20);
+        if ($user->can('grade', $evaluation)) {
+            $attempts = $evaluation->attempts()->with(['student', 'answers'])->latest('submitted_at')->paginate(20);
+
+            return EvaluationAttemptResource::collection($attempts);
+        }
+
+        abort_unless($user->can('attempt', $evaluation), 403);
+
+        $attempts = $evaluation->attempts()
+            ->where('student_id', $user->id)
+            ->latest('started_at')
+            ->get();
 
         return EvaluationAttemptResource::collection($attempts);
     }
@@ -65,6 +79,21 @@ final class EvaluationAttemptController extends Controller
         $this->authorize('view', $attempt);
 
         return new EvaluationAttemptResource($attempt->load('answers'));
+    }
+
+    /**
+     * Read-only result breakdown for a completed attempt — includes the answer key, so it
+     * is hard-gated to submitted attempts and to viewers allowed by the 'view' policy
+     * (attempt owner, course instructor, admin). In-progress attempts 422 here, never
+     * leaking the key mid-attempt.
+     */
+    public function review(Request $request, EvaluationAttempt $attempt): AttemptReviewResource
+    {
+        $this->authorize('view', $attempt);
+
+        abort_unless($attempt->isCompleted(), 422, 'This attempt has not been submitted yet.');
+
+        return new AttemptReviewResource($attempt->load('answers.question.options'));
     }
 
     public function submit(SubmitEvaluationAttemptRequest $request, EvaluationAttempt $attempt): EvaluationAttemptResource

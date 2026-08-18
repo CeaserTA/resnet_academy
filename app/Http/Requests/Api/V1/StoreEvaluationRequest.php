@@ -20,6 +20,7 @@ final class StoreEvaluationRequest extends FormRequest
         return [
             'title' => ['required', 'string', 'max:200'],
             'description' => ['nullable', 'string'],
+            'instructions' => ['nullable', 'string'],
             'pass_score' => ['required', 'numeric', 'min:0', 'max:100'],
             'max_attempts' => ['nullable', 'integer', 'min:1'],
             'time_limit_minutes' => ['nullable', 'integer', 'min:1'],

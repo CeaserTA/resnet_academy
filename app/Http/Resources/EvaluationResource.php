@@ -26,6 +26,7 @@ final class EvaluationResource extends JsonResource
             'course_id' => $this->module?->course_id,
             'title' => $this->title,
             'description' => $this->description,
+            'instructions' => $this->instructions,
             'pass_score' => $this->pass_score,
             'max_attempts' => $this->max_attempts,
             'time_limit_minutes' => $this->time_limit_minutes,

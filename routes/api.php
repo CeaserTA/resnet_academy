@@ -182,12 +182,14 @@ Route::prefix('v1')->group(function (): void {
         // answer-key-free shape (AttemptQuestionResource) via EvaluationAttemptController.
         Route::post('/modules/{module}/evaluations', [EvaluationController::class, 'store']);
         Route::get('/evaluations/{evaluation}', [EvaluationController::class, 'show']);
+        Route::get('/evaluations/{evaluation}/overview', [EvaluationController::class, 'overview']);
         Route::patch('/evaluations/{evaluation}', [EvaluationController::class, 'update']);
         Route::delete('/evaluations/{evaluation}', [EvaluationController::class, 'destroy']);
 
         Route::get('/evaluations/{evaluation}/attempts', [EvaluationAttemptController::class, 'index']);
         Route::post('/evaluations/{evaluation}/attempts', [EvaluationAttemptController::class, 'start']);
         Route::get('/attempts/{attempt}', [EvaluationAttemptController::class, 'show']);
+        Route::get('/attempts/{attempt}/review', [EvaluationAttemptController::class, 'review']);
         Route::post('/attempts/{attempt}/submit', [EvaluationAttemptController::class, 'submit']);
         Route::post('/attempts/{attempt}/grade', [EvaluationAttemptController::class, 'grade']);
 

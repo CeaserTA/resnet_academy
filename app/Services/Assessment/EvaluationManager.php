@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\DB;
 final class EvaluationManager
 {
     private const FIELDS = [
-        'title', 'description', 'pass_score', 'max_attempts', 'time_limit_minutes',
+        'title', 'description', 'instructions', 'pass_score', 'max_attempts', 'time_limit_minutes',
         'randomize_questions', 'questions_per_attempt', 'available_from', 'available_until',
     ];
 

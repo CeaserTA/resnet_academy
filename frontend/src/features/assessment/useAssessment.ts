@@ -11,9 +11,12 @@ import {
     fetchAssignment,
     fetchAssignmentSubmissions,
     fetchAttempt,
+    fetchAttemptReview,
     fetchEvaluation,
     fetchEvaluationAttempts,
+    fetchEvaluationOverview,
     fetchGradebook,
+    fetchMyEvaluationAttempts,
     fetchQuestionBanks,
     gradeAttempt,
     gradeSubmission,
@@ -130,10 +133,35 @@ export function useEvaluationAttempts(evaluationId: number) {
     });
 }
 
+/** Student's own attempt history for an evaluation — persists review access across sessions. */
+export function useMyEvaluationAttempts(evaluationId: number) {
+    return useQuery({
+        queryKey: ['evaluations', evaluationId, 'myAttempts'],
+        queryFn: () => fetchMyEvaluationAttempts(evaluationId),
+        enabled: Number.isFinite(evaluationId),
+    });
+}
+
+export function useEvaluationOverview(evaluationId: number) {
+    return useQuery({
+        queryKey: ['evaluations', evaluationId, 'overview'],
+        queryFn: () => fetchEvaluationOverview(evaluationId),
+        enabled: Number.isFinite(evaluationId),
+    });
+}
+
 export function useAttempt(attemptId: number | null) {
     return useQuery({
         queryKey: ['attempts', attemptId],
         queryFn: () => fetchAttempt(attemptId as number),
+        enabled: attemptId !== null,
+    });
+}
+
+export function useAttemptReview(attemptId: number | null) {
+    return useQuery({
+        queryKey: ['attempts', attemptId, 'review'],
+        queryFn: () => fetchAttemptReview(attemptId as number),
         enabled: attemptId !== null,
     });
 }
@@ -152,6 +180,7 @@ export function useSubmitAttempt() {
             submitAttempt(attemptId, answers),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['modules'] });
+            queryClient.invalidateQueries({ queryKey: ['evaluations'] });
         },
     });
 }

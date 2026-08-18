@@ -20,6 +20,7 @@ final class Evaluation extends Model
         'module_id',
         'title',
         'description',
+        'instructions',
         'pass_score',
         'max_attempts',
         'time_limit_minutes',

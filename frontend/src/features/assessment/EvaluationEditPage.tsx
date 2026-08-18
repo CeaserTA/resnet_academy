@@ -107,6 +107,7 @@ function SettingsTab({ evaluation, courseId }: { evaluation: import('@/lib/api/t
 
     const [title, setTitle] = useState(evaluation.title);
     const [description, setDescription] = useState(evaluation.description ?? '');
+    const [instructions, setInstructions] = useState(evaluation.instructions ?? '');
     const [passScore, setPassScore] = useState(String(evaluation.pass_score));
     const [maxAttempts, setMaxAttempts] = useState(evaluation.max_attempts != null ? String(evaluation.max_attempts) : '');
     const [timeLimit, setTimeLimit] = useState(evaluation.time_limit_minutes != null ? String(evaluation.time_limit_minutes) : '');
@@ -132,6 +133,7 @@ function SettingsTab({ evaluation, courseId }: { evaluation: import('@/lib/api/t
                 payload: {
                     title: title.trim(),
                     description: description.trim() || null,
+                    instructions: instructions.trim() || null,
                     pass_score: Number(passScore),
                     max_attempts: maxAttempts ? Number(maxAttempts) : null,
                     time_limit_minutes: timeLimit ? Number(timeLimit) : null,
@@ -164,6 +166,13 @@ function SettingsTab({ evaluation, courseId }: { evaluation: import('@/lib/api/t
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
                 placeholder="Optional description shown to students before they start."
+            />
+            <Textarea
+                label="Instructions"
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+                rows={4}
+                placeholder="Guidelines shown on the pre-start screen (rules, materials allowed, grading notes…)."
             />
 
             <div className="grid grid-cols-2 gap-4">

@@ -60,4 +60,13 @@ final class EvaluationAttempt extends Model
     {
         return $this->hasMany(EvaluationAttemptAnswer::class, 'attempt_id');
     }
+
+    /**
+     * An attempt is complete once submitted — submitted_at is this schema's completion
+     * marker, and from that point the attempt's answers are strictly immutable.
+     */
+    public function isCompleted(): bool
+    {
+        return $this->submitted_at !== null;
+    }
 }
