@@ -72,15 +72,18 @@ function FileOrUrlField({
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const selected = e.target.files?.[0];
-        e.target.value = '';
+        // Don't clear the input value before reading — that would wipe the file reference.
         if (!selected) return;
 
         setFileError(null);
         if (selected.size > MAX_RESOURCE_FILE_BYTES) {
             setFileError('That file is over 20 MB. Choose a smaller one.');
+            e.target.value = '';
             return;
         }
         onFile(selected);
+        // Reset so selecting the same file again still fires onChange
+        e.target.value = '';
     };
 
     return (
@@ -103,15 +106,28 @@ function FileOrUrlField({
             {fileError && <Alert variant="error" message={fileError} className="mb-1" />}
 
             {mode === 'upload' ? (
-                <div className="flex items-center gap-2 rounded-lg border border-surface-200 bg-surface-50 px-3 py-2">
-                    <Upload className="size-4 shrink-0 text-ink-400" aria-hidden="true" />
-                    <input
-                        type="file"
-                        accept={accept}
-                        onChange={handleFileChange}
-                        className="text-sm text-ink-600 file:mr-2 file:rounded file:border-0 file:bg-blue-50 file:px-2 file:py-1 file:text-xs file:font-medium file:text-blue-700 hover:file:bg-blue-100"
-                    />
-                    {file && <span className="truncate text-xs text-ink-500">{file.name}</span>}
+                <div className="mt-1">
+                    <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-surface-200 bg-surface-50 px-3 py-2.5 transition hover:bg-surface-100">
+                        <Upload className="size-4 shrink-0 text-ink-400" aria-hidden="true" />
+                        <span className="flex min-w-0 flex-1 items-center gap-2">
+                            {file ? (
+                                <span className="truncate text-sm font-medium text-ink-900">{file.name}</span>
+                            ) : (
+                                <span className="text-sm text-ink-400">Click to choose a file…</span>
+                            )}
+                        </span>
+                        {file && (
+                            <span className="shrink-0 text-xs text-ink-400">
+                                {(file.size / 1024 / 1024).toFixed(1)} MB
+                            </span>
+                        )}
+                        <input
+                            type="file"
+                            accept={accept}
+                            onChange={handleFileChange}
+                            className="sr-only"
+                        />
+                    </label>
                 </div>
             ) : (
                 <Input label={urlLabel} type="url" value={url} onChange={(e) => onUrl(e.target.value)} required />

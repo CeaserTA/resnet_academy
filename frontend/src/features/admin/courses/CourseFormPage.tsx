@@ -192,10 +192,10 @@ export function CourseFormPage() {
     if (isEditing && isLoadingCourse) return <Spinner />;
 
     return (
-        <div className="max-w-6xl space-y-4">
+        <div className="mx-auto max-w-6xl">
 
             {/* Page header */}
-            <div>
+            <div className="mb-4">
                 <h1 className="text-lg font-semibold text-ink-900">
                     {isEditing ? 'Edit course' : 'New course'}
                 </h1>
@@ -442,7 +442,7 @@ export function CourseFormPage() {
                 </div>
 
                 {/* Submit */}
-                <div className="flex items-center gap-3 pt-1">
+                <div className="flex items-center gap-3">
                     <Button type="submit" isLoading={isSubmitting}>
                         {isEditing ? 'Save changes' : 'Create course'}
                     </Button>

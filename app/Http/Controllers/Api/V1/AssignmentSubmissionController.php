@@ -24,13 +24,27 @@ final class AssignmentSubmissionController extends Controller
     ) {}
 
     /**
-     * Instructor/admin: every submission for this assignment. Student: only their own.
+     * Instructor/admin: every submission for this assignment (gated by grade policy).
+     * Student: only their own submissions, no policy gate needed — they own the data.
      */
     public function index(Request $request, Assignment $assignment): AnonymousResourceCollection
     {
-        $this->authorize('grade', $assignment);
+        $user = $request->user();
 
-        $submissions = $assignment->submissions()->with(['student', 'rubricScores'])->latest('submitted_at')->paginate(20);
+        if ($user->role->value === 'student') {
+            $submissions = $assignment->submissions()
+                ->where('student_id', $user->id)
+                ->with(['student', 'rubricScores'])
+                ->latest('submitted_at')
+                ->paginate(20);
+        } else {
+            $this->authorize('grade', $assignment);
+
+            $submissions = $assignment->submissions()
+                ->with(['student', 'rubricScores'])
+                ->latest('submitted_at')
+                ->paginate(20);
+        }
 
         return AssignmentSubmissionResource::collection($submissions);
     }

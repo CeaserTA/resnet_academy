@@ -28,10 +28,21 @@ final class MediaStorageService
     /**
      * Stores an uploaded file under the given prefix (e.g. "profiles", "courses/12") and returns
      * the resulting relative path — never a URL — for the caller to persist on the model.
+     *
+     * Tries the R2 disk first; if that fails (e.g. credentials not configured in local dev),
+     * falls back to the local 'public' disk so development can continue without R2 set up.
      */
     public function store(UploadedFile $file, string $prefix): string
     {
-        $path = $file->store(trim($prefix, '/'), self::DISK);
+        $prefix = trim($prefix, '/');
+
+        $path = $file->store($prefix, self::DISK);
+
+        // R2 configured but upload failed — try the local public disk as a fallback
+        // so development environments without working R2 credentials don't hard-crash.
+        if ($path === false) {
+            $path = $file->store($prefix, 'public');
+        }
 
         if ($path === false) {
             throw new RuntimeException('Failed to store the uploaded file.');
@@ -64,6 +75,7 @@ final class MediaStorageService
     /**
      * Resolves a stored value to a public URL. Passes an already-absolute URL through unchanged;
      * builds one from the R2 disk's configured public base (R2_URL) for a relative path.
+     * Falls back to the local public disk URL for paths stored during local dev (no R2).
      */
     public function url(?string $path): ?string
     {
@@ -75,7 +87,13 @@ final class MediaStorageService
             return $path;
         }
 
-        return Storage::disk(self::DISK)->url($path);
+        // If the R2 disk has a usable URL config, use it; otherwise fall back to local storage.
+        $r2Url = config('filesystems.disks.r2.url');
+        if ($r2Url) {
+            return Storage::disk(self::DISK)->url($path);
+        }
+
+        return Storage::disk('public')->url($path);
     }
 
     private function isExternalUrl(string $value): bool

@@ -41,6 +41,15 @@ final class EvaluationAttemptController extends Controller
     {
         $this->authorize('attempt', $evaluation);
 
+        // Guard: an evaluation with no questions attached cannot be attempted — the submit
+        // endpoint requires at least one answer (min:1) so we'd get a 422 anyway; fail early
+        // with a clear message so the student sees why instead of a cryptic validation error.
+        abort_if(
+            $evaluation->questions()->count() === 0,
+            422,
+            'This evaluation has no questions yet. Your instructor needs to add questions before you can attempt it.',
+        );
+
         $attempt = $this->attemptService->start($request->user(), $evaluation);
         $questions = $this->attemptService->questionsFor($attempt);
 
@@ -48,8 +57,6 @@ final class EvaluationAttemptController extends Controller
             'data' => [
                 'attempt' => (new EvaluationAttemptResource($attempt))->resolve($request),
                 'questions' => AttemptQuestionResource::collection($questions)->resolve($request),
-                // Safe summary only — no questions/answer key here, those are gated to
-                // instructors/admins via EvaluationPolicy::view (EvaluationController::show).
                 'evaluation' => [
                     'id' => $evaluation->id,
                     'title' => $evaluation->title,

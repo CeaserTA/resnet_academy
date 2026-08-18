@@ -221,6 +221,18 @@ export function EvaluationTakePage() {
         return error ? <Alert variant="error" message={error} /> : <Spinner />;
     }
 
+    // Evaluation has no questions yet — guard before the student can submit an empty attempt
+    if (session.questions.length === 0) {
+        return (
+            <div className="mx-auto max-w-2xl py-12">
+                <Alert
+                    variant="error"
+                    message="This evaluation has no questions yet. Your instructor hasn't added any questions to it — check back later or contact support."
+                />
+            </div>
+        );
+    }
+
     return (
         <div className="mx-auto max-w-2xl">
             <Breadcrumbs
