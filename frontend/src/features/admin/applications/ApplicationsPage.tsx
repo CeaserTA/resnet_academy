@@ -152,16 +152,23 @@ export function ApplicationsPage() {
         'Applications',
         user?.role === 'instructor' ? 'Applications for your courses, pending first.' : 'Course applications, pending first.',
     );
-    const { data, isLoading } = useCourseApplications();
+    const [tab, setTab] = useState<Tab>('all');
+    const [page, setPage] = useState(1);
+    const { data, isLoading } = useCourseApplications({ status: tab === 'all' ? undefined : tab, page });
     const approveApplication = useApproveCourseApplication();
 
-    const [tab, setTab] = useState<Tab>('all');
     const [viewingApplication, setViewingApplication] = useState<CourseApplication | null>(null);
     const [rejectingApplication, setRejectingApplication] = useState<CourseApplication | null>(null);
 
-    const applications = [...(data ?? [])]
-        .filter((application) => tab === 'all' || application.status === tab)
-        .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
+    const applications = [...(data?.data ?? [])].sort(
+        (a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status],
+    );
+    const meta = data?.meta;
+
+    const switchTab = (nextTab: Tab) => {
+        setTab(nextTab);
+        setPage(1);
+    };
 
     return (
         <div className="space-y-4">
@@ -184,7 +191,7 @@ export function ApplicationsPage() {
                 ).map(([value, label]) => (
                     <button
                         key={value}
-                        onClick={() => setTab(value)}
+                        onClick={() => switchTab(value)}
                         className={cn(
                             'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
                             tab === value ? 'bg-blue-600 text-white shadow-sm' : 'text-ink-600 hover:text-ink-900',
@@ -278,6 +285,26 @@ export function ApplicationsPage() {
                             );
                         })}
                     </ul>
+                </div>
+            )}
+
+            {/* Pagination controls */}
+            {!isLoading && meta && meta.last_page > 1 && (
+                <div className="flex items-center justify-between">
+                    <Button variant="ghost" size="sm" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>
+                        Previous
+                    </Button>
+                    <span className="text-xs text-ink-600">
+                        Page {meta.current_page} of {meta.last_page} ({meta.total} applications)
+                    </span>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={page >= meta.last_page}
+                        onClick={() => setPage((current) => current + 1)}
+                    >
+                        Next
+                    </Button>
                 </div>
             )}
 

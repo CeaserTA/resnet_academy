@@ -85,4 +85,40 @@ final class CourseApplication extends Model
 
         return Course::query()->whereIn('id', $this->recommended_course_ids)->get();
     }
+
+    /**
+     * Batch variant of `recommendedCourses()` for lists: resolves the recommended courses of a
+     * whole page of applications with a single `whereIn` query and attaches each result set under
+     * the `recommendedCourses` relation key, so the resource can render them without issuing one
+     * query per row. The JSON column can't be a real Eloquent relation, hence this manual
+     * eager-load.
+     *
+     * @param  Collection<int, self>  $applications
+     */
+    public static function loadRecommendedCourses(Collection $applications): void
+    {
+        if ($applications->isEmpty()) {
+            return;
+        }
+
+        $courseIds = $applications
+            ->flatMap(fn (self $application): array => $application->recommended_course_ids ?? [])
+            ->unique()
+            ->values()
+            ->all();
+
+        $coursesById = $courseIds === []
+            ? collect()
+            : Course::query()->whereIn('id', $courseIds)->get()->keyBy('id');
+
+        foreach ($applications as $application) {
+            $application->setRelation(
+                'recommendedCourses',
+                collect($application->recommended_course_ids ?? [])
+                    ->map(fn (int $courseId): ?Course => $coursesById->get($courseId))
+                    ->filter()
+                    ->values(),
+            );
+        }
+    }
 }

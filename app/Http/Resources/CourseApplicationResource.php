@@ -31,7 +31,13 @@ final class CourseApplicationResource extends JsonResource
             'alternative_proof_text' => $this->alternative_proof_text,
             'rejection_reason' => $this->rejection_reason,
             'dismissed_at' => $this->dismissed_at?->toIso8601String(),
-            'recommended_courses' => CourseResource::collection($this->resource->recommendedCourses()),
+            'recommended_courses' => CourseResource::collection(
+                // List endpoints batch-load this via CourseApplication::loadRecommendedCourses();
+                // single-resource responses fall back to the per-model lookup.
+                $this->resource->relationLoaded('recommendedCourses')
+                    ? $this->resource->getRelation('recommendedCourses')
+                    : $this->resource->recommendedCourses(),
+            ),
             'reviewer' => $this->whenLoaded('reviewer', fn () => $this->reviewer
                 ? ['id' => $this->reviewer->id, 'name' => $this->reviewer->name, 'role' => $this->reviewer->role->value]
                 : null),

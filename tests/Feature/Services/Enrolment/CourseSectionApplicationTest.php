@@ -191,7 +191,7 @@ final class CourseSectionApplicationTest extends TestCase
             'status' => CourseApplicationStatus::Pending,
         ]);
 
-        $this->applicationService->approve($application, $reviewer);
+        $this->applicationService->approve($application->id, $reviewer);
 
         // Check that enrollment was created with section_id
         $this->assertDatabaseHas('enrolments', [
@@ -237,7 +237,7 @@ final class CourseSectionApplicationTest extends TestCase
         ]);
 
         // Approve first application
-        $this->applicationService->approve($application1, $reviewer);
+        $this->applicationService->approve($application1->id, $reviewer);
 
         // Check that first application is approved
         $this->assertDatabaseHas('course_applications', [
@@ -284,7 +284,7 @@ final class CourseSectionApplicationTest extends TestCase
             'status' => CourseApplicationStatus::Pending,
         ]);
 
-        $this->applicationService->approve($application1, $reviewer);
+        $this->applicationService->approve($application1->id, $reviewer);
 
         // Check audit log for auto-cancellation
         $this->assertDatabaseHas('audit_logs', [
@@ -322,7 +322,7 @@ final class CourseSectionApplicationTest extends TestCase
         ]);
 
         // Approve application for course1
-        $this->applicationService->approve($application1, $reviewer);
+        $this->applicationService->approve($application1->id, $reviewer);
 
         // Application for course2 should remain pending
         $this->assertDatabaseHas('course_applications', [
@@ -331,7 +331,7 @@ final class CourseSectionApplicationTest extends TestCase
         ]);
     }
 
-    public function test_approve_with_waitlisted_enrollment_still_cancels_other_applications(): void
+    public function test_approve_with_waitlisted_enrollment_keeps_other_applications_pending(): void
     {
         $student = User::factory()->create();
         $reviewer = User::factory()->admin()->create();
@@ -365,7 +365,7 @@ final class CourseSectionApplicationTest extends TestCase
         ]);
 
         // Approve application for full section (creates waitlisted enrollment)
-        $this->applicationService->approve($application1, $reviewer);
+        $this->applicationService->approve($application1->id, $reviewer);
 
         // Check that enrollment was waitlisted
         $this->assertDatabaseHas('enrolments', [
@@ -375,10 +375,99 @@ final class CourseSectionApplicationTest extends TestCase
             'status' => EnrolmentStatus::Waitlisted->value,
         ]);
 
-        // Other application should still be auto-cancelled
+        // The student holds no seat yet, so sibling applications must stay pending
         $this->assertDatabaseHas('course_applications', [
             'id' => $application2->id,
-            'status' => CourseApplicationStatus::Rejected->value,
+            'status' => CourseApplicationStatus::Pending->value,
+        ]);
+
+        // And the student gets the waitlist message, not the "you are enrolled" one
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $student->id,
+            'type' => 'application_waitlisted',
+            'related_entity_type' => 'course_application',
+            'related_entity_id' => $application1->id,
+        ]);
+        $this->assertDatabaseMissing('notifications', [
+            'user_id' => $student->id,
+            'type' => 'application_approved',
+        ]);
+    }
+
+    public function test_approve_sends_approved_notification_and_cancels_siblings_when_confirmed(): void
+    {
+        $student = User::factory()->create();
+        $reviewer = User::factory()->admin()->create();
+        $course = Course::factory()->create([
+            'enrolment_policy' => CourseEnrolmentPolicy::Application,
+            'price' => 100.00,
+        ]);
+        $section = CourseSection::factory()->create([
+            'course_id' => $course->id,
+            'status' => CourseSectionStatus::Open,
+            'capacity' => 10,
+            'seats_taken' => 0,
+        ]);
+
+        $application = CourseApplication::factory()->create([
+            'student_id' => $student->id,
+            'course_id' => $course->id,
+            'section_id' => $section->id,
+            'status' => CourseApplicationStatus::Pending,
+        ]);
+
+        $this->applicationService->approve($application->id, $reviewer);
+
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $student->id,
+            'type' => 'application_approved',
+            'related_entity_id' => $application->id,
+        ]);
+        $this->assertDatabaseMissing('notifications', [
+            'user_id' => $student->id,
+            'type' => 'application_waitlisted',
+        ]);
+    }
+
+    public function test_approve_rolls_back_application_when_enrolment_fails(): void
+    {
+        $student = User::factory()->create();
+        $reviewer = User::factory()->admin()->create();
+        $course = Course::factory()->create([
+            'enrolment_policy' => CourseEnrolmentPolicy::Application,
+            'price' => 100.00,
+        ]);
+        $section = CourseSection::factory()->create([
+            'course_id' => $course->id,
+            'status' => CourseSectionStatus::Closed,
+        ]);
+
+        $application = CourseApplication::factory()->create([
+            'student_id' => $student->id,
+            'course_id' => $course->id,
+            'section_id' => $section->id,
+            'status' => CourseApplicationStatus::Pending,
+        ]);
+
+        try {
+            $this->applicationService->approve($application->id, $reviewer);
+            $this->fail('Expected enrolment failure to abort the approval.');
+        } catch (ValidationException) {
+            // Expected: the closed section refuses the enrolment.
+        }
+
+        // The application must roll back to pending — never "approved" without a seat
+        $this->assertDatabaseHas('course_applications', [
+            'id' => $application->id,
+            'status' => CourseApplicationStatus::Pending->value,
+        ]);
+        $this->assertDatabaseMissing('enrolments', [
+            'student_id' => $student->id,
+            'course_id' => $course->id,
+        ]);
+        $this->assertDatabaseMissing('notifications', [
+            'user_id' => $student->id,
+            'type' => 'application_approved',
         ]);
     }
 

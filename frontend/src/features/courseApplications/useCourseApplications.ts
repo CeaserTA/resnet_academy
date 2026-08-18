@@ -12,10 +12,10 @@ import type { CourseApplication } from '@/lib/api/types';
 const ADMIN_QUERY_KEY = ['admin', 'course-applications'];
 const MINE_QUERY_KEY = ['course-applications', 'me'];
 
-export function useCourseApplications(status?: string) {
+export function useCourseApplications(params: { status?: string; page?: number } = {}) {
     return useQuery({
-        queryKey: [...ADMIN_QUERY_KEY, status],
-        queryFn: () => fetchCourseApplications(status),
+        queryKey: [...ADMIN_QUERY_KEY, params.status ?? null, params.page ?? 1],
+        queryFn: () => fetchCourseApplications(params),
     });
 }
 
