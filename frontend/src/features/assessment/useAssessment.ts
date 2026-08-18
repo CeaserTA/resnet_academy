@@ -17,6 +17,7 @@ import {
     fetchQuestionBanks,
     gradeAttempt,
     gradeSubmission,
+    importQuestionsCsv,
     startAttempt,
     submitAssignment,
     submitAttempt,
@@ -223,6 +224,15 @@ export function useDeleteQuestion(courseId: number) {
 
     return useMutation({
         mutationFn: (questionId: number) => deleteQuestion(questionId),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['courses', courseId, 'questionBanks'] }),
+    });
+}
+
+export function useImportQuestionsCsv(courseId: number) {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ bankId, file }: { bankId: number; file: File }) => importQuestionsCsv(bankId, file),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['courses', courseId, 'questionBanks'] }),
     });
 }
