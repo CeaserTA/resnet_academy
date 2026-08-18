@@ -14,6 +14,7 @@ import {
     useMarkRead,
     useRecordVideoProgress,
     useResource,
+    useCourseProgress,
 } from '@/features/learning/useLearning';
 import { useCourseSequence } from '@/features/learning/useCourseSequence';
 import { ReadingLessonView } from '@/features/learning/ReadingLessonView';
@@ -149,6 +150,12 @@ export function ResourceViewerPage() {
     const markOpened = useMarkOpened(courseId);
     const markAttendance = useMarkAttendance(courseId);
     const { flatItems } = useCourseSequence(courseId);
+
+    // Fix 3: calling useCourseProgress here guarantees the backend's evaluateCourseUnlocks()
+    // runs and creates ModuleProgress rows before any progress-write endpoint is called.
+    // Without this, a student who deep-links directly to a resource (bypassing CoursePlayerPage)
+    // would hit a 403 from assertModuleUnlocked() because no row existed yet.
+    useCourseProgress(courseId);
 
     if (isLoading || !resource) {
         return <Spinner />;

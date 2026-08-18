@@ -5,7 +5,6 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
 import { Alert } from '@/components/ui/Alert';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -20,26 +19,12 @@ interface AuthModalProps {
   onClose: () => void;
 }
 
-const roleOptions = [
-  { value: 'student', label: 'Student' },
-  { value: 'instructor', label: 'Instructor' },
-] as const;
-// Admin accounts are provisioned by existing admins via POST /api/v1/admin/users — not public signup.
-
-const expertiseOptions = [
-  { value: 'web-development', label: 'Web development' },
-  { value: 'data-analytics', label: 'Data & analytics' },
-  { value: 'ui-ux', label: 'UI/UX design' },
-];
-
 export function AuthModal({ open, mode, onModeChange, onClose }: AuthModalProps) {
   const { login, register } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<(typeof roleOptions)[number]['value']>('student');
-  const [expertise, setExpertise] = useState(expertiseOptions[0].value);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -148,38 +133,6 @@ export function AuthModal({ open, mode, onModeChange, onClose }: AuthModalProps)
                   Forgot password?
                 </button>
               </div>
-            )}
-
-            {isSignup && (
-              <div className="space-y-4 rounded-3xl border border-[#e8ecf1] bg-white p-4">
-                <p className="text-sm font-semibold text-ink-900">Choose your role</p>
-                <div className="grid grid-cols-2 gap-3">
-                  {roleOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setRole(option.value)}
-                      className={cn(
-                        'rounded-2xl border px-4 py-3 text-center transition',
-                        role === option.value
-                          ? 'border-blue-300 bg-blue-50 shadow-sm'
-                          : 'border-[#e8ecf1] bg-white hover:border-blue-200 hover:bg-blue-50',
-                      )}
-                    >
-                      <p className="text-sm font-semibold text-ink-900">{option.label}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {isSignup && role === 'instructor' && (
-              <Select
-                label="Area of expertise"
-                value={expertise}
-                options={expertiseOptions}
-                onChange={(event) => setExpertise(event.target.value)}
-              />
             )}
 
             <Button type="submit" className="w-full" isLoading={isSubmitting}>

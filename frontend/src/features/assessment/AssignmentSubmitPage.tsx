@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';
 import { Alert } from '@/components/ui/Alert';
 import { Spinner } from '@/components/ui/Spinner';
-import { ProgressBar } from '@/components/ui/ProgressBar';
 import { useCourse } from '@/features/catalogue/useCourses';
 import { ApiError } from '@/lib/api/client';
 import { useAssignment, useAssignmentSubmissions, useSubmitAssignment } from '@/features/assessment/useAssessment';
