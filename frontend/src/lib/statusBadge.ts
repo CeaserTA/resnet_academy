@@ -52,6 +52,7 @@ const courseStatusMap: Record<CourseStatus, StatusDisplay> = {
 const enrolmentStatusMap: Record<EnrolmentStatus, StatusDisplay> = {
     confirmed: { label: 'Confirmed', tone: 'success', icon: CheckCircle2 },
     withdrawn: { label: 'Withdrawn', tone: 'neutral', icon: XCircle },
+    waitlisted: { label: 'Waitlisted', tone: 'warning', icon: Clock },
 };
 
 const orderStatusMap: Record<OrderStatus, StatusDisplay> = {

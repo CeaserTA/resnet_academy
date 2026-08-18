@@ -23,7 +23,14 @@ import { useCoursePlayer } from '@/features/learning/useLearning';
 import { useProgressDashboard } from '@/features/progress/useProgress';
 import { ReviewFormModal } from '@/features/reviews/ReviewFormModal';
 import { useMyReviews } from '@/features/reviews/useReviews';
-import { describeLockedModule, findNextIncompleteItem, flattenModuleItems, itemLinkFor } from '@/lib/courseSequence';
+import {
+    describeLockedModule,
+    findNextIncompleteItem,
+    findNextIncompleteItemInUnlockedModules,
+    flattenModuleItems,
+    isCourseCompleted,
+    itemLinkFor,
+} from '@/lib/courseSequence';
 import { assignmentDueBadge } from '@/lib/statusBadge';
 import { cn } from '@/lib/utils';
 import type { Module, ModuleProgressStatus } from '@/lib/api/types';
@@ -56,31 +63,45 @@ export function CoursePlayerPage() {
         return <Spinner />;
     }
 
-    const statusFor = (moduleId: number): ModuleProgressStatus =>
-        progress.data?.find((p) => p.module_id === moduleId)?.status ?? 'locked';
-
     const sortedModules = (modules.data ?? []).slice().sort((a, b) => a.order_index - b.order_index);
     const progressByModuleId = new Map((progress.data ?? []).map((entry) => [entry.module_id, entry]));
-    const nextIncompleteItem = findNextIncompleteItem(flattenModuleItems(modules.data ?? []));
+
+    const statusFor = (moduleId: number): ModuleProgressStatus =>
+        progressByModuleId.get(moduleId)?.status ?? 'locked';
+
+    // Fix 1: use the progress-aware helper — only looks at UNLOCKED modules.
+    // This prevents the "Course completed" banner from appearing on a fresh enrolment
+    // where all modules are still locked, or on a course with empty modules.
+    const nextIncompleteItem = findNextIncompleteItemInUnlockedModules(sortedModules, progressByModuleId);
+    const courseCompleted = isCourseCompleted(sortedModules, progressByModuleId);
+
     const progressRow = progressRows?.find((row) => row.course.id === courseId);
     const overallPercent = progressRow?.percent_complete ?? 0;
     const hasCompletedCourse = !!progressRow?.certificate;
     const myReview = myReviews?.find((review) => review.course?.id === courseId);
 
-    const nextIncompleteModuleId = sortedModules.find((module) =>
-        module.items.some(
-            (item) => nextIncompleteItem && item.item_type === nextIncompleteItem.item_type && item.id === nextIncompleteItem.id,
-        ),
-    )?.id;
+    // Fix 4 (auto-expand): default open = true for any module that is not_started or in_progress.
+    // completed stays closed (review only), locked stays closed (nothing to show).
+    function isDefaultExpanded(moduleId: number): boolean {
+        const s = statusFor(moduleId);
+        return s === 'not_started' || s === 'in_progress';
+    }
 
-    function actionForModule(module: Module, status: ModuleProgressStatus): { label: string; item: ReturnType<typeof findNextIncompleteItem> } {
+    function isExpanded(moduleId: number): boolean {
+        // If the user has manually toggled, respect that; otherwise fall back to default.
+        return manualToggles[moduleId] ?? isDefaultExpanded(moduleId);
+    }
+
+    // Button label: "Open module" for active modules (as requested), "Review" for completed.
+    function actionForModule(module: Module, status: ModuleProgressStatus): {
+        label: string;
+        item: ReturnType<typeof findNextIncompleteItem>;
+    } {
         const items = flattenModuleItems([module]);
-
         if (status === 'completed') {
             return { label: 'Review', item: items[0] ?? null };
         }
-
-        return { label: 'Start Module', item: findNextIncompleteItem(items) ?? items[0] ?? null };
+        return { label: 'Open module', item: findNextIncompleteItem(items) ?? items[0] ?? null };
     }
 
     return (
@@ -108,6 +129,7 @@ export function CoursePlayerPage() {
                 </div>
             </div>
 
+            {/* Fix 1: banner only shown when genuinely completed (isCourseCompleted) */}
             {nextIncompleteItem ? (
                 <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-blue-600/30 bg-blue-50 p-3">
                     <div className="min-w-0">
@@ -121,7 +143,7 @@ export function CoursePlayerPage() {
                         </Button>
                     </Link>
                 </div>
-            ) : sortedModules.length > 0 ? (
+            ) : courseCompleted ? (
                 <div className="mt-3 flex items-center justify-between gap-2">
                     <Alert variant="success" message="You've completed this course!" className="flex-1" />
                     {hasCompletedCourse && !myReview && (
@@ -139,7 +161,7 @@ export function CoursePlayerPage() {
                     const display = statusDisplay[status];
                     const isLocked = status === 'locked';
                     const lockedReason = isLocked ? describeLockedModule(module, sortedModules, progressByModuleId) : null;
-                    const isExpanded = manualToggles[module.id] ?? false; // Collapsed by default
+                    const expanded = isExpanded(module.id);
                     const action = actionForModule(module, status);
 
                     return (
@@ -151,6 +173,7 @@ export function CoursePlayerPage() {
                                 status === 'in_progress' && 'border-blue-600 ring-1 ring-blue-600/20',
                             )}
                         >
+                            {/* Module number / status indicator */}
                             <div
                                 className={cn(
                                     'absolute -left-3 top-4 flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ring-4 ring-surface-50',
@@ -177,18 +200,23 @@ export function CoursePlayerPage() {
                                         </span>
                                     </div>
                                     <h3 className="mt-1 text-base font-semibold">{module.title}</h3>
-                                    {module.description && !isExpanded && (
-                                        <p className="mt-0.5 text-sm text-ink-600 line-clamp-1">{module.description}</p>
+                                    {module.description && (
+                                        <p className={cn('mt-0.5 text-sm text-ink-600', !expanded && 'line-clamp-1')}>
+                                            {module.description}
+                                        </p>
                                     )}
-                                    {isExpanded && module.description && (
-                                        <p className="mt-0.5 text-sm text-ink-600">{module.description}</p>
+                                    {lockedReason && (
+                                        <p className="mt-1 text-sm text-ink-600">{lockedReason}</p>
                                     )}
-                                    {lockedReason && <p className="mt-1 text-sm text-ink-600">{lockedReason}</p>}
                                 </div>
 
+                                {/* Fix 2 (button label): "Open module" for active, "Review" for completed */}
                                 {!isLocked && action.item ? (
                                     <Link to={itemLinkFor(action.item, courseId)} className="shrink-0">
-                                        <Button variant={status === 'completed' ? 'secondary' : 'primary'} size="sm">
+                                        <Button
+                                            variant={status === 'completed' ? 'secondary' : 'primary'}
+                                            size="sm"
+                                        >
                                             {action.label}
                                         </Button>
                                     </Link>
@@ -199,65 +227,73 @@ export function CoursePlayerPage() {
                                 )}
                             </div>
 
+                            {/* Expandable item list — shown for unlocked modules only */}
                             {!isLocked && module.items.length > 0 && (
                                 <>
                                     <button
                                         type="button"
-                                        onClick={() => setManualToggles((prev) => ({ ...prev, [module.id]: !isExpanded }))}
+                                        onClick={() =>
+                                            setManualToggles((prev) => ({ ...prev, [module.id]: !expanded }))
+                                        }
                                         className="mt-2 flex w-full items-center justify-between border-t border-surface-100 pt-2 text-sm font-medium text-blue-600"
                                     >
                                         <span className="flex items-center gap-1">
-                                            {isExpanded ? (
+                                            {expanded ? (
                                                 <ChevronUp className="size-4" aria-hidden="true" />
                                             ) : (
                                                 <ChevronDown className="size-4" aria-hidden="true" />
                                             )}
-                                            {module.items.length} Resource{module.items.length === 1 ? '' : 's'}
+                                            {module.items.length} item{module.items.length === 1 ? '' : 's'}
                                         </span>
                                     </button>
 
-                                    {isExpanded && (
+                                    {expanded && (
                                         <ul className="mt-1.5 flex flex-col gap-1.5">
-                                            {module.items.map((item) => (
-                                                <li key={`${item.item_type}-${item.id}`}>
-                                                    <Link
-                                                        to={itemLinkFor(item, courseId)}
-                                                        className="flex items-center justify-between rounded-md bg-surface-50 px-2.5 py-2 hover:bg-surface-100"
-                                                    >
-                                                        <span className="flex items-center gap-2 text-sm text-ink-900">
-                                                            {item.is_complete ? (
-                                                                <CheckCircle2
-                                                                    className="size-4 shrink-0 text-success-600"
-                                                                    aria-hidden="true"
-                                                                />
-                                                            ) : (
-                                                                <Circle className="size-4 shrink-0 text-ink-300" aria-hidden="true" />
-                                                            )}
-                                                            <span className="truncate">{item.title}</span>
-                                                            {item.item_type === 'assignment' && item.due_at && (() => {
-                                                                const urgency = assignmentDueBadge(item.due_at, item.is_complete);
-
-                                                                return urgency ? (
-                                                                    <Badge label={urgency.label} tone={urgency.tone} icon={urgency.icon} />
+                                            {module.items
+                                                .slice()
+                                                .sort((a, b) => a.order_index - b.order_index)
+                                                .map((item) => (
+                                                    <li key={`${item.item_type}-${item.id}`}>
+                                                        <Link
+                                                            to={itemLinkFor(item, courseId)}
+                                                            className="flex items-center justify-between rounded-md bg-surface-50 px-2.5 py-2 hover:bg-surface-100"
+                                                        >
+                                                            <span className="flex items-center gap-2 text-sm text-ink-900">
+                                                                {item.is_complete ? (
+                                                                    <CheckCircle2
+                                                                        className="size-4 shrink-0 text-success-600"
+                                                                        aria-hidden="true"
+                                                                    />
                                                                 ) : (
+                                                                    <Circle className="size-4 shrink-0 text-ink-300" aria-hidden="true" />
+                                                                )}
+                                                                <span className="truncate">{item.title}</span>
+
+                                                                {item.item_type === 'assignment' && item.due_at && (() => {
+                                                                    const urgency = assignmentDueBadge(item.due_at, item.is_complete);
+                                                                    return urgency ? (
+                                                                        <Badge label={urgency.label} tone={urgency.tone} icon={urgency.icon} />
+                                                                    ) : (
+                                                                        <span className="text-xs text-ink-600">
+                                                                            Due {new Date(item.due_at).toLocaleDateString()}
+                                                                        </span>
+                                                                    );
+                                                                })()}
+
+                                                                {item.item_type === 'evaluation' && (
                                                                     <span className="text-xs text-ink-600">
-                                                                        Due {new Date(item.due_at).toLocaleDateString()}
+                                                                        Pass {item.pass_score}%
                                                                     </span>
-                                                                );
-                                                            })()}
-                                                            {item.item_type === 'evaluation' && (
-                                                                <span className="text-xs text-ink-600">
-                                                                    Pass {item.pass_score}%
-                                                                </span>
-                                                            )}
-                                                            {!item.is_required && (
-                                                                <span className="text-xs text-ink-600">(optional)</span>
-                                                            )}
-                                                        </span>
-                                                        <ChevronRight className="size-4 shrink-0 text-ink-300" aria-hidden="true" />
-                                                    </Link>
-                                                </li>
-                                            ))}
+                                                                )}
+
+                                                                {!item.is_required && (
+                                                                    <span className="text-xs text-ink-600">(optional)</span>
+                                                                )}
+                                                            </span>
+                                                            <ChevronRight className="size-4 shrink-0 text-ink-300" aria-hidden="true" />
+                                                        </Link>
+                                                    </li>
+                                                ))}
                                         </ul>
                                     )}
                                 </>
