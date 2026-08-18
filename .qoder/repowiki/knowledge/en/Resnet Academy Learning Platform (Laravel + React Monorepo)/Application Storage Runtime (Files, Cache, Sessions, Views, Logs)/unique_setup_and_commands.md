@@ -1,1 +1,0 @@
-The directory must be writable by the web server process at runtime; no build step is required. Compiled views in `storage/framework/views/` are regenerated automatically when Blade templates change, and cache/session directories must be cleared via standard Laravel commands (`php artisan cache:clear`, `php artisan view:clear`) if stale content causes issues.

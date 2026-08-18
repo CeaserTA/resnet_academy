@@ -84,6 +84,15 @@
         @apply bg-background text-foreground font-body antialiased;
     }
 
+    /* Hide scrollbar while keeping scroll functional */
+    .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+
     h1,
     h2,
     h3,

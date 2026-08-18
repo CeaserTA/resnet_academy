@@ -1,1 +1,0 @@
-`npm run dev` starts the Vite dev server on 127.0.0.1:3000; `npm run build` runs `tsc -b` then `vite build`; unit tests via `npm test` / `npm run test:watch` (Vitest, jsdom, setup file at `src/test/setup.ts`); e2e tests via `npm run test:e2e` (Playwright config at `playwright.config.ts`). Environment variables are read from `.env` (see `.env.example`).

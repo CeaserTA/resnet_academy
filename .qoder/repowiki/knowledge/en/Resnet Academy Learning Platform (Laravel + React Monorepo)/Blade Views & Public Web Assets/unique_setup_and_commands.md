@@ -1,1 +1,0 @@
-Apache must have `mod_rewrite` enabled so `.htaccess` can route all requests through `public/index.php`; the `Authorization` and `X-XSRF-Token` headers are explicitly rewritten into `HTTP_AUTHORIZATION` and `HTTP_X_XSRF_TOKEN` for PHP consumption.

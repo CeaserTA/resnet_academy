@@ -214,7 +214,7 @@ export function CourseFormPage() {
                 )}
 
                 {/* Two-column layout */}
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start">
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
 
                     {/* LEFT — main fields (2/3) */}
                     <div className="space-y-4 lg:col-span-2">
@@ -402,7 +402,7 @@ export function CourseFormPage() {
                     </div>
 
                     {/* RIGHT — instructors (1/3) */}
-                    <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
+                    <div className="lg:self-start overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
                         <div className="border-b border-surface-100 bg-surface-50 px-4 py-3">
                             <h2 className="text-sm font-semibold text-ink-900">Instructors</h2>
                             <p className="text-xs text-ink-400">Assign one or more instructors to this course.</p>

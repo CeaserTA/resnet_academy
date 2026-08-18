@@ -1,1 +1,0 @@
-Feature tests automatically get a fresh in-memory SQLite database per test via `RefreshDatabase`; image upload tests rely on the embedded base64 PNG from `fakeImageUpload()` rather than `UploadedFile::fake()->image()` because the GD extension is not installed in this environment.

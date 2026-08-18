@@ -1,1 +1,0 @@
-Run `php artisan migrate --seed` to apply all migrations and populate the database with ~10 realistic rows per table; `php artisan db:seed --class=Database\Seeders\FeaturedReviewsSeeder` seeds only featured reviews. The included `database.sqlite` can be used directly as the dev database without running migrations.

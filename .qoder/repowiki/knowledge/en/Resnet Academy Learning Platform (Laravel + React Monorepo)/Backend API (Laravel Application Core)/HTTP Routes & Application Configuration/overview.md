@@ -1,1 +1,0 @@
-Defines the Laravel application's HTTP route surface (REST API v1, SPA auth, console commands) and environment-driven configuration for Sanctum, CORS, database, cache, queue, logging, mail, and filesystems.

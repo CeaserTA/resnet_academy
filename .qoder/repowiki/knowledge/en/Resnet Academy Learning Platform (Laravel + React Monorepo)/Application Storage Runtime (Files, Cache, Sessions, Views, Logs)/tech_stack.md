@@ -1,1 +1,0 @@
-Laravel runtime storage layout (application files under `storage/app`, framework artifacts under `storage/framework`, logs under `storage/logs`).

@@ -1,1 +1,0 @@
-`composer run setup` performs the full bootstrap: installs Composer deps, copies `.env.example` to `.env`, generates the app key, runs migrations, then installs npm dependencies and builds the frontend. `composer run dev` concurrently starts the Laravel server, queue listener, Pail log tailer, and Vite dev server. `composer run test` clears config and runs the Pest suite.

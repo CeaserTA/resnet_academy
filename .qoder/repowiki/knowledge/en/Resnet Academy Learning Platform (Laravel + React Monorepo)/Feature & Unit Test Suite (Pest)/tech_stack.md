@@ -1,1 +1,0 @@
-Pest testing framework on top of PHPUnit/Laravel Foundation testing; uses `RefreshDatabase` trait for per-test database isolation; Faker for data generation; Laravel factories (`User::factory()`, `Course::factory()`, etc.) for test fixtures.

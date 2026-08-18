@@ -1,1 +1,0 @@
-Laravel Eloquent migrations/factories/seeding with SQLite as the default development database (via `database/database.sqlite`); uses Faker via `fake()` for random data generation and PHP Enums from `App\Enums` for typed column values.

@@ -1,3 +1,0 @@
-- Blade templates use double-curly interpolation (`{{ $variable }}`) to render data passed from controllers or mailables.
-- Email and certificate templates embed all styling inline (style attributes or `<style>` blocks) rather than referencing external stylesheets, ensuring compatibility with email clients and PDF renderers.
-- Templates are grouped by purpose under `resources/views/` using subdirectories (`certificates/`, `emails/`) instead of a flat namespace.

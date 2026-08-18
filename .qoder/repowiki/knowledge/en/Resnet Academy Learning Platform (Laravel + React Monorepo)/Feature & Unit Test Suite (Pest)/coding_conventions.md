@@ -1,6 +1,0 @@
-- Feature tests are organized as Pest function-style specs using `it('describes behavior', function (): void { ... })` with `assert*` helpers and `expect(...)->toBe...` assertions.
-- Domain-scoped test directories mirror the application namespace (e.g., `Feature/Auth`, `Feature/Assessment`, `Feature/Services/Enrolment`) so each feature area has its own cohesive test file set.
-- Service and controller tests construct fixtures through Laravel factories (`User::factory()->create()`, `Course::factory()->create(...)`) and assert side effects via `assertDatabaseHas` / `assertDatabaseMissing`.
-- External side effects (mail, queues, notifications) are stubbed by faking their facades in `setUp()` before invoking the code under test.
-- Property-driven validation tests wrap repeated edge-case scenarios with `->repeat(N)` to fuzz inputs against validator rules.
-- Each test method targets a single behavioral scenario and ends with explicit assertion chains rather than relying on implicit expectations.

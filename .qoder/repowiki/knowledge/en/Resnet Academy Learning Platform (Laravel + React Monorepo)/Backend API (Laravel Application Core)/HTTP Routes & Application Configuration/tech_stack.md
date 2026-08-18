@@ -1,1 +1,0 @@
-Laravel routing + Sanctum for first-party SPA authentication (stateful cookie mode); CORS configured for a React SPA on `FRONTEND_URL`; scheduled Artisan commands for background processing.

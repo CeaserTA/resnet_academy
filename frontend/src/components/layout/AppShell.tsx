@@ -236,7 +236,7 @@ export function AppShell(): ReactNode {
                 <PageHeaderProvider>
                     <TopBar />
 
-                    <main className="flex-1 overflow-y-auto p-4 pb-20 sm:p-5 lg:pb-5">
+                    <main className="scrollbar-hide flex-1 overflow-y-auto p-4 pb-20 sm:p-5 lg:pb-5">
                         <Outlet />
                     </main>
                 </PageHeaderProvider>
