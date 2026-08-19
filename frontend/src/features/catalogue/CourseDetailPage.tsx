@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import {
     ArrowLeft,
     BookOpen,
@@ -26,6 +26,8 @@ import { useEnrol } from '@/features/enrolment/useEnrolments';
 import { useMyCourseApplications } from '@/features/courseApplications/useCourseApplications';
 import { AdvisoryEnrolModal } from '@/features/catalogue/AdvisoryEnrolModal';
 import { ApplicationModal } from '@/features/catalogue/ApplicationModal';
+import { ProfileCompletionModal } from '@/features/profile/ProfileCompletionModal';
+import { profileApi, type ProfileStatus } from '@/lib/api/profileApi';
 import { ApiError } from '@/lib/api/client';
 import type { Module } from '@/lib/api/types';
 
@@ -176,6 +178,9 @@ export function CourseDetailPage() {
     const [showAdvisoryModal, setShowAdvisoryModal] = useState(false);
     const [showApplicationModal, setShowApplicationModal] = useState(false);
     const [applicationSubmitted, setApplicationSubmitted] = useState(false);
+    const [profileStatus, setProfileStatus] = useState<ProfileStatus | null>(null);
+    const [showProfileCompletionModal, setShowProfileCompletionModal] = useState(false);
+    const [searchParams, setSearchParams] = useSearchParams();
 
     // Auto-dismiss application submitted alert after 5 seconds
     useEffect(() => {
@@ -186,6 +191,70 @@ export function CourseDetailPage() {
             return () => clearTimeout(timer);
         }
     }, [applicationSubmitted]);
+
+    const handleEnrol = async () => {
+        if (!user) {
+            // Preserve guest intent so login/register can return the student to this course
+            if (course?.enrolment_policy === 'application') {
+                sessionStorage.setItem('pending_enrolment_intent', JSON.stringify({
+                    courseId: course.id,
+                    action: 'apply',
+                }));
+            }
+            navigate('/login', { state: { from: { pathname: `/courses/${courseId}` } } });
+            return;
+        }
+        if (course?.enrolment_policy === 'advisory') { setShowAdvisoryModal(true); return; }
+        if (course?.enrolment_policy === 'application') {
+            // Gate early: check profile completeness before opening the application modal
+            try {
+                const status = await profileApi.getStatus();
+                if (status.percentage < 100) {
+                    sessionStorage.setItem('returnUrl', `/courses/${course.id}?action=apply`);
+                    setProfileStatus(status);
+                    setShowProfileCompletionModal(true);
+                    return;
+                }
+            } catch {
+                // Fail open — the backend profile.complete middleware remains authoritative
+            }
+            setShowApplicationModal(true);
+            return;
+        }
+        if (!course) return;
+        setEnrolError(null);
+        try {
+            await enrol.mutateAsync({ courseId: course.id, sectionId: selectedSectionId ?? undefined });
+            setEnrolled(true);
+        } catch (error) {
+            setEnrolError(error instanceof ApiError ? error.message : 'Could not enrol. Try again.');
+        }
+    };
+
+    // Auto-resume: continue the apply journey after login/register or profile completion
+    useEffect(() => {
+        if (!user || !course) return;
+        // Returning from the profile completion page via returnUrl
+        if (searchParams.get('action') === 'apply') {
+            // Strip the one-shot param, then re-enter the flow (profile gate runs again)
+            setSearchParams({}, { replace: true });
+            void handleEnrol();
+            return;
+        }
+        // Returning from login/register via saved guest intent
+        const rawIntent = sessionStorage.getItem('pending_enrolment_intent');
+        if (!rawIntent) return;
+        try {
+            const intent = JSON.parse(rawIntent) as { courseId?: unknown; action?: unknown };
+            if (intent.courseId === course.id && intent.action === 'apply') {
+                sessionStorage.removeItem('pending_enrolment_intent');
+                void handleEnrol();
+            }
+        } catch {
+            sessionStorage.removeItem('pending_enrolment_intent');
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user, course?.id]);
 
     if (isLoading) {
         return (
@@ -223,22 +292,6 @@ export function CourseDetailPage() {
     const hasSections = !sectionsLoading && openSections.length > 0;
     const requiresSection = course.sections_required && hasSections;
     const ctaBlocked = sectionsLoading || (requiresSection && selectedSectionId === null);
-
-    const handleEnrol = async () => {
-        if (!user) {
-            navigate('/login', { state: { from: { pathname: `/courses/${course.id}` } } });
-            return;
-        }
-        if (course.enrolment_policy === 'advisory') { setShowAdvisoryModal(true); return; }
-        if (course.enrolment_policy === 'application') { setShowApplicationModal(true); return; }
-        setEnrolError(null);
-        try {
-            await enrol.mutateAsync({ courseId: course.id, sectionId: selectedSectionId ?? undefined });
-            setEnrolled(true);
-        } catch (error) {
-            setEnrolError(error instanceof ApiError ? error.message : 'Could not enrol. Try again.');
-        }
-    };
 
     const resolvedImage = course.thumbnail_url ?? courseImageMap[course.slug] ?? null;
     const outcomeCards = learningOutcomes[course.slug] ?? [];
@@ -580,6 +633,13 @@ export function CourseDetailPage() {
                         setShowApplicationModal(false);
                         setApplicationSubmitted(true);
                     }}
+                />
+            )}
+
+            {showProfileCompletionModal && profileStatus && (
+                <ProfileCompletionModal
+                    profileStatus={profileStatus}
+                    onClose={() => setShowProfileCompletionModal(false)}
                 />
             )}
         </div>

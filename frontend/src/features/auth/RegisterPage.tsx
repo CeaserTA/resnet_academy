@@ -2,7 +2,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Link, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -28,6 +28,7 @@ type FormValues = z.infer<typeof schema>;
 export function RegisterPage() {
     const { register: registerUser } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const [formError, setFormError] = useState<string | null>(null);
 
     const {
@@ -37,12 +38,33 @@ export function RegisterPage() {
         formState: { errors, isSubmitting },
     } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
+    // Return the student to where they were headed instead of always hitting the dashboard
+    const resolveRedirectTarget = (): string => {
+        const fromPathname = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
+        if (typeof fromPathname === 'string' && fromPathname.startsWith('/')) return fromPathname;
+
+        const returnUrl = sessionStorage.getItem('returnUrl');
+        if (returnUrl) return returnUrl;
+
+        const rawIntent = sessionStorage.getItem('pending_enrolment_intent');
+        if (rawIntent) {
+            try {
+                const intent = JSON.parse(rawIntent) as { courseId?: unknown };
+                if (typeof intent.courseId === 'number') return `/courses/${intent.courseId}`;
+            } catch {
+                // Ignore malformed intent payload
+            }
+        }
+
+        return '/dashboard';
+    };
+
     const onSubmit = async (values: FormValues) => {
         setFormError(null);
 
         try {
             await registerUser(values.name, values.email, values.password, values.passwordConfirmation);
-            navigate('/dashboard', { replace: true });
+            navigate(resolveRedirectTarget(), { replace: true });
         } catch (error) {
             if (error instanceof ApiError && error.fields) {
                 Object.entries(error.fields).forEach(([field, messages]) => {

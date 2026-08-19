@@ -11,6 +11,32 @@ import { useSubmitCourseApplication } from '@/features/courseApplications/useCou
 import { ApiError } from '@/lib/api/client';
 import type { Course } from '@/lib/api/types';
 
+/**
+ * Draft persistence: answers are saved to sessionStorage as the student types, so
+ * leaving the modal (e.g. to complete the profile) never loses what was typed.
+ * Cleared strictly on successful submission.
+ */
+interface ApplicationDraft {
+    answers: string[];
+    portfolioUrl: string;
+    alternativeProofText: string;
+}
+
+function readApplicationDraft(storageKey: string): ApplicationDraft | null {
+    const saved = sessionStorage.getItem(storageKey);
+    if (!saved) return null;
+    try {
+        const parsed = JSON.parse(saved) as Partial<ApplicationDraft>;
+        return {
+            answers: Array.isArray(parsed.answers) ? parsed.answers.map((answer) => String(answer ?? '')) : [],
+            portfolioUrl: typeof parsed.portfolioUrl === 'string' ? parsed.portfolioUrl : '',
+            alternativeProofText: typeof parsed.alternativeProofText === 'string' ? parsed.alternativeProofText : '',
+        };
+    } catch {
+        return null;
+    }
+}
+
 export function ApplicationModal({
     course,
     onClose,
@@ -25,17 +51,33 @@ export function ApplicationModal({
     const submitApplication = useSubmitCourseApplication();
     const navigate = useNavigate();
     const questions = course.application_questions ?? [];
-    const [answers, setAnswers] = useState<string[]>(questions.map(() => ''));
-    const [portfolioUrl, setPortfolioUrl] = useState('');
-    const [alternativeProof, setAlternativeProof] = useState('');
+    const draftStorageKey = `pending_app_answers_${course.id}`;
+
+    // Restore any saved draft once on mount (lazy initializers run in order)
+    const [draft] = useState<ApplicationDraft | null>(() => readApplicationDraft(draftStorageKey));
+    const [answers, setAnswers] = useState<string[]>(() =>
+        questions.map((_, index) => draft?.answers[index] ?? ''),
+    );
+    const [portfolioUrl, setPortfolioUrl] = useState(draft?.portfolioUrl ?? '');
+    const [alternativeProof, setAlternativeProof] = useState(draft?.alternativeProofText ?? '');
     const [error, setError] = useState<string | null>(null);
     const [profileIncompleteError, setProfileIncompleteError] = useState<{
         message: string;
         missingFields: string[];
     } | null>(null);
 
+    const persistDraft = (next: ApplicationDraft) => {
+        sessionStorage.setItem(draftStorageKey, JSON.stringify({
+            answers: next.answers,
+            portfolioUrl: next.portfolioUrl,
+            alternativeProofText: next.alternativeProofText,
+        }));
+    };
+
     const handleAnswerChange = (index: number, value: string) => {
-        setAnswers((current) => current.map((answer, i) => (i === index ? value : answer)));
+        const updated = answers.map((answer, i) => (i === index ? value : answer));
+        setAnswers(updated);
+        persistDraft({ answers: updated, portfolioUrl, alternativeProofText: alternativeProof });
     };
 
     const handleSubmit = async () => {
@@ -55,6 +97,8 @@ export function ApplicationModal({
                 portfolio_url: portfolioUrl.trim() || undefined,
                 alternative_proof_text: alternativeProof.trim() || undefined,
             });
+            // Submission succeeded — the draft is now a real application, so drop it.
+            sessionStorage.removeItem(draftStorageKey);
             onSubmitted();
         } catch (err) {
             // Requirement 5.2, 5.3, 5.4: Detect 403 error with profile_incomplete code
@@ -163,7 +207,10 @@ export function ApplicationModal({
                                 type="url"
                                 placeholder="https://…"
                                 value={portfolioUrl}
-                                onChange={(e) => setPortfolioUrl(e.target.value)}
+                                onChange={(e) => {
+                                    setPortfolioUrl(e.target.value);
+                                    persistDraft({ answers, portfolioUrl: e.target.value, alternativeProofText: alternativeProof });
+                                }}
                             />
                         )}
 
@@ -174,7 +221,10 @@ export function ApplicationModal({
                                     rows={3}
                                     placeholder="No formal background? Share a side project, personal statement, or anything else that shows your readiness."
                                     value={alternativeProof}
-                                    onChange={(e) => setAlternativeProof(e.target.value)}
+                                    onChange={(e) => {
+                                        setAlternativeProof(e.target.value);
+                                        persistDraft({ answers, portfolioUrl, alternativeProofText: e.target.value });
+                                    }}
                                 />
                             </div>
                         )}

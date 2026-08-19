@@ -138,6 +138,7 @@ final class EnrolmentService
                     action: 'enrolment.waitlisted',
                     entityType: 'enrolment',
                     entityId: $enrolment->id,
+                    // @phpstan-ignore nullsafe.neverNull (same false positive as the confirmed branch above)
                     actorId: $importedBy?->id ?? $student->id,
                     meta: ['course_id' => $course->id, 'section_id' => $sectionId, 'source' => $source->value],
                 );
@@ -194,6 +195,90 @@ final class EnrolmentService
                     }
                 }
             }
+
+            return $enrolment->fresh();
+        });
+    }
+
+    /**
+     * Admin-driven status change between the three lifecycle states. Withdrawals delegate to
+     * withdraw() so seat release + waitlist promotion still happen; confirming re-runs the
+     * section capacity check and the confirmed side-effects (order, email, progress eval).
+     */
+    public function changeStatus(Enrolment $enrolment, EnrolmentStatus $newStatus, User $actor): Enrolment
+    {
+        if ($enrolment->status === $newStatus) {
+            return $enrolment;
+        }
+
+        if ($newStatus === EnrolmentStatus::Withdrawn) {
+            return $this->withdraw($enrolment, $actor);
+        }
+
+        return DB::transaction(function () use ($enrolment, $newStatus, $actor) {
+            $previousStatus = $enrolment->status;
+
+            if ($newStatus === EnrolmentStatus::Confirmed) {
+                $section = null;
+
+                if ($enrolment->section_id !== null) {
+                    $section = CourseSection::where('id', $enrolment->section_id)
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                    if ($section->capacity !== null && $section->seats_taken >= $section->capacity) {
+                        throw ValidationException::withMessages([
+                            'status' => 'This section has no free seats. Increase its capacity before confirming.',
+                        ]);
+                    }
+                }
+
+                $enrolment->update(['status' => EnrolmentStatus::Confirmed]);
+
+                if ($section !== null) {
+                    $section->increment('seats_taken');
+                }
+
+                // Waitlisted enrolments never got an order — create it on confirmation.
+                if (! $enrolment->order()->exists()) {
+                    Order::create([
+                        'student_id' => $enrolment->student_id,
+                        'course_id' => $enrolment->course_id,
+                        'enrolment_id' => $enrolment->id,
+                        'amount' => $enrolment->course->price,
+                        'currency' => $enrolment->course->currency,
+                        'status' => OrderStatus::Pending,
+                    ]);
+                }
+
+                SendEnrolmentConfirmationEmail::dispatch($enrolment->id)
+                    ->delay($enrolment->confirmation_email_due_at);
+
+                $this->progressEngine->evaluateCourseUnlocks($enrolment->student, $enrolment->course);
+            } else {
+                // Demotion to waitlisted — release the seat if one was held.
+                if ($previousStatus === EnrolmentStatus::Confirmed && $enrolment->section_id !== null) {
+                    $section = CourseSection::where('id', $enrolment->section_id)
+                        ->lockForUpdate()
+                        ->first();
+
+                    $section?->decrement('seats_taken');
+                }
+
+                $enrolment->update(['status' => EnrolmentStatus::Waitlisted]);
+            }
+
+            $this->auditLogger->log(
+                action: 'enrolment.status_changed',
+                entityType: 'enrolment',
+                entityId: $enrolment->id,
+                actorId: $actor->id,
+                meta: [
+                    'from' => $previousStatus->value,
+                    'to' => $newStatus->value,
+                    'section_id' => $enrolment->section_id,
+                ],
+            );
 
             return $enrolment->fresh();
         });

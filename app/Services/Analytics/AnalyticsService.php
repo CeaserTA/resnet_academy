@@ -244,6 +244,37 @@ final class AnalyticsService
     }
 
     /**
+     * Payments page quick stats: per-currency money totals across every order. Same raw-SQL
+     * group-by-currency shape as `revenue_by_currency` in `systemSummary()` so the numbers on
+     * `/admin/payments` can never disagree with the admin dashboard. `expected` is everything
+     * invoiced (amounts never change after creation), `received` is what's been credited so
+     * far, `outstanding` the remaining balance — statuses are always derived from those two
+     * numbers (`Order::deriveStatus()`), so aggregating them directly is the source of truth.
+     *
+     * @return array<string, mixed>
+     */
+    public function paymentSummary(): array
+    {
+        $byCurrency = DB::table('orders')
+            ->selectRaw('currency, COUNT(*) as orders')
+            ->selectRaw('SUM(amount) as expected')
+            ->selectRaw('SUM(amount_paid) as received')
+            ->selectRaw('SUM(amount - amount_paid) as outstanding')
+            ->groupBy('currency')
+            ->get()
+            ->map(fn (object $row) => [
+                'currency' => $row->currency,
+                'orders' => (int) $row->orders,
+                'expected' => (float) $row->expected,
+                'received' => (float) $row->received,
+                'outstanding' => (float) $row->outstanding,
+            ])
+            ->values();
+
+        return ['by_currency' => $byCurrency];
+    }
+
+    /**
      * Admin dashboard: system-wide counts. `at_risk_students` reuses the same grace-period/
      * inactivity rule as `courseAnalytics()` but stays a count only (no per-student mapping),
      * so it's cheap even across every course at once.

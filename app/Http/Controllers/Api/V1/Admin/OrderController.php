@@ -11,7 +11,9 @@ use App\Http\Requests\Api\V1\UpdateOrderRequest;
 use App\Http\Resources\OrderResource;
 use App\Models\Order;
 use App\Models\User;
+use App\Services\Analytics\AnalyticsService;
 use App\Services\Audit\AuditLogger;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -22,7 +24,22 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  */
 final class OrderController extends Controller
 {
-    public function __construct(private readonly AuditLogger $auditLogger) {}
+    public function __construct(
+        private readonly AuditLogger $auditLogger,
+        private readonly AnalyticsService $analyticsService,
+    ) {}
+
+    /**
+     * Quick stats for the payments page — per-currency expected/received/outstanding totals,
+     * same admin-only gate as `index()`. The aggregation lives in `AnalyticsService` so the
+     * dashboard's revenue numbers and these totals share one definition.
+     */
+    public function summary(): JsonResponse
+    {
+        $this->authorize('viewAny', User::class);
+
+        return response()->json(['data' => $this->analyticsService->paymentSummary()]);
+    }
 
     /**
      * `?status=` maps to a tab, not a raw column match — a "pending" (Receivables) row is either

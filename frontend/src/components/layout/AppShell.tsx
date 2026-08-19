@@ -48,6 +48,7 @@ function navItemsForRole(role: string): NavItem[] {
             { to: '/admin/courses', label: 'Courses', icon: BookOpen },
             ...communicationItems,
             { to: '/admin/applications', label: 'Applications', icon: FileCheck, divider: true },
+            { to: '/admin/enrolments', label: 'Enrolments', icon: Users },
             { to: '/admin/reviews', label: 'Reviews', icon: Star },
             { to: '/admin/payments', label: 'Payments', icon: CreditCard },
             { to: '/admin/users', label: 'Team', icon: Users, divider: true },
@@ -61,6 +62,7 @@ function navItemsForRole(role: string): NavItem[] {
             { to: '/admin/courses', label: 'My courses', icon: BookOpen },
             ...communicationItems,
             { to: '/admin/applications', label: 'Applications', icon: FileCheck, divider: true },
+            { to: '/admin/enrolments', label: 'Enrolments', icon: Users },
         ];
     }
 

@@ -1,5 +1,10 @@
 import { apiClient } from '@/lib/api/client';
-import type { Order, OrderStatus, PaginatedResponse, PaymentSubmission } from '@/lib/api/types';
+import type { Order, OrderStatus, PaginatedResponse, PaymentSubmission, PaymentSummary } from '@/lib/api/types';
+
+export async function fetchPaymentSummary(): Promise<PaymentSummary> {
+    const { data } = await apiClient.get<{ data: PaymentSummary }>('/admin/orders/summary');
+    return data.data;
+}
 
 export async function fetchOrders(status?: OrderStatus): Promise<PaginatedResponse<Order>> {
     const { data } = await apiClient.get<PaginatedResponse<Order>>('/admin/orders', {

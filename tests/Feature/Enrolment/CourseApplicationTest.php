@@ -67,8 +67,8 @@ it('rejects a duplicate pending application to the same course', function (): vo
     $student = User::factory()->student()->create();
     $course = Course::factory()->create(['enrolment_policy' => CourseEnrolmentPolicy::Application]);
 
-    $this->actingAs($student)->postJson('/api/v1/course-applications', ['course_id' => $course->id])->assertCreated();
-    $response = $this->actingAs($student)->postJson('/api/v1/course-applications', ['course_id' => $course->id]);
+    $this->actingAs($student)->postJson('/api/v1/course-applications', ['course_id' => $course->id, 'answers' => []])->assertCreated();
+    $response = $this->actingAs($student)->postJson('/api/v1/course-applications', ['course_id' => $course->id, 'answers' => []]);
 
     $response->assertUnprocessable();
 });

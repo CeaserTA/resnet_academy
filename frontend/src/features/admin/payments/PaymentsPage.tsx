@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, CheckCircle2, CreditCard, Eye, Image as ImageIcon, ReceiptText, X } from 'lucide-react';
+import { Check, CheckCircle2, CircleDollarSign, CreditCard, Eye, Hourglass, Image as ImageIcon, ReceiptText, Wallet, X } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
@@ -7,16 +7,18 @@ import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Modal } from '@/components/ui/Modal';
+import { VolumeCard } from '@/components/dashboard/VolumeCard';
 import { cn } from '@/lib/utils';
 import {
     useConfirmPaymentSubmission,
     useOrders,
+    usePaymentSummary,
     useRejectPaymentSubmission,
     useUpdateOrder,
 } from '@/features/admin/payments/useAdminPayments';
 import { orderStatusDisplay, paymentSubmissionStatusDisplay } from '@/lib/statusBadge';
 import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
-import type { Order, OrderStatus } from '@/lib/api/types';
+import type { Order, OrderStatus, PaymentSummaryCurrency } from '@/lib/api/types';
 
 type Tab = OrderStatus;
 
@@ -28,6 +30,54 @@ const TABS: [Tab, string][] = [
 
 function formatAmount(amount: string | number, currency: string): string {
     return new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 }).format(Number(amount));
+}
+
+// Same compact K/M formatting as the admin dashboard's Revenue card, so the quick
+// stats read identically on both screens.
+function formatCurrencyCompact(amount: number, currency: string): string {
+    if (amount >= 1_000_000) return `${currency} ${(amount / 1_000_000).toFixed(1)}M`;
+    if (amount >= 1_000) return `${currency} ${(amount / 1_000).toFixed(1)}K`;
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 0 }).format(amount);
+}
+
+function PaymentQuickStats() {
+    const { data } = usePaymentSummary();
+    const byCurrency = data?.by_currency ?? [];
+
+    const totalOrders = byCurrency.reduce((sum, row) => sum + row.orders, 0);
+    const expectedTotal = byCurrency.reduce((sum, row) => sum + row.expected, 0);
+    const receivedTotal = byCurrency.reduce((sum, row) => sum + row.received, 0);
+    const collectedPercent = expectedTotal > 0 ? Math.round((receivedTotal / expectedTotal) * 100) : null;
+
+    // One formatted amount per currency (multi-currency joins, single-currency stays clean)
+    const statValue = (field: keyof Pick<PaymentSummaryCurrency, 'expected' | 'received' | 'outstanding'>): string =>
+        byCurrency.length > 0 ? byCurrency.map((row) => formatCurrencyCompact(row[field], row.currency)).join('  ') : '—';
+
+    return (
+        <section>
+            <p className="mb-2.5 text-xs font-semibold uppercase tracking-widest text-ink-400">Quick stats</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <VolumeCard
+                    icon={CircleDollarSign}
+                    label="Expected to collect"
+                    value={statValue('expected')}
+                    sub={byCurrency.length > 0 ? `${totalOrders} orders invoiced` : 'No orders yet'}
+                />
+                <VolumeCard
+                    icon={Wallet}
+                    label="Received"
+                    value={statValue('received')}
+                    sub={collectedPercent !== null ? `${collectedPercent}% of expected` : undefined}
+                />
+                <VolumeCard
+                    icon={Hourglass}
+                    label="Outstanding"
+                    value={statValue('outstanding')}
+                    sub={collectedPercent !== null ? `${100 - collectedPercent}% of expected` : undefined}
+                />
+            </div>
+        </section>
+    );
 }
 
 function ViewOrderModal({ order, onClose }: { order: Order; onClose: () => void }) {
@@ -196,6 +246,8 @@ export function PaymentsPage() {
                 <h1 className="text-lg font-semibold text-ink-900">Payments</h1>
                 <p className="text-xs text-ink-400">Every order across every student.</p>
             </div>
+
+            <PaymentQuickStats />
 
             {/* Segmented tab bar */}
             <div className="flex items-center gap-0.5 rounded-lg border border-surface-100 bg-surface-50 p-0.5 self-start">

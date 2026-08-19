@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -45,13 +45,30 @@ vi.mock('@/features/courseApplications/useCourseApplications', () => ({
     })),
 }));
 
+// Mock profile status API (used by the pre-application profile completeness gate)
+const { mockGetProfileStatus } = vi.hoisted(() => ({ mockGetProfileStatus: vi.fn() }));
+vi.mock('@/lib/api/profileApi', () => ({
+    profileApi: {
+        getStatus: mockGetProfileStatus,
+    },
+}));
+
+// Mock ApplicationModal so tests can simulate submission without the real form
+vi.mock('@/features/catalogue/ApplicationModal', () => ({
+    ApplicationModal: ({ onSubmitted }: { onSubmitted: () => void }) => (
+        <div data-testid="application-modal">
+            <button onClick={onSubmitted}>Submit Mock Application</button>
+        </div>
+    ),
+}));
+
 vi.mock('@/lib/auth/AuthContext', async (importOriginal) => {
     const actual = await importOriginal<typeof import('@/lib/auth/AuthContext')>();
     return {
         ...actual,
         useAuth: vi.fn(() => ({
-            user: mockStudent,
-            isAuthenticated: true,
+            user: mockAuthUser,
+            isAuthenticated: mockAuthUser !== null,
         })),
     };
 });
@@ -111,7 +128,16 @@ mockCourseData = { ...mockCourse };
 mockSectionsData = [];
 mockSectionsLoading = false;
 
-function renderPage() {
+// Mutable auth user — tests can switch between authenticated student and guest
+let mockAuthUser: User | null = mockStudent;
+
+const completeProfileStatus = {
+    percentage: 100,
+    missing: [],
+    completed: ['name', 'email', 'phone', 'country', 'city', 'highest_qualification'],
+};
+
+function renderPage(initialEntries: string[] = ['/courses/1']) {
     const queryClient = new QueryClient({
         defaultOptions: {
             queries: { retry: false },
@@ -121,9 +147,10 @@ function renderPage() {
     return render(
         <QueryClientProvider client={queryClient}>
             <AuthProvider>
-                <MemoryRouter initialEntries={['/courses/1']}>
+                <MemoryRouter initialEntries={initialEntries}>
                     <Routes>
                         <Route path="/courses/:id" element={<CourseDetailPage />} />
+                        <Route path="/login" element={<div>Login page</div>} />
                     </Routes>
                 </MemoryRouter>
             </AuthProvider>
@@ -134,19 +161,13 @@ function renderPage() {
 describe('CourseDetailPage - Application Submission Confirmation', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockAuthUser = mockStudent;
+        mockGetProfileStatus.mockResolvedValue(completeProfileStatus);
+        sessionStorage.clear();
     });
 
     it('shows success alert after application submission', async () => {
         const user = userEvent.setup();
-        
-        // Mock ApplicationModal to simulate successful submission
-        vi.mock('@/features/catalogue/ApplicationModal', () => ({
-            ApplicationModal: ({ onSubmitted }: { onSubmitted: () => void }) => (
-                <div data-testid="application-modal">
-                    <button onClick={onSubmitted}>Submit Mock Application</button>
-                </div>
-            ),
-        }));
 
         renderPage();
 
@@ -167,14 +188,6 @@ describe('CourseDetailPage - Application Submission Confirmation', () => {
 
     it('allows manual dismissal of success alert', async () => {
         const user = userEvent.setup();
-        
-        vi.mock('@/features/catalogue/ApplicationModal', () => ({
-            ApplicationModal: ({ onSubmitted }: { onSubmitted: () => void }) => (
-                <div data-testid="application-modal">
-                    <button onClick={onSubmitted}>Submit Mock Application</button>
-                </div>
-            ),
-        }));
 
         renderPage();
 
@@ -200,45 +213,43 @@ describe('CourseDetailPage - Application Submission Confirmation', () => {
     });
 
     it('auto-dismisses success alert after 5 seconds', async () => {
+        // Fake timers break findByText/waitFor polling, so drive the flow with
+        // synchronous fireEvent + act instead, and always restore real timers.
         vi.useFakeTimers();
-        const user = userEvent.setup({ delay: null }); // Disable delay for fake timers
-        
-        vi.mock('@/features/catalogue/ApplicationModal', () => ({
-            ApplicationModal: ({ onSubmitted }: { onSubmitted: () => void }) => (
-                <div data-testid="application-modal">
-                    <button onClick={onSubmitted}>Submit Mock Application</button>
-                </div>
-            ),
-        }));
+        try {
+            renderPage();
 
-        renderPage();
+            // Course data is mocked synchronously, so the CTA renders immediately
+            await act(async () => {
+                fireEvent.click(screen.getByText('Apply to enrol'));
+            });
 
-        const applyButton = await screen.findByText('Apply to enrol');
-        await user.click(applyButton);
+            await act(async () => {
+                fireEvent.click(screen.getByText('Submit Mock Application'));
+            });
 
-        const submitButton = screen.getByText('Submit Mock Application');
-        await user.click(submitButton);
-
-        // Alert should appear
-        await waitFor(() => {
+            // Alert should appear
             expect(screen.getByText(/Application submitted!/)).toBeInTheDocument();
-        });
 
-        // Fast-forward 5 seconds
-        vi.advanceTimersByTime(5000);
+            // Fast-forward 5 seconds
+            await act(async () => {
+                vi.advanceTimersByTime(5000);
+            });
 
-        // Alert should be gone
-        await waitFor(() => {
+            // Alert should be gone
             expect(screen.queryByText(/Application submitted!/)).not.toBeInTheDocument();
-        });
-
-        vi.useRealTimers();
+        } finally {
+            vi.useRealTimers();
+        }
     });
 });
 
 describe('CourseDetailPage - CTA Gating with sections_required', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockAuthUser = mockStudent;
+        mockGetProfileStatus.mockResolvedValue(completeProfileStatus);
+        sessionStorage.clear();
         // Reset to defaults
         mockSectionsData = [];
         mockSectionsLoading = false;
@@ -346,5 +357,96 @@ describe('CourseDetailPage - CTA Gating with sections_required', () => {
         await waitFor(() => {
             expect(screen.queryByText(/Optional: choose a section to join a cohort, or enroll self-paced below/i)).not.toBeInTheDocument();
         });
+    });
+});
+
+describe('CourseDetailPage - Application Journey & State Retention', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockAuthUser = mockStudent;
+        mockGetProfileStatus.mockResolvedValue(completeProfileStatus);
+        mockSectionsData = [];
+        mockSectionsLoading = false;
+        mockCourseData = { ...mockCourse };
+        sessionStorage.clear();
+    });
+
+    it('blocks the application modal and shows profile completion when the profile is incomplete', async () => {
+        mockGetProfileStatus.mockResolvedValue({
+            percentage: 50,
+            missing: ['phone', 'city'],
+            completed: ['name', 'email', 'country', 'highest_qualification'],
+        });
+        const user = userEvent.setup();
+
+        renderPage();
+
+        await user.click(await screen.findByText('Apply to enrol'));
+
+        // Profile completion modal opens instead of the application modal
+        await waitFor(() => {
+            expect(screen.getByRole('dialog', { name: 'Complete your profile' })).toBeInTheDocument();
+        });
+        expect(screen.queryByTestId('application-modal')).not.toBeInTheDocument();
+        // returnUrl points back to this course with the apply action
+        expect(sessionStorage.getItem('returnUrl')).toBe('/courses/1?action=apply');
+    });
+
+    it('opens the application modal directly when the profile is complete', async () => {
+        const user = userEvent.setup();
+
+        renderPage();
+
+        await user.click(await screen.findByText('Apply to enrol'));
+
+        expect(await screen.findByTestId('application-modal')).toBeInTheDocument();
+        expect(screen.queryByRole('dialog', { name: 'Complete your profile' })).not.toBeInTheDocument();
+    });
+
+    it('saves guest intent and redirects to login when unauthenticated', async () => {
+        mockAuthUser = null;
+        const user = userEvent.setup();
+
+        renderPage();
+
+        await user.click(await screen.findByText('Apply to enrol'));
+
+        await waitFor(() => {
+            expect(JSON.parse(sessionStorage.getItem('pending_enrolment_intent') ?? 'null')).toEqual({
+                courseId: 1,
+                action: 'apply',
+            });
+        });
+        // Navigated to /login
+        await waitFor(() => {
+            expect(screen.getByText('Login page')).toBeInTheDocument();
+        });
+    });
+
+    it('auto-resumes the application flow when guest intent matches the current course', async () => {
+        sessionStorage.setItem('pending_enrolment_intent', JSON.stringify({ courseId: 1, action: 'apply' }));
+
+        renderPage();
+
+        // Application modal opens automatically and the intent is consumed
+        expect(await screen.findByTestId('application-modal')).toBeInTheDocument();
+        expect(sessionStorage.getItem('pending_enrolment_intent')).toBeNull();
+    });
+
+    it('ignores guest intent for a different course', async () => {
+        sessionStorage.setItem('pending_enrolment_intent', JSON.stringify({ courseId: 999, action: 'apply' }));
+
+        renderPage();
+
+        await screen.findByText('Apply to enrol');
+        expect(screen.queryByTestId('application-modal')).not.toBeInTheDocument();
+        // Intent for another course is left untouched
+        expect(sessionStorage.getItem('pending_enrolment_intent')).not.toBeNull();
+    });
+
+    it('auto-resumes the application flow when returning with the action=apply query param', async () => {
+        renderPage(['/courses/1?action=apply']);
+
+        expect(await screen.findByTestId('application-modal')).toBeInTheDocument();
     });
 });

@@ -43,6 +43,35 @@ it('denies a non-admin from listing orders', function (): void {
     $this->actingAs($student)->getJson('/api/v1/admin/orders')->assertForbidden();
 });
 
+it('summarizes expected, received and outstanding totals per currency', function (): void {
+    $admin = User::factory()->admin()->create();
+    Order::factory()->create(['amount' => '100.00', 'amount_paid' => '0.00', 'currency' => 'UGX', 'status' => OrderStatus::Pending]);
+    Order::factory()->create(['amount' => '200.00', 'amount_paid' => '50.00', 'currency' => 'UGX', 'status' => OrderStatus::Partial]);
+    Order::factory()->paid()->create(['amount' => '80.00', 'amount_paid' => '80.00', 'currency' => 'USD']);
+
+    $response = $this->actingAs($admin)->getJson('/api/v1/admin/orders/summary');
+
+    $response->assertOk();
+    $response->assertJsonStructure(['data' => ['by_currency' => [['currency', 'orders', 'expected', 'received', 'outstanding']]]]);
+
+    $byCurrency = collect($response->json('data.by_currency'))->keyBy('currency');
+    // json_encode drops trailing .0 on whole-number floats, so decode as float before comparing.
+    expect($byCurrency['UGX']['orders'])->toBe(2);
+    expect((float) $byCurrency['UGX']['expected'])->toBe(300.0);
+    expect((float) $byCurrency['UGX']['received'])->toBe(50.0);
+    expect((float) $byCurrency['UGX']['outstanding'])->toBe(250.0);
+    expect($byCurrency['USD']['orders'])->toBe(1);
+    expect((float) $byCurrency['USD']['expected'])->toBe(80.0);
+    expect((float) $byCurrency['USD']['received'])->toBe(80.0);
+    expect((float) $byCurrency['USD']['outstanding'])->toBe(0.0);
+});
+
+it('denies a non-admin from viewing the payment summary', function (): void {
+    $instructor = User::factory()->instructor()->create();
+
+    $this->actingAs($instructor)->getJson('/api/v1/admin/orders/summary')->assertForbidden();
+});
+
 it('recording a partial payment moves the order to partial with the correct remaining balance', function (): void {
     $admin = User::factory()->admin()->create();
     $order = Order::factory()->create(['amount' => '100.00', 'status' => OrderStatus::Pending]);

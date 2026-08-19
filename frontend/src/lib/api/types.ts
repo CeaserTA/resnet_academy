@@ -2,7 +2,7 @@ export type UserRole = 'admin' | 'instructor' | 'student';
 export type UserStatus = 'active' | 'suspended' | 'deactivated';
 export type CourseLevel = 'beginner' | 'intermediate' | 'advanced';
 export type CourseStatus = 'draft' | 'published' | 'archived';
-export type EnrolmentStatus = 'confirmed' | 'withdrawn';
+export type EnrolmentStatus = 'confirmed' | 'waitlisted' | 'withdrawn';
 export type EnrolmentSource = 'self' | 'admin_bulk';
 export type EnrolmentPolicy = 'open' | 'advisory' | 'application';
 export type CourseApplicationStatus = 'pending' | 'approved' | 'rejected';
@@ -107,6 +107,18 @@ export interface Enrolment {
     confirmation_email_due_at: string;
     confirmation_email_sent_at: string | null;
     order: Order | null;
+}
+
+export interface AdminEnrolment {
+    id: number;
+    student: { id: number; name: string; email: string };
+    course: { id: number; title: string; enrolment_policy: EnrolmentPolicy };
+    section: { id: number; name: string } | null;
+    status: EnrolmentStatus;
+    source: EnrolmentSource;
+    progress_percent: number;
+    applied_at: string;
+    created_at: string;
 }
 
 export interface CourseApplication {
@@ -690,6 +702,18 @@ export interface AuditLogEntry {
 export interface CurrencyTotal {
     currency: string;
     total: number;
+}
+
+export interface PaymentSummaryCurrency {
+    currency: string;
+    orders: number;
+    expected: number;
+    received: number;
+    outstanding: number;
+}
+
+export interface PaymentSummary {
+    by_currency: PaymentSummaryCurrency[];
 }
 
 export interface DashboardSummary {

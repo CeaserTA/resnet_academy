@@ -21,6 +21,7 @@ import type { LucideIcon } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Spinner } from '@/components/ui/Spinner';
 import { Modal } from '@/components/ui/Modal';
+import { VolumeCard } from '@/components/dashboard/VolumeCard';
 import { useDashboardSummary } from '@/features/admin/dashboard/useDashboard';
 import { BulkImportForm } from '@/features/admin/enrolments/BulkImportForm';
 import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
@@ -69,22 +70,6 @@ function AttentionCard({ icon: Icon, label, value, sub, tone, to }: AttentionCar
     );
     if (to) return <Link to={to} className="block">{inner}</Link>;
     return inner;
-}
-
-// ─── Volume card ──────────────────────────────────────────────────────────────
-
-function VolumeCard({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string | number }) {
-    return (
-        <div className="flex flex-col gap-2 rounded-xl border border-surface-100 bg-surface-0 p-4 shadow-sm transition-all hover:shadow-md">
-            <div className="flex items-start justify-between">
-                <p className="text-xs font-medium uppercase tracking-widest text-ink-500">{label}</p>
-                <span className="flex size-7 items-center justify-center rounded-lg bg-surface-100 text-ink-400">
-                    <Icon className="size-3.5" aria-hidden="true" />
-                </span>
-            </div>
-            <p className="text-3xl font-bold tabular-nums text-ink-900">{value}</p>
-        </div>
-    );
 }
 
 // ─── Quick action ─────────────────────────────────────────────────────────────

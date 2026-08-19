@@ -37,6 +37,7 @@ import { AccountPage } from '@/features/account/AccountPage';
 import { ProfileCompletionPage } from '@/features/profile/ProfileCompletionPage';
 import { PaymentsPage } from '@/features/admin/payments/PaymentsPage';
 import { ApplicationsPage } from '@/features/admin/applications/ApplicationsPage';
+import { AdminEnrolmentsPage } from '@/features/admin/enrolments/AdminEnrolmentsPage';
 import { ReviewsPage } from '@/features/admin/reviews/ReviewsPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
@@ -114,6 +115,14 @@ function App() {
                     element={
                         <ProtectedRoute roles={['admin', 'instructor']}>
                             <ApplicationsPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="admin/enrolments"
+                    element={
+                        <ProtectedRoute roles={['admin', 'instructor']}>
+                            <AdminEnrolmentsPage />
                         </ProtectedRoute>
                     }
                 />

@@ -38,6 +38,7 @@ const createTestCourse = (overrides?: Partial<Course>): Course => ({
     application_questions: null,
     application_allow_alternative_proof: false,
     application_require_portfolio_url: false,
+    sections_required: false,
     thumbnail_url: null,
     prerequisites_text: null,
     price: '0.00',
@@ -307,5 +308,99 @@ describe('ApplicationModal', () => {
             expect(mockOnSubmitted).toHaveBeenCalled();
         });
         expect(mockOnClose).not.toHaveBeenCalled();
+    });
+});
+
+describe('ApplicationModal - draft persistence', () => {
+    const mockOnClose = vi.fn();
+    const mockOnSubmitted = vi.fn();
+    const questionCourse = () =>
+        createTestCourse({ application_questions: ['Why do you want to join?'] });
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockMutateAsync.mockReset();
+        sessionStorage.clear();
+    });
+
+    it('auto-saves answers to sessionStorage as the student types', async () => {
+        const user = userEvent.setup();
+
+        renderWithProviders(
+            <ApplicationModal course={questionCourse()} onClose={mockOnClose} onSubmitted={mockOnSubmitted} />
+        );
+
+        await user.type(screen.getByLabelText(/why do you want to join/i), 'I love code');
+
+        const stored = JSON.parse(sessionStorage.getItem('pending_app_answers_1') ?? '{}');
+        expect(stored.answers).toEqual(['I love code']);
+        expect(stored.portfolioUrl).toBe('');
+        expect(stored.alternativeProofText).toBe('');
+    });
+
+    it('restores saved draft answers on mount', () => {
+        sessionStorage.setItem('pending_app_answers_1', JSON.stringify({
+            answers: ['My saved answer'],
+            portfolioUrl: '',
+            alternativeProofText: '',
+        }));
+
+        renderWithProviders(
+            <ApplicationModal course={questionCourse()} onClose={mockOnClose} onSubmitted={mockOnSubmitted} />
+        );
+
+        expect(screen.getByLabelText(/why do you want to join/i)).toHaveValue('My saved answer');
+    });
+
+    it('ignores a corrupt draft payload instead of crashing', () => {
+        sessionStorage.setItem('pending_app_answers_1', '{not-valid-json');
+
+        renderWithProviders(
+            <ApplicationModal course={questionCourse()} onClose={mockOnClose} onSubmitted={mockOnSubmitted} />
+        );
+
+        expect(screen.getByLabelText(/why do you want to join/i)).toHaveValue('');
+    });
+
+    it('clears the draft after successful submission', async () => {
+        const user = userEvent.setup();
+        mockMutateAsync.mockResolvedValueOnce({ id: 1 });
+        sessionStorage.setItem('pending_app_answers_1', JSON.stringify({
+            answers: ['draft'],
+            portfolioUrl: '',
+            alternativeProofText: '',
+        }));
+
+        renderWithProviders(
+            <ApplicationModal course={questionCourse()} onClose={mockOnClose} onSubmitted={mockOnSubmitted} />
+        );
+
+        await user.click(screen.getByRole('button', { name: /submit application/i }));
+
+        await waitFor(() => {
+            expect(mockOnSubmitted).toHaveBeenCalled();
+        });
+        expect(sessionStorage.getItem('pending_app_answers_1')).toBeNull();
+    });
+
+    it('keeps the draft when submission fails', async () => {
+        const user = userEvent.setup();
+        mockMutateAsync.mockRejectedValueOnce(new ApiError(500, 'server_error', 'Internal server error', null));
+        sessionStorage.setItem('pending_app_answers_1', JSON.stringify({
+            answers: ['draft'],
+            portfolioUrl: '',
+            alternativeProofText: '',
+        }));
+
+        renderWithProviders(
+            <ApplicationModal course={questionCourse()} onClose={mockOnClose} onSubmitted={mockOnSubmitted} />
+        );
+
+        await user.click(screen.getByRole('button', { name: /submit application/i }));
+
+        await waitFor(() => {
+            expect(screen.getByText('Internal server error')).toBeInTheDocument();
+        });
+        expect(sessionStorage.getItem('pending_app_answers_1')).not.toBeNull();
     });
 });
