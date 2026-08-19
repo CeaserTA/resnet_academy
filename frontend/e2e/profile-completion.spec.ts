@@ -43,14 +43,13 @@ const invalidTestData = {
 };
 
 /**
- * Helper function to register a new user
+ * Helper function to register a new user via the auth modal (there is no /register page)
  */
 async function registerUser(page: Page, email: string, password: string, name: string) {
-  await page.goto('/register');
-  await page.fill('input[name="name"]', name);
-  await page.fill('input[name="email"]', email);
-  await page.fill('input[name="password"]', password);
-  await page.fill('input[name="password_confirmation"]', password);
+  await page.goto('/?auth=signup');
+  await page.getByLabel('Full name').fill(name);
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password').fill(password);
   await page.click('button[type="submit"]');
   
   // Wait for successful registration and redirect to dashboard
@@ -58,12 +57,12 @@ async function registerUser(page: Page, email: string, password: string, name: s
 }
 
 /**
- * Helper function to login an existing user
+ * Helper function to login an existing user via the auth modal (there is no /login page)
  */
 async function loginUser(page: Page, email: string, password: string) {
-  await page.goto('/login');
-  await page.fill('input[name="email"]', email);
-  await page.fill('input[name="password"]', password);
+  await page.goto('/?auth=login');
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password').fill(password);
   await page.click('button[type="submit"]');
   
   // Wait for successful login and redirect to dashboard

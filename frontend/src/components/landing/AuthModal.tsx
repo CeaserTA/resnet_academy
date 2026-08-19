@@ -17,9 +17,14 @@ interface AuthModalProps {
   mode: AuthMode;
   onModeChange: (mode: AuthMode) => void;
   onClose: () => void;
+  /**
+   * Where to send the user after a successful login/signup. Pass `null` to keep them on the
+   * current page (e.g. the course detail page resumes its apply flow via saved guest intent).
+   */
+  redirectTo?: string | null;
 }
 
-export function AuthModal({ open, mode, onModeChange, onClose }: AuthModalProps) {
+export function AuthModal({ open, mode, onModeChange, onClose, redirectTo = '/dashboard' }: AuthModalProps) {
   const { login, register } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState('');
@@ -42,7 +47,9 @@ export function AuthModal({ open, mode, onModeChange, onClose }: AuthModalProps)
         await login(email, password);
       }
       onClose();
-      navigate('/dashboard');
+      if (redirectTo) {
+        navigate(redirectTo);
+      }
     } catch (error) {
       setFormError(
         error instanceof ApiError
@@ -129,7 +136,14 @@ export function AuthModal({ open, mode, onModeChange, onClose }: AuthModalProps)
 
             {!isSignup && (
               <div className="flex justify-end text-sm">
-                <button type="button" className="text-blue-600 hover:underline">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    navigate('/forgot-password');
+                  }}
+                  className="text-blue-600 hover:underline"
+                >
                   Forgot password?
                 </button>
               </div>

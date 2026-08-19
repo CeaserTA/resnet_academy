@@ -5,8 +5,6 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { LandingPage } from '@/pages/LandingPage';
 import { AboutPage } from '@/pages/AboutPage';
 import { ContactPage } from '@/pages/ContactPage';
-import { LoginPage } from '@/features/auth/LoginPage';
-import { RegisterPage } from '@/features/auth/RegisterPage';
 import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage';
 import { VerifyEmailNoticePage } from '@/features/auth/VerifyEmailNoticePage';
@@ -67,8 +65,9 @@ function App() {
             <Route path="courses/:id" element={<CourseDetailPage />} />
             <Route path="about" element={<AboutPage />} />
             <Route path="contact" element={<ContactPage />} />
-            <Route path="login" element={<LoginPage />} />
-            <Route path="register" element={<RegisterPage />} />
+            {/* Legacy auth URLs — sign-in/signup now happen exclusively in the auth modal */}
+            <Route path="login" element={<Navigate to="/?auth=login" replace />} />
+            <Route path="register" element={<Navigate to="/?auth=signup" replace />} />
             <Route path="forgot-password" element={<ForgotPasswordPage />} />
             <Route path="reset-password" element={<ResetPasswordPage />} />
             <Route path="verify-certificate" element={<VerifyEmailNoticePage />} />

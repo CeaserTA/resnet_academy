@@ -9,7 +9,7 @@ vi.mock('@/lib/auth/AuthContext', () => ({
     useAuth: () => mockUseAuth(),
 }));
 
-it('redirects an unauthenticated visitor to /login', () => {
+it('redirects an unauthenticated visitor to the landing page auth deep link', () => {
     mockUseAuth.mockReturnValue({ user: null, isLoading: false });
 
     render(
@@ -23,12 +23,12 @@ it('redirects an unauthenticated visitor to /login', () => {
                         </ProtectedRoute>
                     }
                 />
-                <Route path="/login" element={<p>Login page</p>} />
+                <Route path="/" element={<p>Landing page</p>} />
             </Routes>
         </MemoryRouter>,
     );
 
-    expect(screen.getByText('Login page')).toBeInTheDocument();
+    expect(screen.getByText('Landing page')).toBeInTheDocument();
 });
 
 it('redirects a student away from an admin-only route', () => {

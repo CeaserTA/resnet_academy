@@ -1,10 +1,12 @@
 import { Link, Outlet } from 'react-router';
 import { GraduationCap } from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuthModal } from '@/lib/auth/AuthModalContext';
 import { Button } from '@/components/ui/Button';
 
 export function PublicLayout() {
     const { user, isLoading } = useAuth();
+    const { openAuth } = useAuthModal();
 
     return (
         <div className="flex min-h-screen flex-col">
@@ -22,12 +24,8 @@ export function PublicLayout() {
 
                         {!isLoading && !user && (
                             <>
-                                <Link to="/login">
-                                    <Button variant="ghost">Log in</Button>
-                                </Link>
-                                <Link to="/register">
-                                    <Button variant="primary">Sign up</Button>
-                                </Link>
+                                <Button variant="ghost" onClick={() => openAuth('login')}>Log in</Button>
+                                <Button variant="primary" onClick={() => openAuth('signup')}>Sign up</Button>
                             </>
                         )}
 

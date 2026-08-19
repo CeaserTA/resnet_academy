@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { expect, it, vi, beforeEach, describe } from 'vitest';
 import { CourseDetailPage } from '@/features/catalogue/CourseDetailPage';
 import { AuthProvider } from '@/lib/auth/AuthContext';
+import { AuthModalProvider } from '@/lib/auth/AuthModalContext';
 import type { Course, User } from '@/lib/api/types';
 
 // Mock data that will be updated in tests
@@ -148,10 +149,11 @@ function renderPage(initialEntries: string[] = ['/courses/1']) {
         <QueryClientProvider client={queryClient}>
             <AuthProvider>
                 <MemoryRouter initialEntries={initialEntries}>
-                    <Routes>
-                        <Route path="/courses/:id" element={<CourseDetailPage />} />
-                        <Route path="/login" element={<div>Login page</div>} />
-                    </Routes>
+                    <AuthModalProvider>
+                        <Routes>
+                            <Route path="/courses/:id" element={<CourseDetailPage />} />
+                        </Routes>
+                    </AuthModalProvider>
                 </MemoryRouter>
             </AuthProvider>
         </QueryClientProvider>,
@@ -417,9 +419,9 @@ describe('CourseDetailPage - Application Journey & State Retention', () => {
                 action: 'apply',
             });
         });
-        // Navigated to /login
+        // The auth modal opens in place (no redirect) so the saved intent can resume the flow
         await waitFor(() => {
-            expect(screen.getByText('Login page')).toBeInTheDocument();
+            expect(screen.getByText('Log in to Resnet Academy')).toBeInTheDocument();
         });
     });
 

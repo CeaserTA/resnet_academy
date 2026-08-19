@@ -1,11 +1,8 @@
-import { useState } from 'react';
 import { BookOpen, Code2, FolderOpen, GraduationCap, Globe, Rocket, TrendingUp, Users } from 'lucide-react';
 import { LandingHeader } from '@/components/layout/LandingHeader';
 import { Footer } from '@/components/landing/Footer';
-import { AuthModal, type AuthMode } from '@/components/landing/AuthModal';
+import { useAuthModal } from '@/lib/auth/AuthModalContext';
 import { Button } from '@/components/ui/Button';
-
-type ModalState = AuthMode | null;
 
 const stats = [
     { value: '95%', label: 'Course completion rate' },
@@ -101,11 +98,10 @@ const steps = [
 ];
 
 export function AboutPage() {
-    const [modalState, setModalState] = useState<ModalState>(null);
+    const { openAuth } = useAuthModal();
 
-    const handleLoginClick = () => setModalState('login');
-    const handleSignupClick = () => setModalState('signup');
-    const closeModal = () => setModalState(null);
+    const handleLoginClick = () => openAuth('login');
+    const handleSignupClick = () => openAuth('signup');
 
     return (
         <div>
@@ -380,13 +376,6 @@ export function AboutPage() {
             </main>
 
             <Footer onLoginClick={handleLoginClick} onSignupClick={handleSignupClick} />
-
-            <AuthModal
-                open={modalState !== null}
-                mode={modalState ?? 'login'}
-                onModeChange={setModalState}
-                onClose={closeModal}
-            />
         </div>
     );
 }

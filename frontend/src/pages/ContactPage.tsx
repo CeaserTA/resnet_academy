@@ -2,11 +2,9 @@ import { useState } from 'react';
 import { Building2, Mail, MapPin, Phone } from 'lucide-react';
 import { LandingHeader } from '@/components/layout/LandingHeader';
 import { Footer } from '@/components/landing/Footer';
-import { AuthModal, type AuthMode } from '@/components/landing/AuthModal';
+import { useAuthModal } from '@/lib/auth/AuthModalContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-
-type ModalState = AuthMode | null;
 
 const inquiryOptions = [
     { label: 'Course enquiry', value: 'course' },
@@ -71,7 +69,7 @@ function DarkSelect({
 // ─── ContactPage ─────────────────────────────────────────────────────────────
 
 export function ContactPage() {
-    const [modalState, setModalState] = useState<ModalState>(null);
+    const { openAuth } = useAuthModal();
     const [submitted, setSubmitted] = useState(false);
 
     // Form state
@@ -81,9 +79,8 @@ export function ContactPage() {
     const [inquiry, setInquiry] = useState('');
     const [message, setMessage] = useState('');
 
-    const handleLoginClick = () => setModalState('login');
-    const handleSignupClick = () => setModalState('signup');
-    const closeModal = () => setModalState(null);
+    const handleLoginClick = () => openAuth('login');
+    const handleSignupClick = () => openAuth('signup');
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -363,13 +360,6 @@ export function ContactPage() {
             </main>
 
             <Footer onLoginClick={handleLoginClick} onSignupClick={handleSignupClick} />
-
-            <AuthModal
-                open={modalState !== null}
-                mode={modalState ?? 'login'}
-                onModeChange={setModalState}
-                onClose={closeModal}
-            />
         </div>
     );
 }

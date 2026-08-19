@@ -1,23 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { LandingHeader } from '@/components/layout/LandingHeader';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuthModal } from '@/lib/auth/AuthModalContext';
 import { Hero } from '@/components/landing/Hero';
 import { CoursePreviews } from '@/components/landing/CoursePreviews';
 import { CohortSection } from '@/components/landing/CohortSection';
 import { Features } from '@/components/landing/Features';
 import { Testimonials } from '@/components/landing/Testimonials';
 import { Footer } from '@/components/landing/Footer';
-import { AuthModal, type AuthMode } from '@/components/landing/AuthModal';
-
-type ModalState = AuthMode | null;
 
 export function LandingPage() {
     const { user } = useAuth();
-    const [modalState, setModalState] = useState<ModalState>(null);
+    const { openAuth } = useAuthModal();
 
-    const handleLoginClick = () => setModalState('login');
-    const handleSignupClick = () => setModalState('signup');
-    const closeModal = () => setModalState(null);
+    const handleLoginClick = () => openAuth('login');
+    const handleSignupClick = () => openAuth('signup');
 
     useEffect(() => {
         if (window.location.hash === '#courses') {
@@ -54,14 +51,6 @@ export function LandingPage() {
                 {/* Footer Section */}
                 <Footer onLoginClick={handleLoginClick} onSignupClick={handleSignupClick} />
             </main>
-
-            {/* Modals */}
-            <AuthModal
-                open={modalState !== null}
-                mode={modalState ?? 'login'}
-                onModeChange={setModalState}
-                onClose={closeModal}
-            />
         </div>
     );
 }

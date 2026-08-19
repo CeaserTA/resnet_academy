@@ -23,7 +23,8 @@ export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
     }
 
     if (!user) {
-        return <Navigate to="/login" state={{ from: location }} replace />;
+        // No dedicated login page — bounce to the landing page with the auth modal deep link.
+        return <Navigate to="/?auth=login" state={{ from: location }} replace />;
     }
 
     if (roles && !roles.includes(user.role)) {

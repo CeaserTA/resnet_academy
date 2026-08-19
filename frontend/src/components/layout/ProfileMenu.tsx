@@ -21,7 +21,8 @@ export function ProfileMenu({ className }: { className?: string }) {
 
     const handleLogout = async () => {
         await logout();
-        navigate('/login');
+        // Land on the public homepage after signing out — /login is only for intentional visits.
+        navigate('/');
     };
 
     return (

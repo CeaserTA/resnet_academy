@@ -247,7 +247,7 @@ export function AccountPage() {
 
         await requestDeactivation.mutateAsync();
         await refetch();
-        navigate('/login');
+        navigate('/?auth=login');
     };
 
     const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

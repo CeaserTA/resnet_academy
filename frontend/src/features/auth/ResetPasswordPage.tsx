@@ -41,7 +41,7 @@ export function ResetPasswordPage() {
 
         try {
             await resetPassword(token, email, values.password, values.passwordConfirmation);
-            navigate('/login', { replace: true });
+            navigate('/?auth=login', { replace: true });
         } catch (error) {
             setFormError(
                 error instanceof ApiError ? error.message : 'This reset link is invalid or expired. Request a new one.',

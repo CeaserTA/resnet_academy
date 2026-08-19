@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
+import { Link, useParams, useSearchParams } from 'react-router';
 import {
     ArrowLeft,
     ArrowRight,
@@ -22,6 +22,7 @@ import { courseImageMap } from '@/features/catalogue/courseImages';
 import { useStudentSections } from '@/features/catalogue/useStudentSections';
 import { SectionPicker } from '@/features/catalogue/SectionPicker';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuthModal } from '@/lib/auth/AuthModalContext';
 import { useEnrol } from '@/features/enrolment/useEnrolments';
 import { useMyCourseApplications } from '@/features/courseApplications/useCourseApplications';
 import { AdvisoryEnrolModal } from '@/features/catalogue/AdvisoryEnrolModal';
@@ -164,11 +165,11 @@ const learningOutcomes: Record<string, { title: string; body: string }[]> = {
 export function CourseDetailPage() {
     const { id } = useParams();
     const courseId = Number(id);
-    const navigate = useNavigate();
 
     const { data: course, isLoading, isError } = useCourse(courseId);
     const { data: modules, isLoading: modulesLoading } = useCourseModules(courseId);
     const { user } = useAuth();
+    const { openAuth } = useAuthModal();
     const enrol = useEnrol();
     const { data: myApplications } = useMyCourseApplications(user?.role === 'student');
     const { openSections, isLoading: sectionsLoading } = useStudentSections(courseId);
@@ -194,14 +195,16 @@ export function CourseDetailPage() {
 
     const handleEnrol = async () => {
         if (!user) {
-            // Preserve guest intent so login/register can return the student to this course
+            // Preserve guest intent so the auto-resume effect continues the flow after login
             if (course?.enrolment_policy === 'application') {
                 sessionStorage.setItem('pending_enrolment_intent', JSON.stringify({
                     courseId: course.id,
                     action: 'apply',
                 }));
             }
-            navigate('/login', { state: { from: { pathname: `/courses/${courseId}` } } });
+            // Sign-in happens in the modal, in place — no redirect, so the saved intent can
+            // resume the apply journey once the auth query flips to the logged-in user.
+            openAuth('login', null);
             return;
         }
         if (course?.enrolment_policy === 'advisory') { setShowAdvisoryModal(true); return; }

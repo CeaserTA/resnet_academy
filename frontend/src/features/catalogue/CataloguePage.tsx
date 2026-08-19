@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { LandingHeader } from '@/components/layout/LandingHeader';
 import { Footer } from '@/components/landing/Footer';
-import { AuthModal, type AuthMode } from '@/components/landing/AuthModal';
+import { useAuthModal } from '@/lib/auth/AuthModalContext';
 import { useCategories, useCourseModules, useCourses } from '@/features/catalogue/useCourses';
 import { usePublicSections } from '@/features/sections/useSections';
 import type { PublicSection } from '@/features/sections/types';
@@ -22,10 +22,6 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { cn } from '@/lib/utils';
 import type { Course, Module } from '@/lib/api/types';
 import type { CourseFilters } from '@/features/catalogue/api';
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-type ModalState = AuthMode | null;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -342,7 +338,7 @@ function CohortSchedule() {
 
 export function CataloguePage() {
     const [searchParams] = useSearchParams();
-    const [modalState, setModalState] = useState<ModalState>(null);
+    const { openAuth } = useAuthModal();
 
     // Active filters — search is client-side only
     const [search, setSearch] = useState('');
@@ -383,8 +379,8 @@ export function CataloguePage() {
     return (
         <div className="min-h-screen bg-[#fafbfc]">
             <LandingHeader
-                onLoginClick={() => setModalState('login')}
-                onSignupClick={() => setModalState('signup')}
+                onLoginClick={() => openAuth('login')}
+                onSignupClick={() => openAuth('signup')}
             />
 
             <main>
@@ -548,15 +544,8 @@ export function CataloguePage() {
             </main>
 
             <Footer
-                onLoginClick={() => setModalState('login')}
-                onSignupClick={() => setModalState('signup')}
-            />
-
-            <AuthModal
-                open={modalState !== null}
-                mode={modalState ?? 'login'}
-                onModeChange={setModalState}
-                onClose={() => setModalState(null)}
+                onLoginClick={() => openAuth('login')}
+                onSignupClick={() => openAuth('signup')}
             />
         </div>
     );

@@ -2,13 +2,13 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Link } from 'react-router';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Alert } from '@/components/ui/Alert';
 import { Card } from '@/components/ui/Card';
 import { ApiError } from '@/lib/api/client';
 import { requestPasswordReset } from '@/features/auth/api';
+import { useAuthModal } from '@/lib/auth/AuthModalContext';
 
 const schema = z.object({
     email: z.string().min(1, 'Email is required').email('Enter a valid email address'),
@@ -17,6 +17,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export function ForgotPasswordPage() {
+    const { openAuth } = useAuthModal();
     const [sent, setSent] = useState(false);
     const [formError, setFormError] = useState<string | null>(null);
 
@@ -65,9 +66,13 @@ export function ForgotPasswordPage() {
             </Card>
 
             <p className="text-center text-sm">
-                <Link to="/login" className="text-blue-600 hover:underline">
+                <button
+                    type="button"
+                    onClick={() => openAuth('login')}
+                    className="text-blue-600 hover:underline"
+                >
                     Back to log in
-                </Link>
+                </button>
             </p>
         </div>
     );
