@@ -51,6 +51,8 @@ final class StoreCourseApplicationRequest extends FormRequest
 
         return [
             'course_id' => ['required', 'integer', Rule::exists('courses', 'id')->where('status', 'published')],
+            // The section must belong to the course being applied to — a valid section id for a
+            // different course is rejected here instead of blowing up deep inside enrol().
             'section_id' => [
                 'nullable',
                 'integer',
@@ -60,6 +62,7 @@ final class StoreCourseApplicationRequest extends FormRequest
             // receives an empty array, which "required" would reject.
             'answers' => ['present', 'array', "size:{$expectedAnswerCount}"],
             'answers.*' => ['required', 'string', 'max:2000'],
+            // Courses can demand a portfolio link — enforce it server-side, not just in the modal.
             'portfolio_url' => [
                 Rule::requiredIf($portfolioRequired),
                 'nullable',

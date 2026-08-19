@@ -30,7 +30,7 @@ export function InstructorDashboardPage() {
 
     const published = myCourses.filter((c) => c.status === 'published').length;
     const drafts = myCourses.filter((c) => c.status === 'draft').length;
-    const pending = (applications ?? []).filter((a) => a.status === 'pending').length;
+    const pending = (applications?.data ?? []).filter((a) => a.status === 'pending').length;
 
     const statusColor: Record<string, string> = {
         published: 'text-success-600',

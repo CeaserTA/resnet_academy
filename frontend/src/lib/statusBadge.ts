@@ -198,6 +198,7 @@ const notificationTypeMap: Record<string, StatusDisplay> = {
     module_unlocked: { label: 'Module unlocked', tone: 'success', icon: Unlock },
     at_risk_reminder: { label: 'At-risk check-in', tone: 'warning', icon: AlertTriangle },
     application_approved: { label: 'Application approved', tone: 'success', icon: CheckCircle2 },
+    application_waitlisted: { label: 'Application waitlisted', tone: 'warning', icon: Clock },
     application_rejected: { label: 'Application update', tone: 'warning', icon: XCircle },
 };
 

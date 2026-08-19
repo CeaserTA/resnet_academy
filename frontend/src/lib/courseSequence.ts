@@ -48,11 +48,62 @@ export function findAdjacentItems(
 }
 
 /**
- * The first item (in course order) that isn't complete yet — the "resume where I left off"
- * target for the dashboard's Continue button and the course player's Continue banner.
+ * The first incomplete item across ALL modules (locked or not). Used by the resource viewer's
+ * prev/next navigation and the dashboard card's "Continue" link where we have no progress map.
  */
 export function findNextIncompleteItem(flatItems: ModuleItem[]): ModuleItem | null {
     return flatItems.find((item) => !item.is_complete) ?? null;
+}
+
+/**
+ * The first incomplete item from UNLOCKED modules only (not_started, in_progress, completed).
+ * Used by the course player "Continue" banner so a locked module never falsely blocks the banner
+ * and a course with only locked remaining modules doesn't incorrectly show "Course completed".
+ *
+ * Returns null only when every item in every unlocked module is complete — i.e. the student
+ * has genuinely finished all content available to them right now.
+ */
+export function findNextIncompleteItemInUnlockedModules(
+    modules: Module[],
+    progressByModuleId: Map<number, ModuleProgressEntry>,
+): ModuleItem | null {
+    const sorted = modules.slice().sort((a, b) => a.order_index - b.order_index);
+
+    for (const module of sorted) {
+        const status = progressByModuleId.get(module.id)?.status;
+        // Skip modules the backend hasn't unlocked yet
+        if (!status || status === 'locked') continue;
+
+        const incomplete = module.items
+            .slice()
+            .sort((a, b) => a.order_index - b.order_index)
+            .find((item) => !item.is_complete);
+
+        if (incomplete) return incomplete;
+    }
+
+    return null;
+}
+
+/**
+ * True only when the course has at least one unlocked module AND every item in every
+ * unlocked module is complete. A course where ALL modules are still locked is "not started",
+ * not "completed" — we never show the completion banner in that case.
+ */
+export function isCourseCompleted(
+    modules: Module[],
+    progressByModuleId: Map<number, ModuleProgressEntry>,
+): boolean {
+    const unlockedModules = modules.filter((m) => {
+        const status = progressByModuleId.get(m.id)?.status;
+        return status && status !== 'locked';
+    });
+
+    if (unlockedModules.length === 0) return false;
+
+    return unlockedModules.every((m) =>
+        progressByModuleId.get(m.id)?.status === 'completed',
+    );
 }
 
 /**

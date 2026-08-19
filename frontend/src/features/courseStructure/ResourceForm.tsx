@@ -1,9 +1,21 @@
 import { lazy, Suspense, useState } from 'react';
-import { Link as LinkIcon, Upload } from 'lucide-react';
+import {
+    FileEdit,
+    Link as LinkIcon,
+    Upload,
+    Video,
+    FileText,
+    BookOpen,
+    Globe,
+    Package,
+    Radio,
+    Download,
+} from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
+import { cn } from '@/lib/utils';
 import { ApiError } from '@/lib/api/client';
 import type { ResourceType } from '@/lib/api/types';
 import type { ResourcePayload } from '@/features/courseStructure/api';
@@ -19,11 +31,25 @@ interface ResourceFormProps {
 
 const MAX_RESOURCE_FILE_BYTES = 20 * 1024 * 1024;
 
-/**
- * Shared by the document/downloadable_file `file` field and the scorm `package` field — either
- * upload a file (primary) or fall back to pasting a URL, keeping the capability the plain
- * `Input type="url"` already had rather than replacing it outright.
- */
+// ─── Resource type pill config ─────────────────────────────────────────────────
+
+const resourceTypes: {
+    value: ResourceType;
+    label: string;
+    icon: React.ElementType;
+    description: string;
+}[] = [
+        { value: 'reading', label: 'Reading', icon: BookOpen, description: 'Rich-text lesson' },
+        { value: 'video', label: 'Video', icon: Video, description: 'Bunny Stream' },
+        { value: 'document', label: 'Document', icon: FileText, description: 'PDF / DOCX / PPTX' },
+        { value: 'external_link', label: 'Link', icon: Globe, description: 'External URL' },
+        { value: 'live_session', label: 'Live', icon: Radio, description: 'Zoom / Meet' },
+        { value: 'downloadable_file', label: 'Download', icon: Download, description: 'Any file' },
+        { value: 'scorm', label: 'SCORM', icon: Package, description: 'SCORM / xAPI' },
+    ];
+
+// ─── File-or-URL field ────────────────────────────────────────────────────────
+
 function FileOrUrlField({
     label,
     urlLabel,
@@ -46,23 +72,23 @@ function FileOrUrlField({
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const selected = e.target.files?.[0];
-        e.target.value = '';
-        if (!selected) {
-            return;
-        }
+        // Don't clear the input value before reading — that would wipe the file reference.
+        if (!selected) return;
 
         setFileError(null);
         if (selected.size > MAX_RESOURCE_FILE_BYTES) {
-            setFileError('That file is over 20MB. Choose a smaller one.');
+            setFileError('That file is over 20 MB. Choose a smaller one.');
+            e.target.value = '';
             return;
         }
-
         onFile(selected);
+        // Reset so selecting the same file again still fires onChange
+        e.target.value = '';
     };
 
     return (
         <div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-1">
                 <p className="text-sm font-medium text-ink-900">{label}</p>
                 <button
                     type="button"
@@ -70,42 +96,47 @@ function FileOrUrlField({
                     className="flex items-center gap-1 text-xs text-blue-600 hover:underline"
                 >
                     {mode === 'upload' ? (
-                        <>
-                            <LinkIcon className="size-3" aria-hidden="true" />
-                            Paste a URL instead
-                        </>
+                        <><LinkIcon className="size-3" aria-hidden="true" />Paste a URL instead</>
                     ) : (
-                        <>
-                            <Upload className="size-3" aria-hidden="true" />
-                            Upload a file instead
-                        </>
+                        <><Upload className="size-3" aria-hidden="true" />Upload a file instead</>
                     )}
                 </button>
             </div>
 
-            {fileError && <Alert variant="error" message={fileError} className="mt-1" />}
+            {fileError && <Alert variant="error" message={fileError} className="mb-1" />}
 
             {mode === 'upload' ? (
-                <div className="mt-1 flex items-center gap-2">
-                    <input type="file" accept={accept} onChange={handleFileChange} className="text-sm text-ink-600" />
-                    {file && <span className="text-xs text-ink-600">{file.name}</span>}
+                <div className="mt-1">
+                    <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-surface-200 bg-surface-50 px-3 py-2.5 transition hover:bg-surface-100">
+                        <Upload className="size-4 shrink-0 text-ink-400" aria-hidden="true" />
+                        <span className="flex min-w-0 flex-1 items-center gap-2">
+                            {file ? (
+                                <span className="truncate text-sm font-medium text-ink-900">{file.name}</span>
+                            ) : (
+                                <span className="text-sm text-ink-400">Click to choose a file…</span>
+                            )}
+                        </span>
+                        {file && (
+                            <span className="shrink-0 text-xs text-ink-400">
+                                {(file.size / 1024 / 1024).toFixed(1)} MB
+                            </span>
+                        )}
+                        <input
+                            type="file"
+                            accept={accept}
+                            onChange={handleFileChange}
+                            className="sr-only"
+                        />
+                    </label>
                 </div>
             ) : (
-                <Input label={urlLabel} type="url" value={url} onChange={(e) => onUrl(e.target.value)} required className="mt-1" />
+                <Input label={urlLabel} type="url" value={url} onChange={(e) => onUrl(e.target.value)} required />
             )}
         </div>
     );
 }
 
-const typeLabels: Record<ResourceType, string> = {
-    video: 'Video',
-    document: 'Document (PDF/PPTX/DOCX)',
-    reading: 'Reading / text lesson',
-    external_link: 'External link',
-    scorm: 'SCORM/xAPI package',
-    live_session: 'Live session',
-    downloadable_file: 'Downloadable file',
-};
+// ─── Main form ────────────────────────────────────────────────────────────────
 
 /**
  * One form, fields shown depend on `type` — mirrors StoreResourceRequest's conditional
@@ -128,8 +159,6 @@ export function ResourceForm({ onSubmit, onCancel }: ResourceFormProps) {
         e.preventDefault();
         setError(null);
 
-        // The rich text editor has no native `required` attribute to lean on (unlike the plain
-        // textarea it replaced), so this mirrors the backend's `required_if:type,reading` rule.
         if (type === 'reading' && !(fields.content_html ?? '').replace(/<[^>]+>/g, '').trim()) {
             setError('Lesson content is required.');
             return;
@@ -143,10 +172,6 @@ export function ResourceForm({ onSubmit, onCancel }: ResourceFormProps) {
                 title,
                 is_required: isRequired,
                 ...fields,
-                // These selects show a default option but never fire onChange (and so never land
-                // in `fields`) unless the user actually picks something else — this fills in the
-                // same default the UI already implies, rather than silently submitting nothing
-                // and hitting the backend's `required_if` rule.
                 ...(type === 'document' ? { file_type: fields.file_type ?? 'pdf' } : {}),
                 ...(type === 'scorm' ? { standard: fields.standard ?? 'scorm_2004' } : {}),
                 ...(type === 'live_session' ? { provider: fields.provider ?? 'zoom' } : {}),
@@ -160,154 +185,194 @@ export function ResourceForm({ onSubmit, onCancel }: ResourceFormProps) {
         }
     };
 
-    return (
-        <form
-            onSubmit={handleSubmit}
-            className="flex flex-col gap-3 rounded-md border border-surface-100 bg-surface-50 p-4"
-        >
-            {error && <Alert variant="error" message={error} />}
+    const activeType = resourceTypes.find((t) => t.value === type)!;
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Select label="Type" value={type} onChange={(e) => setType(e.target.value as ResourceType)}>
-                    {Object.entries(typeLabels).map(([value, label]) => (
-                        <option key={value} value={value}>
-                            {label}
-                        </option>
-                    ))}
-                </Select>
-                <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} required />
+    return (
+        <form onSubmit={handleSubmit} className="flex flex-col">
+            {/* ── Coloured header banner ── */}
+            <div className="flex items-center gap-3 rounded-t-lg bg-blue-50 px-5 py-4 border-b border-blue-100">
+                <span className="flex size-9 items-center justify-center rounded-lg bg-blue-100">
+                    <FileEdit className="size-4 text-blue-600" aria-hidden="true" />
+                </span>
+                <div>
+                    <p className="text-sm font-semibold text-blue-900">New resource</p>
+                    <p className="text-xs text-blue-500">Choose a type, fill in the details, and save</p>
+                </div>
             </div>
 
-            {type === 'video' && (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <Input
-                        label="Bunny Stream video ID"
-                        value={fields.bunny_stream_video_id ?? ''}
-                        onChange={setField('bunny_stream_video_id')}
-                        required
-                    />
-                    <Input
-                        label="Duration (seconds)"
-                        type="number"
-                        value={fields.duration_seconds ?? ''}
-                        onChange={setField('duration_seconds')}
-                    />
-                </div>
-            )}
+            <div className="flex flex-col gap-5 p-5">
+                {error && <Alert variant="error" message={error} />}
 
-            {(type === 'document' || type === 'downloadable_file') && (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <FileOrUrlField
-                        label="File"
-                        urlLabel="File URL"
-                        file={file}
-                        url={fields.file_url ?? ''}
-                        onFile={setFile}
-                        onUrl={(value) => setFields((prev) => ({ ...prev, file_url: value }))}
-                        accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.csv,.txt"
-                    />
-                    {type === 'document' && (
-                        <Select
-                            label="File type"
-                            value={fields.file_type ?? 'pdf'}
-                            onChange={setField('file_type') as never}
-                        >
-                            <option value="pdf">PDF</option>
-                            <option value="pptx">PPTX</option>
-                            <option value="docx">DOCX</option>
-                        </Select>
-                    )}
-                </div>
-            )}
-
-            {type === 'reading' && (
+                {/* ── Type picker ── */}
                 <div>
-                    <p className="mb-1.5 text-sm font-medium text-ink-900">Lesson content</p>
-                    <Suspense
-                        fallback={
-                            <div className="flex h-48 items-center justify-center rounded-md border border-input text-sm text-ink-600">
-                                Loading editor…
-                            </div>
-                        }
-                    >
-                        <RichTextEditor
-                            value={fields.content_html ?? ''}
-                            onChange={(html) => setFields((prev) => ({ ...prev, content_html: html }))}
-                            placeholder="Write the lesson…"
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-400">Resource type</p>
+                    <div className="flex flex-wrap gap-2">
+                        {resourceTypes.map(({ value, label, icon: Icon, description }) => (
+                            <button
+                                key={value}
+                                type="button"
+                                onClick={() => setType(value)}
+                                title={description}
+                                className={cn(
+                                    'flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all',
+                                    type === value
+                                        ? 'border-blue-300 bg-blue-50 text-blue-700 shadow-sm'
+                                        : 'border-surface-200 bg-surface-0 text-ink-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700',
+                                )}
+                            >
+                                <Icon className="size-3.5 shrink-0" aria-hidden="true" />
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                    <p className="mt-1.5 text-xs text-ink-400">{activeType.description}</p>
+                </div>
+
+                {/* ── Title ── */}
+                <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} required />
+
+                {/* ── Type-specific fields ── */}
+                {type === 'video' && (
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <Input
+                            label="Bunny Stream video ID"
+                            value={fields.bunny_stream_video_id ?? ''}
+                            onChange={setField('bunny_stream_video_id')}
+                            required
                         />
-                    </Suspense>
+                        <Input
+                            label="Duration (seconds)"
+                            type="number"
+                            value={fields.duration_seconds ?? ''}
+                            onChange={setField('duration_seconds')}
+                        />
+                    </div>
+                )}
+
+                {(type === 'document' || type === 'downloadable_file') && (
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <FileOrUrlField
+                            label="File"
+                            urlLabel="File URL"
+                            file={file}
+                            url={fields.file_url ?? ''}
+                            onFile={setFile}
+                            onUrl={(value) => setFields((prev) => ({ ...prev, file_url: value }))}
+                            accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.csv,.txt"
+                        />
+                        {type === 'document' && (
+                            <Select
+                                label="File type"
+                                value={fields.file_type ?? 'pdf'}
+                                onChange={setField('file_type') as never}
+                            >
+                                <option value="pdf">PDF</option>
+                                <option value="pptx">PPTX</option>
+                                <option value="docx">DOCX</option>
+                            </Select>
+                        )}
+                    </div>
+                )}
+
+                {type === 'reading' && (
+                    <div>
+                        <p className="mb-1.5 text-sm font-medium text-ink-900">Lesson content</p>
+                        <Suspense
+                            fallback={
+                                <div className="flex h-48 items-center justify-center rounded-lg border border-surface-200 text-sm text-ink-400">
+                                    Loading editor…
+                                </div>
+                            }
+                        >
+                            <RichTextEditor
+                                value={fields.content_html ?? ''}
+                                onChange={(html) => setFields((prev) => ({ ...prev, content_html: html }))}
+                                placeholder="Write the lesson…"
+                            />
+                        </Suspense>
+                    </div>
+                )}
+
+                {type === 'external_link' && (
+                    <Input label="URL" type="url" value={fields.url ?? ''} onChange={setField('url')} required />
+                )}
+
+                {type === 'scorm' && (
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <FileOrUrlField
+                            label="Package"
+                            urlLabel="Package URL"
+                            file={packageFile}
+                            url={fields.package_url ?? ''}
+                            onFile={setPackageFile}
+                            onUrl={(value) => setFields((prev) => ({ ...prev, package_url: value }))}
+                            accept=".zip"
+                        />
+                        <Select
+                            label="Standard"
+                            value={fields.standard ?? 'scorm_2004'}
+                            onChange={setField('standard') as never}
+                        >
+                            <option value="scorm_1_2">SCORM 1.2</option>
+                            <option value="scorm_2004">SCORM 2004</option>
+                            <option value="xapi">xAPI</option>
+                        </Select>
+                    </div>
+                )}
+
+                {type === 'live_session' && (
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <Select label="Provider" value={fields.provider ?? 'zoom'} onChange={setField('provider') as never}>
+                            <option value="zoom">Zoom</option>
+                            <option value="google_meet">Google Meet</option>
+                        </Select>
+                        <Input
+                            label="Meeting URL"
+                            type="url"
+                            value={fields.meeting_url ?? ''}
+                            onChange={setField('meeting_url')}
+                            required
+                        />
+                        <Input
+                            label="Scheduled at"
+                            type="datetime-local"
+                            value={fields.scheduled_at ?? ''}
+                            onChange={setField('scheduled_at')}
+                            required
+                        />
+                        <Input
+                            label="Duration (minutes)"
+                            type="number"
+                            value={fields.duration_minutes ?? ''}
+                            onChange={setField('duration_minutes')}
+                            required
+                        />
+                    </div>
+                )}
+
+                {/* ── Required toggle ── */}
+                <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-surface-100 bg-surface-50 px-4 py-3 transition hover:bg-surface-100">
+                    <input
+                        type="checkbox"
+                        checked={isRequired}
+                        onChange={(e) => setIsRequired(e.target.checked)}
+                        className="size-4 rounded accent-blue-600"
+                    />
+                    <div>
+                        <p className="text-sm font-medium text-ink-900">Required for module completion</p>
+                        <p className="text-xs text-ink-400">Students must complete this to unlock the next module</p>
+                    </div>
+                </label>
+
+                {/* ── Actions ── */}
+                <div className="flex items-center gap-2 pt-1">
+                    <Button type="submit" isLoading={isSubmitting}>
+                        Add resource
+                    </Button>
+                    <Button type="button" variant="ghost" onClick={onCancel}>
+                        Cancel
+                    </Button>
                 </div>
-            )}
-
-            {type === 'external_link' && (
-                <Input label="URL" type="url" value={fields.url ?? ''} onChange={setField('url')} required />
-            )}
-
-            {type === 'scorm' && (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <FileOrUrlField
-                        label="Package"
-                        urlLabel="Package URL"
-                        file={packageFile}
-                        url={fields.package_url ?? ''}
-                        onFile={setPackageFile}
-                        onUrl={(value) => setFields((prev) => ({ ...prev, package_url: value }))}
-                        accept=".zip"
-                    />
-                    <Select
-                        label="Standard"
-                        value={fields.standard ?? 'scorm_2004'}
-                        onChange={setField('standard') as never}
-                    >
-                        <option value="scorm_1_2">SCORM 1.2</option>
-                        <option value="scorm_2004">SCORM 2004</option>
-                        <option value="xapi">xAPI</option>
-                    </Select>
-                </div>
-            )}
-
-            {type === 'live_session' && (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <Select label="Provider" value={fields.provider ?? 'zoom'} onChange={setField('provider') as never}>
-                        <option value="zoom">Zoom</option>
-                        <option value="google_meet">Google Meet</option>
-                    </Select>
-                    <Input
-                        label="Meeting URL"
-                        type="url"
-                        value={fields.meeting_url ?? ''}
-                        onChange={setField('meeting_url')}
-                        required
-                    />
-                    <Input
-                        label="Scheduled at"
-                        type="datetime-local"
-                        value={fields.scheduled_at ?? ''}
-                        onChange={setField('scheduled_at')}
-                        required
-                    />
-                    <Input
-                        label="Duration (minutes)"
-                        type="number"
-                        value={fields.duration_minutes ?? ''}
-                        onChange={setField('duration_minutes')}
-                        required
-                    />
-                </div>
-            )}
-
-            <label className="flex items-center gap-2 text-sm text-ink-900">
-                <input type="checkbox" checked={isRequired} onChange={(e) => setIsRequired(e.target.checked)} />
-                Required for module completion
-            </label>
-
-            <div className="flex gap-2">
-                <Button type="submit" isLoading={isSubmitting}>
-                    Add resource
-                </Button>
-                <Button type="button" variant="ghost" onClick={onCancel}>
-                    Cancel
-                </Button>
             </div>
         </form>
     );

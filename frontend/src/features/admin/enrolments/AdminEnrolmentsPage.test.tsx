@@ -5,7 +5,6 @@ import { it, expect, vi } from 'vitest';
 import { AdminEnrolmentsPage } from '@/features/admin/enrolments/AdminEnrolmentsPage';
 import { PageHeaderProvider } from '@/lib/pageHeader/PageHeaderContext';
 import { AuthProvider } from '@/lib/auth/AuthContext';
-import { fetchCurrentUser } from '@/features/auth/api';
 import { fetchAdminEnrolments, updateEnrolmentStatus } from '@/features/admin/enrolments/api';
 import type { AdminEnrolment, PaginatedResponse, User } from '@/lib/api/types';
 

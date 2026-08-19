@@ -1,11 +1,14 @@
 import { apiClient } from '@/lib/api/client';
-import type { CourseApplication } from '@/lib/api/types';
+import type { CourseApplication, PaginatedResponse } from '@/lib/api/types';
 
-export async function fetchCourseApplications(status?: string): Promise<CourseApplication[]> {
-    const { data } = await apiClient.get<{ data: CourseApplication[] }>('/course-applications', {
-        params: status ? { status } : undefined,
+export async function fetchCourseApplications(params: {
+    status?: string;
+    page?: number;
+} = {}): Promise<PaginatedResponse<CourseApplication>> {
+    const { data } = await apiClient.get<PaginatedResponse<CourseApplication>>('/course-applications', {
+        params: { status: params.status, page: params.page },
     });
-    return data.data;
+    return data;
 }
 
 export async function fetchMyCourseApplications(): Promise<CourseApplication[]> {

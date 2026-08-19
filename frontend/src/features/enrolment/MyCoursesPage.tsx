@@ -184,6 +184,8 @@ function EnrolmentCard({ enrolment, progress, review, onWithdraw, onReview }: {
 
     const { flatItems } = useCourseSequence(enrolment.course.id);
     const nextIncompleteItem = findNextIncompleteItem(flatItems);
+    // If there's a next incomplete item, go directly to it; otherwise land on the course
+    // player page which will show the module list (and auto-expand the first unlocked module).
     const continueHref = nextIncompleteItem
         ? itemLinkFor(nextIncompleteItem, enrolment.course.id)
         : `/learn/courses/${enrolment.course.id}`;
@@ -231,7 +233,7 @@ function EnrolmentCard({ enrolment, progress, review, onWithdraw, onReview }: {
                         <ProgressBar percent={progress.percent_complete} />
                         <Link to={continueHref}>
                             <Button variant="primary" size="sm" className="w-full justify-center">
-                                Continue learning
+                                {progress.percent_complete === 0 ? 'Start learning' : 'Continue learning'}
                                 <ArrowRight className="size-3.5" aria-hidden="true" />
                             </Button>
                         </Link>
@@ -370,7 +372,7 @@ export function MyCoursesPage() {
     return (
         <div className="space-y-5">
 
-            {/* Profile completion modal — shown once per session */}
+            {/* Profile completion modal — shown once per session when profile is incomplete */}
             {showProfileModal && profileStatus && (
                 <ProfileCompletionModal profileStatus={profileStatus} onClose={handleCloseProfileModal} />
             )}
@@ -390,7 +392,7 @@ export function MyCoursesPage() {
                             Make a payment
                         </Button>
                     )}
-                    <Link to="/#courses">
+                    <Link to="/courses">
                         <Button size="sm" variant="secondary">
                             <Compass className="size-3.5" aria-hidden="true" />
                             Browse courses
@@ -410,7 +412,7 @@ export function MyCoursesPage() {
                     </h2>
                     <p className="text-xs text-ink-400">
                         {allApplicationsPending
-                            ? "You'll be notified once an admin makes a decision."
+                            ? "Your application is in review — you'll be notified once an admin approves or declines."
                             : 'Track the status of your course applications.'}
                     </p>
                     <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -432,7 +434,7 @@ export function MyCoursesPage() {
                     title="No courses yet"
                     description="Browse the catalogue to find your first course."
                     action={
-                        <Link to="/#courses">
+                        <Link to="/courses">
                             <Button size="sm">Browse the catalogue</Button>
                         </Link>
                     }
@@ -451,6 +453,20 @@ export function MyCoursesPage() {
                                 onReview={() => setReviewingCourse({ id: enrolment.course.id, title: enrolment.course.title })}
                             />
                         ))}
+
+                        {/* "Add a course" card — always visible at the end of the grid */}
+                        <Link
+                            to="/courses"
+                            className="flex min-h-[200px] flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-surface-200 bg-surface-0 p-6 text-center transition hover:border-blue-300 hover:bg-blue-50"
+                        >
+                            <span className="flex size-10 items-center justify-center rounded-full bg-blue-50 ring-1 ring-blue-100">
+                                <Compass className="size-5 text-blue-500" aria-hidden="true" />
+                            </span>
+                            <div>
+                                <p className="text-sm font-semibold text-ink-900">Add a course</p>
+                                <p className="mt-0.5 text-xs text-ink-400">Browse the catalogue and enrol</p>
+                            </div>
+                        </Link>
                     </div>
                 </div>
             )}

@@ -16,6 +16,7 @@ use App\Services\Audit\AuditLogger;
 use App\Services\Notifications\NotificationDispatcher;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -102,55 +103,84 @@ final class CourseApplicationService
     /**
      * $reviewer is an admin, or an instructor teaching the course (enforced by
      * `CourseApplicationPolicy`) — whichever acts first on a pending application wins.
-     * 
-     * After successful enrollment, auto-cancel any other pending applications for the same course_id.
+     *
+     * The whole decision runs in one transaction: the application row is re-fetched under a
+     * row lock (so two reviewers acting concurrently can't both decide it), and
+     * `EnrolmentService::enrol()` runs inside the same transaction — any enrolment failure
+     * rolls the application back to pending instead of leaving it "approved" with no seat.
+     *
+     * The enrolment outcome decides the messaging: a confirmed seat sends the enrolled
+     * notification and auto-cancels sibling applications, while a waitlisted seat sends a
+     * dedicated waitlist notification and leaves sibling applications untouched — the
+     * student holds no seat yet, so their other options stay alive.
      */
-    public function approve(CourseApplication $application, User $reviewer): CourseApplication
+    public function approve(int $applicationId, User $reviewer): CourseApplication
     {
-        if ($application->status !== CourseApplicationStatus::Pending) {
-            throw ValidationException::withMessages(['status' => 'This application has already been decided.']);
-        }
+        return DB::transaction(function () use ($applicationId, $reviewer): CourseApplication {
+            $application = CourseApplication::where('id', $applicationId)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $application->update([
-            'status' => CourseApplicationStatus::Approved,
-            'reviewed_by' => $reviewer->id,
-            'reviewed_at' => Carbon::now(),
-        ]);
+            if ($application->status !== CourseApplicationStatus::Pending) {
+                throw ValidationException::withMessages(['status' => 'This application has already been decided.']);
+            }
 
-        // Enroll the student (may be confirmed or waitlisted depending on section capacity)
-        $this->enrolmentService->enrol(
-            $application->student,
-            $application->course,
-            EnrolmentSource::Self,
-            $application->section_id
-        );
+            $application->update([
+                'status' => CourseApplicationStatus::Approved,
+                'reviewed_by' => $reviewer->id,
+                'reviewed_at' => Carbon::now(),
+            ]);
 
-        $this->auditLogger->log(
-            action: 'course_application.approved',
-            entityType: 'course_application',
-            entityId: $application->id,
-            actorId: $reviewer->id,
-            meta: [
-                'course_id' => $application->course_id,
-                'section_id' => $application->section_id,
-                'student_id' => $application->student_id,
-                'decided_by_role' => $reviewer->role->value,
-            ],
-        );
+            // Enroll the student (may be confirmed or waitlisted depending on section capacity)
+            $enrolment = $this->enrolmentService->enrol(
+                $application->student,
+                $application->course,
+                EnrolmentSource::Self,
+                $application->section_id
+            );
 
-        $this->notificationDispatcher->notify(
-            user: $application->student,
-            type: 'application_approved',
-            title: "Your application to {$application->course->title} was approved",
-            body: 'You are now enrolled — check your courses to get started.',
-            relatedEntityType: 'course_application',
-            relatedEntityId: $application->id,
-        );
+            $this->auditLogger->log(
+                action: 'course_application.approved',
+                entityType: 'course_application',
+                entityId: $application->id,
+                actorId: $reviewer->id,
+                meta: [
+                    'course_id' => $application->course_id,
+                    'section_id' => $application->section_id,
+                    'student_id' => $application->student_id,
+                    'decided_by_role' => $reviewer->role->value,
+                    'enrolment_status' => $enrolment->status->value,
+                ],
+            );
 
-        // Auto-cancel other pending applications for the same course
-        $this->autoCancelOtherApplications($application);
+            if ($enrolment->status === EnrolmentStatus::Waitlisted) {
+                $this->notificationDispatcher->notify(
+                    user: $application->student,
+                    type: 'application_waitlisted',
+                    title: "Your application to {$application->course->title} was approved — you're on the waitlist",
+                    body: 'The section is currently full, so you hold a waitlisted spot. We will notify you as soon as a seat opens up.',
+                    relatedEntityType: 'course_application',
+                    relatedEntityId: $application->id,
+                );
 
-        return $application->fresh();
+                return $application->fresh();
+            }
+
+            $this->notificationDispatcher->notify(
+                user: $application->student,
+                type: 'application_approved',
+                title: "Your application to {$application->course->title} was approved",
+                body: 'You are now enrolled — check your courses to get started.',
+                relatedEntityType: 'course_application',
+                relatedEntityId: $application->id,
+            );
+
+            // Auto-cancel other pending applications for the same course — only once the
+            // student actually holds a confirmed seat.
+            $this->autoCancelOtherApplications($application);
+
+            return $application->fresh();
+        });
     }
 
     /**
@@ -255,6 +285,9 @@ final class CourseApplicationService
             ->with(['course.category', 'course.instructors', 'reviewer', 'section'])
             ->orderBy('created_at', 'desc')
             ->get();
+
+        // Same N+1 guard as the admin review queue: one query for every recommended course.
+        CourseApplication::loadRecommendedCourses($applications);
 
         $recommendedCourseIds = $applications
             ->flatMap(fn (CourseApplication $application): array => $application->recommended_course_ids ?? [])

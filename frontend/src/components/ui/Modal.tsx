@@ -10,13 +10,14 @@ interface ModalProps {
     children: ReactNode;
     footer?: ReactNode;
     className?: string;
+    bodyClassName?: string;
 }
 
 /**
  * Built on Radix's Dialog for real focus trapping, return-focus-on-close, and Escape/overlay-click
  * handling — the hand-rolled version this replaced had none of that (no focus trap at all).
  */
-export function Modal({ isOpen, onClose, title, children, footer, className }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, footer, className, bodyClassName }: ModalProps) {
     return (
         <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <Dialog.Portal>
@@ -40,7 +41,7 @@ export function Modal({ isOpen, onClose, title, children, footer, className }: M
                         </Dialog.Close>
                     </div>
 
-                    <div className="overflow-y-auto px-5 py-4">{children}</div>
+                    <div className={cn('overflow-y-auto px-5 py-4', bodyClassName)}>{children}</div>
 
                     {footer && (
                         <div className="flex shrink-0 justify-end gap-2 border-t border-surface-100 bg-surface-50 px-5 py-3.5">

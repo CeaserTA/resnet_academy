@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FileCheck2 } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
@@ -49,46 +50,83 @@ export function AssignmentQuickForm({ onSubmit, onCancel }: AssignmentQuickFormP
     };
 
     return (
-        <form
-            onSubmit={handleSubmit}
-            className="flex flex-col gap-3 rounded-md border border-surface-100 bg-surface-50 p-4"
-        >
-            {error && <Alert variant="error" message={error} />}
-
-            <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} required />
-            <Textarea
-                label="Instructions"
-                rows={3}
-                value={instructions}
-                onChange={(e) => setInstructions(e.target.value)}
-            />
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Select
-                    label="Submission type"
-                    value={submissionType}
-                    onChange={(e) => setSubmissionType(e.target.value as AssignmentSubmissionType)}
-                >
-                    <option value="file">File</option>
-                    <option value="text">Text</option>
-                    <option value="both">Either</option>
-                </Select>
-                <Input label="Max score" type="number" value={maxScore} onChange={(e) => setMaxScore(e.target.value)} />
-                <Input label="Due at" type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
+        <form onSubmit={handleSubmit} className="flex flex-col">
+            {/* ── Coloured header banner ── */}
+            <div className="flex items-center gap-3 rounded-t-lg bg-violet-50 px-5 py-4 border-b border-violet-100">
+                <span className="flex size-9 items-center justify-center rounded-lg bg-violet-100">
+                    <FileCheck2 className="size-4 text-violet-600" aria-hidden="true" />
+                </span>
+                <div>
+                    <p className="text-sm font-semibold text-violet-900">New assignment</p>
+                    <p className="text-xs text-violet-500">Rubrics can be added after creation</p>
+                </div>
             </div>
 
-            <label className="flex items-center gap-2 text-sm text-ink-900">
-                <input type="checkbox" checked={allowLate} onChange={(e) => setAllowLate(e.target.checked)} />
-                Accept late submissions (with penalty)
-            </label>
+            <div className="flex flex-col gap-4 p-5">
+                {error && <Alert variant="error" message={error} />}
 
-            <div className="flex gap-2">
-                <Button type="submit" isLoading={isSubmitting}>
-                    Add assignment
-                </Button>
-                <Button type="button" variant="ghost" onClick={onCancel}>
-                    Cancel
-                </Button>
+                {/* Basic info */}
+                <div className="flex flex-col gap-3">
+                    <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} required />
+                    <Textarea
+                        label="Instructions"
+                        rows={3}
+                        value={instructions}
+                        onChange={(e) => setInstructions(e.target.value)}
+                    />
+                </div>
+
+                {/* Settings row */}
+                <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-400">Settings</p>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        <Select
+                            label="Submission type"
+                            value={submissionType}
+                            onChange={(e) => setSubmissionType(e.target.value as AssignmentSubmissionType)}
+                        >
+                            <option value="file">File upload</option>
+                            <option value="text">Text entry</option>
+                            <option value="both">Either</option>
+                        </Select>
+                        <Input
+                            label="Max score"
+                            type="number"
+                            value={maxScore}
+                            onChange={(e) => setMaxScore(e.target.value)}
+                        />
+                        <Input
+                            label="Due at"
+                            type="datetime-local"
+                            value={dueAt}
+                            onChange={(e) => setDueAt(e.target.value)}
+                        />
+                    </div>
+                </div>
+
+                {/* Late submissions toggle */}
+                <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-surface-100 bg-surface-50 px-4 py-3 transition hover:bg-surface-100">
+                    <input
+                        type="checkbox"
+                        checked={allowLate}
+                        onChange={(e) => setAllowLate(e.target.checked)}
+                        className="size-4 rounded accent-violet-600"
+                    />
+                    <div>
+                        <p className="text-sm font-medium text-ink-900">Accept late submissions</p>
+                        <p className="text-xs text-ink-400">A penalty can be configured on the assignment page</p>
+                    </div>
+                </label>
+
+                {/* Actions */}
+                <div className="flex items-center gap-2 pt-1">
+                    <Button type="submit" isLoading={isSubmitting}>
+                        Add assignment
+                    </Button>
+                    <Button type="button" variant="ghost" onClick={onCancel}>
+                        Cancel
+                    </Button>
+                </div>
             </div>
         </form>
     );

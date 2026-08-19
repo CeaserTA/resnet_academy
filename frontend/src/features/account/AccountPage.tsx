@@ -43,7 +43,9 @@ function EditProfileModal({ user, onClose }: { user: User; onClose: () => void }
                 phone: phone || undefined,
                 bio: bio || undefined,
             });
-            await refetch();
+            // refetch runs in the background via invalidateQueries in useUpdateProfile —
+            // don't await it here so a slow network can't block closing the modal.
+            void refetch();
             onClose();
         } catch (err) {
             setError(err instanceof ApiError ? err.message : 'Could not update your profile.');
@@ -102,7 +104,7 @@ function EditAddressModal({ user, onClose }: { user: User; onClose: () => void }
                 postal_code: postalCode || undefined,
                 tax_id: taxId || undefined,
             });
-            await refetch();
+            void refetch();
             onClose();
         } catch (err) {
             setError(err instanceof ApiError ? err.message : 'Could not update your address.');

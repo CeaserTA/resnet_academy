@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 use App\Enums\CourseApplicationStatus;
 use App\Enums\CourseEnrolmentPolicy;
+use App\Enums\CourseSectionStatus;
 use App\Models\Course;
 use App\Models\CourseApplication;
+use App\Models\CourseSection;
 use App\Models\Enrolment;
 use App\Models\User;
 use Illuminate\Support\Facades\Bus;
@@ -71,6 +73,89 @@ it('rejects a duplicate pending application to the same course', function (): vo
     $response = $this->actingAs($student)->postJson('/api/v1/course-applications', ['course_id' => $course->id, 'answers' => []]);
 
     $response->assertUnprocessable();
+});
+
+it('rejects a section that belongs to a different course than the application', function (): void {
+    $student = User::factory()->student()->create();
+    $course = Course::factory()->create(['enrolment_policy' => CourseEnrolmentPolicy::Application]);
+    $otherCourse = Course::factory()->create();
+    $foreignSection = CourseSection::factory()->create([
+        'course_id' => $otherCourse->id,
+        'status' => CourseSectionStatus::Open,
+    ]);
+
+    $response = $this->actingAs($student)->postJson('/api/v1/course-applications', [
+        'course_id' => $course->id,
+        'section_id' => $foreignSection->id,
+    ]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonPath('error.code', 'validation_failed');
+    expect(array_keys($response->json('error.fields')))->toContain('section_id');
+    $this->assertDatabaseMissing('course_applications', ['student_id' => $student->id]);
+});
+
+it('requires a portfolio URL when the course demands one', function (): void {
+    $student = User::factory()->student()->create();
+    $course = Course::factory()->create([
+        'enrolment_policy' => CourseEnrolmentPolicy::Application,
+        'application_require_portfolio_url' => true,
+    ]);
+
+    $response = $this->actingAs($student)->postJson('/api/v1/course-applications', [
+        'course_id' => $course->id,
+    ]);
+
+    $response->assertUnprocessable();
+    $response->assertJsonPath('error.code', 'validation_failed');
+    expect(array_keys($response->json('error.fields')))->toContain('portfolio_url');
+
+    // With the portfolio supplied the same application goes through
+    $this->actingAs($student)->postJson('/api/v1/course-applications', [
+        'course_id' => $course->id,
+        'portfolio_url' => 'https://example.com/portfolio',
+    ])->assertCreated();
+});
+
+it('does not require a portfolio URL when the course does not demand one', function (): void {
+    $student = User::factory()->student()->create();
+    $course = Course::factory()->create([
+        'enrolment_policy' => CourseEnrolmentPolicy::Application,
+        'application_require_portfolio_url' => false,
+    ]);
+
+    $this->actingAs($student)->postJson('/api/v1/course-applications', [
+        'course_id' => $course->id,
+    ])->assertCreated();
+});
+
+it('paginates the review queue, filters by status, and batch-loads recommended courses', function (): void {
+    $admin = User::factory()->admin()->create();
+    $course = Course::factory()->create(['enrolment_policy' => CourseEnrolmentPolicy::Application]);
+    $recommendedCourse = Course::factory()->create();
+
+    $pending = CourseApplication::factory()->for($course, 'course')->create([
+        'status' => CourseApplicationStatus::Pending,
+    ]);
+    $rejected = CourseApplication::factory()->for($course, 'course')->create([
+        'status' => CourseApplicationStatus::Rejected,
+        'recommended_course_ids' => [$recommendedCourse->id],
+        'rejection_reason' => 'Not ready yet.',
+    ]);
+
+    $all = $this->actingAs($admin)->getJson('/api/v1/course-applications');
+    $all->assertOk();
+    $all->assertJsonStructure(['data', 'meta' => ['current_page', 'last_page', 'per_page', 'total']]);
+    expect(collect($all->json('data'))->pluck('id'))->toContain($pending->id, $rejected->id);
+    expect($all->json('meta.per_page'))->toBe(25);
+
+    // Status filter narrows the queue server-side
+    $onlyRejected = $this->actingAs($admin)->getJson('/api/v1/course-applications?status=rejected');
+    expect(collect($onlyRejected->json('data'))->pluck('id'))->toEqual(collect([$rejected->id]));
+
+    // Recommended courses render from the batch load, not a per-row query
+    $row = collect($onlyRejected->json('data'))->firstWhere('id', $rejected->id);
+    expect(collect($row['recommended_courses'])->pluck('id'))->toEqual(collect([$recommendedCourse->id]));
 });
 
 it('approving an application creates a real confirmed enrolment via the existing enrolment pipeline', function (): void {

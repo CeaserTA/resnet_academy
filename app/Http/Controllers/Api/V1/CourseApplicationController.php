@@ -36,7 +36,10 @@ final class CourseApplicationController extends Controller
             )
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')))
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate(25);
+
+        // One query for the recommended courses of the whole page instead of one per row.
+        CourseApplication::loadRecommendedCourses($applications->getCollection());
 
         return CourseApplicationResource::collection($applications);
     }
@@ -75,7 +78,10 @@ final class CourseApplicationController extends Controller
     {
         $this->authorize('approve', $application);
 
-        $application = $this->courseApplicationService->approve($application, $request->user());
+        // The service re-fetches the application under a row lock inside its transaction, so
+        // the policy check here runs against the route-bound model while the decision itself
+        // is race-safe.
+        $application = $this->courseApplicationService->approve($application->id, $request->user());
 
         return new CourseApplicationResource($application->load(['student', 'course', 'reviewer']));
     }

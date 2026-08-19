@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import {
     ArrowLeft,
+    ArrowRight,
     BookOpen,
     CheckCircle2,
-    CircleCheck,
     Clock,
     GraduationCap,
     Lock,
@@ -174,7 +174,7 @@ export function CourseDetailPage() {
     const { openSections, isLoading: sectionsLoading } = useStudentSections(courseId);
     const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
     const [enrolError, setEnrolError] = useState<string | null>(null);
-    const [enrolled, setEnrolled] = useState(false);
+    const [enrolResult, setEnrolResult] = useState<{ courseTitle: string; status: 'confirmed' | 'waitlisted' } | null>(null);
     const [showAdvisoryModal, setShowAdvisoryModal] = useState(false);
     const [showApplicationModal, setShowApplicationModal] = useState(false);
     const [applicationSubmitted, setApplicationSubmitted] = useState(false);
@@ -224,8 +224,8 @@ export function CourseDetailPage() {
         if (!course) return;
         setEnrolError(null);
         try {
-            await enrol.mutateAsync({ courseId: course.id, sectionId: selectedSectionId ?? undefined });
-            setEnrolled(true);
+            const result = await enrol.mutateAsync({ courseId: course.id, sectionId: selectedSectionId ?? undefined });
+            setEnrolResult({ courseTitle: course.title, status: result.status as 'confirmed' | 'waitlisted' });
         } catch (error) {
             setEnrolError(error instanceof ApiError ? error.message : 'Could not enrol. Try again.');
         }
@@ -348,13 +348,7 @@ export function CourseDetailPage() {
                             {course.title}
                         </h1>
 
-                        {course.description && (
-                            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70 sm:text-base">
-                                {course.description}
-                            </p>
-                        )}
-
-                        {/* Stat row */}
+                        {/* Stat row — immediately under title, description moves to body */}
                         <div className="mt-4 flex flex-wrap gap-5 border-t border-white/10 pt-4">
                             {/* PLACEHOLDER: estimated from module count — see estimateDuration() */}
                             <div className="flex flex-col gap-0.5">
@@ -423,6 +417,16 @@ export function CourseDetailPage() {
 
                     {/* ── LEFT: main content ────────────────────────────────────── */}
                     <div className="space-y-12 lg:col-span-2">
+
+                        {/* ── 1. COURSE DESCRIPTION ───────────────────────────────── */}
+                        {course.description && (
+                            <section aria-labelledby="about-heading">
+                                <SectionHeading id="about-heading">About this course</SectionHeading>
+                                <p className="mt-4 pl-3 text-sm leading-7 text-[#475569]">
+                                    {course.description}
+                                </p>
+                            </section>
+                        )}
 
                         {/* ── 2. WHAT YOU WILL LEARN ──────────────────────────────── */}
                         {outcomeCards.length > 0 && (
@@ -549,8 +553,28 @@ export function CourseDetailPage() {
 
                                 {/* CTA */}
                                 <div className="mt-5 flex flex-col gap-3">
-                                    {enrolled ? (
-                                        <Badge label="Enrolled" tone="success" icon={CircleCheck} className="self-start" />
+                                    {enrolResult ? (
+                                        <div className={`rounded-lg border p-3 text-sm ${enrolResult.status === 'waitlisted' ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
+                                            <p className="font-semibold">
+                                                {enrolResult.status === 'waitlisted'
+                                                    ? "You're on the waitlist!"
+                                                    : "You've been enrolled!"}
+                                            </p>
+                                            <p className="mt-0.5 text-xs">
+                                                {enrolResult.status === 'waitlisted'
+                                                    ? `You're on the waitlist for ${enrolResult.courseTitle}. You'll be notified automatically when a spot opens up.`
+                                                    : `You've been enrolled in ${enrolResult.courseTitle}!`}
+                                            </p>
+                                            {enrolResult.status === 'confirmed' && (
+                                                <Link
+                                                    to={`/learn/courses/${course.id}`}
+                                                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
+                                                >
+                                                    Start learning
+                                                    <ArrowRight className="size-3.5" aria-hidden="true" />
+                                                </Link>
+                                            )}
+                                        </div>
                                     ) : pendingApplication ? (
                                         <Badge label="Pending approval" tone="warning" icon={Clock} className="self-start" />
                                     ) : user?.role === 'student' || !user ? (
@@ -567,7 +591,7 @@ export function CourseDetailPage() {
                                         <Badge label="Students only" tone="neutral" icon={Lock} className="self-start" />
                                     )}
 
-                                    {!enrolled && !pendingApplication && (user?.role === 'student' || !user) && (
+                                    {!enrolResult && !pendingApplication && (user?.role === 'student' || !user) && (
                                         <>
                                             {course.enrolment_policy === 'advisory' && (
                                                 <p className="text-xs text-[#94a3b8]">
@@ -620,7 +644,7 @@ export function CourseDetailPage() {
                     course={course}
                     sectionId={selectedSectionId ?? undefined}
                     onClose={() => setShowAdvisoryModal(false)}
-                    onEnrolled={() => { setShowAdvisoryModal(false); setEnrolled(true); }}
+                    onEnrolled={(result) => { setShowAdvisoryModal(false); setEnrolResult({ courseTitle: course.title, status: result.status as 'confirmed' | 'waitlisted' }); }}
                 />
             )}
 

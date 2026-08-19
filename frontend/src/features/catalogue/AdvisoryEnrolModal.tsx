@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
 import { useEnrol } from '@/features/enrolment/useEnrolments';
 import { ApiError } from '@/lib/api/client';
-import type { Course } from '@/lib/api/types';
+import type { Course, Enrolment } from '@/lib/api/types';
 
 /**
  * Advisory policy doesn't need admin review — "I'm Ready" calls the same `useEnrol()` endpoint
@@ -19,7 +19,7 @@ export function AdvisoryEnrolModal({
 }: {
     course: Course;
     onClose: () => void;
-    onEnrolled: () => void;
+    onEnrolled: (enrolment: Enrolment) => void;
     sectionId?: number;
 }) {
     const navigate = useNavigate();
@@ -32,8 +32,8 @@ export function AdvisoryEnrolModal({
     const handleEnrol = async () => {
         setError(null);
         try {
-            await enrol.mutateAsync({ courseId: course.id, sectionId });
-            onEnrolled();
+            const result = await enrol.mutateAsync({ courseId: course.id, sectionId });
+            onEnrolled(result);
         } catch (err) {
             setError(err instanceof ApiError ? err.message : 'Could not enrol. Try again.');
         }

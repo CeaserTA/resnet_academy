@@ -6,8 +6,8 @@ import { ApplicationsPage } from '@/features/admin/applications/ApplicationsPage
 import { PageHeaderProvider } from '@/lib/pageHeader/PageHeaderContext';
 import { AuthProvider } from '@/lib/auth/AuthContext';
 import { fetchCurrentUser } from '@/features/auth/api';
-import { rejectCourseApplication } from '@/features/courseApplications/api';
-import type { CourseApplication, User, UserRole } from '@/lib/api/types';
+import { rejectCourseApplication, fetchCourseApplications } from '@/features/courseApplications/api';
+import type { CourseApplication, PaginatedResponse, User, UserRole } from '@/lib/api/types';
 
 function makeUser(id: number, role: UserRole, name: string): User {
     return {
@@ -151,8 +151,19 @@ MOCK_APPLICATIONS[1].course = makeCourse(2, 'UX Design Fundamentals');
 MOCK_APPLICATIONS[2].student = makeStudent(3, 'Kevin Ssemwogerere');
 MOCK_APPLICATIONS[2].course = makeCourse(2, 'UX Design Fundamentals');
 
+// The review queue is paginated and filtered server-side, so the mock honors the status param
+function paginated(rows: CourseApplication[]): PaginatedResponse<CourseApplication> {
+    return {
+        data: rows,
+        meta: { current_page: 1, last_page: 1, per_page: 25, total: rows.length },
+        links: { first: null, last: null, prev: null, next: null },
+    };
+}
+
 vi.mock('@/features/courseApplications/api', () => ({
-    fetchCourseApplications: vi.fn().mockResolvedValue(MOCK_APPLICATIONS),
+    fetchCourseApplications: vi.fn(async (params: { status?: string } = {}) =>
+        paginated(params.status ? MOCK_APPLICATIONS.filter((a) => a.status === params.status) : MOCK_APPLICATIONS),
+    ),
     approveCourseApplication: vi.fn().mockResolvedValue({ ...MOCK_APPLICATIONS[0], status: 'approved' }),
     rejectCourseApplication: vi.fn().mockResolvedValue({ ...MOCK_APPLICATIONS[0], status: 'rejected' }),
 }));
@@ -185,8 +196,8 @@ it('shows all applications pending-first on the All tab, and filters correctly o
     const user = userEvent.setup();
     renderPage();
 
-    const rows = await screen.findAllByRole('row');
-    expect(rows[1]).toHaveTextContent('Pending');
+    const rows = await screen.findAllByRole('listitem');
+    expect(rows[0]).toHaveTextContent('Pending');
     expect(screen.getByText('Kevin Ssemwogerere')).toBeInTheDocument();
     expect(screen.getByText('Priya Shah')).toBeInTheDocument();
 
@@ -194,6 +205,8 @@ it('shows all applications pending-first on the All tab, and filters correctly o
     expect(await screen.findByText('Kevin Ssemwogerere')).toBeInTheDocument();
     expect(screen.queryByText('Amara Kintu')).not.toBeInTheDocument();
     expect(screen.queryByText('Priya Shah')).not.toBeInTheDocument();
+    // Tabs filter server-side via the status param
+    expect(fetchCourseApplications).toHaveBeenCalledWith({ status: 'rejected', page: 1 });
 
     await user.click(screen.getByRole('button', { name: 'Approved' }));
     expect(await screen.findByText('Priya Shah')).toBeInTheDocument();
