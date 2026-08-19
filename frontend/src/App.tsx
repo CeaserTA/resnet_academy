@@ -8,6 +8,7 @@ import { ContactPage } from '@/pages/ContactPage';
 import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage';
 import { VerifyEmailNoticePage } from '@/features/auth/VerifyEmailNoticePage';
+import { CertificateVerifyPage } from '@/features/progress/CertificateVerifyPage';
 import { CourseDetailPage } from '@/features/catalogue/CourseDetailPage';
 import { CataloguePage } from '@/features/catalogue/CataloguePage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
@@ -70,7 +71,7 @@ function App() {
             <Route path="register" element={<Navigate to="/?auth=signup" replace />} />
             <Route path="forgot-password" element={<ForgotPasswordPage />} />
             <Route path="reset-password" element={<ResetPasswordPage />} />
-            <Route path="verify-certificate" element={<VerifyEmailNoticePage />} />
+            <Route path="verify-certificate" element={<CertificateVerifyPage />} />
 
             <Route
                 element={

@@ -157,6 +157,18 @@ export function ResourceViewerPage() {
     // would hit a 403 from assertModuleUnlocked() because no row existed yet.
     useCourseProgress(courseId);
 
+    // Guard: ?course= param missing or invalid — all hooks have already run above
+    if (!courseId || !Number.isFinite(courseId)) {
+        return (
+            <div className="mx-auto max-w-xl py-16 text-center">
+                <p className="text-ink-600">This link is missing course context.</p>
+                <Link to="/dashboard" className="mt-3 inline-block text-sm text-blue-600 hover:underline">
+                    Back to my courses
+                </Link>
+            </div>
+        );
+    }
+
     if (isLoading || !resource) {
         return <Spinner />;
     }

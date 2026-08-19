@@ -128,7 +128,7 @@ export function AdminDashboardPage() {
                     <AttentionCard icon={AlertTriangle} label="At-risk students" value={data.at_risk_students} sub="No activity in 14 days" tone="danger" to="/admin/courses" />
                     <AttentionCard icon={LifeBuoy} label="Open tickets" value={data.open_tickets} sub="Awaiting response" tone="warning" to="/tickets" />
                     <AttentionCard icon={Star} label="Pending reviews" value={data.pending_reviews} sub="Awaiting approval" tone="neutral" to="/admin/reviews" />
-                    <AttentionCard icon={FileCheck} label="Applications" value={data.confirmed_enrolments} sub="Awaiting decision" tone="neutral" to="/admin/applications" />
+                    <AttentionCard icon={FileCheck} label="Applications" value="—" sub="Review pending applications" tone="neutral" to="/admin/applications" />
                 </div>
             </section>
 

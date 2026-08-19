@@ -114,12 +114,13 @@ function ExistingSubmission({ submission, onResubmit }: { submission: Assignment
 
 // ─── Submission form ──────────────────────────────────────────────────────────
 
-function SubmissionForm({ assignmentId, submissionType, onSuccess }: {
+function SubmissionForm({ assignmentId, submissionType, courseId, onSuccess }: {
     assignmentId: number;
     submissionType: string;
+    courseId: number;
     onSuccess: () => void;
 }) {
-    const submit = useSubmitAssignment(assignmentId);
+    const submit = useSubmitAssignment(assignmentId, courseId);
     const [file, setFile] = useState<File | null>(null);
     const [textContent, setTextContent] = useState('');
     const [error, setError] = useState<string | null>(null);
@@ -235,6 +236,18 @@ export function AssignmentSubmitPage() {
         return (
             <div className="mx-auto max-w-xl py-12 text-center">
                 <p className="text-ink-600">Assignment not found.</p>
+                <Link to="/dashboard" className="mt-3 inline-block text-sm text-blue-600 hover:underline">
+                    Back to my courses
+                </Link>
+            </div>
+        );
+    }
+
+    // Guard: ?course= param missing or invalid — breadcrumb and enrolment check both need it
+    if (!courseId || !Number.isFinite(courseId)) {
+        return (
+            <div className="mx-auto max-w-xl py-12 text-center">
+                <p className="text-ink-600">This link is missing course context.</p>
                 <Link to="/dashboard" className="mt-3 inline-block text-sm text-blue-600 hover:underline">
                     Back to my courses
                 </Link>
@@ -385,6 +398,7 @@ export function AssignmentSubmitPage() {
                         <SubmissionForm
                             assignmentId={assignmentId}
                             submissionType={assignment.submission_type}
+                            courseId={courseId}
                             onSuccess={() => {
                                 setShowResubmitForm(false);
                                 setJustSubmitted(true);

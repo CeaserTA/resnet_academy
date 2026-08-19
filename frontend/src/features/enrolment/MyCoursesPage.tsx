@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import { useMyEnrolments, useSubmitPayment, useWithdrawEnrolment } from '@/features/enrolment/useEnrolments';
 import { useDismissCourseApplication, useMyCourseApplications } from '@/features/courseApplications/useCourseApplications';
-import { useCourseSequence } from '@/features/learning/useCourseSequence';
 import { useProgressDashboard } from '@/features/progress/useProgress';
 import { ApplicationStatusCard } from '@/features/enrolment/ApplicationStatusCard';
 import { ReviewFormModal } from '@/features/reviews/ReviewFormModal';
@@ -33,7 +32,6 @@ import {
     enrolmentStatusDisplay,
     paymentSubmissionStatusDisplay,
 } from '@/lib/statusBadge';
-import { findNextIncompleteItem, itemLinkFor } from '@/lib/courseSequence';
 import { ApiError } from '@/lib/api/client';
 import type { CourseReview, Enrolment, ProgressDashboardRow } from '@/lib/api/types';
 
@@ -182,13 +180,10 @@ function EnrolmentCard({ enrolment, progress, review, onWithdraw, onReview }: {
     const pendingSubmissionStatus = pendingSubmission ? paymentSubmissionStatusDisplay(pendingSubmission.status) : null;
     const progressStatus = progress ? courseProgressStatusDisplay(progress.status) : null;
 
-    const { flatItems } = useCourseSequence(enrolment.course.id);
-    const nextIncompleteItem = findNextIncompleteItem(flatItems);
-    // If there's a next incomplete item, go directly to it; otherwise land on the course
-    // player page which will show the module list (and auto-expand the first unlocked module).
-    const continueHref = nextIncompleteItem
-        ? itemLinkFor(nextIncompleteItem, enrolment.course.id)
-        : `/learn/courses/${enrolment.course.id}`;
+    // Always link to the CoursePlayerPage — it handles "Continue where you left off" itself.
+    // Previously this called useCourseSequence() inside .map(), violating rules of hooks and
+    // causing one GET /courses/:id/modules request per enrolled course on every render.
+    const continueHref = `/learn/courses/${enrolment.course.id}`;
 
     return (
         <Card className="flex flex-col gap-0 p-0 overflow-hidden">
