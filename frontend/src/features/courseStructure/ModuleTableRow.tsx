@@ -57,7 +57,7 @@ const resourceTypeIcons: Record<string, React.ElementType> = {
     scorm: Package,
     live_session: Radio,
     downloadable_file: Download,
-};
+} as const;
 
 type AddingForm = 'resource' | 'assignment' | 'evaluation' | null;
 
@@ -133,12 +133,12 @@ function ItemRow({ item, onDelete }: { item: ModuleItem; onDelete: () => void })
                 : (resourceTypeLabels[item.type] ?? item.type);
 
     const tone = item.item_type === 'resource' ? 'neutral' : 'progress';
-    const badgeIcon =
+    const badgeIcon: React.ElementType | undefined =
         item.item_type === 'assignment'
             ? FileCheck2
             : item.item_type === 'evaluation'
                 ? ClipboardList
-                : (resourceTypeIcons[item.type] ?? undefined);
+                : resourceTypeIcons[item.type as keyof typeof resourceTypeIcons];
 
     const editHref =
         item.item_type === 'assignment'

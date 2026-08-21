@@ -8,18 +8,11 @@ import {
     ChevronRight,
     ChevronUp,
     Circle,
-    Clock,
-    Download,
     FileCheck2,
-    FileText,
-    Globe,
     ListChecks,
     Lock,
     MessageCircle,
-    Package,
-    Radio,
     Star,
-    Video,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -64,17 +57,7 @@ const statusDisplay: Record<
     completed: { label: 'Completed', tone: 'success', icon: CheckCircle2 },
 };
 
-// ─── Resource type icons ──────────────────────────────────────────────────────
-
-const resourceTypeIcon: Record<string, React.ElementType> = {
-    video: Video,
-    document: FileText,
-    reading: BookOpen,
-    external_link: Globe,
-    scorm: Package,
-    live_session: Radio,
-    downloadable_file: Download,
-};
+// ─── Resource type labels ──────────────────────────────────────────────────────
 
 const resourceTypeLabel: Record<string, string> = {
     video: 'Video',

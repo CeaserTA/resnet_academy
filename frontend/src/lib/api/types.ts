@@ -130,7 +130,7 @@ export interface CourseApplication {
         id: number;
         name: string;
         status: string;
-    } | null;
+    } | null | undefined;
     answers: string[] | null;
     portfolio_url: string | null;
     alternative_proof_text: string | null;

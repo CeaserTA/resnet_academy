@@ -9,7 +9,7 @@ const statusConfig = {
     [CourseSectionStatus.Draft]: { label: 'Draft', tone: 'neutral' as const },
     [CourseSectionStatus.Open]: { label: 'Open', tone: 'success' as const },
     [CourseSectionStatus.InProgress]: { label: 'In Progress', tone: 'progress' as const },
-    [CourseSectionStatus.Completed]: { label: 'Completed', tone: 'info' as const },
+    [CourseSectionStatus.Completed]: { label: 'Completed', tone: 'success' as const },
     [CourseSectionStatus.Closed]: { label: 'Closed', tone: 'warning' as const },
 };
 

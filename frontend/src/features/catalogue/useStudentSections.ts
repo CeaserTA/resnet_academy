@@ -4,8 +4,8 @@ import type { CourseSection } from '@/features/sections/types';
 
 // Statuses a student can enroll into (open or actively running)
 const ENROLLABLE_STATUSES: CourseSectionStatus[] = [
-    CourseSectionStatus.Open,
-    CourseSectionStatus.InProgress,
+    'open',
+    'in_progress',
 ];
 
 export interface UseStudentSectionsResult {

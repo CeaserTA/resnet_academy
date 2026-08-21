@@ -1,10 +1,12 @@
-export enum CourseSectionStatus {
-    Draft = 'draft',
-    Open = 'open',
-    InProgress = 'in_progress',
-    Completed = 'completed',
-    Closed = 'closed',
-}
+export const CourseSectionStatus = {
+    Draft: 'draft',
+    Open: 'open',
+    InProgress: 'in_progress',
+    Completed: 'completed',
+    Closed: 'closed',
+} as const;
+
+export type CourseSectionStatus = typeof CourseSectionStatus[keyof typeof CourseSectionStatus];
 
 export interface CourseSection {
     id: number;
@@ -52,14 +54,4 @@ export interface PublicSection extends Omit<CourseSection, 'course_id'> {
             email: string;
         }>;
     };
-}
-
-export interface CreateSectionInput {
-    name: string;
-    start_date: string;
-    end_date: string;
-    application_deadline?: string;
-    capacity?: number;
-    status: CourseSectionStatus;
-    primary_instructor_id?: number;
 }

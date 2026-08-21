@@ -6,10 +6,10 @@
  */
 
 import { Link } from 'react-router';
-import { CalendarDays, Clock, Layers, Monitor, Users } from 'lucide-react';
+import { CalendarDays, Clock, Layers, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePublicSections } from '@/features/sections/useSections';
-import { CourseSectionStatus, type PublicSection } from '@/features/sections/types';
+import type { PublicSection } from '@/features/sections/types';
 import { Spinner } from '@/components/ui/Spinner';
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
@@ -80,7 +80,7 @@ function CohortCard({ section }: { section: PublicSection }) {
                         <CalendarDays className="mt-0.5 size-4 shrink-0 text-blue-500" aria-hidden="true" />
                         <div>
                             <dt className="text-xs font-medium uppercase tracking-wide text-[#94a3b8]">
-                                {section.status === CourseSectionStatus.InProgress ? 'Started' : 'Starts'}
+                                {section.status === 'in_progress' ? 'Started' : 'Starts'}
                             </dt>
                             <dd className="text-ink-700">{formatDate(section.start_date)}</dd>
                         </div>
@@ -109,10 +109,10 @@ function CohortCard({ section }: { section: PublicSection }) {
                         <Layers className="size-4 text-blue-500" aria-hidden="true" />
                         {section.is_full ? (
                             <span className="text-amber-700 font-medium">Section Full</span>
-                        ) : section.seats_available !== null && section.seats_available <= 5 ? (
+                        ) : section.seats_available != null && section.seats_available <= 5 ? (
                             <span className="text-amber-700 font-medium">Only {section.seats_available} seats left!</span>
                         ) : (
-                            <span className="text-ink-700">{section.seats_available} seats available</span>
+                            <span className="text-ink-700">{section.seats_available ?? 'Unlimited'} seats available</span>
                         )}
                     </div>
                 )}
@@ -123,12 +123,12 @@ function CohortCard({ section }: { section: PublicSection }) {
                         to={`/courses/${section.course.id}`}
                         className={cn(
                             'inline-flex w-full items-center justify-center rounded-md px-4 py-2.5 text-sm font-medium transition-colors',
-                            section.status === CourseSectionStatus.Open
+                            section.status === 'open'
                                 ? 'bg-blue-600 text-white hover:bg-blue-700'
                                 : 'border border-blue-600 text-blue-700 hover:bg-blue-50',
                         )}
                     >
-                        {section.status === CourseSectionStatus.Open ? 'Register Now' : 'View Course'}
+                        {section.status === 'open' ? 'Register Now' : 'View Course'}
                     </Link>
                 </div>
             </div>
@@ -142,9 +142,8 @@ export function CohortSection() {
     const { data, isLoading } = usePublicSections();
     const sections = data ?? [];
 
-    const now = new Date();
-    const ongoing = sections.filter((s) => s.status === CourseSectionStatus.InProgress);
-    const upcoming = sections.filter((s) => s.status === CourseSectionStatus.Open);
+    const ongoing = sections.filter((s) => s.status === 'in_progress');
+    const upcoming = sections.filter((s) => s.status === 'open');
 
     if (isLoading) {
         return (

@@ -128,7 +128,7 @@ function OngoingCohortCard({ section }: { section: PublicSection }) {
                         <User className="size-4 shrink-0 text-blue-600" aria-hidden="true" />
                         <span className="font-medium text-blue-900">
                             {section.enrolled_count} / {section.capacity} enrolled
-                            {section.seats_available !== null && section.seats_available > 0 && (
+                            {section.seats_available != null && section.seats_available > 0 && (
                                 <span className="ml-1 text-blue-700">
                                     ({section.seats_available} seats left)
                                 </span>
@@ -226,7 +226,7 @@ function UpcomingCohortCard({ section }: { section: PublicSection }) {
                             <span>{instructor.name}</span>
                         </div>
                     )}
-                    {section.capacity !== null && section.seats_available !== null && (
+                    {section.capacity !== null && section.seats_available != null && (
                         <div className="flex items-center gap-1.5">
                             <Clock className="size-3.5 shrink-0 text-blue-400" aria-hidden="true" />
                             {section.is_full ? (

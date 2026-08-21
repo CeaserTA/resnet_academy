@@ -17,6 +17,7 @@ function makeCourse(id: number, title: string): Course {
         application_questions: null,
         application_allow_alternative_proof: true,
         application_require_portfolio_url: false,
+        sections_required: false,
         thumbnail_url: null,
         prerequisites_text: null,
         price: '0',

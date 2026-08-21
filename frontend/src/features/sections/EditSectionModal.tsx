@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { AlertTriangle, XCircle } from 'lucide-react';
 import { useUpdateSection } from './useSections';
-import { CourseSectionStatus, type CreateSectionInput, type CourseSection } from './types';
+import { CourseSectionStatus, type CourseSection } from './types';
+import type { CreateSectionInput } from './api';
 import type { ApiError } from '@/lib/api/client';
 
 interface EditSectionModalProps {
@@ -16,11 +17,11 @@ interface EditSectionModalProps {
 }
 
 const ALLOWED_TRANSITIONS: Record<CourseSectionStatus, CourseSectionStatus[]> = {
-    [CourseSectionStatus.Draft]: [CourseSectionStatus.Draft, CourseSectionStatus.Open],
-    [CourseSectionStatus.Open]: [CourseSectionStatus.Open, CourseSectionStatus.InProgress, CourseSectionStatus.Closed],
-    [CourseSectionStatus.InProgress]: [CourseSectionStatus.InProgress, CourseSectionStatus.Completed],
-    [CourseSectionStatus.Closed]: [CourseSectionStatus.Closed, CourseSectionStatus.Open],
-    [CourseSectionStatus.Completed]: [CourseSectionStatus.Completed],
+    draft: [CourseSectionStatus.Draft, CourseSectionStatus.Open],
+    open: [CourseSectionStatus.Open, CourseSectionStatus.InProgress, CourseSectionStatus.Closed],
+    in_progress: [CourseSectionStatus.InProgress, CourseSectionStatus.Completed],
+    closed: [CourseSectionStatus.Closed, CourseSectionStatus.Open],
+    completed: [CourseSectionStatus.Completed],
 };
 
 export function EditSectionModal({ isOpen, onClose, courseId, section, instructors = [] }: EditSectionModalProps) {
@@ -55,7 +56,7 @@ export function EditSectionModal({ isOpen, onClose, courseId, section, instructo
     const capacityBelowSeats = newCapacity !== undefined && newCapacity < seatsTaken;
     const capacityReducedToSeats =
         newCapacity !== undefined &&
-        oldCapacity !== undefined &&
+        oldCapacity != null &&
         newCapacity < oldCapacity &&
         newCapacity >= seatsTaken &&
         newCapacity === seatsTaken;

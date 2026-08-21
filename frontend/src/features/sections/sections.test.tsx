@@ -6,7 +6,7 @@ import { CreateSectionModal } from './CreateSectionModal';
 import { EditSectionModal } from './EditSectionModal';
 import { SectionRow } from './SectionRow';
 import { useCreateSection, useUpdateSection } from './useSections';
-import { CourseSectionStatus, type CourseSection } from './types';
+import type { CourseSection } from './types';
 
 // ─── Module mocks ─────────────────────────────────────────────────────────────
 // vi.mock is hoisted to the top of the compiled output by Vitest, so the mock
@@ -35,7 +35,7 @@ function makeSection(overrides: Partial<CourseSection> = {}): CourseSection {
         end_date: '2026-06-30',
         capacity: 30,
         seats_taken: 25,
-        status: CourseSectionStatus.Open,
+        status: 'open',
         enrolled_count: 25,
         waitlisted_count: 0,
         applications_pending_count: 0,
@@ -47,10 +47,22 @@ function makeSection(overrides: Partial<CourseSection> = {}): CourseSection {
     };
 }
 
-function makeMutation(overrides: object = {}) {
+function makeMutation(overrides: any = {}) {
     return {
+        mutate: vi.fn(),
         mutateAsync: vi.fn().mockResolvedValue({}),
         isPending: false,
+        isSuccess: false,
+        isError: false,
+        isIdle: true,
+        data: undefined,
+        error: null,
+        variables: undefined,
+        context: undefined,
+        failureCount: 0,
+        failureReason: null,
+        paused: false,
+        reset: vi.fn(),
         ...overrides,
     };
 }
@@ -60,7 +72,7 @@ function makeMutation(overrides: object = {}) {
 describe('CreateSectionModal', () => {
     beforeEach(() => {
         vi.mocked(useCreateSection).mockReturnValue(
-            makeMutation() as ReturnType<typeof useCreateSection>,
+            makeMutation() as any,
         );
     });
 
@@ -77,9 +89,7 @@ describe('CreateSectionModal', () => {
         });
 
         vi.mocked(useCreateSection).mockReturnValue(
-            makeMutation({ mutateAsync: vi.fn().mockRejectedValue(apiError) }) as ReturnType<
-                typeof useCreateSection
-            >,
+            makeMutation({ mutateAsync: vi.fn().mockRejectedValue(apiError) }) as any,
         );
 
         render(<CreateSectionModal isOpen courseId={10} onClose={vi.fn()} />, { wrapper });
@@ -99,7 +109,7 @@ describe('CreateSectionModal', () => {
         const user = userEvent.setup();
         const mutateAsync = vi.fn().mockResolvedValue({});
         vi.mocked(useCreateSection).mockReturnValue(
-            makeMutation({ mutateAsync }) as ReturnType<typeof useCreateSection>,
+            makeMutation({ mutateAsync }) as any,
         );
 
         render(<CreateSectionModal isOpen courseId={10} onClose={vi.fn()} />, { wrapper });
@@ -131,7 +141,7 @@ describe('CreateSectionModal', () => {
 describe('EditSectionModal — capacity blocking', () => {
     beforeEach(() => {
         vi.mocked(useUpdateSection).mockReturnValue(
-            makeMutation() as ReturnType<typeof useUpdateSection>,
+            makeMutation() as any,
         );
     });
 
@@ -197,7 +207,7 @@ describe('EditSectionModal — capacity blocking', () => {
         const user = userEvent.setup();
         const mutateAsync = vi.fn().mockResolvedValue({});
         vi.mocked(useUpdateSection).mockReturnValue(
-            makeMutation({ mutateAsync }) as ReturnType<typeof useUpdateSection>,
+            makeMutation({ mutateAsync }) as any,
         );
 
         const section = makeSection({ seats_taken: 25, capacity: 30 });
@@ -222,7 +232,7 @@ describe('EditSectionModal — capacity blocking', () => {
 describe('EditSectionModal — status transitions', () => {
     beforeEach(() => {
         vi.mocked(useUpdateSection).mockReturnValue(
-            makeMutation() as ReturnType<typeof useUpdateSection>,
+            makeMutation() as any,
         );
     });
 
@@ -231,7 +241,7 @@ describe('EditSectionModal — status transitions', () => {
             <EditSectionModal
                 isOpen
                 courseId={10}
-                section={makeSection({ status: CourseSectionStatus.Draft })}
+                section={makeSection({ status: 'draft' })}
                 onClose={vi.fn()}
             />,
             { wrapper },
@@ -252,7 +262,7 @@ describe('EditSectionModal — status transitions', () => {
             <EditSectionModal
                 isOpen
                 courseId={10}
-                section={makeSection({ status: CourseSectionStatus.Open })}
+                section={makeSection({ status: 'open' })}
                 onClose={vi.fn()}
             />,
             { wrapper },
@@ -273,7 +283,7 @@ describe('EditSectionModal — status transitions', () => {
             <EditSectionModal
                 isOpen
                 courseId={10}
-                section={makeSection({ status: CourseSectionStatus.InProgress })}
+                section={makeSection({ status: 'in_progress' })}
                 onClose={vi.fn()}
             />,
             { wrapper },
@@ -294,7 +304,7 @@ describe('EditSectionModal — status transitions', () => {
             <EditSectionModal
                 isOpen
                 courseId={10}
-                section={makeSection({ status: CourseSectionStatus.Completed })}
+                section={makeSection({ status: 'completed' })}
                 onClose={vi.fn()}
             />,
             { wrapper },
@@ -315,7 +325,7 @@ describe('EditSectionModal — status transitions', () => {
             <EditSectionModal
                 isOpen
                 courseId={10}
-                section={makeSection({ status: CourseSectionStatus.Closed })}
+                section={makeSection({ status: 'closed' })}
                 onClose={vi.fn()}
             />,
             { wrapper },

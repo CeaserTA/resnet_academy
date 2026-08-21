@@ -15,7 +15,6 @@ import { SectionPicker } from './SectionPicker';
 import { CourseDetailPage } from './CourseDetailPage';
 import { enrolInCourse } from '@/features/enrolment/api';
 import { submitCourseApplication } from '@/features/courseApplications/api';
-import { CourseSectionStatus } from '@/features/sections/types';
 import type { CourseSection } from '@/features/sections/types';
 import type { Course } from '@/lib/api/types';
 
@@ -31,7 +30,7 @@ function makeSection(overrides: Partial<CourseSection> = {}): CourseSection {
         application_deadline: undefined,
         capacity: 30,
         seats_taken: 10,
-        status: CourseSectionStatus.Open,
+        status: 'open' as const,
         primary_instructor_id: undefined,
         primary_instructor: undefined,
         enrolled_count: undefined,       // Analytics fields optional for students/guests
@@ -57,6 +56,7 @@ function makeCourse(overrides: Partial<Course> = {}): Course {
         application_questions: null,
         application_allow_alternative_proof: false,
         application_require_portfolio_url: false,
+        sections_required: false,
         thumbnail_url: null,
         prerequisites_text: null,
         price: '150000.00',
@@ -92,7 +92,7 @@ const mockUseCourse = vi.fn();
 const mockUseCourseModules = vi.fn(() => ({ data: [], isLoading: false }));
 vi.mock('@/features/catalogue/useCourses', () => ({
     useCourse: (...args: unknown[]) => mockUseCourse(...args),
-    useCourseModules: (...args: unknown[]) => mockUseCourseModules(...args),
+    useCourseModules: () => mockUseCourseModules(),
 }));
 
 // Mock useMyCourseApplications — no pending applications

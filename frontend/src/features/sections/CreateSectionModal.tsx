@@ -3,7 +3,8 @@ import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { useCreateSection } from './useSections';
-import { CourseSectionStatus, type CreateSectionInput } from './types';
+import { CourseSectionStatus } from './types';
+import type { CreateSectionInput } from './api';
 import type { ApiError } from '@/lib/api/client';
 
 interface CreateSectionModalProps {
@@ -21,7 +22,7 @@ export function CreateSectionModal({ isOpen, onClose, courseId, instructors = []
     const [endDate, setEndDate] = useState('');
     const [applicationDeadline, setApplicationDeadline] = useState('');
     const [capacity, setCapacity] = useState('');
-    const [status, setStatus] = useState<CourseSectionStatus>(CourseSectionStatus.Draft);
+    const [status, setStatus] = useState<CourseSectionStatus>('draft');
     const [primaryInstructorId, setPrimaryInstructorId] = useState('');
     const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -56,7 +57,7 @@ export function CreateSectionModal({ isOpen, onClose, courseId, instructors = []
             setEndDate('');
             setApplicationDeadline('');
             setCapacity('');
-            setStatus(CourseSectionStatus.Draft);
+            setStatus('draft');
             setPrimaryInstructorId('');
             onClose();
         } catch (error) {
@@ -77,7 +78,7 @@ export function CreateSectionModal({ isOpen, onClose, courseId, instructors = []
         setEndDate('');
         setApplicationDeadline('');
         setCapacity('');
-        setStatus(CourseSectionStatus.Draft);
+        setStatus('draft');
         setPrimaryInstructorId('');
         setErrors({});
         onClose();
@@ -141,11 +142,11 @@ export function CreateSectionModal({ isOpen, onClose, courseId, instructors = []
                         onChange={(e) => setStatus(e.target.value as CourseSectionStatus)}
                         className="w-full rounded-md border border-surface-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     >
-                        <option value={CourseSectionStatus.Draft}>Draft</option>
-                        <option value={CourseSectionStatus.Open}>Open</option>
-                        <option value={CourseSectionStatus.InProgress}>In Progress</option>
-                        <option value={CourseSectionStatus.Completed}>Completed</option>
-                        <option value={CourseSectionStatus.Closed}>Closed</option>
+                        <option value="draft">Draft</option>
+                        <option value="open">Open</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="closed">Closed</option>
                     </select>
                     {errors.status && <p className="mt-1 text-xs text-red-600">{errors.status}</p>}
                 </div>

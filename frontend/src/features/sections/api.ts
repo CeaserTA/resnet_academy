@@ -1,5 +1,15 @@
 import { apiClient } from '@/lib/api/client';
-import type { CourseSection, CreateSectionInput, PublicSection } from './types';
+import type { CourseSection, PublicSection } from './types';
+
+export interface CreateSectionInput {
+    name: string;
+    start_date: string;
+    end_date: string;
+    application_deadline?: string;
+    capacity?: number;
+    status: 'draft' | 'open' | 'in_progress' | 'completed' | 'closed';
+    primary_instructor_id?: number;
+}
 
 export async function fetchSections(courseId: number): Promise<CourseSection[]> {
     const { data } = await apiClient.get<{ data: CourseSection[] }>(`/courses/${courseId}/sections`);

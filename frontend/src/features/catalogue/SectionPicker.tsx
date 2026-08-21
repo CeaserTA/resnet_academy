@@ -1,4 +1,4 @@
-import { CalendarDays, User, Clock, Users } from 'lucide-react';
+import { CalendarDays, User, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { CourseSection } from '@/features/sections/types';
 

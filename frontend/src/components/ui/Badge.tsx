@@ -2,7 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
-export type BadgeTone = 'success' | 'progress' | 'neutral' | 'warning' | 'danger';
+export type BadgeTone = 'success' | 'progress' | 'neutral' | 'warning' | 'danger' | 'info';
 
 const badgeVariants = cva(
     'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap transition-colors',
@@ -14,6 +14,7 @@ const badgeVariants = cva(
                 neutral: 'bg-ink-300/20 text-ink-600',
                 warning: 'bg-amber-100 text-amber-500',
                 danger: 'bg-danger-600/15 text-danger-600',
+                info: 'bg-cyan-600/15 text-cyan-600',
             },
             variant: {
                 default: 'border border-transparent',
@@ -30,7 +31,7 @@ const badgeVariants = cva(
 interface BadgeProps extends VariantProps<typeof badgeVariants> {
     label: string;
     tone?: BadgeTone;
-    icon?: LucideIcon;
+    icon?: LucideIcon | React.ElementType;
     className?: string;
 }
 
