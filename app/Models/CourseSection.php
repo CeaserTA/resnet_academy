@@ -77,6 +77,8 @@ final class CourseSection extends Model
         return $this->enrolments()->whereIn('status', [
             \App\Enums\EnrolmentStatus::Confirmed,
             \App\Enums\EnrolmentStatus::Waitlisted,
+            \App\Enums\EnrolmentStatus::TransferRequested,
+            \App\Enums\EnrolmentStatus::Transferred,
         ])->count();
     }
 

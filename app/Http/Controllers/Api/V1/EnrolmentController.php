@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\CourseEnrolmentPolicy;
 use App\Enums\EnrolmentSource;
+use App\Exceptions\EnrolmentAlreadyHasPendingTransferException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreEnrolmentRequest;
 use App\Http\Resources\EnrolmentResource;
@@ -64,11 +65,35 @@ final class EnrolmentController extends Controller
      * A student dropping their own course, or an admin withdrawing them — the only enrolment
      * status transition that exists post-creation (architecture.md §7 audit requirement).
      */
-    public function withdraw(Request $request, Enrolment $enrolment): EnrolmentResource
+    public function withdraw(Request $request, Enrolment $enrolment): EnrolmentResource|JsonResponse
     {
         $this->authorize('withdraw', $enrolment);
 
-        $enrolment = $this->enrolmentService->withdraw($enrolment, $request->user());
+        $validated = $request->validate([
+            'note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        try {
+            $enrolment = $this->enrolmentService->withdraw(
+                $enrolment,
+                $request->user(),
+                $validated['note'] ?? null
+            );
+
+            return new EnrolmentResource($enrolment->load(['course.category', 'order.paymentSubmissions']));
+        } catch (EnrolmentAlreadyHasPendingTransferException $e) {
+            return response()->json(['message' => $e->getMessage()], 409);
+        }
+    }
+
+    /**
+     * Cancel a pending transfer request, reverting to Confirmed status.
+     */
+    public function cancelTransferRequest(Request $request, Enrolment $enrolment): EnrolmentResource
+    {
+        $this->authorize('cancelTransferRequest', $enrolment);
+
+        $enrolment = $this->enrolmentService->cancelTransferRequest($enrolment, $request->user());
 
         return new EnrolmentResource($enrolment->load(['course.category', 'order.paymentSubmissions']));
     }

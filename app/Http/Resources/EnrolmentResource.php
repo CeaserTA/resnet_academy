@@ -22,6 +22,9 @@ final class EnrolmentResource extends JsonResource
             'applied_at' => $this->applied_at->toIso8601String(),
             'confirmation_email_due_at' => $this->confirmation_email_due_at->toIso8601String(),
             'confirmation_email_sent_at' => $this->confirmation_email_sent_at?->toIso8601String(),
+            'transfer_requested_at' => $this->transfer_requested_at?->toIso8601String(),
+            'transferred_to_id' => $this->transferred_to_id,
+            'withdrawal_note' => $this->withdrawal_note,
             'order' => new OrderResource($this->whenLoaded('order')),
         ];
     }

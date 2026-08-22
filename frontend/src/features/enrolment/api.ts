@@ -14,8 +14,15 @@ export async function enrolInCourse(courseId: number, sectionId?: number): Promi
     return data.data;
 }
 
-export async function withdrawEnrolment(enrolmentId: number): Promise<Enrolment> {
-    const { data } = await apiClient.post<{ data: Enrolment }>(`/enrolments/${enrolmentId}/withdraw`);
+export async function withdrawEnrolment(enrolmentId: number, note?: string): Promise<Enrolment> {
+    const { data } = await apiClient.post<{ data: Enrolment }>(`/enrolments/${enrolmentId}/withdraw`, {
+        ...(note !== undefined ? { note } : {}),
+    });
+    return data.data;
+}
+
+export async function cancelTransferRequest(enrolmentId: number): Promise<Enrolment> {
+    const { data } = await apiClient.post<{ data: Enrolment }>(`/enrolments/${enrolmentId}/cancel-transfer-request`);
     return data.data;
 }
 

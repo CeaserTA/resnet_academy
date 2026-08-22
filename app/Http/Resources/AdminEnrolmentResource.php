@@ -40,6 +40,9 @@ final class AdminEnrolmentResource extends JsonResource
             'source' => $this->source->value,
             'progress_percent' => (float) ($this->resource->getAttribute('progress_percent') ?? 0),
             'applied_at' => $this->applied_at->toIso8601String(),
+            'transfer_requested_at' => $this->transfer_requested_at?->toIso8601String(),
+            'withdrawal_note' => $this->withdrawal_note,
+            'order' => new OrderResource($this->whenLoaded('order')),
             'created_at' => $this->created_at->toIso8601String(),
         ];
     }

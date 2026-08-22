@@ -6,10 +6,12 @@ namespace App\Services\Notifications;
 
 use App\Enums\EnrolmentStatus;
 use App\Enums\NotificationChannel;
+use App\Enums\UserRole;
 use App\Models\Announcement;
 use App\Models\Certificate;
 use App\Models\Conversation;
 use App\Models\Course;
+use App\Models\Enrolment;
 use App\Models\ForumThread;
 use App\Models\Module;
 use App\Models\Notification;
@@ -24,11 +26,11 @@ use App\Models\User;
  */
 final class NotificationDispatcher
 {
-    public function notify(User $user, string $type, string $title, ?string $body = null, ?string $relatedEntityType = null, ?int $relatedEntityId = null): Notification
+    public function notify(User $user, string $type, string $title, ?string $body = null, ?string $relatedEntityType = null, ?int $relatedEntityId = null, NotificationChannel $channel = NotificationChannel::InApp): Notification
     {
         return Notification::create([
             'user_id' => $user->id,
-            'channel' => NotificationChannel::InApp,
+            'channel' => $channel,
             'type' => $type,
             'title' => $title,
             'body' => $body,
@@ -200,6 +202,77 @@ final class NotificationDispatcher
             body: $message ?? "It looks like you've fallen behind — reach out if you need help catching up.",
             relatedEntityType: 'course',
             relatedEntityId: $course->id,
+        );
+    }
+
+    /**
+     * Notify all admins of a new transfer request from a student.
+     */
+    public function notifyAdminsOfTransferRequest(Enrolment $enrolment): void
+    {
+        $amountPaid = $enrolment->order ? (float) $enrolment->order->amount_paid : 0;
+        $courseName = $enrolment->course->title;
+        $studentName = $enrolment->student->name;
+
+        $adminUsers = User::where('role', UserRole::Admin)->get();
+
+        foreach ($adminUsers as $admin) {
+            $this->notify(
+                user: $admin,
+                type: 'transfer_request',
+                title: "Transfer request from {$studentName}",
+                body: "{$studentName} requested a transfer from {$courseName}. Amount paid: {$amountPaid}.",
+                relatedEntityType: 'enrolment',
+                relatedEntityId: $enrolment->id,
+                channel: NotificationChannel::InApp,
+            );
+        }
+    }
+
+    /**
+     * Notify a student that their transfer request has been approved.
+     */
+    public function notifyStudentOfTransfer(User $student, Enrolment $oldEnrolment, Enrolment $newEnrolment, ?string $note): void
+    {
+        $oldCourseName = $oldEnrolment->course->title;
+        $newCourseName = $newEnrolment->course->title;
+
+        $body = "You've been transferred from {$oldCourseName} to {$newCourseName}.";
+        if ($note) {
+            $body .= " Note: {$note}";
+        }
+
+        $this->notify(
+            user: $student,
+            type: 'transfer_approved',
+            title: "Transfer approved: {$newCourseName}",
+            body: $body,
+            relatedEntityType: 'enrolment',
+            relatedEntityId: $newEnrolment->id,
+            channel: NotificationChannel::Email, // Financial action - use email
+        );
+    }
+
+    /**
+     * Notify a student that their refund has been processed.
+     */
+    public function notifyStudentOfRefund(User $student, Enrolment $enrolment, float $refundAmount, ?string $note): void
+    {
+        $courseName = $enrolment->course->title;
+
+        $body = "Your payment of {$refundAmount} for {$courseName} has been refunded.";
+        if ($note) {
+            $body .= " Note: {$note}";
+        }
+
+        $this->notify(
+            user: $student,
+            type: 'refund_processed',
+            title: "Refund processed for {$courseName}",
+            body: $body,
+            relatedEntityType: 'enrolment',
+            relatedEntityId: $enrolment->id,
+            channel: NotificationChannel::Email, // Financial action - use email
         );
     }
 }

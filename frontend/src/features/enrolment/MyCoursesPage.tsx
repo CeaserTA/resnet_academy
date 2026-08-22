@@ -9,8 +9,9 @@ import {
     LogOut,
     Star,
     TrendingUp,
+    XCircle,
 } from 'lucide-react';
-import { useMyEnrolments, useSubmitPayment, useWithdrawEnrolment } from '@/features/enrolment/useEnrolments';
+import { useMyEnrolments, useSubmitPayment, useWithdrawEnrolment, useCancelTransferRequest } from '@/features/enrolment/useEnrolments';
 import { useDismissCourseApplication, useMyCourseApplications } from '@/features/courseApplications/useCourseApplications';
 import { useCourseSequence } from '@/features/learning/useCourseSequence';
 import { useProgressDashboard } from '@/features/progress/useProgress';
@@ -144,7 +145,7 @@ function MakePaymentModal({ enrolments, onClose }: { enrolments: Enrolment[]; on
 
 // ─── Withdraw confirm modal ───────────────────────────────────────────────────
 
-function WithdrawConfirmModal({ enrolment, onClose }: { enrolment: Enrolment; onClose: () => void }) {
+function WithdrawConfirmModal({ enrolment, onClose, onWithdrawSuccess }: { enrolment: Enrolment; onClose: () => void; onWithdrawSuccess: (status: string) => void }) {
     const withdrawEnrolment = useWithdrawEnrolment();
     return (
         <Modal
@@ -154,7 +155,11 @@ function WithdrawConfirmModal({ enrolment, onClose }: { enrolment: Enrolment; on
             footer={
                 <>
                     <Button variant="ghost" onClick={onClose}>Cancel</Button>
-                    <Button variant="destructive" onClick={async () => { await withdrawEnrolment.mutateAsync(enrolment.id); onClose(); }} isLoading={withdrawEnrolment.isPending}>
+                    <Button variant="destructive" onClick={async () => { 
+                        const result = await withdrawEnrolment.mutateAsync({ enrolmentId: enrolment.id }); 
+                        onWithdrawSuccess(result.status);
+                        onClose(); 
+                    }} isLoading={withdrawEnrolment.isPending}>
                         Withdraw
                     </Button>
                 </>
@@ -169,11 +174,12 @@ function WithdrawConfirmModal({ enrolment, onClose }: { enrolment: Enrolment; on
 
 // ─── Enrolment card ───────────────────────────────────────────────────────────
 
-function EnrolmentCard({ enrolment, progress, review, onWithdraw, onReview }: {
+function EnrolmentCard({ enrolment, progress, review, onWithdraw, onCancelTransfer, onReview }: {
     enrolment: Enrolment;
     progress: ProgressDashboardRow | undefined;
     review: CourseReview | undefined;
     onWithdraw: () => void;
+    onCancelTransfer: () => void;
     onReview: () => void;
 }) {
     const status = enrolmentStatusDisplay(enrolment.status);
@@ -181,6 +187,7 @@ function EnrolmentCard({ enrolment, progress, review, onWithdraw, onReview }: {
     const pendingSubmission = order?.pending_submission ?? null;
     const pendingSubmissionStatus = pendingSubmission ? paymentSubmissionStatusDisplay(pendingSubmission.status) : null;
     const progressStatus = progress ? courseProgressStatusDisplay(progress.status) : null;
+    const isTransferRequested = enrolment.status === 'transfer_requested';
 
     const { flatItems } = useCourseSequence(enrolment.course.id);
     const nextIncompleteItem = findNextIncompleteItem(flatItems);
@@ -268,10 +275,17 @@ function EnrolmentCard({ enrolment, progress, review, onWithdraw, onReview }: {
                 )}
 
                 <div className="mt-auto border-t border-surface-100 pt-2">
-                    <button type="button" onClick={onWithdraw} className="flex items-center gap-1.5 text-xs text-ink-400 hover:text-danger-600">
-                        <LogOut className="size-3.5" aria-hidden="true" />
-                        Withdraw
-                    </button>
+                    {isTransferRequested ? (
+                        <button type="button" onClick={onCancelTransfer} className="flex items-center gap-1.5 text-xs text-ink-400 hover:text-blue-600">
+                            <XCircle className="size-3.5" aria-hidden="true" />
+                            Cancel transfer request
+                        </button>
+                    ) : (
+                        <button type="button" onClick={onWithdraw} className="flex items-center gap-1.5 text-xs text-ink-400 hover:text-danger-600">
+                            <LogOut className="size-3.5" aria-hidden="true" />
+                            Withdraw
+                        </button>
+                    )}
                 </div>
             </div>
         </Card>
@@ -325,12 +339,16 @@ export function MyCoursesPage() {
     const { data: progressRows } = useProgressDashboard();
     const { data: myReviews } = useMyReviews();
     const dismissApplication = useDismissCourseApplication();
+    const withdrawEnrolment = useWithdrawEnrolment();
+    const cancelTransferRequest = useCancelTransferRequest();
 
     const [withdrawingEnrolment, setWithdrawingEnrolment] = useState<Enrolment | null>(null);
     const [isMakingPayment, setIsMakingPayment] = useState(false);
     const [reviewingCourse, setReviewingCourse] = useState<{ id: number; title: string } | null>(null);
     const [profileStatus, setProfileStatus] = useState<ProfileStatus | null>(null);
     const [showProfileModal, setShowProfileModal] = useState(false);
+    const [transferSuccessMessage, setTransferSuccessMessage] = useState<string | null>(null);
+    const [withdrawSuccessMessage, setWithdrawSuccessMessage] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchProfileStatus = async () => {
@@ -356,9 +374,21 @@ export function MyCoursesPage() {
         sessionStorage.setItem(PROFILE_MODAL_DISMISSED_KEY, '1');
     };
 
+    const handleWithdrawSuccess = (status: string) => {
+        if (status === 'transfer_requested') {
+            setTransferSuccessMessage("You've already paid for this course — your request has been sent to an admin, who can transfer you to another course.");
+        } else if (status === 'withdrawn') {
+            setWithdrawSuccessMessage("You've successfully withdrawn from this course.");
+        }
+    };
+
+    const handleCancelTransfer = async (enrolmentId: number) => {
+        await cancelTransferRequest.mutateAsync(enrolmentId);
+    };
+
     if (isLoading) return <Spinner />;
 
-    const activeEnrolments = (data?.data ?? []).filter((e) => e.status !== 'withdrawn');
+    const activeEnrolments = (data?.data ?? []).filter((e) => e.status !== 'withdrawn' && e.status !== 'transferred');
     const payableEnrolments = activeEnrolments.filter(
         (e) => e.order && e.order.remaining_balance > 0 && !e.order.pending_submission,
     );
@@ -400,6 +430,14 @@ export function MyCoursesPage() {
                     </Link>
                 </div>
             </div>
+
+            {/* Success messages */}
+            {transferSuccessMessage && (
+                <Alert variant="success" message={transferSuccessMessage} onDismiss={() => setTransferSuccessMessage(null)} />
+            )}
+            {withdrawSuccessMessage && (
+                <Alert variant="success" message={withdrawSuccessMessage} onDismiss={() => setWithdrawSuccessMessage(null)} />
+            )}
 
             {/* Overview strip */}
             <OverviewStrip activeEnrolments={activeEnrolments} progressRows={progressRows ?? []} />
@@ -450,6 +488,7 @@ export function MyCoursesPage() {
                                 progress={progressByCourseId.get(enrolment.course.id)}
                                 review={reviewByCourseId.get(enrolment.course.id)}
                                 onWithdraw={() => setWithdrawingEnrolment(enrolment)}
+                                onCancelTransfer={() => handleCancelTransfer(enrolment.id)}
                                 onReview={() => setReviewingCourse({ id: enrolment.course.id, title: enrolment.course.title })}
                             />
                         ))}
@@ -476,7 +515,7 @@ export function MyCoursesPage() {
                 <MakePaymentModal enrolments={payableEnrolments} onClose={() => setIsMakingPayment(false)} />
             )}
             {withdrawingEnrolment && (
-                <WithdrawConfirmModal enrolment={withdrawingEnrolment} onClose={() => setWithdrawingEnrolment(null)} />
+                <WithdrawConfirmModal enrolment={withdrawingEnrolment} onClose={() => setWithdrawingEnrolment(null)} onWithdrawSuccess={handleWithdrawSuccess} />
             )}
             {reviewingCourse && (
                 <ReviewFormModal

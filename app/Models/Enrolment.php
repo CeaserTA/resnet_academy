@@ -29,6 +29,9 @@ final class Enrolment extends Model
         'applied_at',
         'confirmation_email_due_at',
         'confirmation_email_sent_at',
+        'transferred_to_id',
+        'transfer_requested_at',
+        'withdrawal_note',
     ];
 
     protected $casts = [
@@ -37,6 +40,7 @@ final class Enrolment extends Model
         'applied_at' => 'datetime',
         'confirmation_email_due_at' => 'datetime',
         'confirmation_email_sent_at' => 'datetime',
+        'transfer_requested_at' => 'datetime',
     ];
 
     /**
@@ -71,5 +75,21 @@ final class Enrolment extends Model
     public function order(): HasOne
     {
         return $this->hasOne(Order::class);
+    }
+
+    /**
+     * @return BelongsTo<Enrolment, $this>
+     */
+    public function transferredTo(): BelongsTo
+    {
+        return $this->belongsTo(Enrolment::class, 'transferred_to_id');
+    }
+
+    /**
+     * @return HasOne<Enrolment, $this>
+     */
+    public function transferredFrom(): HasOne
+    {
+        return $this->hasOne(Enrolment::class, 'transferred_to_id');
     }
 }

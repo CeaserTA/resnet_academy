@@ -96,6 +96,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/enrolments', [EnrolmentController::class, 'store']);
         Route::post('/enrolments/import', [EnrolmentImportController::class, 'store']);
         Route::post('/enrolments/{enrolment}/withdraw', [EnrolmentController::class, 'withdraw']);
+        Route::post('/enrolments/{enrolment}/cancel-transfer-request', [EnrolmentController::class, 'cancelTransferRequest']);
 
         Route::get('/course-applications', [CourseApplicationController::class, 'index']);
         Route::get('/course-applications/me', [CourseApplicationController::class, 'mine']);
@@ -125,6 +126,9 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('/admin/payment-submissions/{paymentSubmission}/reject', [AdminPaymentSubmissionController::class, 'reject']);
         Route::get('/admin/enrolments', [AdminEnrolmentController::class, 'index']);
         Route::patch('/admin/enrolments/{enrolment}/status', [AdminEnrolmentController::class, 'updateStatus']);
+        Route::get('/admin/enrolments/transfer-requests', [AdminEnrolmentController::class, 'transferRequests']);
+        Route::post('/admin/enrolments/{enrolment}/transfer', [AdminEnrolmentController::class, 'transfer']);
+        Route::post('/admin/enrolments/{enrolment}/refund', [AdminEnrolmentController::class, 'refund']);
 
         // Course structure (FR-6/FR-7/FR-8) — admin/instructor writes via Policies.
         Route::post('/courses/{course}/modules', [ModuleController::class, 'store']);

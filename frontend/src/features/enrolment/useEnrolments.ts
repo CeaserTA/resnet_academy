@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { enrolInCourse, fetchMyEnrolments, submitPayment, withdrawEnrolment } from '@/features/enrolment/api';
+import { cancelTransferRequest, enrolInCourse, fetchMyEnrolments, submitPayment, withdrawEnrolment } from '@/features/enrolment/api';
 
 export function useMyEnrolments(page = 1) {
     return useQuery({
@@ -24,7 +24,19 @@ export function useWithdrawEnrolment() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: withdrawEnrolment,
+        mutationFn: ({ enrolmentId, note }: { enrolmentId: number; note?: string }) =>
+            withdrawEnrolment(enrolmentId, note),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['enrolments', 'me'] });
+        },
+    });
+}
+
+export function useCancelTransferRequest() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: cancelTransferRequest,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['enrolments', 'me'] });
         },

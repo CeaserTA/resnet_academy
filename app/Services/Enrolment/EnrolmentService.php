@@ -8,6 +8,7 @@ use App\Enums\CourseSectionStatus;
 use App\Enums\EnrolmentSource;
 use App\Enums\EnrolmentStatus;
 use App\Enums\OrderStatus;
+use App\Exceptions\EnrolmentAlreadyHasPendingTransferException;
 use App\Jobs\SendEnrolmentConfirmationEmail;
 use App\Models\Course;
 use App\Models\CourseSection;
@@ -149,13 +150,64 @@ final class EnrolmentService
     }
 
     /**
-     * Withdraw an enrollment. If the enrollment was in a section with capacity,
-     * decrement seats_taken and promote the oldest waitlisted student.
+     * Withdraw an enrollment. Branches on payment status - unpaid enrollments withdraw directly,
+     * paid enrollments create a transfer request for admin mediation.
      *
      * architecture.md §7 / ai-workflow-rules.md §9: enrolment status changes are one of the
      * three sensitive-mutation categories that must always be audited.
      */
-    public function withdraw(Enrolment $enrolment, User $actor): Enrolment
+    public function withdraw(Enrolment $enrolment, User $actor, ?string $note = null): Enrolment
+    {
+        // Load order if not already loaded
+        if (! $enrolment->relationLoaded('order')) {
+            $enrolment->load('order');
+        }
+
+        $order = $enrolment->order;
+
+        // If no order or no payment made, withdraw directly
+        if ($order === null || (float) $order->amount_paid <= 0) {
+            return $this->withdrawDirectly($enrolment, $actor);
+        }
+
+        // Payment has been made - create transfer request
+        if ($enrolment->status === EnrolmentStatus::TransferRequested) {
+            throw new EnrolmentAlreadyHasPendingTransferException();
+        }
+
+        return DB::transaction(function () use ($enrolment, $actor, $note) {
+            $previousStatus = $enrolment->status;
+
+            $enrolment->update([
+                'status' => EnrolmentStatus::TransferRequested,
+                'transfer_requested_at' => now(),
+                'withdrawal_note' => $note,
+            ]);
+
+            $this->auditLogger->log(
+                action: 'enrolment.transfer_requested',
+                entityType: 'enrolment',
+                entityId: $enrolment->id,
+                actorId: $actor->id,
+                meta: [
+                    'from' => $previousStatus->value,
+                    'to' => EnrolmentStatus::TransferRequested->value,
+                    'section_id' => $enrolment->section_id,
+                    'note' => $note,
+                ],
+            );
+
+            $this->notifyAdminsOfTransferRequest($enrolment);
+
+            return $enrolment->fresh();
+        });
+    }
+
+    /**
+     * Direct withdrawal for unpaid enrollments - sets status to Withdrawn, releases capacity,
+     * and promotes waitlisted students.
+     */
+    private function withdrawDirectly(Enrolment $enrolment, User $actor): Enrolment
     {
         return DB::transaction(function () use ($enrolment, $actor) {
             $previousStatus = $enrolment->status;
@@ -201,7 +253,49 @@ final class EnrolmentService
     }
 
     /**
-     * Admin-driven status change between the three lifecycle states. Withdrawals delegate to
+     * Notify admins of a new transfer request.
+     */
+    private function notifyAdminsOfTransferRequest(Enrolment $enrolment): void
+    {
+        $this->notificationDispatcher->notifyAdminsOfTransferRequest($enrolment);
+    }
+
+    /**
+     * Cancel a pending transfer request, reverting to Confirmed status.
+     */
+    public function cancelTransferRequest(Enrolment $enrolment, User $actor): Enrolment
+    {
+        if ($enrolment->status !== EnrolmentStatus::TransferRequested) {
+            throw ValidationException::withMessages(['status' => 'This enrolment does not have a pending transfer request.']);
+        }
+
+        return DB::transaction(function () use ($enrolment, $actor) {
+            $previousStatus = $enrolment->status;
+
+            $enrolment->update([
+                'status' => EnrolmentStatus::Confirmed,
+                'transfer_requested_at' => null,
+                'withdrawal_note' => null,
+            ]);
+
+            $this->auditLogger->log(
+                action: 'enrolment.transfer_request_cancelled',
+                entityType: 'enrolment',
+                entityId: $enrolment->id,
+                actorId: $actor->id,
+                meta: [
+                    'from' => $previousStatus->value,
+                    'to' => EnrolmentStatus::Confirmed->value,
+                    'section_id' => $enrolment->section_id,
+                ],
+            );
+
+            return $enrolment->fresh();
+        });
+    }
+
+    /**
+     * Admin-driven status change between the lifecycle states. Withdrawals delegate to
      * withdraw() so seat release + waitlist promotion still happen; confirming re-runs the
      * section capacity check and the confirmed side-effects (order, email, progress eval).
      */
@@ -212,7 +306,16 @@ final class EnrolmentService
         }
 
         if ($newStatus === EnrolmentStatus::Withdrawn) {
-            return $this->withdraw($enrolment, $actor);
+            return $this->withdraw($enrolment, $actor, null);
+        }
+
+        // Transfer-related statuses should go through the dedicated transfer methods
+        if ($newStatus === EnrolmentStatus::TransferRequested) {
+            throw ValidationException::withMessages(['status' => 'Use the withdraw method to request a transfer.']);
+        }
+
+        if ($newStatus === EnrolmentStatus::Transferred) {
+            throw ValidationException::withMessages(['status' => 'Use the dedicated transfer methods to handle transfers.']);
         }
 
         return DB::transaction(function () use ($enrolment, $newStatus, $actor) {

@@ -1,5 +1,6 @@
 import {
     AlertTriangle,
+    ArrowRight,
     Award,
     BookOpen,
     CheckCircle2,
@@ -53,6 +54,8 @@ const enrolmentStatusMap: Record<EnrolmentStatus, StatusDisplay> = {
     confirmed: { label: 'Confirmed', tone: 'success', icon: CheckCircle2 },
     waitlisted: { label: 'Waitlisted', tone: 'warning', icon: Clock },
     withdrawn: { label: 'Withdrawn', tone: 'neutral', icon: XCircle },
+    transfer_requested: { label: 'Transfer pending', tone: 'warning', icon: Clock },
+    transferred: { label: 'Transferred', tone: 'neutral', icon: ArrowRight },
 };
 
 const orderStatusMap: Record<OrderStatus, StatusDisplay> = {

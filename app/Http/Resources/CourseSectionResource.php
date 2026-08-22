@@ -20,9 +20,9 @@ final class CourseSectionResource extends JsonResource
     public function toArray(Request $request): array
     {
         // Use aggregate count if available (from withCount), otherwise calculate from loaded relation
-        $enrolledCount = $this->enrolled_count 
-            ?? ($this->relationLoaded('enrolments') 
-                ? $this->enrolments->whereIn('status', [EnrolmentStatus::Confirmed, EnrolmentStatus::Waitlisted])->count()
+        $enrolledCount = $this->enrolled_count
+            ?? ($this->relationLoaded('enrolments')
+                ? $this->enrolments->whereIn('status', [EnrolmentStatus::Confirmed, EnrolmentStatus::Waitlisted, EnrolmentStatus::TransferRequested, EnrolmentStatus::Transferred])->count()
                 : null);
 
         $seatsAvailable = $this->capacity !== null && $enrolledCount !== null

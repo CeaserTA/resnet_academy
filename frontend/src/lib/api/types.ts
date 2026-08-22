@@ -2,8 +2,8 @@ export type UserRole = 'admin' | 'instructor' | 'student';
 export type UserStatus = 'active' | 'suspended' | 'deactivated';
 export type CourseLevel = 'beginner' | 'intermediate' | 'advanced';
 export type CourseStatus = 'draft' | 'published' | 'archived';
-export type EnrolmentStatus = 'confirmed' | 'waitlisted' | 'withdrawn';
-export type EnrolmentSource = 'self' | 'admin_bulk';
+export type EnrolmentStatus = 'confirmed' | 'waitlisted' | 'withdrawn' | 'transfer_requested' | 'transferred';
+export type EnrolmentSource = 'self' | 'admin_bulk' | 'transfer';
 export type EnrolmentPolicy = 'open' | 'advisory' | 'application';
 export type CourseApplicationStatus = 'pending' | 'approved' | 'rejected';
 export type ReviewStatus = 'pending' | 'approved' | 'rejected';
@@ -106,6 +106,9 @@ export interface Enrolment {
     applied_at: string;
     confirmation_email_due_at: string;
     confirmation_email_sent_at: string | null;
+    transfer_requested_at: string | null;
+    transferred_to_id: number | null;
+    withdrawal_note: string | null;
     order: Order | null;
 }
 
@@ -118,6 +121,9 @@ export interface AdminEnrolment {
     source: EnrolmentSource;
     progress_percent: number;
     applied_at: string;
+    transfer_requested_at: string | null;
+    withdrawal_note: string | null;
+    order: Order | null;
     created_at: string;
 }
 
