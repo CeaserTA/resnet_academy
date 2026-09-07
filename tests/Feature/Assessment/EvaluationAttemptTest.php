@@ -8,6 +8,8 @@ use App\Enums\QuestionType;
 use App\Models\Course;
 use App\Models\CohortCourse;
 use App\Models\Evaluation;
+use App\Models\EvaluationAttempt;
+use App\Models\EvaluationAttemptAnswer;
 use App\Models\Module;
 use App\Models\ModuleItem;
 use App\Models\ModuleProgress;
@@ -145,4 +147,46 @@ it('enforces the configured max_attempts limit', function (): void {
     $second = $this->actingAs($student)->postJson("/api/v1/evaluations/{$evaluation->id}/attempts");
 
     $second->assertForbidden();
+});
+
+it('rolls back every answer already written if a later answer in the same submit() fails', function (): void {
+    ['student' => $student, 'evaluation' => $evaluation, 'question' => $question, 'correctOption' => $correctOption] =
+        setUpEvaluationWithOneMcqQuestion(passScore: 70);
+
+    $start = $this->actingAs($student)->postJson("/api/v1/evaluations/{$evaluation->id}/attempts");
+    $attemptId = $start->json('data.attempt.id');
+    $attempt = EvaluationAttempt::findOrFail($attemptId);
+
+    // Called directly against the service (bypassing SubmitEvaluationAttemptRequest, which
+    // already validates question_id with Rule::exists() and would reject this at the HTTP
+    // layer before the service ever runs): the first answer references a real question and
+    // would normally be written successfully, but the second references a question id that
+    // doesn't exist, so Question::findOrFail() throws partway through the loop. The first
+    // answer must not survive that.
+    expect(fn () => app(App\Services\Assessment\EvaluationAttemptService::class)->submit($attempt, [
+        ['question_id' => $question->id, 'selected_option_ids' => [$correctOption->id]],
+        ['question_id' => 999999999, 'selected_option_ids' => []],
+    ]))->toThrow(Illuminate\Database\Eloquent\ModelNotFoundException::class);
+
+    expect(EvaluationAttemptAnswer::where('attempt_id', $attemptId)->count())->toBe(0)
+        ->and(EvaluationAttempt::find($attemptId)->submitted_at)->toBeNull('the attempt itself must not show as submitted either');
+});
+
+it('rejects a second submit on an attempt that was already submitted', function (): void {
+    ['student' => $student, 'evaluation' => $evaluation, 'question' => $question, 'correctOption' => $correctOption] =
+        setUpEvaluationWithOneMcqQuestion(passScore: 70);
+
+    $start = $this->actingAs($student)->postJson("/api/v1/evaluations/{$evaluation->id}/attempts");
+    $attemptId = $start->json('data.attempt.id');
+
+    $answers = ['answers' => [['question_id' => $question->id, 'selected_option_ids' => [$correctOption->id]]]];
+
+    $this->actingAs($student)->postJson("/api/v1/attempts/{$attemptId}/submit", $answers)->assertOk();
+
+    // The immutability guard now re-fetches and locks the attempt row inside the transaction
+    // (rather than checking the caller's already-loaded instance) — this confirms that refactor
+    // still rejects a resubmit and, critically, doesn't double-write the answer rows.
+    $this->actingAs($student)->postJson("/api/v1/attempts/{$attemptId}/submit", $answers)->assertUnprocessable();
+
+    expect(EvaluationAttemptAnswer::where('attempt_id', $attemptId)->count())->toBe(1);
 });

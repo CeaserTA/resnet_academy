@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\Rules;
@@ -29,16 +30,21 @@ final class NewPasswordController extends Controller
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function ($user) use ($request): void {
-                $user->forceFill([
-                    'password_hash' => Hash::make($request->string('password')->toString()),
-                ])->save();
+                DB::transaction(function () use ($user, $request): void {
+                    $user->forceFill([
+                        'password_hash' => Hash::make($request->string('password')->toString()),
+                    ])->save();
 
-                // Clicking a single-use emailed link is itself proof of inbox ownership — closes
-                // the loop for admin-invited accounts (`UserProvisionedQueued`) without a separate
-                // "verify your email" step. A no-op for an already-verified self-service reset.
-                if (! $user->hasVerifiedEmail()) {
-                    $user->markEmailAsVerified();
-                }
+                    // Clicking a single-use emailed link is itself proof of inbox ownership —
+                    // closes the loop for admin-invited accounts (`UserProvisionedQueued`) without
+                    // a separate "verify your email" step. A no-op for an already-verified
+                    // self-service reset. Previously a separate, unwrapped UPDATE from the
+                    // password-hash save above; a crash between the two left a user with a new
+                    // password but email_verified_at unset.
+                    if (! $user->hasVerifiedEmail()) {
+                        $user->markEmailAsVerified();
+                    }
+                });
 
                 event(new PasswordReset($user));
             }

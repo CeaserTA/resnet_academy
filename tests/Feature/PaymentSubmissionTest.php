@@ -10,7 +10,9 @@ use App\Models\Notification;
 use App\Models\Order;
 use App\Models\PaymentSubmission;
 use App\Models\User;
+use App\Services\Payments\PaymentSubmissionService;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 function fakeReceipt(): UploadedFile
@@ -241,4 +243,29 @@ it('receivables includes a partial order with a pending submission, and partials
 
     expect(collect($pending->json('data'))->pluck('id'))->toContain($order->id);
     expect(collect($partial->json('data'))->pluck('id'))->not->toContain($order->id);
+});
+
+it('rolls back the order and submission updates if a later write during confirm() fails', function (): void {
+    $admin = User::factory()->admin()->create();
+    $order = Order::factory()->create(['amount' => '100.00', 'amount_paid' => '0.00', 'status' => OrderStatus::Pending]);
+    $submission = PaymentSubmission::factory()->for($order)->create([
+        'amount' => '60.00',
+        'status' => PaymentSubmissionStatus::Pending,
+    ]);
+
+    // Simulate a failure on the audit-log write, which happens after both the order's
+    // amount_paid/status and the submission's status have already been updated in this
+    // transaction — both of those must roll back together.
+    DB::beforeExecuting(function (string $query): void {
+        if (str_contains($query, 'insert into `audit_logs`')) {
+            throw new RuntimeException('Simulated failure for atomicity test');
+        }
+    });
+
+    expect(fn () => app(PaymentSubmissionService::class)->confirm($submission, $admin))
+        ->toThrow(RuntimeException::class);
+
+    expect($order->fresh()->amount_paid)->toEqual('0.00', 'the order should not have been marked paid')
+        ->and($order->fresh()->status)->toBe(OrderStatus::Pending)
+        ->and($submission->fresh()->status)->toBe(PaymentSubmissionStatus::Pending, 'the submission should not have been marked confirmed');
 });

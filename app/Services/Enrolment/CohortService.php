@@ -7,6 +7,7 @@ namespace App\Services\Enrolment;
 use App\Models\Cohort;
 use App\Models\CohortCourse;
 use App\Services\Audit\AuditLogger;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -23,33 +24,37 @@ final class CohortService
 
     public function create(array $data, int $actorId): Cohort
     {
-        $cohort = Cohort::create([
-            ...$data,
-            'created_by' => $actorId,
-        ])->fresh();
+        return DB::transaction(function () use ($data, $actorId): Cohort {
+            $cohort = Cohort::create([
+                ...$data,
+                'created_by' => $actorId,
+            ])->fresh();
 
-        $this->auditLogger->log(
-            action: 'cohort.created',
-            entityType: 'cohort',
-            entityId: $cohort->id,
-            actorId: $actorId,
-            meta: ['name' => $cohort->name],
-        );
+            $this->auditLogger->log(
+                action: 'cohort.created',
+                entityType: 'cohort',
+                entityId: $cohort->id,
+                actorId: $actorId,
+                meta: ['name' => $cohort->name],
+            );
 
-        return $cohort;
+            return $cohort;
+        });
     }
 
     public function update(Cohort $cohort, array $data, int $actorId): Cohort
     {
-        $cohort->update($data);
+        DB::transaction(function () use ($cohort, $data, $actorId): void {
+            $cohort->update($data);
 
-        $this->auditLogger->log(
-            action: 'cohort.updated',
-            entityType: 'cohort',
-            entityId: $cohort->id,
-            actorId: $actorId,
-            meta: ['changes' => array_keys($data)],
-        );
+            $this->auditLogger->log(
+                action: 'cohort.updated',
+                entityType: 'cohort',
+                entityId: $cohort->id,
+                actorId: $actorId,
+                meta: ['changes' => array_keys($data)],
+            );
+        });
 
         return $cohort->fresh();
     }
@@ -61,23 +66,25 @@ final class CohortService
      */
     public function delete(Cohort $cohort, int $actorId): void
     {
-        foreach ($cohort->cohortCourses as $cohortCourse) {
-            if ($cohortCourse->enrolments()->exists() || $cohortCourse->applications()->exists()) {
-                throw ValidationException::withMessages([
-                    'cohort' => 'Cannot delete a cohort with enrollment or application history. Archive it instead.',
-                ]);
+        DB::transaction(function () use ($cohort, $actorId): void {
+            foreach ($cohort->cohortCourses as $cohortCourse) {
+                if ($cohortCourse->enrolments()->exists() || $cohortCourse->applications()->exists()) {
+                    throw ValidationException::withMessages([
+                        'cohort' => 'Cannot delete a cohort with enrollment or application history. Archive it instead.',
+                    ]);
+                }
             }
-        }
 
-        $this->auditLogger->log(
-            action: 'cohort.deleted',
-            entityType: 'cohort',
-            entityId: $cohort->id,
-            actorId: $actorId,
-            meta: ['name' => $cohort->name],
-        );
+            $this->auditLogger->log(
+                action: 'cohort.deleted',
+                entityType: 'cohort',
+                entityId: $cohort->id,
+                actorId: $actorId,
+                meta: ['name' => $cohort->name],
+            );
 
-        $cohort->delete();
+            $cohort->delete();
+        });
     }
 
     /**

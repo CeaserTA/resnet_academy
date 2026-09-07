@@ -102,8 +102,11 @@ final class EnrolmentService
                     meta: ['course_id' => $course->id, 'cohort_course_id' => $cohortCourse->id, 'source' => $source->value],
                 );
 
+                // afterCommit(): dispatched inside this transaction, so on a non-database queue
+                // driver a worker could otherwise pick this up before the enrolment row commits.
                 SendEnrolmentConfirmationEmail::dispatch($enrolment->id)
-                    ->delay($enrolment->confirmation_email_due_at);
+                    ->delay($enrolment->confirmation_email_due_at)
+                    ->afterCommit();
 
                 $this->progressEngine->evaluateCourseUnlocks($student, $course);
             } else {
@@ -334,8 +337,10 @@ final class EnrolmentService
                     ]);
                 }
 
+                // afterCommit(): see the note on the same call in enrol() above.
                 SendEnrolmentConfirmationEmail::dispatch($enrolment->id)
-                    ->delay($enrolment->confirmation_email_due_at);
+                    ->delay($enrolment->confirmation_email_due_at)
+                    ->afterCommit();
 
                 $this->progressEngine->evaluateCourseUnlocks($enrolment->student, $enrolment->course);
             } else {
@@ -410,9 +415,12 @@ final class EnrolmentService
             relatedEntityId: $enrolment->id,
         );
 
-        // Queue confirmation email
+        // Queue confirmation email (afterCommit(): see the note in enrol() above — this method
+        // relies on running inside a caller's transaction, so deferring to that transaction's
+        // commit matters here too).
         SendEnrolmentConfirmationEmail::dispatch($enrolment->id)
-            ->delay($enrolment->confirmation_email_due_at);
+            ->delay($enrolment->confirmation_email_due_at)
+            ->afterCommit();
 
         // Initialize progress
         $this->progressEngine->evaluateCourseUnlocks($enrolment->student, $enrolment->course);

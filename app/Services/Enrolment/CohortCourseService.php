@@ -27,22 +27,24 @@ final class CohortCourseService
      */
     public function create(int $cohortId, int $courseId, array $data, int $actorId): CohortCourse
     {
-        $cohortCourse = CohortCourse::create([
-            ...$data,
-            'cohort_id' => $cohortId,
-            'course_id' => $courseId,
-            'seats_taken' => 0,
-        ])->fresh();
+        return DB::transaction(function () use ($cohortId, $courseId, $data, $actorId): CohortCourse {
+            $cohortCourse = CohortCourse::create([
+                ...$data,
+                'cohort_id' => $cohortId,
+                'course_id' => $courseId,
+                'seats_taken' => 0,
+            ])->fresh();
 
-        $this->auditLogger->log(
-            action: 'cohort_course.created',
-            entityType: 'cohort_course',
-            entityId: $cohortCourse->id,
-            actorId: $actorId,
-            meta: ['cohort_id' => $cohortId, 'course_id' => $courseId],
-        );
+            $this->auditLogger->log(
+                action: 'cohort_course.created',
+                entityType: 'cohort_course',
+                entityId: $cohortCourse->id,
+                actorId: $actorId,
+                meta: ['cohort_id' => $cohortId, 'course_id' => $courseId],
+            );
 
-        return $cohortCourse;
+            return $cohortCourse;
+        });
     }
 
     /**
@@ -95,36 +97,38 @@ final class CohortCourseService
      */
     public function delete(CohortCourse $cohortCourse, int $actorId): void
     {
-        // Check for any enrollments at all (including withdrawn - has history)
-        $hasAnyEnrollments = $cohortCourse->enrolments()->exists();
+        DB::transaction(function () use ($cohortCourse, $actorId): void {
+            // Check for any enrollments at all (including withdrawn - has history)
+            $hasAnyEnrollments = $cohortCourse->enrolments()->exists();
 
-        if ($hasAnyEnrollments) {
-            throw ValidationException::withMessages([
-                'cohort_course' => 'Cannot remove a course with enrollment history from a cohort. Use the "Closed" status instead.',
-            ]);
-        }
+            if ($hasAnyEnrollments) {
+                throw ValidationException::withMessages([
+                    'cohort_course' => 'Cannot remove a course with enrollment history from a cohort. Use the "Closed" status instead.',
+                ]);
+            }
 
-        // Check for any applications (including rejected/dismissed - has history)
-        $hasAnyApplications = $cohortCourse->applications()->exists();
+            // Check for any applications (including rejected/dismissed - has history)
+            $hasAnyApplications = $cohortCourse->applications()->exists();
 
-        if ($hasAnyApplications) {
-            throw ValidationException::withMessages([
-                'cohort_course' => 'Cannot remove a course with application history from a cohort. Use the "Closed" status instead.',
-            ]);
-        }
+            if ($hasAnyApplications) {
+                throw ValidationException::withMessages([
+                    'cohort_course' => 'Cannot remove a course with application history from a cohort. Use the "Closed" status instead.',
+                ]);
+            }
 
-        $this->auditLogger->log(
-            action: 'cohort_course.deleted',
-            entityType: 'cohort_course',
-            entityId: $cohortCourse->id,
-            actorId: $actorId,
-            meta: [
-                'cohort_id' => $cohortCourse->cohort_id,
-                'course_id' => $cohortCourse->course_id,
-            ],
-        );
+            $this->auditLogger->log(
+                action: 'cohort_course.deleted',
+                entityType: 'cohort_course',
+                entityId: $cohortCourse->id,
+                actorId: $actorId,
+                meta: [
+                    'cohort_id' => $cohortCourse->cohort_id,
+                    'course_id' => $cohortCourse->course_id,
+                ],
+            );
 
-        $cohortCourse->delete();
+            $cohortCourse->delete();
+        });
     }
 
     /**

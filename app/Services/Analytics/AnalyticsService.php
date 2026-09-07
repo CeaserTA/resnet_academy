@@ -189,9 +189,11 @@ final class AnalyticsService
 
         $atRiskEnrolments = $this->atRiskEnrolments($course, $enrolments, $completedStudentIds, $lastEngagementByStudent);
 
-        foreach ($atRiskEnrolments as $enrolment) {
-            $this->notificationDispatcher->notifyAtRiskReminder($enrolment->student, $course, $message);
-        }
+        DB::transaction(function () use ($atRiskEnrolments, $course, $message): void {
+            foreach ($atRiskEnrolments as $enrolment) {
+                $this->notificationDispatcher->notifyAtRiskReminder($enrolment->student, $course, $message);
+            }
+        });
 
         return $atRiskEnrolments->count();
     }
