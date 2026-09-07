@@ -31,6 +31,10 @@ final class Order extends Model
         'payment_method',
         'provider_ref',
         'paid_at',
+        'refunded_amount',
+        'refunded_at',
+        'refunded_by',
+        'transferred_from_enrolment_id',
     ];
 
     protected $casts = [
@@ -38,6 +42,8 @@ final class Order extends Model
         'amount' => 'decimal:2',
         'amount_paid' => 'decimal:2',
         'paid_at' => 'datetime',
+        'refunded_amount' => 'decimal:2',
+        'refunded_at' => 'datetime',
     ];
 
     /**
@@ -62,6 +68,22 @@ final class Order extends Model
     public function enrolment(): BelongsTo
     {
         return $this->belongsTo(Enrolment::class);
+    }
+
+    /**
+     * @return BelongsTo<Enrolment, $this>
+     */
+    public function transferredFromEnrolment(): BelongsTo
+    {
+        return $this->belongsTo(Enrolment::class, 'transferred_from_enrolment_id');
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function refundedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'refunded_by');
     }
 
     /**

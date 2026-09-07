@@ -66,10 +66,10 @@ final class CourseApplicationController extends Controller
             answers: $request->validated('answers', []),
             portfolioUrl: $request->validated('portfolio_url'),
             alternativeProofText: $request->validated('alternative_proof_text'),
-            sectionId: $request->validated('section_id'),
+            cohortCourseId: $request->validated('cohort_course_id'),
         );
 
-        return (new CourseApplicationResource($application->load(['student', 'course', 'section'])))
+        return (new CourseApplicationResource($application->load(['student', 'course', 'cohortCourse.cohort'])))
             ->response()
             ->setStatusCode(201);
     }

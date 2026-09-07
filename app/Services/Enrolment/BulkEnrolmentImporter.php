@@ -6,7 +6,7 @@ namespace App\Services\Enrolment;
 
 use App\Enums\EnrolmentSource;
 use App\Enums\UserRole;
-use App\Models\Course;
+use App\Models\CohortCourse;
 use App\Models\Enrolment;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
@@ -26,8 +26,9 @@ final class BulkEnrolmentImporter
     /**
      * @return array{imported: int, skipped: list<string>}
      */
-    public function import(Course $course, string $absoluteCsvPath, User $admin): array
+    public function import(CohortCourse $cohortCourse, string $absoluteCsvPath, User $admin): array
     {
+        $course = $cohortCourse->course;
         $imported = 0;
         $skipped = [];
 
@@ -67,7 +68,7 @@ final class BulkEnrolmentImporter
                 continue;
             }
 
-            $this->enrolmentService->enrol($student, $course, EnrolmentSource::AdminBulk, $admin);
+            $this->enrolmentService->enrol($student, $course, EnrolmentSource::AdminBulk, $cohortCourse->id, $admin);
             $imported++;
         }
 
@@ -78,7 +79,7 @@ final class BulkEnrolmentImporter
             entityType: 'course',
             entityId: $course->id,
             actorId: $admin->id,
-            meta: ['imported' => $imported, 'skipped' => $skipped],
+            meta: ['cohort_course_id' => $cohortCourse->id, 'imported' => $imported, 'skipped' => $skipped],
         );
 
         return ['imported' => $imported, 'skipped' => $skipped];

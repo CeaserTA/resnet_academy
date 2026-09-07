@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Factories;
 
 use App\Enums\CourseApplicationStatus;
+use App\Models\CohortCourse;
 use App\Models\Course;
 use App\Models\CourseApplication;
 use App\Models\User;
@@ -22,9 +23,24 @@ final class CourseApplicationFactory extends Factory
         return [
             'student_id' => User::factory()->student(),
             'course_id' => Course::factory(),
+            'cohort_course_id' => null,
             'status' => CourseApplicationStatus::Pending,
-            'answers' => [fake()->sentence()],
+            'answers' => [fake()->boolean()],
         ];
+    }
+
+    /**
+     * Resolved after `course_id` overrides (explicit array key, ->for(), states) have already
+     * been applied, so the default cohort_course_id always belongs to the FINAL course_id —
+     * not whichever course a naive eager default in definition() would have guessed at.
+     */
+    public function configure(): static
+    {
+        return $this->afterMaking(function (CourseApplication $application): void {
+            if ($application->cohort_course_id === null) {
+                $application->cohort_course_id = CohortCourse::factory()->for($application->course)->open()->create()->id;
+            }
+        });
     }
 
     public function approved(): static

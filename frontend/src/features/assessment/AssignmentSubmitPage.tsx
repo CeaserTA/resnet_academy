@@ -114,13 +114,12 @@ function ExistingSubmission({ submission, onResubmit }: { submission: Assignment
 
 // ─── Submission form ──────────────────────────────────────────────────────────
 
-function SubmissionForm({ assignmentId, submissionType, courseId, onSuccess }: {
+function SubmissionForm({ assignmentId, submissionType, onSuccess }: {
     assignmentId: number;
     submissionType: string;
-    courseId: number;
     onSuccess: () => void;
 }) {
-    const submit = useSubmitAssignment(assignmentId, courseId);
+    const submit = useSubmitAssignment(assignmentId);
     const [file, setFile] = useState<File | null>(null);
     const [textContent, setTextContent] = useState('');
     const [error, setError] = useState<string | null>(null);
@@ -398,7 +397,6 @@ export function AssignmentSubmitPage() {
                         <SubmissionForm
                             assignmentId={assignmentId}
                             submissionType={assignment.submission_type}
-                            courseId={courseId}
                             onSuccess={() => {
                                 setShowResubmitForm(false);
                                 setJustSubmitted(true);

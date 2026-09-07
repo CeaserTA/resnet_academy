@@ -21,6 +21,7 @@ const { course, enrolment, modules, progressRows } = vi.hoisted(() => {
         enrolment_policy: 'open',
         advisory_require_attestation: false,
         application_questions: null,
+    application_pass_threshold: null,
         application_allow_alternative_proof: true,
         application_require_portfolio_url: false,
         thumbnail_url: null,
@@ -42,9 +43,13 @@ const { course, enrolment, modules, progressRows } = vi.hoisted(() => {
         status: 'confirmed',
         source: 'self',
         course,
+        cohort_course: null,
         applied_at: '2026-01-01T00:00:00Z',
         confirmation_email_due_at: '2026-01-01T00:00:00Z',
         confirmation_email_sent_at: null,
+        transfer_requested_at: null,
+        transferred_to_id: null,
+        withdrawal_note: null,
         order: null,
     };
 
@@ -94,6 +99,7 @@ vi.mock('@/features/enrolment/api', () => ({
     ),
     withdrawEnrolment: vi.fn().mockResolvedValue({}),
     submitPayment: vi.fn(),
+    cancelTransferRequest: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock('@/features/courseApplications/api', () => ({
@@ -140,13 +146,17 @@ function renderPage() {
     );
 }
 
-it('links the Continue button to the next incomplete item, not the module list', async () => {
+it('links the Continue button to the course player, which resumes progress itself', async () => {
+    // Deliberately not a deep link to a specific next-incomplete-item resource: computing that
+    // here would mean calling useCourseSequence() once per enrolled course inside .map(),
+    // violating the rules of hooks and firing one GET /courses/:id/modules per card on every
+    // render. CoursePlayerPage resolves "continue where you left off" internally instead.
     renderPage();
 
     expect(await screen.findByText('Intro to Testing')).toBeInTheDocument();
 
     await waitFor(() => {
-        expect(screen.getByRole('link', { name: /Continue/ })).toHaveAttribute('href', '/learn/resources/10?course=1');
+        expect(screen.getByRole('link', { name: /Continue/ })).toHaveAttribute('href', '/learn/courses/1');
     });
 });
 
@@ -241,7 +251,12 @@ function makeApplication(overrides: Partial<CourseApplication>): CourseApplicati
         status: 'pending',
         student: null as unknown as CourseApplication['student'],
         course: { ...course, id: 2, title: 'Search Engine Optimisation' },
+        cohort_course: null,
         answers: null,
+        eligibility_score: null,
+        eligibility_passed: null,
+        approved_automatically: false,
+        enrolment_status: null,
         portfolio_url: null,
         alternative_proof_text: null,
         rejection_reason: null,

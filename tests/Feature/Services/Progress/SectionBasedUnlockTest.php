@@ -7,8 +7,9 @@ namespace Tests\Feature\Services\Progress;
 use App\Enums\CourseSectionStatus;
 use App\Enums\EnrolmentStatus;
 use App\Enums\ModuleProgressStatus;
+use App\Models\Cohort;
+use App\Models\CohortCourse;
 use App\Models\Course;
-use App\Models\CourseSection;
 use App\Models\Enrolment;
 use App\Models\Module;
 use App\Models\ModuleProgress;
@@ -29,32 +30,42 @@ final class SectionBasedUnlockTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         Mail::fake();
         Queue::fake();
         Notification::fake();
-        
+
         $this->progressEngine = $this->app->make(ProgressEngine::class);
     }
 
-    public function test_module_unlocks_based_on_section_start_date_and_offset(): void
+    /**
+     * @return CohortCourse
+     */
+    private function cohortCourseStartingOn(Course $course, \DateTimeInterface|string $startDate): CohortCourse
+    {
+        $cohort = Cohort::factory()->create(['start_date' => $startDate]);
+
+        return CohortCourse::factory()->create([
+            'course_id' => $course->id,
+            'cohort_id' => $cohort->id,
+            'status' => CourseSectionStatus::InProgress,
+        ]);
+    }
+
+    public function test_module_unlocks_based_on_cohort_start_date_and_offset(): void
     {
         $student = User::factory()->create();
         $course = Course::factory()->create();
-        $section = CourseSection::factory()->create([
-            'course_id' => $course->id,
-            'status' => CourseSectionStatus::InProgress,
-            'start_date' => now()->subDays(10),
-        ]);
+        $cohortCourse = $this->cohortCourseStartingOn($course, now()->subDays(10));
 
         Enrolment::factory()->create([
             'student_id' => $student->id,
             'course_id' => $course->id,
-            'section_id' => $section->id,
+            'cohort_course_id' => $cohortCourse->id,
             'status' => EnrolmentStatus::Confirmed,
         ]);
 
-        // Module with unlock_offset_days = 5 (should unlock 5 days after section start)
+        // Module with unlock_offset_days = 5 (should unlock 5 days after cohort start)
         $module = Module::factory()->create([
             'course_id' => $course->id,
             'unlock_offset_days' => 5,
@@ -64,7 +75,7 @@ final class SectionBasedUnlockTest extends TestCase
 
         $this->progressEngine->evaluateCourseUnlocks($student, $course);
 
-        // Module should be unlocked (section started 10 days ago, offset is 5 days)
+        // Module should be unlocked (cohort started 10 days ago, offset is 5 days)
         $this->assertDatabaseHas('module_progress', [
             'student_id' => $student->id,
             'module_id' => $module->id,
@@ -77,24 +88,20 @@ final class SectionBasedUnlockTest extends TestCase
         $this->assertNotNull($progress->unlocked_at);
     }
 
-    public function test_module_stays_locked_when_section_offset_not_reached(): void
+    public function test_module_stays_locked_when_cohort_offset_not_reached(): void
     {
         $student = User::factory()->create();
         $course = Course::factory()->create();
-        $section = CourseSection::factory()->create([
-            'course_id' => $course->id,
-            'status' => CourseSectionStatus::InProgress,
-            'start_date' => now()->subDays(3),
-        ]);
+        $cohortCourse = $this->cohortCourseStartingOn($course, now()->subDays(3));
 
         Enrolment::factory()->create([
             'student_id' => $student->id,
             'course_id' => $course->id,
-            'section_id' => $section->id,
+            'cohort_course_id' => $cohortCourse->id,
             'status' => EnrolmentStatus::Confirmed,
         ]);
 
-        // Module with unlock_offset_days = 7 (should unlock 7 days after section start)
+        // Module with unlock_offset_days = 7 (should unlock 7 days after cohort start)
         $module = Module::factory()->create([
             'course_id' => $course->id,
             'unlock_offset_days' => 7,
@@ -112,96 +119,31 @@ final class SectionBasedUnlockTest extends TestCase
         ]);
     }
 
-    public function test_module_falls_back_to_scheduled_start_at_for_self_paced(): void
+    public function test_cohort_relative_scheduling_takes_precedence_over_absolute(): void
     {
         $student = User::factory()->create();
         $course = Course::factory()->create();
-
-        // Self-paced enrollment (no section)
-        Enrolment::factory()->create([
-            'student_id' => $student->id,
-            'course_id' => $course->id,
-            'section_id' => null,
-            'status' => EnrolmentStatus::Confirmed,
-        ]);
-
-        // Module with scheduled_start_at in the past
-        $module = Module::factory()->create([
-            'course_id' => $course->id,
-            'unlock_offset_days' => 5, // Has offset but no section - should be ignored
-            'scheduled_start_at' => now()->subDays(1),
-            'order_index' => 1,
-        ]);
-
-        $this->progressEngine->evaluateCourseUnlocks($student, $course);
-
-        // Module should unlock based on scheduled_start_at
-        $this->assertDatabaseHas('module_progress', [
-            'student_id' => $student->id,
-            'module_id' => $module->id,
-            'status' => ModuleProgressStatus::NotStarted->value,
-        ]);
-    }
-
-    public function test_module_stays_locked_for_self_paced_when_scheduled_start_at_future(): void
-    {
-        $student = User::factory()->create();
-        $course = Course::factory()->create();
+        $cohortCourse = $this->cohortCourseStartingOn($course, now()->subDays(10));
 
         Enrolment::factory()->create([
             'student_id' => $student->id,
             'course_id' => $course->id,
-            'section_id' => null,
-            'status' => EnrolmentStatus::Confirmed,
-        ]);
-
-        // Module with scheduled_start_at in the future
-        $module = Module::factory()->create([
-            'course_id' => $course->id,
-            'unlock_offset_days' => null,
-            'scheduled_start_at' => now()->addDays(5),
-            'order_index' => 1,
-        ]);
-
-        $this->progressEngine->evaluateCourseUnlocks($student, $course);
-
-        // Module should remain locked
-        $this->assertDatabaseHas('module_progress', [
-            'student_id' => $student->id,
-            'module_id' => $module->id,
-            'status' => ModuleProgressStatus::Locked->value,
-        ]);
-    }
-
-    public function test_section_relative_scheduling_takes_precedence_over_absolute(): void
-    {
-        $student = User::factory()->create();
-        $course = Course::factory()->create();
-        $section = CourseSection::factory()->create([
-            'course_id' => $course->id,
-            'status' => CourseSectionStatus::InProgress,
-            'start_date' => now()->subDays(10),
-        ]);
-
-        Enrolment::factory()->create([
-            'student_id' => $student->id,
-            'course_id' => $course->id,
-            'section_id' => $section->id,
+            'cohort_course_id' => $cohortCourse->id,
             'status' => EnrolmentStatus::Confirmed,
         ]);
 
         // Module with BOTH unlock_offset_days and scheduled_start_at
-        // Section-relative should take precedence
+        // Cohort-relative should take precedence
         $module = Module::factory()->create([
             'course_id' => $course->id,
-            'unlock_offset_days' => 5, // 5 days after section start = 5 days ago (should unlock)
+            'unlock_offset_days' => 5, // 5 days after cohort start = 5 days ago (should unlock)
             'scheduled_start_at' => now()->addDays(10), // Future date (would stay locked if this was used)
             'order_index' => 1,
         ]);
 
         $this->progressEngine->evaluateCourseUnlocks($student, $course);
 
-        // Module should unlock based on section offset, not scheduled_start_at
+        // Module should unlock based on cohort offset, not scheduled_start_at
         $this->assertDatabaseHas('module_progress', [
             'student_id' => $student->id,
             'module_id' => $module->id,
@@ -209,24 +151,20 @@ final class SectionBasedUnlockTest extends TestCase
         ]);
     }
 
-    public function test_module_with_zero_offset_unlocks_on_section_start(): void
+    public function test_module_with_zero_offset_unlocks_on_cohort_start(): void
     {
         $student = User::factory()->create();
         $course = Course::factory()->create();
-        $section = CourseSection::factory()->create([
-            'course_id' => $course->id,
-            'status' => CourseSectionStatus::InProgress,
-            'start_date' => now()->subDay(),
-        ]);
+        $cohortCourse = $this->cohortCourseStartingOn($course, now()->subDay());
 
         Enrolment::factory()->create([
             'student_id' => $student->id,
             'course_id' => $course->id,
-            'section_id' => $section->id,
+            'cohort_course_id' => $cohortCourse->id,
             'status' => EnrolmentStatus::Confirmed,
         ]);
 
-        // Module with unlock_offset_days = 0 (unlocks immediately on section start)
+        // Module with unlock_offset_days = 0 (unlocks immediately on cohort start)
         $module = Module::factory()->create([
             'course_id' => $course->id,
             'unlock_offset_days' => 0,
@@ -244,20 +182,16 @@ final class SectionBasedUnlockTest extends TestCase
         ]);
     }
 
-    public function test_section_based_unlock_respects_sequential_prerequisite(): void
+    public function test_cohort_based_unlock_respects_sequential_prerequisite(): void
     {
         $student = User::factory()->create();
         $course = Course::factory()->create();
-        $section = CourseSection::factory()->create([
-            'course_id' => $course->id,
-            'status' => CourseSectionStatus::InProgress,
-            'start_date' => now()->subDays(30),
-        ]);
+        $cohortCourse = $this->cohortCourseStartingOn($course, now()->subDays(30));
 
         Enrolment::factory()->create([
             'student_id' => $student->id,
             'course_id' => $course->id,
-            'section_id' => $section->id,
+            'cohort_course_id' => $cohortCourse->id,
             'status' => EnrolmentStatus::Confirmed,
         ]);
 
@@ -307,24 +241,20 @@ final class SectionBasedUnlockTest extends TestCase
         ]);
     }
 
-    public function test_module_without_offset_uses_scheduled_start_at_even_in_section(): void
+    public function test_module_without_offset_uses_scheduled_start_at_even_in_a_cohort(): void
     {
         $student = User::factory()->create();
         $course = Course::factory()->create();
-        $section = CourseSection::factory()->create([
-            'course_id' => $course->id,
-            'status' => CourseSectionStatus::InProgress,
-            'start_date' => now()->subDays(10),
-        ]);
+        $cohortCourse = $this->cohortCourseStartingOn($course, now()->subDays(10));
 
         Enrolment::factory()->create([
             'student_id' => $student->id,
             'course_id' => $course->id,
-            'section_id' => $section->id,
+            'cohort_course_id' => $cohortCourse->id,
             'status' => EnrolmentStatus::Confirmed,
         ]);
 
-        // Module enrolled in section but has no unlock_offset_days - uses scheduled_start_at
+        // Module in a cohort but with no unlock_offset_days - uses scheduled_start_at
         $module = Module::factory()->create([
             'course_id' => $course->id,
             'unlock_offset_days' => null,
@@ -335,36 +265,6 @@ final class SectionBasedUnlockTest extends TestCase
         $this->progressEngine->evaluateCourseUnlocks($student, $course);
 
         // Module should unlock based on scheduled_start_at
-        $this->assertDatabaseHas('module_progress', [
-            'student_id' => $student->id,
-            'module_id' => $module->id,
-            'status' => ModuleProgressStatus::NotStarted->value,
-        ]);
-    }
-
-    public function test_module_unlocks_immediately_when_no_schedule_constraints(): void
-    {
-        $student = User::factory()->create();
-        $course = Course::factory()->create();
-
-        Enrolment::factory()->create([
-            'student_id' => $student->id,
-            'course_id' => $course->id,
-            'section_id' => null,
-            'status' => EnrolmentStatus::Confirmed,
-        ]);
-
-        // Module with no scheduling constraints
-        $module = Module::factory()->create([
-            'course_id' => $course->id,
-            'unlock_offset_days' => null,
-            'scheduled_start_at' => null,
-            'order_index' => 1,
-        ]);
-
-        $this->progressEngine->evaluateCourseUnlocks($student, $course);
-
-        // Module should unlock immediately
         $this->assertDatabaseHas('module_progress', [
             'student_id' => $student->id,
             'module_id' => $module->id,

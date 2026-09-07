@@ -16,6 +16,7 @@ const { baseCourse, fetchCourseMock, updateCourseMock } = vi.hoisted(() => {
         enrolment_policy: 'open',
         advisory_require_attestation: false,
         application_questions: null,
+        application_pass_threshold: null,
         application_allow_alternative_proof: true,
         application_require_portfolio_url: false,
         thumbnail_url: null,
@@ -124,7 +125,11 @@ it('loading a course that already has application_questions and saving immediate
         ...baseCourse,
         level: 'advanced',
         enrolment_policy: 'application',
-        application_questions: ['Why do you want to take this course?', 'What relevant experience do you have?'],
+        application_questions: [
+            { text: 'Why do you want to take this course?', correct_answer: true },
+            { text: 'What relevant experience do you have?', correct_answer: false },
+        ],
+        application_pass_threshold: 80,
         application_require_portfolio_url: true,
     };
 
@@ -138,9 +143,10 @@ it('loading a course that already has application_questions and saving immediate
     expect(updateCourseMock).toHaveBeenCalledTimes(1);
     const [, payload] = updateCourseMock.mock.calls[0];
     expect(payload.application_questions).toEqual([
-        'Why do you want to take this course?',
-        'What relevant experience do you have?',
+        { text: 'Why do you want to take this course?', correct_answer: true },
+        { text: 'What relevant experience do you have?', correct_answer: false },
     ]);
+    expect(payload.application_pass_threshold).toBe(80);
 });
 
 it('overriding the policy and adding application questions saves them', async () => {
@@ -157,5 +163,7 @@ it('overriding the policy and adding application questions saves them', async ()
     expect(await screen.findByText('Course list')).toBeInTheDocument();
     const [, payload] = updateCourseMock.mock.calls.at(-1)!;
     expect(payload.enrolment_policy).toBe('application');
-    expect(payload.application_questions).toEqual(['Why do you want to take this course?']);
+    expect(payload.application_questions).toEqual([
+        { text: 'Why do you want to take this course?', correct_answer: true },
+    ]);
 });

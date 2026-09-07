@@ -5,7 +5,8 @@ declare(strict_types=1);
 use App\Enums\EnrolmentSource;
 use App\Enums\ModuleProgressStatus;
 use App\Models\Course;
-use App\Models\GroupsCohort;
+use App\Models\CohortCourse;
+use App\Models\Group;
 use App\Models\Module;
 use App\Models\ModuleItem;
 use App\Models\ModuleProgress;
@@ -44,7 +45,7 @@ it('unlocks module 1 immediately on enrolment when no schedule is set', function
     $course = Course::factory()->create();
     $module1 = Module::factory()->for($course)->create(['order_index' => 1]);
 
-    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
 
     expect(statusFor($student, $module1))->toBe(ModuleProgressStatus::NotStarted);
 });
@@ -56,7 +57,7 @@ it('locks module 2 until module 1 is completed even if scheduled_start_at has pa
     $module2 = Module::factory()->for($course)->create(['order_index' => 2, 'scheduled_start_at' => now()->subDay()]);
     makeRequiredResourceItem($module1);
 
-    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
 
     expect(statusFor($student, $module2))->toBe(ModuleProgressStatus::Locked);
 });
@@ -68,7 +69,7 @@ it('unlocks module 2 once module 1 completes, its own schedule already having pa
     $module2 = Module::factory()->for($course)->create(['order_index' => 2, 'scheduled_start_at' => now()->subDay()]);
     $item = makeRequiredResourceItem($module1);
 
-    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
     app(ProgressEngine::class)->markRead($student, $item->resolveItem());
 
     expect(statusFor($student, $module1))->toBe(ModuleProgressStatus::Completed);
@@ -80,7 +81,7 @@ it('keeps a module locked until its own scheduled_start_at passes, even with no 
     $course = Course::factory()->create();
     Module::factory()->for($course)->create(['order_index' => 1, 'scheduled_start_at' => now()->addWeek()]);
 
-    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
 
     $module = $course->modules()->first();
     expect(statusFor($student, $module))->toBe(ModuleProgressStatus::Locked);
@@ -94,10 +95,10 @@ it('does not let a group-scoped module block a students sequence when they are n
     $module3 = Module::factory()->for($course)->create(['order_index' => 3]);
     makeRequiredResourceItem($module1);
 
-    $otherGroup = GroupsCohort::factory()->for($course)->create();
+    $otherGroup = Group::factory()->for($course)->create();
     $module2->groups()->attach($otherGroup->id);
 
-    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
     $item1 = ModuleItem::where('module_id', $module1->id)->first();
     app(ProgressEngine::class)->markRead($student, $item1->resolveItem());
 
@@ -113,7 +114,7 @@ it('rejects a progress action on a resource whose module is still locked', funct
     $module1 = Module::factory()->for($course)->create(['order_index' => 1, 'scheduled_start_at' => now()->addWeek()]);
     $resource = Resource::factory()->for($module1)->reading()->create();
 
-    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
 
     expect(fn () => app(ProgressEngine::class)->markRead($student, $resource))
         ->toThrow(HttpException::class);
@@ -124,7 +125,7 @@ it('notifies the student when a module unlocks, exactly once per transition', fu
     $course = Course::factory()->create();
     $module1 = Module::factory()->for($course)->create(['order_index' => 1]);
 
-    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
     expect(Notification::where('user_id', $student->id)->where('type', 'module_unlocked')->count())->toBe(1);
 
     // Re-evaluating unlocks again (e.g. the scheduled sweep) must not notify a second time —

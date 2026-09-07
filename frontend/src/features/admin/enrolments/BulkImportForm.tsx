@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Upload } from 'lucide-react';
 import { useCourses } from '@/features/catalogue/useCourses';
+import { useCohortCoursesForCourse } from '@/features/cohorts/useCohorts';
 import { importEnrolmentsCsv } from '@/features/admin/enrolments/api';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
@@ -16,12 +17,15 @@ import { ApiError } from '@/lib/api/client';
 export function BulkImportForm({ onClose }: { onClose: () => void }) {
     const { data: courses } = useCourses({});
     const [courseId, setCourseId] = useState<string>('');
+    const [cohortCourseId, setCohortCourseId] = useState<string>('');
     const [formError, setFormError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const { data: cohortCourses } = useCohortCoursesForCourse(Number(courseId));
+
     const importMutation = useMutation({
-        mutationFn: ({ courseId, file }: { courseId: number; file: File }) => importEnrolmentsCsv(courseId, file),
+        mutationFn: ({ cohortCourseId, file }: { cohortCourseId: number; file: File }) => importEnrolmentsCsv(cohortCourseId, file),
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -31,13 +35,13 @@ export function BulkImportForm({ onClose }: { onClose: () => void }) {
 
         const file = fileInputRef.current?.files?.[0];
 
-        if (!courseId || !file) {
-            setFormError('Choose a course and a CSV file.');
+        if (!cohortCourseId || !file) {
+            setFormError('Choose a course, a cohort, and a CSV file.');
             return;
         }
 
         try {
-            await importMutation.mutateAsync({ courseId: Number(courseId), file });
+            await importMutation.mutateAsync({ cohortCourseId: Number(cohortCourseId), file });
             setSuccess(true);
             if (fileInputRef.current) fileInputRef.current.value = '';
         } catch (error) {
@@ -49,7 +53,7 @@ export function BulkImportForm({ onClose }: { onClose: () => void }) {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <p className="text-sm text-ink-600">
                 Upload a CSV with an <code className="rounded bg-surface-100 px-1 font-mono text-xs">email</code> column.
-                Students already enrolled in the course are skipped automatically.
+                Students already enrolled are skipped automatically.
             </p>
 
             {formError && <Alert variant="error" message={formError} />}
@@ -60,7 +64,14 @@ export function BulkImportForm({ onClose }: { onClose: () => void }) {
                 />
             )}
 
-            <Select label="Course" value={courseId} onChange={(e) => setCourseId(e.target.value)}>
+            <Select
+                label="Course"
+                value={courseId}
+                onChange={(e) => {
+                    setCourseId(e.target.value);
+                    setCohortCourseId('');
+                }}
+            >
                 <option value="">Select a course</option>
                 {courses?.data.map((course) => (
                     <option key={course.id} value={course.id}>
@@ -68,6 +79,17 @@ export function BulkImportForm({ onClose }: { onClose: () => void }) {
                     </option>
                 ))}
             </Select>
+
+            {courseId && (
+                <Select label="Cohort" value={cohortCourseId} onChange={(e) => setCohortCourseId(e.target.value)}>
+                    <option value="">Select a cohort offering</option>
+                    {cohortCourses?.map((cc) => (
+                        <option key={cc.id} value={cc.id}>
+                            {cc.cohort_name}
+                        </option>
+                    ))}
+                </Select>
+            )}
 
             <div className="flex flex-col gap-1.5">
                 <label htmlFor="csv-file" className="text-sm font-medium text-ink-900">

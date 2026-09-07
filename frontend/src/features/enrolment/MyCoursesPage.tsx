@@ -9,8 +9,9 @@ import {
     LogOut,
     Star,
     TrendingUp,
+    XCircle,
 } from 'lucide-react';
-import { useMyEnrolments, useSubmitPayment, useWithdrawEnrolment } from '@/features/enrolment/useEnrolments';
+import { useMyEnrolments, useSubmitPayment, useWithdrawEnrolment, useCancelTransferRequest } from '@/features/enrolment/useEnrolments';
 import { useDismissCourseApplication, useMyCourseApplications } from '@/features/courseApplications/useCourseApplications';
 import { useProgressDashboard } from '@/features/progress/useProgress';
 import { ApplicationStatusCard } from '@/features/enrolment/ApplicationStatusCard';
@@ -27,11 +28,7 @@ import { Alert } from '@/components/ui/Alert';
 import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ProgressBar } from '@/components/ui/ProgressBar';
-import {
-    courseProgressStatusDisplay,
-    enrolmentStatusDisplay,
-    paymentSubmissionStatusDisplay,
-} from '@/lib/statusBadge';
+import { courseProgressStatusDisplay, enrolmentStatusDisplay } from '@/lib/statusBadge';
 import { ApiError } from '@/lib/api/client';
 import type { CourseReview, Enrolment, ProgressDashboardRow } from '@/lib/api/types';
 
@@ -46,7 +43,7 @@ function formatAmount(amount: string | number, currency: string): string {
 
 // ─── Make payment modal ───────────────────────────────────────────────────────
 
-function MakePaymentModal({ enrolments, onClose }: { enrolments: Enrolment[]; onClose: () => void }) {
+function MakePaymentModal({ enrolments, onClose, onSubmitted }: { enrolments: Enrolment[]; onClose: () => void; onSubmitted: () => void }) {
     const submitPayment = useSubmitPayment();
     const [selected, setSelected] = useState<Enrolment | null>(() => (enrolments.length === 1 ? enrolments[0] : null));
     const [amount, setAmount] = useState(() =>
@@ -77,6 +74,7 @@ function MakePaymentModal({ enrolments, onClose }: { enrolments: Enrolment[]; on
         if (!receipt) { setError('Attach a receipt image.'); return; }
         try {
             await submitPayment.mutateAsync({ orderId: selected.order.id, amount: numericAmount, receipt });
+            onSubmitted();
             onClose();
         } catch (err) {
             setError(err instanceof ApiError ? err.message : 'Could not submit the payment. Try again.');
@@ -142,7 +140,7 @@ function MakePaymentModal({ enrolments, onClose }: { enrolments: Enrolment[]; on
 
 // ─── Withdraw confirm modal ───────────────────────────────────────────────────
 
-function WithdrawConfirmModal({ enrolment, onClose }: { enrolment: Enrolment; onClose: () => void }) {
+function WithdrawConfirmModal({ enrolment, onClose, onWithdrawSuccess }: { enrolment: Enrolment; onClose: () => void; onWithdrawSuccess: (status: string) => void }) {
     const withdrawEnrolment = useWithdrawEnrolment();
     return (
         <Modal
@@ -152,7 +150,11 @@ function WithdrawConfirmModal({ enrolment, onClose }: { enrolment: Enrolment; on
             footer={
                 <>
                     <Button variant="ghost" onClick={onClose}>Cancel</Button>
-                    <Button variant="destructive" onClick={async () => { await withdrawEnrolment.mutateAsync(enrolment.id); onClose(); }} isLoading={withdrawEnrolment.isPending}>
+                    <Button variant="destructive" onClick={async () => { 
+                        const result = await withdrawEnrolment.mutateAsync({ enrolmentId: enrolment.id }); 
+                        onWithdrawSuccess(result.status);
+                        onClose(); 
+                    }} isLoading={withdrawEnrolment.isPending}>
                         Withdraw
                     </Button>
                 </>
@@ -167,18 +169,19 @@ function WithdrawConfirmModal({ enrolment, onClose }: { enrolment: Enrolment; on
 
 // ─── Enrolment card ───────────────────────────────────────────────────────────
 
-function EnrolmentCard({ enrolment, progress, review, onWithdraw, onReview }: {
+function EnrolmentCard({ enrolment, progress, review, onWithdraw, onCancelTransfer, onReview }: {
     enrolment: Enrolment;
     progress: ProgressDashboardRow | undefined;
     review: CourseReview | undefined;
     onWithdraw: () => void;
+    onCancelTransfer: () => void;
     onReview: () => void;
 }) {
     const status = enrolmentStatusDisplay(enrolment.status);
     const order = enrolment.order;
     const pendingSubmission = order?.pending_submission ?? null;
-    const pendingSubmissionStatus = pendingSubmission ? paymentSubmissionStatusDisplay(pendingSubmission.status) : null;
     const progressStatus = progress ? courseProgressStatusDisplay(progress.status) : null;
+    const isTransferRequested = enrolment.status === 'transfer_requested';
 
     // Always link to the CoursePlayerPage — it handles "Continue where you left off" itself.
     // Previously this called useCourseSequence() inside .map(), violating rules of hooks and
@@ -205,9 +208,6 @@ function EnrolmentCard({ enrolment, progress, review, onWithdraw, onReview }: {
                 <div>
                     <div className="flex items-center gap-2">
                         <Badge label={status.label} tone={status.tone} icon={status.icon} />
-                        {pendingSubmissionStatus && (
-                            <Badge label={pendingSubmissionStatus.label} tone={pendingSubmissionStatus.tone} icon={pendingSubmissionStatus.icon} />
-                        )}
                     </div>
                     <Link to={`/learn/courses/${enrolment.course.id}`}>
                         <h3 className="mt-2 line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-tight text-ink-900 hover:text-blue-600">
@@ -247,26 +247,26 @@ function EnrolmentCard({ enrolment, progress, review, onWithdraw, onReview }: {
                     </div>
                 )}
 
-                {order && order.remaining_balance > 0 && (
+                {order && order.remaining_balance > 0 && !pendingSubmission && (
                     <div className="flex flex-col gap-1.5 border-t border-surface-100 pt-2">
-                        {pendingSubmission && pendingSubmissionStatus ? (
-                            <div className="flex items-center justify-between text-xs">
-                                <span className="text-ink-600">{formatAmount(pendingSubmission.amount, order.currency)} submitted</span>
-                                <Badge label={pendingSubmissionStatus.label} tone={pendingSubmissionStatus.tone} icon={pendingSubmissionStatus.icon} />
-                            </div>
-                        ) : (
-                            <p className="text-xs text-ink-600">
-                                Amount owed: <span className="font-medium text-ink-900">{formatAmount(order.remaining_balance, order.currency)}</span>
-                            </p>
-                        )}
+                        <p className="text-xs text-ink-600">
+                            Amount owed: <span className="font-medium text-ink-900">{formatAmount(order.remaining_balance, order.currency)}</span>
+                        </p>
                     </div>
                 )}
 
                 <div className="mt-auto border-t border-surface-100 pt-2">
-                    <button type="button" onClick={onWithdraw} className="flex items-center gap-1.5 text-xs text-ink-400 hover:text-danger-600">
-                        <LogOut className="size-3.5" aria-hidden="true" />
-                        Withdraw
-                    </button>
+                    {isTransferRequested ? (
+                        <button type="button" onClick={onCancelTransfer} className="flex items-center gap-1.5 text-xs text-ink-400 hover:text-blue-600">
+                            <XCircle className="size-3.5" aria-hidden="true" />
+                            Cancel transfer request
+                        </button>
+                    ) : (
+                        <button type="button" onClick={onWithdraw} className="flex items-center gap-1.5 text-xs text-ink-400 hover:text-danger-600">
+                            <LogOut className="size-3.5" aria-hidden="true" />
+                            Withdraw
+                        </button>
+                    )}
                 </div>
             </div>
         </Card>
@@ -320,12 +320,16 @@ export function MyCoursesPage() {
     const { data: progressRows } = useProgressDashboard();
     const { data: myReviews } = useMyReviews();
     const dismissApplication = useDismissCourseApplication();
+    const cancelTransferRequest = useCancelTransferRequest();
 
     const [withdrawingEnrolment, setWithdrawingEnrolment] = useState<Enrolment | null>(null);
     const [isMakingPayment, setIsMakingPayment] = useState(false);
     const [reviewingCourse, setReviewingCourse] = useState<{ id: number; title: string } | null>(null);
     const [profileStatus, setProfileStatus] = useState<ProfileStatus | null>(null);
     const [showProfileModal, setShowProfileModal] = useState(false);
+    const [transferSuccessMessage, setTransferSuccessMessage] = useState<string | null>(null);
+    const [withdrawSuccessMessage, setWithdrawSuccessMessage] = useState<string | null>(null);
+    const [paymentSubmittedMessage, setPaymentSubmittedMessage] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchProfileStatus = async () => {
@@ -351,9 +355,21 @@ export function MyCoursesPage() {
         sessionStorage.setItem(PROFILE_MODAL_DISMISSED_KEY, '1');
     };
 
+    const handleWithdrawSuccess = (status: string) => {
+        if (status === 'transfer_requested') {
+            setTransferSuccessMessage("You've already paid for this course — your request has been sent to an admin, who can transfer you to another course.");
+        } else if (status === 'withdrawn') {
+            setWithdrawSuccessMessage("You've successfully withdrawn from this course.");
+        }
+    };
+
+    const handleCancelTransfer = async (enrolmentId: number) => {
+        await cancelTransferRequest.mutateAsync(enrolmentId);
+    };
+
     if (isLoading) return <Spinner />;
 
-    const activeEnrolments = (data?.data ?? []).filter((e) => e.status !== 'withdrawn');
+    const activeEnrolments = (data?.data ?? []).filter((e) => e.status !== 'withdrawn' && e.status !== 'transferred');
     const payableEnrolments = activeEnrolments.filter(
         (e) => e.order && e.order.remaining_balance > 0 && !e.order.pending_submission,
     );
@@ -395,6 +411,17 @@ export function MyCoursesPage() {
                     </Link>
                 </div>
             </div>
+
+            {/* Success messages */}
+            {transferSuccessMessage && (
+                <Alert variant="success" message={transferSuccessMessage} onDismiss={() => setTransferSuccessMessage(null)} />
+            )}
+            {withdrawSuccessMessage && (
+                <Alert variant="success" message={withdrawSuccessMessage} onDismiss={() => setWithdrawSuccessMessage(null)} />
+            )}
+            {paymentSubmittedMessage && (
+                <Alert variant="success" message={paymentSubmittedMessage} onDismiss={() => setPaymentSubmittedMessage(null)} />
+            )}
 
             {/* Overview strip */}
             <OverviewStrip activeEnrolments={activeEnrolments} progressRows={progressRows ?? []} />
@@ -445,6 +472,7 @@ export function MyCoursesPage() {
                                 progress={progressByCourseId.get(enrolment.course.id)}
                                 review={reviewByCourseId.get(enrolment.course.id)}
                                 onWithdraw={() => setWithdrawingEnrolment(enrolment)}
+                                onCancelTransfer={() => handleCancelTransfer(enrolment.id)}
                                 onReview={() => setReviewingCourse({ id: enrolment.course.id, title: enrolment.course.title })}
                             />
                         ))}
@@ -468,10 +496,16 @@ export function MyCoursesPage() {
 
             {/* Modals */}
             {isMakingPayment && (
-                <MakePaymentModal enrolments={payableEnrolments} onClose={() => setIsMakingPayment(false)} />
+                <MakePaymentModal
+                    enrolments={payableEnrolments}
+                    onClose={() => setIsMakingPayment(false)}
+                    onSubmitted={() =>
+                        setPaymentSubmittedMessage("Payment submitted — we'll notify you once an admin confirms it.")
+                    }
+                />
             )}
             {withdrawingEnrolment && (
-                <WithdrawConfirmModal enrolment={withdrawingEnrolment} onClose={() => setWithdrawingEnrolment(null)} />
+                <WithdrawConfirmModal enrolment={withdrawingEnrolment} onClose={() => setWithdrawingEnrolment(null)} onWithdrawSuccess={handleWithdrawSuccess} />
             )}
             {reviewingCourse && (
                 <ReviewFormModal

@@ -17,10 +17,11 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
 import { Alert } from '@/components/ui/Alert';
+import { Modal } from '@/components/ui/Modal';
 import { useCourse, useCourseModules } from '@/features/catalogue/useCourses';
 import { courseImageMap } from '@/features/catalogue/courseImages';
 import { useStudentSections } from '@/features/catalogue/useStudentSections';
-import { SectionPicker } from '@/features/catalogue/SectionPicker';
+import { CohortInfo } from '@/features/catalogue/CohortInfo';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useAuthModal } from '@/lib/auth/AuthModalContext';
 import { useEnrol } from '@/features/enrolment/useEnrolments';
@@ -174,6 +175,19 @@ export function CourseDetailPage() {
     const { data: myApplications } = useMyCourseApplications(user?.role === 'student');
     const { openSections, isLoading: sectionsLoading } = useStudentSections(courseId);
     const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
+
+    // The course belongs to a cohort — it isn't something the student picks here. When one or
+    // more open offerings exist, target the earliest-starting one automatically; a course
+    // offered by more than one open cohort at once is browsed/enrolled via /cohorts instead.
+    useEffect(() => {
+        if (!sectionsLoading && openSections.length > 0 && selectedSectionId === null) {
+            const earliest = [...openSections].sort((a, b) =>
+                (a.start_date ?? '').localeCompare(b.start_date ?? ''),
+            )[0];
+            setSelectedSectionId(earliest.id);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sectionsLoading, openSections]);
     const [enrolError, setEnrolError] = useState<string | null>(null);
     const [enrolResult, setEnrolResult] = useState<{ courseTitle: string; status: 'confirmed' | 'waitlisted' } | null>(null);
     const [showAdvisoryModal, setShowAdvisoryModal] = useState(false);
@@ -196,14 +210,15 @@ export function CourseDetailPage() {
     const handleEnrol = async () => {
         if (!user) {
             // Preserve guest intent so the auto-resume effect continues the flow after login
-            if (course?.enrolment_policy === 'application') {
-                sessionStorage.setItem('pending_enrolment_intent', JSON.stringify({
-                    courseId: course.id,
-                    action: 'apply',
-                }));
-            }
+            // Save intent for ALL course policies, not just application, so enrollment can be
+            // automatically created after signup for beginner/intermediate courses too
+            const action = course?.enrolment_policy === 'application' ? 'apply' : 'enrol';
+            sessionStorage.setItem('pending_enrolment_intent', JSON.stringify({
+                courseId: course?.id,
+                action,
+            }));
             // Sign-in happens in the modal, in place — no redirect, so the saved intent can
-            // resume the apply journey once the auth query flips to the logged-in user.
+            // resume the enrolment/apply journey once the auth query flips to the logged-in user.
             openAuth('login', null);
             return;
         }
@@ -224,17 +239,17 @@ export function CourseDetailPage() {
             setShowApplicationModal(true);
             return;
         }
-        if (!course) return;
+        if (!course || selectedSectionId === null) return;
         setEnrolError(null);
         try {
-            const result = await enrol.mutateAsync({ courseId: course.id, sectionId: selectedSectionId ?? undefined });
+            const result = await enrol.mutateAsync({ courseId: course.id, cohortCourseId: selectedSectionId });
             setEnrolResult({ courseTitle: course.title, status: result.status as 'confirmed' | 'waitlisted' });
         } catch (error) {
             setEnrolError(error instanceof ApiError ? error.message : 'Could not enrol. Try again.');
         }
     };
 
-    // Auto-resume: continue the apply journey after login/register or profile completion
+    // Auto-resume: continue the enrolment/apply journey after login/register or profile completion
     useEffect(() => {
         if (!user || !course) return;
         // Returning from the profile completion page via returnUrl
@@ -249,15 +264,30 @@ export function CourseDetailPage() {
         if (!rawIntent) return;
         try {
             const intent = JSON.parse(rawIntent) as { courseId?: unknown; action?: unknown };
-            if (intent.courseId === course.id && intent.action === 'apply') {
-                sessionStorage.removeItem('pending_enrolment_intent');
-                void handleEnrol();
+            if (intent.courseId !== course.id || (intent.action !== 'apply' && intent.action !== 'enrol')) {
+                return;
             }
+            // A direct enrol needs a cohort offering resolved first. The auto-select effect
+            // above runs in the same initial commit as this one, so its setSelectedSectionId
+            // call isn't visible here yet on that first pass — selectedSectionId still reads
+            // null even though an offering exists. Wait for the re-render it schedules (this
+            // effect re-runs as selectedSectionId/sectionsLoading change) whenever there's an
+            // offering for it to resolve; only give up immediately when there's truly none.
+            if (intent.action === 'enrol') {
+                if (sectionsLoading) return;
+                if (selectedSectionId === null) {
+                    if (openSections.length > 0) return;
+                    sessionStorage.removeItem('pending_enrolment_intent');
+                    return;
+                }
+            }
+            sessionStorage.removeItem('pending_enrolment_intent');
+            void handleEnrol();
         } catch {
             sessionStorage.removeItem('pending_enrolment_intent');
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user, course?.id]);
+    }, [user, course?.id, sectionsLoading, selectedSectionId]);
 
     if (isLoading) {
         return (
@@ -288,13 +318,12 @@ export function CourseDetailPage() {
         (application) => application.course.id === course.id && application.status === 'pending',
     );
 
-    // Section gating:
-    // - While sectionsLoading, block to avoid state flicker
-    // - If sections_required=true and sections exist: block until one is selected
-    // - If sections_required=false: never block (sections are optional)
+    // Cohort gating: every enrolment now belongs to a specific cohort offering, so the CTA
+    // stays blocked until one is selected (or while still loading, to avoid a flicker where
+    // the button is briefly clickable before offerings have loaded).
     const hasSections = !sectionsLoading && openSections.length > 0;
-    const requiresSection = course.sections_required && hasSections;
-    const ctaBlocked = sectionsLoading || (requiresSection && selectedSectionId === null);
+    const ctaBlocked = sectionsLoading || selectedSectionId === null;
+    const activeSection = openSections.find((s) => s.id === selectedSectionId) ?? null;
 
     const resolvedImage = course.thumbnail_url ?? courseImageMap[course.slug] ?? null;
     const outcomeCards = learningOutcomes[course.slug] ?? [];
@@ -404,15 +433,22 @@ export function CourseDetailPage() {
             </div>
 
             {/* ── Application submitted confirmation ──────────────────────────── */}
-            {applicationSubmitted && (
-                <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
-                    <Alert
-                        variant="success"
-                        message="Application submitted! Check your dashboard to track its status."
-                        onDismiss={() => setApplicationSubmitted(false)}
-                    />
-                </div>
-            )}
+            {/* A popup rather than an inline banner — the banner used to render above the
+                fold, so it went unnoticed whenever the student had scrolled down to apply. */}
+            <Modal
+                isOpen={applicationSubmitted}
+                onClose={() => setApplicationSubmitted(false)}
+                title="Application submitted"
+                footer={
+                    <Button variant="primary" onClick={() => setApplicationSubmitted(false)}>
+                        Got it
+                    </Button>
+                }
+            >
+                <p className="text-sm text-ink-700">
+                    Application submitted! Check your dashboard to track its status.
+                </p>
+            </Modal>
 
             {/* ── BODY ────────────────────────────────────────────────────────── */}
             <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -527,31 +563,22 @@ export function CourseDetailPage() {
                                 </p>
                                 <p className="mt-0.5 text-xs text-[#94a3b8]">One-time payment · lifetime access</p>
 
-                                {/* Section picker — shown while loading or when open sections exist */}
-                                {(sectionsLoading || hasSections) && (
-                                    <div className="mt-5 border-t border-[#e8ecf1] pt-5">
-                                        {/* Helper text for optional sections */}
-                                        {!course.sections_required && hasSections && (
-                                            <p className="text-xs text-[#64748b] mb-2">
-                                                Optional: choose a section to join a cohort, or enroll self-paced below.
-                                            </p>
-                                        )}
-                                        {sectionsLoading ? (
-                                            <div data-testid="sections-loading" aria-busy="true">
-                                                <div className="h-3 w-24 animate-pulse rounded bg-[#e8ecf1]" />
-                                                <div className="mt-3 space-y-2">
-                                                    <div className="h-16 w-full animate-pulse rounded-xl bg-[#e8ecf1]" />
-                                                    <div className="h-16 w-full animate-pulse rounded-xl bg-[#e8ecf1]" />
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <SectionPicker
-                                                sections={openSections}
-                                                selectedId={selectedSectionId}
-                                                onSelect={setSelectedSectionId}
-                                            />
-                                        )}
+                                {/* Cohort info — read-only; the student doesn't choose a cohort here */}
+                                {sectionsLoading && (
+                                    <div className="mt-5 border-t border-[#e8ecf1] pt-5" data-testid="sections-loading" aria-busy="true">
+                                        <div className="h-3 w-24 animate-pulse rounded bg-[#e8ecf1]" />
+                                        <div className="mt-3 h-16 w-full animate-pulse rounded-xl bg-[#e8ecf1]" />
                                     </div>
+                                )}
+
+                                {!sectionsLoading && activeSection && (
+                                    <CohortInfo section={activeSection} />
+                                )}
+
+                                {!sectionsLoading && !hasSections && (
+                                    <p className="mt-5 border-t border-[#e8ecf1] pt-5 text-xs text-[#64748b]">
+                                        Not currently open for enrolment — check back once a new cohort is announced.
+                                    </p>
                                 )}
 
                                 {/* CTA */}
@@ -604,8 +631,9 @@ export function CourseDetailPage() {
                                             )}
                                             {course.enrolment_policy === 'application' && (
                                                 <p className="text-xs text-[#94a3b8]">
-                                                    Requires an admin to review and approve your application before
-                                                    you&apos;re enrolled.
+                                                    {(course.application_questions?.length ?? 0) > 0
+                                                        ? "You'll answer a few quick eligibility questions — qualifying applicants are enrolled instantly, others are reviewed by an admin."
+                                                        : "Requires an admin to review and approve your application before you're enrolled."}
                                                 </p>
                                             )}
                                         </>
@@ -642,23 +670,33 @@ export function CourseDetailPage() {
                 </div>
             </div>
 
-            {showAdvisoryModal && (
+            {showAdvisoryModal && selectedSectionId !== null && (
                 <AdvisoryEnrolModal
                     course={course}
-                    sectionId={selectedSectionId ?? undefined}
+                    cohortCourseId={selectedSectionId}
                     onClose={() => setShowAdvisoryModal(false)}
                     onEnrolled={(result) => { setShowAdvisoryModal(false); setEnrolResult({ courseTitle: course.title, status: result.status as 'confirmed' | 'waitlisted' }); }}
                 />
             )}
 
-            {showApplicationModal && (
+            {showApplicationModal && selectedSectionId !== null && (
                 <ApplicationModal
                     course={course}
-                    sectionId={selectedSectionId ?? undefined}
+                    cohortCourseId={selectedSectionId}
                     onClose={() => setShowApplicationModal(false)}
-                    onSubmitted={() => {
+                    onSubmitted={(application) => {
                         setShowApplicationModal(false);
-                        setApplicationSubmitted(true);
+                        // Eligibility answers can auto-clear the applicant instantly — show the
+                        // same enrolled/waitlisted popup as a direct enrol, not the "pending
+                        // review" one, since there's nothing left to review.
+                        if (application.status === 'approved') {
+                            setEnrolResult({
+                                courseTitle: course.title,
+                                status: application.enrolment_status === 'waitlisted' ? 'waitlisted' : 'confirmed',
+                            });
+                        } else {
+                            setApplicationSubmitted(true);
+                        }
                     }}
                 />
             )}

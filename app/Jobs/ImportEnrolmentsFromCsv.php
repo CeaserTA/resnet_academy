@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
-use App\Models\Course;
+use App\Models\CohortCourse;
 use App\Models\User;
 use App\Services\Enrolment\BulkEnrolmentImporter;
 use Illuminate\Bus\Queueable;
@@ -25,17 +25,17 @@ final class ImportEnrolmentsFromCsv implements ShouldQueue
     public int $tries = 1;
 
     public function __construct(
-        public readonly int $courseId,
+        public readonly int $cohortCourseId,
         public readonly string $storedFilePath,
         public readonly int $importedByUserId,
     ) {}
 
     public function handle(BulkEnrolmentImporter $importer): void
     {
-        $course = Course::query()->findOrFail($this->courseId);
+        $cohortCourse = CohortCourse::query()->findOrFail($this->cohortCourseId);
         $admin = User::query()->findOrFail($this->importedByUserId);
 
-        $importer->import($course, Storage::path($this->storedFilePath), $admin);
+        $importer->import($cohortCourse, Storage::path($this->storedFilePath), $admin);
 
         Storage::delete($this->storedFilePath);
     }
@@ -43,7 +43,7 @@ final class ImportEnrolmentsFromCsv implements ShouldQueue
     public function failed(\Throwable $e): void
     {
         logger()->error('ImportEnrolmentsFromCsv failed', [
-            'course_id' => $this->courseId,
+            'cohort_course_id' => $this->cohortCourseId,
             'error' => $e->getMessage(),
         ]);
     }

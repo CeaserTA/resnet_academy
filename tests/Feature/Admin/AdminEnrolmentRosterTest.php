@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 use App\Enums\EnrolmentSource;
 use App\Enums\EnrolmentStatus;
+use App\Models\Cohort;
+use App\Models\CohortCourse;
 use App\Models\Course;
-use App\Models\CourseSection;
 use App\Models\Enrolment;
 use App\Models\User;
 use Illuminate\Support\Facades\Bus;
@@ -14,12 +15,13 @@ beforeEach(function (): void {
     Bus::fake();
 });
 
-it('lists enrolments for an admin with student, course and section details', function (): void {
+it('lists enrolments for an admin with student, course and cohort details', function (): void {
     $admin = User::factory()->admin()->create();
     $course = Course::factory()->create(['title' => 'Advanced Laravel']);
-    $section = CourseSection::factory()->for($course)->create(['name' => 'Cohort 3']);
+    $cohort = Cohort::factory()->create(['name' => 'Cohort 3']);
+    $cohortCourse = CohortCourse::factory()->for($course)->for($cohort)->create();
     $student = User::factory()->student()->create(['name' => 'Alice Wonder', 'email' => 'alice@example.com']);
-    Enrolment::factory()->for($student, 'student')->for($course)->for($section, 'section')->create();
+    Enrolment::factory()->for($student, 'student')->for($course)->for($cohortCourse, 'cohortCourse')->create();
 
     $response = $this->actingAs($admin)->getJson('/api/v1/admin/enrolments');
 
@@ -27,7 +29,7 @@ it('lists enrolments for an admin with student, course and section details', fun
     $response->assertJsonPath('data.0.student.name', 'Alice Wonder');
     $response->assertJsonPath('data.0.student.email', 'alice@example.com');
     $response->assertJsonPath('data.0.course.title', 'Advanced Laravel');
-    $response->assertJsonPath('data.0.section.name', 'Cohort 3');
+    $response->assertJsonPath('data.0.cohort_course.cohort_name', 'Cohort 3');
     $response->assertJsonPath('data.0.status', 'confirmed');
     $response->assertJsonPath('data.0.source', 'self');
     // PHP's json_encode drops the trailing .0 on whole floats, so this decodes as an int.
@@ -127,8 +129,8 @@ it('lets an admin revoke a confirmed enrolment and audits the change', function 
 it('lets an admin confirm a waitlisted enrolment, taking a seat and creating the order', function (): void {
     $admin = User::factory()->admin()->create();
     $course = Course::factory()->create(['price' => 15000]);
-    $section = CourseSection::factory()->for($course)->withSeatsAvailable(capacity: 2, taken: 0)->create();
-    $enrolment = Enrolment::factory()->for($course)->for($section, 'section')->create([
+    $section = CohortCourse::factory()->for($course)->withSeatsAvailable(capacity: 2, taken: 0)->create();
+    $enrolment = Enrolment::factory()->for($course)->for($section, 'cohortCourse')->create([
         'status' => EnrolmentStatus::Waitlisted,
     ]);
 
@@ -149,8 +151,8 @@ it('lets an admin confirm a waitlisted enrolment, taking a seat and creating the
 it('blocks confirming a waitlisted enrolment when the section is full', function (): void {
     $admin = User::factory()->admin()->create();
     $course = Course::factory()->create();
-    $section = CourseSection::factory()->for($course)->withSeatsAvailable(capacity: 1, taken: 1)->create();
-    $enrolment = Enrolment::factory()->for($course)->for($section, 'section')->create([
+    $section = CohortCourse::factory()->for($course)->withSeatsAvailable(capacity: 1, taken: 1)->create();
+    $enrolment = Enrolment::factory()->for($course)->for($section, 'cohortCourse')->create([
         'status' => EnrolmentStatus::Waitlisted,
     ]);
 

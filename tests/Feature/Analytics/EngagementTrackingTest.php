@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Enums\EnrolmentSource;
 use App\Models\Assignment;
 use App\Models\Course;
+use App\Models\CohortCourse;
 use App\Models\EngagementEvent;
 use App\Models\Module;
 use App\Models\ModuleItem;
@@ -25,7 +26,7 @@ it('records a resource_viewed engagement event when a student marks a reading re
     $resource = Resource::factory()->for($module)->reading()->create();
     ModuleItem::create(['module_id' => $module->id, 'item_type' => 'resource', 'item_id' => $resource->id, 'order_index' => 1, 'is_required' => true]);
 
-    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
     app(ProgressEngine::class)->markRead($student, $resource);
 
     $this->assertDatabaseHas('engagement_events', [
@@ -42,7 +43,7 @@ it('records an assignment_submitted engagement event on submission', function ()
     $assignment = Assignment::factory()->for($module)->create();
     ModuleItem::create(['module_id' => $module->id, 'item_type' => 'assignment', 'item_id' => $assignment->id, 'order_index' => 1, 'is_required' => true]);
 
-    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
 
     $this->actingAs($student)->postJson("/api/v1/assignments/{$assignment->id}/submissions", [
         'text_content' => 'My answer.',

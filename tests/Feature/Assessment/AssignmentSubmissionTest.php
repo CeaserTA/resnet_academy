@@ -8,6 +8,7 @@ use App\Enums\ModuleProgressStatus;
 use App\Models\Assignment;
 use App\Models\AssignmentSubmission;
 use App\Models\Course;
+use App\Models\CohortCourse;
 use App\Models\LatePenaltyPolicy;
 use App\Models\Module;
 use App\Models\ModuleItem;
@@ -42,7 +43,7 @@ function setUpAssignmentForSubmission(?LatePenaltyPolicy $policy = null, ?Carbon
         'is_required' => true,
     ]);
 
-    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
 
     return compact('admin', 'instructor', 'student', 'course', 'module', 'assignment');
 }
