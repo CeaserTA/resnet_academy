@@ -58,7 +58,7 @@ final class ForumService
     ): ForumThread {
         $forum = $this->forCourse($course);
 
-        $thread = DB::transaction(function () use ($forum, $course, $author, $title, $body, $attachmentType, $attachment): ForumThread {
+        return DB::transaction(function () use ($forum, $course, $author, $title, $body, $tagNames, $attachmentType, $attachment): ForumThread {
             $thread = ForumThread::create([
                 'forum_id' => $forum->id,
                 'created_by' => $author->id,
@@ -77,12 +77,13 @@ final class ForumService
                 'attachment_original_name' => $originalName,
             ]);
 
+            // Previously ran after the transaction closed: a thread/post could commit while tag
+            // creation/sync failed or was interrupted, leaving a tag-less thread. Now part of the
+            // same atomic unit as the thread + head post.
+            $this->syncTags($thread, $tagNames);
+
             return $thread;
         });
-
-        $this->syncTags($thread, $tagNames);
-
-        return $thread;
     }
 
     /**
@@ -91,19 +92,21 @@ final class ForumService
      */
     public function reply(ForumThread $thread, User $author, string $body): ForumPost
     {
-        $post = ForumPost::create([
-            'thread_id' => $thread->id,
-            'user_id' => $author->id,
-            'body' => $body,
-        ]);
+        return DB::transaction(function () use ($thread, $author, $body): ForumPost {
+            $post = ForumPost::create([
+                'thread_id' => $thread->id,
+                'user_id' => $author->id,
+                'body' => $body,
+            ]);
 
-        $thread->update(['last_activity_at' => now()]);
+            $thread->update(['last_activity_at' => now()]);
 
-        if ($thread->created_by !== $author->id) {
-            $this->notificationDispatcher->notifyForumReply($thread->creator, $thread, $author);
-        }
+            if ($thread->created_by !== $author->id) {
+                $this->notificationDispatcher->notifyForumReply($thread->creator, $thread, $author);
+            }
 
-        return $post;
+            return $post;
+        });
     }
 
     /**

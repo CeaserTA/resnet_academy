@@ -80,20 +80,27 @@ final class ConversationService
 
     public function send(Conversation $conversation, User $sender, string $body): Message
     {
-        $message = Message::create([
-            'conversation_id' => $conversation->id,
-            'sender_id' => $sender->id,
-            'body' => $body,
-            'sent_at' => now(),
-        ]);
+        // Wrapped here (not just by startOrGet()'s "new conversation" branch) so the "existing
+        // conversation" branch gets the same atomicity guarantee for the message + notification
+        // fan-out — previously that branch called send() with no transaction at all. Nests as a
+        // savepoint when called from startOrGet()'s own transaction, which is safe here since
+        // nothing between the two catches an exception from this method.
+        return DB::transaction(function () use ($conversation, $sender, $body): Message {
+            $message = Message::create([
+                'conversation_id' => $conversation->id,
+                'sender_id' => $sender->id,
+                'body' => $body,
+                'sent_at' => now(),
+            ]);
 
-        foreach ($conversation->participants as $participant) {
-            if ($participant->id !== $sender->id) {
-                $this->notificationDispatcher->notifyNewMessage($participant, $conversation, $sender);
+            foreach ($conversation->participants as $participant) {
+                if ($participant->id !== $sender->id) {
+                    $this->notificationDispatcher->notifyNewMessage($participant, $conversation, $sender);
+                }
             }
-        }
 
-        return $message;
+            return $message;
+        });
     }
 
     /**

@@ -299,38 +299,40 @@ final class CourseApplicationService
             throw ValidationException::withMessages(['status' => 'This application has already been decided.']);
         }
 
-        $application->update([
-            'status' => CourseApplicationStatus::Rejected,
-            'reviewed_by' => $reviewer->id,
-            'reviewed_at' => Carbon::now(),
-            'recommended_course_ids' => $recommendedCourseIds !== [] ? $recommendedCourseIds : null,
-            'rejection_reason' => $rejectionReason,
-        ]);
+        return DB::transaction(function () use ($application, $reviewer, $recommendedCourseIds, $rejectionReason): CourseApplication {
+            $application->update([
+                'status' => CourseApplicationStatus::Rejected,
+                'reviewed_by' => $reviewer->id,
+                'reviewed_at' => Carbon::now(),
+                'recommended_course_ids' => $recommendedCourseIds !== [] ? $recommendedCourseIds : null,
+                'rejection_reason' => $rejectionReason,
+            ]);
 
-        $this->auditLogger->log(
-            action: 'course_application.rejected',
-            entityType: 'course_application',
-            entityId: $application->id,
-            actorId: $reviewer->id,
-            meta: [
-                'course_id' => $application->course_id,
-                'student_id' => $application->student_id,
-                'decided_by_role' => $reviewer->role->value,
-            ],
-        );
+            $this->auditLogger->log(
+                action: 'course_application.rejected',
+                entityType: 'course_application',
+                entityId: $application->id,
+                actorId: $reviewer->id,
+                meta: [
+                    'course_id' => $application->course_id,
+                    'student_id' => $application->student_id,
+                    'decided_by_role' => $reviewer->role->value,
+                ],
+            );
 
-        $this->notificationDispatcher->notify(
-            user: $application->student,
-            type: 'application_rejected',
-            title: "Your application to {$application->course->title} was not accepted",
-            body: $recommendedCourseIds !== []
-                ? 'Take a look at the recommended courses on your dashboard to build up to this one.'
-                : null,
-            relatedEntityType: 'course_application',
-            relatedEntityId: $application->id,
-        );
+            $this->notificationDispatcher->notify(
+                user: $application->student,
+                type: 'application_rejected',
+                title: "Your application to {$application->course->title} was not accepted",
+                body: $recommendedCourseIds !== []
+                    ? 'Take a look at the recommended courses on your dashboard to build up to this one.'
+                    : null,
+                relatedEntityType: 'course_application',
+                relatedEntityId: $application->id,
+            );
 
-        return $application->fresh();
+            return $application->fresh();
+        });
     }
 
     /**
@@ -377,15 +379,17 @@ final class CourseApplicationService
 
     public function dismiss(CourseApplication $application, User $student): CourseApplication
     {
-        $application->update(['dismissed_at' => Carbon::now()]);
+        DB::transaction(function () use ($application, $student): void {
+            $application->update(['dismissed_at' => Carbon::now()]);
 
-        $this->auditLogger->log(
-            action: 'course_application.dismissed',
-            entityType: 'course_application',
-            entityId: $application->id,
-            actorId: $student->id,
-            meta: ['course_id' => $application->course_id],
-        );
+            $this->auditLogger->log(
+                action: 'course_application.dismissed',
+                entityType: 'course_application',
+                entityId: $application->id,
+                actorId: $student->id,
+                meta: ['course_id' => $application->course_id],
+            );
+        });
 
         return $application->fresh();
     }

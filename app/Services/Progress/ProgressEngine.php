@@ -23,6 +23,7 @@ use App\Services\Analytics\EngagementTracker;
 use App\Services\Certification\CertificateService;
 use App\Services\Notifications\NotificationDispatcher;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * The single owner of "is this module complete / unlocked" (architecture.md §3). Every
@@ -47,38 +48,46 @@ final class ProgressEngine
      * With cohorts: if the student is enrolled in a cohort offering and the module has
      * unlock_offset_days, use cohort.start_date + offset instead of scheduled_start_at.
      */
+    /**
+     * Note: called both standalone (e.g. directly from ProgressController) and from inside other
+     * callers' already-open transactions (EnrolmentService, EnrolmentTransferService,
+     * rollupModuleCompletion() below) — DB::transaction() nests as a savepoint in the latter case,
+     * which is safe as long as nothing between the layers catches an exception from this method.
+     */
     public function evaluateCourseUnlocks(User $student, Course $course): void
     {
-        // Get the student's enrollment for this course to check for its cohort
-        $enrolment = $course->enrolments()
-            ->where('student_id', $student->id)
-            ->where('status', \App\Enums\EnrolmentStatus::Confirmed)
-            ->with('cohortCourse.cohort')
-            ->first();
+        DB::transaction(function () use ($student, $course): void {
+            // Get the student's enrollment for this course to check for its cohort
+            $enrolment = $course->enrolments()
+                ->where('student_id', $student->id)
+                ->where('status', \App\Enums\EnrolmentStatus::Confirmed)
+                ->with('cohortCourse.cohort')
+                ->first();
 
-        $cohortCourse = $enrolment?->cohortCourse;
-        $previousCompleted = true;
+            $cohortCourse = $enrolment?->cohortCourse;
+            $previousCompleted = true;
 
-        foreach ($this->applicableModules($student, $course) as $module) {
-            $progress = ModuleProgress::firstOrCreate(
-                ['student_id' => $student->id, 'module_id' => $module->id],
-                ['status' => ModuleProgressStatus::Locked],
-            );
+            foreach ($this->applicableModules($student, $course) as $module) {
+                $progress = ModuleProgress::firstOrCreate(
+                    ['student_id' => $student->id, 'module_id' => $module->id],
+                    ['status' => ModuleProgressStatus::Locked],
+                );
 
-            // Determine if schedule has been reached based on the student's cohort offering
-            $scheduleReached = $this->isModuleScheduleReached($module, $cohortCourse);
+                // Determine if schedule has been reached based on the student's cohort offering
+                $scheduleReached = $this->isModuleScheduleReached($module, $cohortCourse);
 
-            if ($progress->status === ModuleProgressStatus::Locked && $scheduleReached && $previousCompleted) {
-                $progress->update([
-                    'status' => ModuleProgressStatus::NotStarted,
-                    'unlocked_at' => now(),
-                ]);
+                if ($progress->status === ModuleProgressStatus::Locked && $scheduleReached && $previousCompleted) {
+                    $progress->update([
+                        'status' => ModuleProgressStatus::NotStarted,
+                        'unlocked_at' => now(),
+                    ]);
 
-                $this->notificationDispatcher->notifyModuleUnlocked($student, $module);
+                    $this->notificationDispatcher->notifyModuleUnlocked($student, $module);
+                }
+
+                $previousCompleted = $progress->status === ModuleProgressStatus::Completed;
             }
-
-            $previousCompleted = $progress->status === ModuleProgressStatus::Completed;
-        }
+        });
     }
 
     /**
@@ -125,32 +134,38 @@ final class ProgressEngine
      * module up to completed once every *required* item is complete, then unlocks the next
      * module in sequence.
      */
+    /**
+     * Note: same nested-transaction caveat as evaluateCourseUnlocks() above — safe under
+     * Laravel's savepoint semantics as long as no caller catches an exception from this method.
+     */
     public function rollupModuleCompletion(User $student, Module $module): void
     {
-        $progress = ModuleProgress::where('student_id', $student->id)->where('module_id', $module->id)->first();
+        DB::transaction(function () use ($student, $module): void {
+            $progress = ModuleProgress::where('student_id', $student->id)->where('module_id', $module->id)->first();
 
-        if (! $progress || $progress->status === ModuleProgressStatus::Completed) {
-            return;
-        }
+            if (! $progress || $progress->status === ModuleProgressStatus::Completed) {
+                return;
+            }
 
-        $requiredItems = $module->items()->where('is_required', true)->get();
+            $requiredItems = $module->items()->where('is_required', true)->get();
 
-        $allComplete = $requiredItems->isNotEmpty()
-            && $requiredItems->every(fn (ModuleItem $item) => $this->isModuleItemComplete($student, $item));
+            $allComplete = $requiredItems->isNotEmpty()
+                && $requiredItems->every(fn (ModuleItem $item) => $this->isModuleItemComplete($student, $item));
 
-        if (! $allComplete) {
-            return;
-        }
+            if (! $allComplete) {
+                return;
+            }
 
-        $progress->update(['status' => ModuleProgressStatus::Completed, 'completed_at' => now()]);
+            $progress->update(['status' => ModuleProgressStatus::Completed, 'completed_at' => now()]);
 
-        $this->evaluateCourseUnlocks($student, $module->course);
+            $this->evaluateCourseUnlocks($student, $module->course);
 
-        $lastModule = $this->applicableModules($student, $module->course)->last();
+            $lastModule = $this->applicableModules($student, $module->course)->last();
 
-        if ($lastModule !== null && $lastModule->is($module)) {
-            $this->certificateService->issueForCourseCompletion($student, $module->course);
-        }
+            if ($lastModule !== null && $lastModule->is($module)) {
+                $this->certificateService->issueForCourseCompletion($student, $module->course);
+            }
+        });
     }
 
     public function isModuleItemComplete(User $student, ModuleItem $item): bool
@@ -221,69 +236,87 @@ final class ProgressEngine
     {
         $this->assertModuleUnlocked($student, $resource->module);
 
-        VideoWatchPing::create([
-            'student_id' => $student->id,
-            'resource_id' => $resource->id,
-            'position_seconds' => $positionSeconds,
-        ]);
+        DB::transaction(function () use ($student, $resource, $positionSeconds): void {
+            VideoWatchPing::create([
+                'student_id' => $student->id,
+                'resource_id' => $resource->id,
+                'position_seconds' => $positionSeconds,
+            ]);
 
-        $duration = $resource->video?->duration_seconds;
-        $percent = $duration ? min(100.0, round($positionSeconds / $duration * 100, 2)) : 0.0;
+            $duration = $resource->video?->duration_seconds;
+            $percent = $duration ? min(100.0, round($positionSeconds / $duration * 100, 2)) : 0.0;
 
-        $progress = ResourceProgress::firstOrNew(['student_id' => $student->id, 'resource_id' => $resource->id]);
-        $progress->watch_percent = max((float) ($progress->watch_percent ?? 0), $percent);
-        $progress->status = $progress->watch_percent >= 90.0 ? ResourceProgressStatus::Completed : ResourceProgressStatus::InProgress;
+            // Lock the existing row (if any) before the read-modify-write on watch_percent:
+            // firstOrNew() alone doesn't lock, so concurrent pings for the same student/resource
+            // (e.g. multiple tabs, or a retried request) could previously lose an update — the
+            // second read wouldn't see the first ping's not-yet-committed watch_percent. A brand
+            // new resource_progress row is still protected from duplication by the
+            // (student_id, resource_id) unique constraint.
+            $progress = ResourceProgress::where('student_id', $student->id)
+                ->where('resource_id', $resource->id)
+                ->lockForUpdate()
+                ->first() ?? new ResourceProgress(['student_id' => $student->id, 'resource_id' => $resource->id]);
 
-        if ($progress->watch_percent >= 90.0 && ! $progress->completed_at) {
-            $progress->completed_at = now();
-        }
+            $progress->watch_percent = max((float) ($progress->watch_percent ?? 0), $percent);
+            $progress->status = $progress->watch_percent >= 90.0 ? ResourceProgressStatus::Completed : ResourceProgressStatus::InProgress;
 
-        $progress->save();
+            if ($progress->watch_percent >= 90.0 && ! $progress->completed_at) {
+                $progress->completed_at = now();
+            }
 
-        $this->engagementTracker->track($student, $resource->module->course, 'resource_viewed', ['resource_id' => $resource->id, 'resource_type' => $resource->type->value]);
+            $progress->save();
 
-        $this->rollupModuleCompletion($student, $resource->module);
+            $this->engagementTracker->track($student, $resource->module->course, 'resource_viewed', ['resource_id' => $resource->id, 'resource_type' => $resource->type->value]);
+
+            $this->rollupModuleCompletion($student, $resource->module);
+        });
     }
 
     public function markRead(User $student, Resource $resource): void
     {
         $this->assertModuleUnlocked($student, $resource->module);
 
-        ResourceProgress::updateOrCreate(
-            ['student_id' => $student->id, 'resource_id' => $resource->id],
-            ['status' => ResourceProgressStatus::Completed, 'marked_read_at' => now(), 'completed_at' => now()],
-        );
+        DB::transaction(function () use ($student, $resource): void {
+            ResourceProgress::updateOrCreate(
+                ['student_id' => $student->id, 'resource_id' => $resource->id],
+                ['status' => ResourceProgressStatus::Completed, 'marked_read_at' => now(), 'completed_at' => now()],
+            );
 
-        $this->engagementTracker->track($student, $resource->module->course, 'resource_viewed', ['resource_id' => $resource->id, 'resource_type' => $resource->type->value]);
+            $this->engagementTracker->track($student, $resource->module->course, 'resource_viewed', ['resource_id' => $resource->id, 'resource_type' => $resource->type->value]);
 
-        $this->rollupModuleCompletion($student, $resource->module);
+            $this->rollupModuleCompletion($student, $resource->module);
+        });
     }
 
     public function markOpened(User $student, Resource $resource): void
     {
         $this->assertModuleUnlocked($student, $resource->module);
 
-        ResourceProgress::updateOrCreate(
-            ['student_id' => $student->id, 'resource_id' => $resource->id],
-            ['status' => ResourceProgressStatus::Completed, 'opened_at' => now(), 'completed_at' => now()],
-        );
+        DB::transaction(function () use ($student, $resource): void {
+            ResourceProgress::updateOrCreate(
+                ['student_id' => $student->id, 'resource_id' => $resource->id],
+                ['status' => ResourceProgressStatus::Completed, 'opened_at' => now(), 'completed_at' => now()],
+            );
 
-        $this->engagementTracker->track($student, $resource->module->course, 'resource_viewed', ['resource_id' => $resource->id, 'resource_type' => $resource->type->value]);
+            $this->engagementTracker->track($student, $resource->module->course, 'resource_viewed', ['resource_id' => $resource->id, 'resource_type' => $resource->type->value]);
 
-        $this->rollupModuleCompletion($student, $resource->module);
+            $this->rollupModuleCompletion($student, $resource->module);
+        });
     }
 
     public function markAttendance(User $student, Resource $resource, ?User $markedBy = null): void
     {
         $this->assertModuleUnlocked($student, $resource->module);
 
-        LiveSessionAttendance::updateOrCreate(
-            ['resource_id' => $resource->id, 'student_id' => $student->id],
-            ['attended' => true, 'marked_at' => now(), 'marked_by' => $markedBy?->id],
-        );
+        DB::transaction(function () use ($student, $resource, $markedBy): void {
+            LiveSessionAttendance::updateOrCreate(
+                ['resource_id' => $resource->id, 'student_id' => $student->id],
+                ['attended' => true, 'marked_at' => now(), 'marked_by' => $markedBy?->id],
+            );
 
-        $this->engagementTracker->track($student, $resource->module->course, 'resource_viewed', ['resource_id' => $resource->id, 'resource_type' => $resource->type->value]);
+            $this->engagementTracker->track($student, $resource->module->course, 'resource_viewed', ['resource_id' => $resource->id, 'resource_type' => $resource->type->value]);
 
-        $this->rollupModuleCompletion($student, $resource->module);
+            $this->rollupModuleCompletion($student, $resource->module);
+        });
     }
 }

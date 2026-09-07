@@ -12,6 +12,7 @@ use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\User as SocialiteUser;
@@ -49,27 +50,34 @@ final class SocialAuthController extends Controller
 
     private function resolveUser(SocialiteUser $socialiteUser): User
     {
-        $user = User::query()->where('email', $socialiteUser->getEmail())->first();
+        // Wrapped so a failure creating the OauthAccount rolls back a just-created User row too —
+        // previously a brand-new Google sign-in could commit the User and then fail on the
+        // OauthAccount insert, leaving an orphaned account with no linked login method. The
+        // unique constraints on users.email and (provider, provider_user_id) still guard against
+        // two concurrent callbacks for the same identity actually duplicating a row.
+        return DB::transaction(function () use ($socialiteUser): User {
+            $user = User::query()->where('email', $socialiteUser->getEmail())->first();
 
-        if (! $user) {
-            $user = User::create([
-                'role' => UserRole::Student,
-                'name' => $socialiteUser->getName() ?? $socialiteUser->getNickname() ?? $socialiteUser->getEmail(),
-                'email' => $socialiteUser->getEmail(),
-                'password_hash' => Str::password(32),
-                'avatar_url' => $socialiteUser->getAvatar(),
-                'email_verified_at' => now(),
+            if (! $user) {
+                $user = User::create([
+                    'role' => UserRole::Student,
+                    'name' => $socialiteUser->getName() ?? $socialiteUser->getNickname() ?? $socialiteUser->getEmail(),
+                    'email' => $socialiteUser->getEmail(),
+                    'password_hash' => Str::password(32),
+                    'avatar_url' => $socialiteUser->getAvatar(),
+                    'email_verified_at' => now(),
+                ]);
+
+                event(new Registered($user));
+            }
+
+            OauthAccount::create([
+                'user_id' => $user->id,
+                'provider' => OAuthProvider::Google,
+                'provider_user_id' => $socialiteUser->getId(),
             ]);
 
-            event(new Registered($user));
-        }
-
-        OauthAccount::create([
-            'user_id' => $user->id,
-            'provider' => OAuthProvider::Google,
-            'provider_user_id' => $socialiteUser->getId(),
-        ]);
-
-        return $user;
+            return $user;
+        });
     }
 }

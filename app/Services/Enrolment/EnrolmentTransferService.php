@@ -46,25 +46,29 @@ final class EnrolmentTransferService
             throw ValidationException::withMessages(['cohort_course_id' => 'This cohort offering does not belong to the specified course.']);
         }
 
-        // Check seat capacity on the new cohort_course using the same logic as normal enrollment
-        $cohortCourse = CohortCourse::where('id', $newCohortCourse->id)
-            ->where('course_id', $newCourse->id)
-            ->lockForUpdate()
-            ->firstOrFail();
+        return DB::transaction(function () use ($oldEnrolment, $newCourse, $admin, $newCohortCourse, $note) {
+            // Lock + check capacity *inside* the transaction (same pattern as EnrolmentService::enrol()):
+            // lockForUpdate() outside of an open transaction is a no-op in MySQL (the row lock is
+            // released the instant the autocommitted SELECT finishes), so a concurrent transfer()
+            // could previously slip past the capacity check between the lock query and the increment
+            // below. Keeping lock, check, and increment inside the same transaction closes that gap.
+            $cohortCourse = CohortCourse::where('id', $newCohortCourse->id)
+                ->where('course_id', $newCourse->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $status = match ($cohortCourse->status) {
-            CourseSectionStatus::Open => EnrolmentStatus::Confirmed,
-            CourseSectionStatus::Draft => throw ValidationException::withMessages(['cohort_course_id' => 'This cohort is not yet open for enrollment.']),
-            CourseSectionStatus::Closed => throw ValidationException::withMessages(['cohort_course_id' => 'This cohort is closed for enrollment.']),
-            CourseSectionStatus::InProgress => throw ValidationException::withMessages(['cohort_course_id' => 'This cohort has already started and is no longer accepting enrollments.']),
-            CourseSectionStatus::Completed => throw ValidationException::withMessages(['cohort_course_id' => 'This cohort has already completed.']),
-        };
+            $status = match ($cohortCourse->status) {
+                CourseSectionStatus::Open => EnrolmentStatus::Confirmed,
+                CourseSectionStatus::Draft => throw ValidationException::withMessages(['cohort_course_id' => 'This cohort is not yet open for enrollment.']),
+                CourseSectionStatus::Closed => throw ValidationException::withMessages(['cohort_course_id' => 'This cohort is closed for enrollment.']),
+                CourseSectionStatus::InProgress => throw ValidationException::withMessages(['cohort_course_id' => 'This cohort has already started and is no longer accepting enrollments.']),
+                CourseSectionStatus::Completed => throw ValidationException::withMessages(['cohort_course_id' => 'This cohort has already completed.']),
+            };
 
-        if ($cohortCourse->capacity !== null && $cohortCourse->seats_taken >= $cohortCourse->capacity) {
-            throw ValidationException::withMessages(['cohort_course_id' => 'This cohort has no free seats.']);
-        }
+            if ($cohortCourse->capacity !== null && $cohortCourse->seats_taken >= $cohortCourse->capacity) {
+                throw ValidationException::withMessages(['cohort_course_id' => 'This cohort has no free seats.']);
+            }
 
-        return DB::transaction(function () use ($oldEnrolment, $newCourse, $admin, $cohortCourse, $note, $status) {
             $student = $oldEnrolment->student;
             $oldOrder = $oldEnrolment->order;
 
@@ -157,11 +161,17 @@ final class EnrolmentTransferService
             throw ValidationException::withMessages(['refund_amount' => 'Refund amount must be greater than 0.']);
         }
 
-        if ($refundAmount > (float) $order->amount_paid) {
-            throw ValidationException::withMessages(['refund_amount' => 'Refund amount cannot exceed the amount paid.']);
-        }
-
         return DB::transaction(function () use ($enrolment, $admin, $refundAmount, $note, $order) {
+            // Re-fetch and lock the order row inside the transaction before re-validating the
+            // refund amount against amount_paid: reading it outside a lock (as before) let two
+            // concurrent refund requests both pass the "amount <= amount_paid" check against the
+            // same stale value and clobber each other's refunded_amount.
+            $order = $order->newQuery()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+
+            if ($refundAmount > (float) $order->amount_paid) {
+                throw ValidationException::withMessages(['refund_amount' => 'Refund amount cannot exceed the amount paid.']);
+            }
+
             // Update order with refund information
             $order->update([
                 'refunded_amount' => $refundAmount,
