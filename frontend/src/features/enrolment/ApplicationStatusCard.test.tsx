@@ -15,6 +15,7 @@ function makeCourse(id: number, title: string): Course {
         enrolment_policy: 'application',
         advisory_require_attestation: false,
         application_questions: null,
+    application_pass_threshold: null,
         application_allow_alternative_proof: true,
         application_require_portfolio_url: false,
         thumbnail_url: null,
@@ -38,8 +39,12 @@ function makeApplication(overrides: Partial<CourseApplication>): CourseApplicati
         status: 'pending',
         student: null as unknown as CourseApplication['student'],
         course: makeCourse(1, 'Search Engine Optimisation'),
-        section: null,
+        cohort_course: null,
         answers: null,
+        eligibility_score: null,
+        eligibility_passed: null,
+        approved_automatically: false,
+        enrolment_status: null,
         portfolio_url: null,
         alternative_proof_text: null,
         rejection_reason: null,
@@ -106,37 +111,37 @@ it('does not show a dismiss control for a pending application', () => {
     expect(screen.queryByRole('button', { name: 'Dismiss' })).not.toBeInTheDocument();
 });
 
-it('displays section name for cohort applications', () => {
+it('displays cohort name for cohort applications', () => {
     renderCard(
         makeApplication({
             status: 'pending',
-            section: { id: 1, name: 'Summer 2026 Intensive', status: 'open' },
+            cohort_course: { id: 1, cohort_id: 1, cohort_name: 'Summer 2026 Intensive', status: 'open' },
         }),
     );
 
-    expect(screen.getByText(/Section: Summer 2026 Intensive/)).toBeInTheDocument();
+    expect(screen.getByText(/Cohort: Summer 2026 Intensive/)).toBeInTheDocument();
 });
 
-it('does not display section text for self-paced applications', () => {
+it('does not display cohort text when the application has no cohort offering', () => {
     renderCard(
         makeApplication({
             status: 'pending',
-            section: null,
+            cohort_course: null,
         }),
     );
 
-    expect(screen.queryByText(/Section:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Cohort:/)).not.toBeInTheDocument();
 });
 
-it('displays section name for rejected cohort applications', () => {
+it('displays cohort name for rejected cohort applications', () => {
     renderCard(
         makeApplication({
             status: 'rejected',
-            section: { id: 2, name: 'Fall 2026', status: 'open' },
+            cohort_course: { id: 2, cohort_id: 2, cohort_name: 'Fall 2026', status: 'open' },
             rejection_reason: 'Application not accepted.',
         }),
     );
 
-    expect(screen.getByText(/Section: Fall 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Cohort: Fall 2026/)).toBeInTheDocument();
     expect(screen.getByText('Not accepted')).toBeInTheDocument();
 });

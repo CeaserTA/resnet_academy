@@ -30,6 +30,7 @@ export function AuthModal({ open, mode, onModeChange, onClose, redirectTo = '/da
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -42,7 +43,12 @@ export function AuthModal({ open, mode, onModeChange, onClose, redirectTo = '/da
 
     try {
       if (isSignup) {
-        await register(name, email, password, password);
+        if (password !== confirmPassword) {
+          setFormError('Passwords do not match. Please try again.');
+          setIsSubmitting(false);
+          return;
+        }
+        await register(name, email, password, confirmPassword);
       } else {
         await login(email, password);
       }
@@ -114,25 +120,34 @@ export function AuthModal({ open, mode, onModeChange, onClose, redirectTo = '/da
             {formError && <Alert variant="error" message={formError} />}
             {isSignup && (
               <Input
-                label="Full name"
+                label="Enter full name"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
               />
             )}
 
             <Input
-              label="Email"
+              label="Enter email"
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
             />
 
             <Input
-              label="Password"
+              label="Enter password"
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
+
+            {isSignup && (
+              <Input
+                label="Confirm password"
+                type="password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+              />
+            )}
 
             {!isSignup && (
               <div className="flex justify-end text-sm">

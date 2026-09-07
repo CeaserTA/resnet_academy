@@ -10,6 +10,7 @@ use App\Models\Order;
 use App\Models\PaymentSubmission;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
+use App\Services\Notifications\NotificationDispatcher;
 use App\Services\Storage\MediaStorageService;
 use Illuminate\Http\UploadedFile;
 
@@ -22,6 +23,7 @@ final class PaymentSubmissionService
     public function __construct(
         private readonly AuditLogger $auditLogger,
         private readonly MediaStorageService $mediaStorage,
+        private readonly NotificationDispatcher $notificationDispatcher,
     ) {}
 
     public function submit(Order $order, float $amount, UploadedFile $receipt): PaymentSubmission
@@ -44,13 +46,17 @@ final class PaymentSubmissionService
 
         $path = $this->mediaStorage->store($receipt, "payment-receipts/{$order->id}");
 
-        return PaymentSubmission::create([
+        $submission = PaymentSubmission::create([
             'order_id' => $order->id,
             'amount' => $amount,
             'receipt_path' => $path,
             'receipt_original_name' => $receipt->getClientOriginalName(),
             'status' => PaymentSubmissionStatus::Pending,
         ]);
+
+        $this->notificationDispatcher->notifyAdminsOfPaymentSubmitted($submission->fresh(['order.student', 'order.course']));
+
+        return $submission;
     }
 
     public function confirm(PaymentSubmission $submission, User $admin): PaymentSubmission
@@ -82,15 +88,19 @@ final class PaymentSubmissionService
             meta: ['from' => (float) $previousAmountPaid, 'to' => $amountPaid, 'status' => $status->value, 'submission_id' => $submission->id],
         );
 
-        return $submission->fresh(['order']);
+        $submission = $submission->fresh(['order.student', 'order.course']);
+        $this->notificationDispatcher->notifyStudentOfPaymentConfirmed($submission);
+
+        return $submission;
     }
 
-    public function reject(PaymentSubmission $submission, User $admin): PaymentSubmission
+    public function reject(PaymentSubmission $submission, User $admin, ?string $reason = null): PaymentSubmission
     {
         abort_if($submission->status !== PaymentSubmissionStatus::Pending, 422, 'This payment has already been reviewed.');
 
         $submission->update([
             'status' => PaymentSubmissionStatus::Rejected,
+            'rejection_reason' => $reason,
             'reviewed_by' => $admin->id,
             'reviewed_at' => now(),
         ]);
@@ -100,9 +110,12 @@ final class PaymentSubmissionService
             entityType: 'order',
             entityId: $submission->order_id,
             actorId: $admin->id,
-            meta: ['submission_id' => $submission->id, 'amount' => (float) $submission->amount],
+            meta: ['submission_id' => $submission->id, 'amount' => (float) $submission->amount, 'reason' => $reason],
         );
 
-        return $submission->fresh(['order']);
+        $submission = $submission->fresh(['order.student', 'order.course']);
+        $this->notificationDispatcher->notifyStudentOfPaymentRejected($submission);
+
+        return $submission;
     }
 }

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\Course;
-use App\Models\GroupsCohort;
+use App\Models\Group;
 use App\Models\Module;
 use App\Models\ModuleItem;
 use App\Models\Resource;
@@ -58,7 +58,7 @@ it('shows locked modules in the listing rather than hiding them', function (): v
 it('scopes a group to a course and syncs it onto a module', function (): void {
     $admin = User::factory()->admin()->create();
     $course = Course::factory()->create();
-    $group = GroupsCohort::factory()->for($course)->create();
+    $group = Group::factory()->for($course)->create();
     $module = Module::factory()->for($course)->create();
 
     $response = $this->actingAs($admin)->patchJson("/api/v1/modules/{$module->id}", [

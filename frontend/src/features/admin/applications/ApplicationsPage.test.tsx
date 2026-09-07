@@ -70,10 +70,10 @@ function makeCourse(id: number, title: string): CourseApplication['course'] {
         level: 'advanced',
         enrolment_policy: 'application',
         advisory_require_attestation: false,
-        application_questions: ['Why do you want to take this course?'],
+        application_questions: [{ text: 'Why do you want to take this course?', correct_answer: true }],
+        application_pass_threshold: null,
         application_allow_alternative_proof: true,
         application_require_portfolio_url: false,
-        sections_required: false,
         thumbnail_url: null,
         prerequisites_text: null,
         price: '0',
@@ -96,8 +96,12 @@ const { MOCK_APPLICATIONS } = vi.hoisted(() => {
             status: 'pending',
             student: null as unknown as CourseApplication['student'],
             course: null as unknown as CourseApplication['course'],
-            section: null,
-            answers: ['Because I want to level up.'],
+            cohort_course: null,
+            answers: [true],
+            eligibility_score: 100,
+            eligibility_passed: true,
+            approved_automatically: false,
+            enrolment_status: null,
             portfolio_url: null,
             alternative_proof_text: null,
             rejection_reason: null,
@@ -112,8 +116,12 @@ const { MOCK_APPLICATIONS } = vi.hoisted(() => {
             status: 'approved',
             student: null as unknown as CourseApplication['student'],
             course: null as unknown as CourseApplication['course'],
-            section: null,
-            answers: ['I have a portfolio.'],
+            cohort_course: null,
+            answers: [true],
+            eligibility_score: 100,
+            eligibility_passed: true,
+            approved_automatically: false,
+            enrolment_status: null,
             portfolio_url: null,
             alternative_proof_text: null,
             rejection_reason: null,
@@ -128,8 +136,12 @@ const { MOCK_APPLICATIONS } = vi.hoisted(() => {
             status: 'rejected',
             student: null as unknown as CourseApplication['student'],
             course: null as unknown as CourseApplication['course'],
-            section: null,
-            answers: ['Not much experience yet.'],
+            cohort_course: null,
+            answers: [false],
+            eligibility_score: 0,
+            eligibility_passed: false,
+            approved_automatically: false,
+            enrolment_status: null,
             portfolio_url: null,
             alternative_proof_text: null,
             rejection_reason: null,
@@ -229,7 +241,7 @@ it('opens the view modal with the submitted question and answer', async () => {
     await user.click(await screen.findByRole('button', { name: 'View Amara Kintu' }));
 
     expect(screen.getByText('Why do you want to take this course?')).toBeInTheDocument();
-    expect(screen.getByText('Because I want to level up.')).toBeInTheDocument();
+    expect(screen.getByText('Yes')).toBeInTheDocument();
 });
 
 it('opens the reject modal with a beginner-course recommendation picker', async () => {

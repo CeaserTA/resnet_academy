@@ -28,6 +28,7 @@ final class Course extends Model
         'enrolment_policy',
         'advisory_require_attestation',
         'application_questions',
+        'application_pass_threshold',
         'application_allow_alternative_proof',
         'application_require_portfolio_url',
         'thumbnail_url',
@@ -38,7 +39,6 @@ final class Course extends Model
         'current_version',
         'confirmation_delay_hours',
         'schedule_start_date',
-        'sections_required',
         'created_by',
     ];
 
@@ -47,12 +47,12 @@ final class Course extends Model
         'enrolment_policy' => CourseEnrolmentPolicy::class,
         'advisory_require_attestation' => 'boolean',
         'application_questions' => 'array',
+        'application_pass_threshold' => 'integer',
         'application_allow_alternative_proof' => 'boolean',
         'application_require_portfolio_url' => 'boolean',
         'status' => CourseStatus::class,
         'price' => 'decimal:2',
         'schedule_start_date' => 'date',
-        'sections_required' => 'boolean',
     ];
 
     /**
@@ -129,19 +129,19 @@ final class Course extends Model
     }
 
     /**
-     * @return HasMany<GroupsCohort, $this>
+     * @return HasMany<Group, $this>
      */
     public function groups(): HasMany
     {
-        return $this->hasMany(GroupsCohort::class, 'course_id');
+        return $this->hasMany(Group::class, 'course_id');
     }
 
     /**
-     * @return HasMany<CourseSection, $this>
+     * @return HasMany<CohortCourse, $this>
      */
-    public function sections(): HasMany
+    public function cohortCourses(): HasMany
     {
-        return $this->hasMany(CourseSection::class);
+        return $this->hasMany(CohortCourse::class);
     }
 
     /**
@@ -170,7 +170,7 @@ final class Course extends Model
 
     /**
      * Shared "can this instructor manage this course" check, reused by every Phase 2 policy
-     * (Module/GroupsCohort/Resource/ModuleItem) alongside admin's blanket access.
+     * (Module/Group/Resource/ModuleItem) alongside admin's blanket access.
      */
     public function isTaughtBy(User $user): bool
     {

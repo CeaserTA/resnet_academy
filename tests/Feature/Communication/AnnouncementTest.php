@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Enums\EnrolmentSource;
 use App\Models\Course;
+use App\Models\CohortCourse;
 use App\Models\Notification;
 use App\Models\User;
 use App\Services\Enrolment\EnrolmentService;
@@ -13,7 +14,7 @@ it('lets an instructor post an announcement and notifies every confirmed-enrolle
     $student = User::factory()->student()->create();
     $course = Course::factory()->create();
     $course->instructors()->attach($instructor->id, ['is_primary' => true, 'assigned_at' => now()]);
-    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
 
     $response = $this->actingAs($instructor)->postJson("/api/v1/courses/{$course->id}/announcements", [
         'title' => 'Class moved to next week',

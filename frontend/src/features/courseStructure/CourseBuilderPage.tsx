@@ -15,14 +15,14 @@ import { TrashedModulesSection } from '@/features/courseStructure/TrashedModules
 import { useCourseAnalytics } from '@/features/analytics/useAnalytics';
 import { AtRiskStudentsTable } from '@/features/analytics/AtRiskStudentsTable';
 import { EnrollmentTable } from '@/features/analytics/EnrollmentTable';
-import { SectionsManagePage } from '@/features/sections/SectionsManagePage';
-import { useUsers } from '@/features/admin/users/useAdminUsers';
+import { CourseCohortsPanel } from '@/features/cohorts/CourseCohortsPanel';
 import { AlertTriangle, TrendingUp, Users } from 'lucide-react';
 
 /**
  * Course builder: Analytics stat cards at the top, then tabbed view —
- * Modules tab (module management table), Sections tab (cohort management),
- * Analytics tab (enrollment + at-risk). All pulling from one useCourseAnalytics() call.
+ * Modules tab (module management table), Cohorts tab (read-only: which cohorts this course
+ * is offered in — attach/detach happens from the cohort's own page), Analytics tab
+ * (enrollment + at-risk). All pulling from one useCourseAnalytics() call.
  */
 export function CourseBuilderPage() {
     const { id } = useParams();
@@ -30,11 +30,10 @@ export function CourseBuilderPage() {
     const { data: course } = useCourse(courseId);
     const { data: modules, isLoading } = useModules(courseId);
     const { data: analytics, isLoading: isLoadingAnalytics } = useCourseAnalytics(courseId);
-    const { data: instructors = [] } = useUsers('instructor');
     const createModule = useCreateModule(courseId);
     const deleteModule = useDeleteModule(courseId);
 
-    const [activeTab, setActiveTab] = useState<'modules' | 'sections' | 'analytics'>('modules');
+    const [activeTab, setActiveTab] = useState<'modules' | 'cohorts' | 'analytics'>('modules');
     const [isAddingModule, setIsAddingModule] = useState(false);
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -130,14 +129,14 @@ export function CourseBuilderPage() {
                     Modules
                 </button>
                 <button
-                    onClick={() => setActiveTab('sections')}
+                    onClick={() => setActiveTab('cohorts')}
                     className={`px-4 py-2 text-sm font-medium transition-colors ${
-                        activeTab === 'sections'
+                        activeTab === 'cohorts'
                             ? 'border-b-2 border-blue-600 text-blue-600'
                             : 'text-ink-600 hover:text-ink-900'
                     }`}
                 >
-                    Sections
+                    Cohorts
                 </button>
                 <button
                     onClick={() => setActiveTab('analytics')}
@@ -211,13 +210,10 @@ export function CourseBuilderPage() {
                 </>
             )}
 
-            {/* Sections Tab */}
-            {activeTab === 'sections' && (
+            {/* Cohorts Tab */}
+            {activeTab === 'cohorts' && (
                 <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm p-4">
-                    <SectionsManagePage
-                        courseId={courseId}
-                        instructors={instructors.map((i) => ({ id: i.id, name: i.name }))}
-                    />
+                    <CourseCohortsPanel courseId={courseId} />
                 </div>
             )}
 

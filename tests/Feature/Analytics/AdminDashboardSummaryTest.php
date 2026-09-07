@@ -7,6 +7,7 @@ use App\Enums\EnrolmentSource;
 use App\Enums\OrderStatus;
 use App\Enums\TicketStatus;
 use App\Models\Certificate;
+use App\Models\CohortCourse;
 use App\Models\Course;
 use App\Models\Order;
 use App\Models\Ticket;
@@ -29,11 +30,13 @@ it('summarizes system-wide counts for the admin dashboard', function (): void {
 
     $paidStudent = User::factory()->student()->create();
     $enrolmentService = app(EnrolmentService::class);
-    $enrolmentService->enrol($paidStudent, $ugxCourse, EnrolmentSource::Self);
+    $ugxCohortCourse = CohortCourse::factory()->for($ugxCourse)->open()->create();
+    $enrolmentService->enrol($paidStudent, $ugxCourse, EnrolmentSource::Self, $ugxCohortCourse->id);
     Order::where('course_id', $ugxCourse->id)->update(['status' => OrderStatus::Paid]);
 
     $otherPaidStudent = User::factory()->student()->create();
-    $enrolmentService->enrol($otherPaidStudent, $usdCourse, EnrolmentSource::Self);
+    $usdCohortCourse = CohortCourse::factory()->for($usdCourse)->open()->create();
+    $enrolmentService->enrol($otherPaidStudent, $usdCourse, EnrolmentSource::Self, $usdCohortCourse->id);
     Order::where('course_id', $usdCourse->id)->update(['status' => OrderStatus::Paid]);
 
     Certificate::factory()->for($paidStudent, 'student')->for($ugxCourse)->create();

@@ -20,10 +20,6 @@ export default defineConfig({
         environment: 'jsdom',
         globals: true,
         setupFiles: ['./src/test/setup.ts'],
-        pool: 'forks',
-        forkOptions: {
-            // Worker startup on Windows with many imports can exceed the default 60s.
-            execTimeout: 120_000,
-        },
+        pool: 'threads',
     },
 });

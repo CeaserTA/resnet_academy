@@ -15,6 +15,9 @@ final class CourseResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $user = $request->user();
+        $isPrivileged = $user !== null && in_array($user->role->value, ['admin', 'instructor'], true);
+
         return [
             'id' => $this->id,
             'title' => $this->title,
@@ -23,10 +26,16 @@ final class CourseResource extends JsonResource
             'level' => $this->level->value,
             'enrolment_policy' => $this->enrolment_policy->value,
             'advisory_require_attestation' => $this->advisory_require_attestation,
-            'application_questions' => $this->application_questions,
+            // Only admins/instructors (who can author these questions) ever see which answer is
+            // correct — a student applying to the course must never learn it from the payload.
+            'application_questions' => $isPrivileged
+                ? $this->application_questions
+                : collect($this->application_questions ?? [])
+                    ->map(fn (array $question): array => ['text' => $question['text']])
+                    ->all(),
+            'application_pass_threshold' => $this->application_pass_threshold,
             'application_allow_alternative_proof' => $this->application_allow_alternative_proof,
             'application_require_portfolio_url' => $this->application_require_portfolio_url,
-            'sections_required' => $this->sections_required,
             'thumbnail_url' => app(MediaStorageService::class)->url($this->thumbnail_url),
             'prerequisites_text' => $this->prerequisites_text,
             'price' => $this->price,

@@ -1,33 +1,26 @@
 /**
  * CohortSection — landing page cohort schedule.
  *
- * Displays real course sections (cohorts) from the database.
- * Shows both ongoing (in_progress) and upcoming (open) sections.
+ * One card per cohort (an intake can offer several courses at once) — clicking through to
+ * /cohorts/:id lets the student see every course in that cohort and pick the one to apply for.
  */
 
 import { Link } from 'react-router';
-import { CalendarDays, Clock, Layers, Monitor, Users } from 'lucide-react';
+import { CalendarDays, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { usePublicSections } from '@/features/sections/useSections';
-import { CourseSectionStatus, type PublicSection } from '@/features/sections/types';
+import { useCohorts } from '@/features/cohorts/useCohorts';
 import { Spinner } from '@/components/ui/Spinner';
+import type { Cohort } from '@/lib/api/types';
 
-// ─── Status badge ─────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const statusConfig = {
-    in_progress: {
-        label: 'Ongoing',
-        className: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-        dot: 'bg-emerald-500',
-    },
-    open: {
-        label: 'Registration Open',
-        className: 'bg-amber-100 text-amber-700 border-amber-200',
-        dot: 'bg-amber-500',
-    },
-} as const;
+function isOngoing(cohort: Cohort): boolean {
+    return cohort.courses.some((c) => c.status === 'in_progress');
+}
 
-// ─── Helper ───────────────────────────────────────────────────────────────────
+function isUpcoming(cohort: Cohort): boolean {
+    return !isOngoing(cohort) && cohort.courses.some((c) => c.status === 'open');
+}
 
 function formatDate(dateStr: string): string {
     return new Date(dateStr).toLocaleDateString('en-UG', {
@@ -39,9 +32,9 @@ function formatDate(dateStr: string): string {
 
 // ─── Single cohort card ───────────────────────────────────────────────────────
 
-function CohortCard({ section }: { section: PublicSection }) {
-    const status = statusConfig[section.status as keyof typeof statusConfig];
-    const instructor = section.primary_instructor || section.course.instructors[0];
+function CohortCard({ cohort }: { cohort: Cohort }) {
+    const ongoing = isOngoing(cohort);
+    const courseCount = cohort.courses.length;
 
     return (
         <div className="flex flex-col overflow-hidden rounded-2xl border border-[#e8ecf1] bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-md">
@@ -53,82 +46,68 @@ function CohortCard({ section }: { section: PublicSection }) {
                 <div className="flex items-start justify-between gap-3">
                     <div>
                         <p className="text-xs font-semibold uppercase tracking-widest text-blue-600">
-                            {section.course.title}
+                            {courseCount} course{courseCount !== 1 ? 's' : ''}
                         </p>
-                        <h3 className="mt-1 text-lg font-bold text-ink-900">{section.name}</h3>
+                        <h3 className="mt-1 text-lg font-bold text-ink-900">{cohort.name}</h3>
                     </div>
                     {/* Status badge */}
                     <span
                         className={cn(
                             'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium',
-                            status.className,
+                            ongoing
+                                ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                                : 'bg-amber-100 text-amber-700 border-amber-200',
                         )}
                     >
-                        <span className={cn('size-1.5 rounded-full', status.dot)} aria-hidden="true" />
-                        {status.label}
+                        <span className={cn('size-1.5 rounded-full', ongoing ? 'bg-emerald-500' : 'bg-amber-500')} aria-hidden="true" />
+                        {ongoing ? 'Ongoing' : 'Registration Open'}
                     </span>
                 </div>
 
-                {/* Course description */}
-                {section.course.description && (
-                    <p className="text-sm leading-6 text-[#64748b] line-clamp-2">{section.course.description}</p>
-                )}
+                {/* Courses in this cohort */}
+                <ul className="flex flex-wrap gap-2">
+                    {cohort.courses.map((cc) => (
+                        <li
+                            key={cc.id}
+                            className="rounded-full border border-[#e8ecf1] bg-[#f8fafc] px-3 py-1 text-xs text-ink-700"
+                        >
+                            {cc.course?.title}
+                        </li>
+                    ))}
+                </ul>
 
                 {/* Meta grid */}
-                <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+                <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                     <div className="flex items-start gap-2">
                         <CalendarDays className="mt-0.5 size-4 shrink-0 text-blue-500" aria-hidden="true" />
                         <div>
                             <dt className="text-xs font-medium uppercase tracking-wide text-[#94a3b8]">
-                                {section.status === CourseSectionStatus.InProgress ? 'Started' : 'Starts'}
+                                {ongoing ? 'Started' : 'Starts'}
                             </dt>
-                            <dd className="text-ink-700">{formatDate(section.start_date)}</dd>
+                            <dd className="text-ink-700">{formatDate(cohort.start_date)}</dd>
                         </div>
                     </div>
                     <div className="flex items-start gap-2">
                         <Clock className="mt-0.5 size-4 shrink-0 text-blue-500" aria-hidden="true" />
                         <div>
                             <dt className="text-xs font-medium uppercase tracking-wide text-[#94a3b8]">Ends</dt>
-                            <dd className="text-ink-700">{formatDate(section.end_date)}</dd>
+                            <dd className="text-ink-700">{formatDate(cohort.end_date)}</dd>
                         </div>
                     </div>
-                    {instructor && (
-                        <div className="flex items-start gap-2">
-                            <Users className="mt-0.5 size-4 shrink-0 text-blue-500" aria-hidden="true" />
-                            <div>
-                                <dt className="text-xs font-medium uppercase tracking-wide text-[#94a3b8]">Instructor</dt>
-                                <dd className="text-ink-700">{instructor.name}</dd>
-                            </div>
-                        </div>
-                    )}
                 </dl>
-
-                {/* Seat availability */}
-                {section.capacity !== null && (
-                    <div className="flex items-center gap-2 text-sm">
-                        <Layers className="size-4 text-blue-500" aria-hidden="true" />
-                        {section.is_full ? (
-                            <span className="text-amber-700 font-medium">Section Full</span>
-                        ) : section.seats_available !== null && section.seats_available <= 5 ? (
-                            <span className="text-amber-700 font-medium">Only {section.seats_available} seats left!</span>
-                        ) : (
-                            <span className="text-ink-700">{section.seats_available} seats available</span>
-                        )}
-                    </div>
-                )}
 
                 {/* CTA */}
                 <div className="mt-auto pt-2">
                     <Link
-                        to={`/courses/${section.course.id}`}
+                        to={`/cohorts/${cohort.id}`}
                         className={cn(
                             'inline-flex w-full items-center justify-center rounded-md px-4 py-2.5 text-sm font-medium transition-colors',
-                            section.status === CourseSectionStatus.Open
-                                ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                : 'border border-blue-600 text-blue-700 hover:bg-blue-50',
+                            ongoing
+                                ? 'border border-blue-600 text-blue-700 hover:bg-blue-50'
+                                : 'bg-blue-600 text-white hover:bg-blue-700',
                         )}
                     >
-                        {section.status === CourseSectionStatus.Open ? 'Register Now' : 'View Course'}
+                        {ongoing ? 'View cohort' : 'View cohort & register'}
                     </Link>
                 </div>
             </div>
@@ -139,12 +118,11 @@ function CohortCard({ section }: { section: PublicSection }) {
 // ─── Section ──────────────────────────────────────────────────────────────────
 
 export function CohortSection() {
-    const { data, isLoading } = usePublicSections();
-    const sections = data ?? [];
+    const { data, isLoading } = useCohorts({ status: 'published' });
+    const cohorts = data ?? [];
 
-    const now = new Date();
-    const ongoing = sections.filter((s) => s.status === CourseSectionStatus.InProgress);
-    const upcoming = sections.filter((s) => s.status === CourseSectionStatus.Open);
+    const ongoing = cohorts.filter(isOngoing);
+    const upcoming = cohorts.filter(isUpcoming);
 
     if (isLoading) {
         return (
@@ -159,7 +137,7 @@ export function CohortSection() {
         );
     }
 
-    if (sections.length === 0) {
+    if (ongoing.length === 0 && upcoming.length === 0) {
         return (
             <section
                 id="cohorts"
@@ -221,8 +199,8 @@ export function CohortSection() {
                                 Ongoing Cohorts
                             </h3>
                             <div className="grid gap-6 sm:grid-cols-2">
-                                {ongoing.map((section) => (
-                                    <CohortCard key={section.id} section={section} />
+                                {ongoing.map((cohort) => (
+                                    <CohortCard key={cohort.id} cohort={cohort} />
                                 ))}
                             </div>
                         </div>
@@ -236,8 +214,8 @@ export function CohortSection() {
                                 Upcoming Cohorts
                             </h3>
                             <div className="grid gap-6 sm:grid-cols-2">
-                                {upcoming.map((section) => (
-                                    <CohortCard key={section.id} section={section} />
+                                {upcoming.map((cohort) => (
+                                    <CohortCard key={cohort.id} cohort={cohort} />
                                 ))}
                             </div>
                         </div>

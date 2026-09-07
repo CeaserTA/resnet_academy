@@ -1,32 +1,31 @@
-import { useSections } from '@/features/sections/useSections';
-import { CourseSectionStatus } from '@/features/sections/types';
-import type { CourseSection } from '@/features/sections/types';
+import { useCohortCoursesForCourse } from '@/features/cohorts/useCohorts';
+import type { CohortCourse, CohortCourseStatus } from '@/lib/api/types';
 
 // Statuses a student can enroll into (open or actively running)
-const ENROLLABLE_STATUSES: CourseSectionStatus[] = [
-    CourseSectionStatus.Open,
-    CourseSectionStatus.InProgress,
+const ENROLLABLE_STATUSES: CohortCourseStatus[] = [
+    'open',
+    'in_progress',
 ];
 
 export interface UseStudentSectionsResult {
-    /** All sections for the course (unfiltered). */
-    sections: CourseSection[];
-    /** Only open/in_progress sections — drives the picker display and CTA gating. */
-    openSections: CourseSection[];
+    /** Every cohort offering of this course (unfiltered). */
+    sections: CohortCourse[];
+    /** Only open/in_progress offerings — drives the picker display and CTA gating. */
+    openSections: CohortCourse[];
     isLoading: boolean;
     isError: boolean;
 }
 
 /**
- * Student-facing read-only wrapper around useSections.
- * Re-uses the exact same query key and fetch function as the admin feature — no duplicate logic.
+ * Student-facing read-only wrapper around useCohortCoursesForCourse — every enrolment now
+ * belongs to a specific cohort offering, so there is no self-paced fallback to gate on.
  *
  * `openSections` filters to status open|in_progress only.
- * Full sections (is_full: true) are intentionally included — selecting them triggers
+ * Full offerings (is_full: true) are intentionally included — selecting them triggers
  * a waitlist enrollment on the backend, which is the correct behavior.
  */
 export function useStudentSections(courseId: number): UseStudentSectionsResult {
-    const { data: sections = [], isLoading, isError } = useSections(courseId);
+    const { data: sections = [], isLoading, isError } = useCohortCoursesForCourse(courseId);
 
     const openSections = sections.filter((s) =>
         ENROLLABLE_STATUSES.includes(s.status),

@@ -17,6 +17,7 @@ const { course, assignment, student, submitAssignmentMock } = vi.hoisted(() => {
         enrolment_policy: 'open',
         advisory_require_attestation: false,
         application_questions: null,
+    application_pass_threshold: null,
         application_allow_alternative_proof: true,
         application_require_portfolio_url: false,
         thumbnail_url: null,

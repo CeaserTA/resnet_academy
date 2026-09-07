@@ -6,6 +6,7 @@ use App\Enums\EnrolmentSource;
 use App\Jobs\GenerateCertificatePdf;
 use App\Models\Certificate;
 use App\Models\Course;
+use App\Models\CohortCourse;
 use App\Models\Module;
 use App\Models\ModuleItem;
 use App\Models\Notification;
@@ -28,7 +29,7 @@ it('issues a certificate when the last module in a course completes', function (
     $resource = Resource::factory()->for($module)->reading()->create();
     ModuleItem::create(['module_id' => $module->id, 'item_type' => 'resource', 'item_id' => $resource->id, 'order_index' => 1, 'is_required' => true]);
 
-    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
     app(ProgressEngine::class)->markRead($student, $resource);
 
     $certificate = Certificate::where('student_id', $student->id)->where('course_id', $course->id)->first();
@@ -52,7 +53,7 @@ it('does not issue a certificate while a later module is still incomplete', func
     $secondResource = Resource::factory()->for($second)->reading()->create();
     ModuleItem::create(['module_id' => $second->id, 'item_type' => 'resource', 'item_id' => $secondResource->id, 'order_index' => 1, 'is_required' => true]);
 
-    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
     app(ProgressEngine::class)->markRead($student, $firstResource);
 
     expect(Certificate::where('student_id', $student->id)->where('course_id', $course->id)->exists())->toBeFalse();

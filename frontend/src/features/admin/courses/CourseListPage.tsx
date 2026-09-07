@@ -11,7 +11,6 @@ import {
     Plus,
     Search,
     Trash2,
-    Users,
 } from 'lucide-react';
 import { useCourses } from '@/features/catalogue/useCourses';
 import { useDeleteCourse } from '@/features/admin/courses/useAdminCourses';

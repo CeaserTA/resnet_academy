@@ -22,6 +22,7 @@ final class PaymentSubmissionResource extends JsonResource
             'receipt_url' => app(MediaStorageService::class)->url($this->receipt_path),
             'receipt_original_name' => $this->receipt_original_name,
             'status' => $this->status->value,
+            'rejection_reason' => $this->rejection_reason,
             'reviewed_at' => $this->reviewed_at?->toIso8601String(),
             'created_at' => $this->created_at->toIso8601String(),
         ];

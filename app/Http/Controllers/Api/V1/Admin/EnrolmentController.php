@@ -10,9 +10,12 @@ use App\Enums\ModuleProgressStatus;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AdminEnrolmentResource;
+use App\Models\CohortCourse;
+use App\Models\Course;
 use App\Models\Enrolment;
 use App\Models\ModuleProgress;
 use App\Services\Enrolment\EnrolmentService;
+use App\Services\Enrolment\EnrolmentTransferService;
 use App\Services\Progress\ProgressEngine;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -22,6 +25,7 @@ final class EnrolmentController extends Controller
 {
     public function __construct(
         private readonly EnrolmentService $enrolmentService,
+        private readonly EnrolmentTransferService $enrolmentTransferService,
         private readonly ProgressEngine $progressEngine,
     ) {}
 
@@ -36,20 +40,20 @@ final class EnrolmentController extends Controller
 
         $validated = $request->validate([
             'course_id' => ['nullable', 'integer', 'exists:courses,id'],
-            'section_id' => ['nullable', 'integer', 'exists:course_sections,id'],
+            'cohort_course_id' => ['nullable', 'integer', 'exists:cohort_courses,id'],
             'status' => ['nullable', Rule::enum(EnrolmentStatus::class)],
             'source' => ['nullable', Rule::enum(EnrolmentSource::class)],
             'search' => ['nullable', 'string', 'max:100'],
         ]);
 
         $enrolments = Enrolment::query()
-            ->with(['student', 'course', 'section'])
+            ->with(['student', 'course', 'cohortCourse.cohort', 'order'])
             ->when(
                 $request->user()->role === UserRole::Instructor,
                 fn ($query) => $query->whereHas('course.instructors', fn ($q) => $q->where('users.id', $request->user()->id)),
             )
             ->when($validated['course_id'] ?? null, fn ($query, $courseId) => $query->where('course_id', $courseId))
-            ->when($validated['section_id'] ?? null, fn ($query, $sectionId) => $query->where('section_id', $sectionId))
+            ->when($validated['cohort_course_id'] ?? null, fn ($query, $cohortCourseId) => $query->where('cohort_course_id', $cohortCourseId))
             ->when($validated['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when($validated['source'] ?? null, fn ($query, $source) => $query->where('source', $source))
             ->when(
@@ -87,7 +91,7 @@ final class EnrolmentController extends Controller
             $request->user(),
         );
 
-        $enrolment->load(['student', 'course', 'section']);
+        $enrolment->load(['student', 'course', 'cohortCourse.cohort']);
         $this->attachProgressPercent([$enrolment]);
 
         return new AdminEnrolmentResource($enrolment);
@@ -122,5 +126,78 @@ final class EnrolmentController extends Controller
                 $totalCount > 0 ? round($completedCount / $totalCount * 100, 2) : 0.0,
             );
         }
+    }
+
+    /**
+     * List all transfer requests (enrolments with TransferRequested status).
+     */
+    public function transferRequests(Request $request): AnonymousResourceCollection
+    {
+        $this->authorize('viewRoster', Enrolment::class);
+
+        $transferRequests = Enrolment::query()
+            ->where('status', EnrolmentStatus::TransferRequested)
+            ->with(['student', 'course', 'cohortCourse.cohort', 'order'])
+            ->latest('transfer_requested_at')
+            ->latest('id')
+            ->paginate(25)
+            ->withQueryString();
+
+        return AdminEnrolmentResource::collection($transferRequests);
+    }
+
+    /**
+     * Process a transfer request - move student to a new course-within-a-cohort.
+     */
+    public function transfer(Request $request, Enrolment $enrolment): AdminEnrolmentResource
+    {
+        $this->authorize('updateStatus', $enrolment);
+
+        $validated = $request->validate([
+            'course_id' => ['required', 'integer', 'exists:courses,id'],
+            'cohort_course_id' => ['required', 'integer', 'exists:cohort_courses,id'],
+            'note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $newCourse = Course::findOrFail($validated['course_id']);
+        $newCohortCourse = CohortCourse::findOrFail($validated['cohort_course_id']);
+
+        $newEnrolment = $this->enrolmentTransferService->transfer(
+            $enrolment,
+            $newCourse,
+            $request->user(),
+            $newCohortCourse,
+            $validated['note'] ?? null
+        );
+
+        $newEnrolment->load(['student', 'course', 'cohortCourse.cohort', 'order']);
+        $this->attachProgressPercent([$newEnrolment]);
+
+        return new AdminEnrolmentResource($newEnrolment);
+    }
+
+    /**
+     * Process a refund for a transfer request.
+     */
+    public function refund(Request $request, Enrolment $enrolment): AdminEnrolmentResource
+    {
+        $this->authorize('updateStatus', $enrolment);
+
+        $validated = $request->validate([
+            'refund_amount' => ['required', 'numeric', 'min:0.01'],
+            'note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $refundedEnrolment = $this->enrolmentTransferService->refund(
+            $enrolment,
+            $request->user(),
+            (float) $validated['refund_amount'],
+            $validated['note'] ?? null
+        );
+
+        $refundedEnrolment->load(['student', 'course', 'cohortCourse.cohort', 'order']);
+        $this->attachProgressPercent([$refundedEnrolment]);
+
+        return new AdminEnrolmentResource($refundedEnrolment);
     }
 }
