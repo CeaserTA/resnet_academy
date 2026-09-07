@@ -9,7 +9,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * Admin roster row — richer than the student-facing EnrolmentResource: includes the student's
- * identity, section name, and their progress percentage (attached by the admin controller).
+ * identity, cohort name, and their progress percentage (attached by the admin controller).
  */
 final class AdminEnrolmentResource extends JsonResource
 {
@@ -30,10 +30,14 @@ final class AdminEnrolmentResource extends JsonResource
                 'title' => $this->course->title,
                 'enrolment_policy' => $this->course->enrolment_policy->value,
             ],
-            'section' => $this->whenLoaded(
-                'section',
-                fn () => $this->section !== null
-                    ? ['id' => $this->section->id, 'name' => $this->section->name]
+            'cohort_course' => $this->whenLoaded(
+                'cohortCourse',
+                fn () => $this->cohortCourse !== null
+                    ? [
+                        'id' => $this->cohortCourse->id,
+                        'cohort_id' => $this->cohortCourse->cohort_id,
+                        'cohort_name' => $this->cohortCourse->cohort?->name,
+                    ]
                     : null,
             ),
             'status' => $this->status->value,

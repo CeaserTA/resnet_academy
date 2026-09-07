@@ -1,16 +1,18 @@
 import { useState } from 'react';
-import { ArrowRight, CreditCard, ReceiptText, Users, XCircle } from 'lucide-react';
+import { ArrowRight, ReceiptText, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Modal } from '@/components/ui/Modal';
 import { Alert } from '@/components/ui/Alert';
 import { useCourses } from '@/features/catalogue/useCourses';
+import { useCohortCoursesForCourse } from '@/features/cohorts/useCohorts';
 import { useTransferRequests, useTransferEnrolment, useRefundEnrolment } from '@/features/admin/enrolments/useAdminEnrolments';
-import { enrolmentStatusDisplay, orderStatusDisplay } from '@/lib/statusBadge';
+import { orderStatusDisplay } from '@/lib/statusBadge';
 import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import type { AdminEnrolment } from '@/lib/api/types';
 
@@ -18,22 +20,19 @@ function formatAmount(amount: string | number, currency: string): string {
     return new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 }).format(Number(amount));
 }
 
-function TransferModal({ enrolment, courses, onClose }: { enrolment: AdminEnrolment; courses: any[]; onClose: () => void }) {
+function TransferModal({ enrolment, courses, onClose }: { enrolment: AdminEnrolment; courses: { id: number; title: string }[]; onClose: () => void }) {
     const transferEnrolment = useTransferEnrolment();
     const [selectedCourseId, setSelectedCourseId] = useState<string>('');
+    const [selectedCohortCourseId, setSelectedCohortCourseId] = useState<string>('');
     const [note, setNote] = useState<string>('');
     const [error, setError] = useState<string | null>(null);
 
-    const selectedCourse = courses.find((c) => c.id === Number(selectedCourseId));
+    const { data: cohortCourses } = useCohortCoursesForCourse(Number(selectedCourseId));
 
     const handleSubmit = async () => {
         setError(null);
-        if (!selectedCourseId) {
-            setError('Please select a target course.');
-            return;
-        }
-        if (selectedCourse?.sections_required) {
-            setError('This course requires section selection. Please use the main enrolments page to transfer to this course.');
+        if (!selectedCourseId || !selectedCohortCourseId) {
+            setError('Please select a target course and cohort.');
             return;
         }
 
@@ -42,6 +41,7 @@ function TransferModal({ enrolment, courses, onClose }: { enrolment: AdminEnrolm
                 enrolmentId: enrolment.id,
                 payload: {
                     course_id: Number(selectedCourseId),
+                    cohort_course_id: Number(selectedCohortCourseId),
                     note: note || undefined,
                 },
             });
@@ -69,30 +69,37 @@ function TransferModal({ enrolment, courses, onClose }: { enrolment: AdminEnrolm
         >
             <div className="flex flex-col gap-4">
                 {error && <Alert variant="error" message={error} />}
-                
+
                 <div className="text-sm text-ink-600">
                     <p><strong>Current course:</strong> {enrolment.course.title}</p>
-                    {enrolment.section && <p><strong>Current section:</strong> {enrolment.section.name}</p>}
+                    {enrolment.cohort_course && <p><strong>Current cohort:</strong> {enrolment.cohort_course.cohort_name}</p>}
                 </div>
 
-                <label className="flex flex-col gap-1.5">
-                    <span className="text-sm font-medium text-ink-900">Target course</span>
-                    <select
-                        value={selectedCourseId}
-                        onChange={(e) => setSelectedCourseId(e.target.value)}
-                        className="rounded-md border border-surface-100 bg-surface-0 px-3 py-2 text-sm text-ink-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-                    >
-                        <option value="">Select a course</option>
-                        {courses.map((course) => (
-                            <option key={course.id} value={course.id}>
-                                {course.title}
+                <Select
+                    label="Target course"
+                    value={selectedCourseId}
+                    onChange={(e) => {
+                        setSelectedCourseId(e.target.value);
+                        setSelectedCohortCourseId('');
+                    }}
+                >
+                    <option value="">Select a course</option>
+                    {courses.map((course) => (
+                        <option key={course.id} value={course.id}>
+                            {course.title}
+                        </option>
+                    ))}
+                </Select>
+
+                {selectedCourseId && (
+                    <Select label="Target cohort" value={selectedCohortCourseId} onChange={(e) => setSelectedCohortCourseId(e.target.value)}>
+                        <option value="">Select a cohort offering</option>
+                        {cohortCourses?.map((cc) => (
+                            <option key={cc.id} value={cc.id}>
+                                {cc.cohort_name}
                             </option>
                         ))}
-                    </select>
-                </label>
-
-                {selectedCourse?.sections_required && (
-                    <Alert variant="error" message="This course requires section selection. Please use the main enrolments page to transfer to this course." />
+                    </Select>
                 )}
 
                 <label className="flex flex-col gap-1.5">
@@ -249,7 +256,6 @@ export function AdminTransferRequestsPage() {
                     {/* Rows */}
                     <ul className="divide-y divide-surface-100">
                         {enrolments.map((enrolment) => {
-                            const status = enrolmentStatusDisplay(enrolment.status);
                             const orderStatus = enrolment.order ? orderStatusDisplay(enrolment.order.status) : null;
                             const transferRequestedAt = enrolment.transfer_requested_at 
                                 ? new Date(enrolment.transfer_requested_at).toLocaleDateString()
@@ -269,10 +275,10 @@ export function AdminTransferRequestsPage() {
                                         </div>
                                     </div>
 
-                                    {/* Course & section */}
+                                    {/* Course & cohort */}
                                     <div className="min-w-0">
                                         <p className="truncate text-sm text-ink-900">{enrolment.course.title}</p>
-                                        <p className="truncate text-xs text-ink-400">{enrolment.section?.name ?? 'Self-paced'}</p>
+                                        <p className="truncate text-xs text-ink-400">{enrolment.cohort_course?.cohort_name ?? '—'}</p>
                                     </div>
 
                                     {/* Amount paid */}

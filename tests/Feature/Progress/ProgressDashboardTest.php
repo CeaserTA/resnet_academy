@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Enums\EnrolmentSource;
 use App\Models\Course;
+use App\Models\CohortCourse;
 use App\Models\Module;
 use App\Models\ModuleItem;
 use App\Models\Resource;
@@ -32,8 +33,8 @@ it('summarizes a completed course with its certificate and an in-progress course
     $inProgressResource2 = Resource::factory()->for($inProgressModule2)->reading()->create();
     ModuleItem::create(['module_id' => $inProgressModule2->id, 'item_type' => 'resource', 'item_id' => $inProgressResource2->id, 'order_index' => 1, 'is_required' => true]);
 
-    app(EnrolmentService::class)->enrol($student, $completedCourse, EnrolmentSource::Self);
-    app(EnrolmentService::class)->enrol($student, $inProgressCourse, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($student, $completedCourse, EnrolmentSource::Self, CohortCourse::factory()->for($completedCourse)->open()->create()->id);
+    app(EnrolmentService::class)->enrol($student, $inProgressCourse, EnrolmentSource::Self, CohortCourse::factory()->for($inProgressCourse)->open()->create()->id);
 
     app(ProgressEngine::class)->markRead($student, $completedResource);
     app(ProgressEngine::class)->markRead($student, $inProgressResource1);

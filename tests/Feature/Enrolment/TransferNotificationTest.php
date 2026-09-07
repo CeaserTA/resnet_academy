@@ -9,7 +9,7 @@ use App\Enums\NotificationChannel;
 use App\Enums\OrderStatus;
 use App\Enums\UserRole;
 use App\Models\Course;
-use App\Models\CourseSection;
+use App\Models\CohortCourse;
 use App\Models\Enrolment;
 use App\Models\Notification;
 use App\Models\Order;
@@ -23,12 +23,12 @@ describe('Transfer Notifications', function (): void {
 
     it('creates admin notification when student requests transfer after payment', function (): void {
         $course = Course::factory()->create();
-        $section = CourseSection::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
+        $section = CohortCourse::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
 
         $enrolment = Enrolment::factory()->create([
             'student_id' => $this->student->id,
             'course_id' => $course->id,
-            'section_id' => $section->id,
+            'cohort_course_id' => $section->id,
             'status' => EnrolmentStatus::Confirmed,
         ]);
 
@@ -69,15 +69,15 @@ describe('Transfer Notifications', function (): void {
 
     it('creates student notification when admin approves transfer', function (): void {
         $oldCourse = Course::factory()->create();
-        $oldSection = CourseSection::factory()->for($oldCourse)->create(['capacity' => 10, 'seats_taken' => 1]);
+        $oldSection = CohortCourse::factory()->for($oldCourse)->create(['capacity' => 10, 'seats_taken' => 1]);
         
         $newCourse = Course::factory()->create();
-        $newSection = CourseSection::factory()->for($newCourse)->create(['capacity' => 10, 'seats_taken' => 0]);
+        $newSection = CohortCourse::factory()->for($newCourse)->create(['capacity' => 10, 'seats_taken' => 0]);
 
         $oldEnrolment = Enrolment::factory()->create([
             'student_id' => $this->student->id,
             'course_id' => $oldCourse->id,
-            'section_id' => $oldSection->id,
+            'cohort_course_id' => $oldSection->id,
             'status' => EnrolmentStatus::TransferRequested,
         ]);
 
@@ -93,7 +93,7 @@ describe('Transfer Notifications', function (): void {
         $response = $this->actingAs($this->admin)
             ->postJson("/api/v1/admin/enrolments/{$oldEnrolment->id}/transfer", [
                 'course_id' => $newCourse->id,
-                'section_id' => $newSection->id,
+                'cohort_course_id' => $newSection->id,
                 'note' => 'Transferred to later cohort per request',
             ]);
 
@@ -120,12 +120,12 @@ describe('Transfer Notifications', function (): void {
 
     it('creates student notification when admin processes refund', function (): void {
         $course = Course::factory()->create();
-        $section = CourseSection::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
+        $section = CohortCourse::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
 
         $enrolment = Enrolment::factory()->create([
             'student_id' => $this->student->id,
             'course_id' => $course->id,
-            'section_id' => $section->id,
+            'cohort_course_id' => $section->id,
             'status' => EnrolmentStatus::TransferRequested,
         ]);
 
@@ -168,12 +168,12 @@ describe('Transfer Notifications', function (): void {
 
     it('does not create admin notification when student withdraws without payment', function (): void {
         $course = Course::factory()->create();
-        $section = CourseSection::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
+        $section = CohortCourse::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
 
         $enrolment = Enrolment::factory()->create([
             'student_id' => $this->student->id,
             'course_id' => $course->id,
-            'section_id' => $section->id,
+            'cohort_course_id' => $section->id,
             'status' => EnrolmentStatus::Confirmed,
         ]);
 
@@ -202,12 +202,12 @@ describe('Transfer Notifications', function (): void {
         $secondAdmin = User::factory()->admin()->create();
         
         $course = Course::factory()->create();
-        $section = CourseSection::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
+        $section = CohortCourse::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
 
         $enrolment = Enrolment::factory()->create([
             'student_id' => $this->student->id,
             'course_id' => $course->id,
-            'section_id' => $section->id,
+            'cohort_course_id' => $section->id,
             'status' => EnrolmentStatus::Confirmed,
         ]);
 
@@ -239,11 +239,15 @@ describe('Transfer Notifications', function (): void {
 
     it('uses email channel for financial transfer notifications', function (): void {
         $oldCourse = Course::factory()->create();
+        $oldSection = CohortCourse::factory()->for($oldCourse)->create(['capacity' => 10, 'seats_taken' => 1]);
+
         $newCourse = Course::factory()->create();
+        $newSection = CohortCourse::factory()->for($newCourse)->create(['capacity' => 10, 'seats_taken' => 0]);
 
         $oldEnrolment = Enrolment::factory()->create([
             'student_id' => $this->student->id,
             'course_id' => $oldCourse->id,
+            'cohort_course_id' => $oldSection->id,
             'status' => EnrolmentStatus::TransferRequested,
         ]);
 
@@ -259,6 +263,7 @@ describe('Transfer Notifications', function (): void {
         $response = $this->actingAs($this->admin)
             ->postJson("/api/v1/admin/enrolments/{$oldEnrolment->id}/transfer", [
                 'course_id' => $newCourse->id,
+                'cohort_course_id' => $newSection->id,
             ]);
 
         $response->assertOk();
@@ -268,15 +273,17 @@ describe('Transfer Notifications', function (): void {
             ->where('type', 'transfer_approved')
             ->first();
 
-        expect($notification->channel)->toBe(NotificationChannel::Email->value);
+        expect($notification->channel)->toBe(NotificationChannel::Email);
     });
 
     it('uses email channel for financial refund notifications', function (): void {
         $course = Course::factory()->create();
+        $section = CohortCourse::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
 
         $enrolment = Enrolment::factory()->create([
             'student_id' => $this->student->id,
             'course_id' => $course->id,
+            'cohort_course_id' => $section->id,
             'status' => EnrolmentStatus::TransferRequested,
         ]);
 
@@ -301,6 +308,6 @@ describe('Transfer Notifications', function (): void {
             ->where('type', 'refund_processed')
             ->first();
 
-        expect($notification->channel)->toBe(NotificationChannel::Email->value);
+        expect($notification->channel)->toBe(NotificationChannel::Email);
     });
 });

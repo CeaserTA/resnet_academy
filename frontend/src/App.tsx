@@ -10,9 +10,12 @@ import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage';
 import { VerifyEmailNoticePage } from '@/features/auth/VerifyEmailNoticePage';
 import { CourseDetailPage } from '@/features/catalogue/CourseDetailPage';
 import { CataloguePage } from '@/features/catalogue/CataloguePage';
+import { CohortPage } from '@/features/catalogue/CohortPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { CourseListPage } from '@/features/admin/courses/CourseListPage';
 import { CourseFormPage } from '@/features/admin/courses/CourseFormPage';
+import { CohortsListPage } from '@/features/cohorts/CohortsListPage';
+import { CohortDetailPage } from '@/features/cohorts/CohortDetailPage';
 import { ProvisionUserPage } from '@/features/admin/users/ProvisionUserPage';
 import { CourseBuilderPage } from '@/features/courseStructure/CourseBuilderPage';
 import { CoursePlayerPage } from '@/features/learning/CoursePlayerPage';
@@ -64,6 +67,7 @@ function App() {
             />
             <Route path="courses" element={<CataloguePage />} />
             <Route path="courses/:id" element={<CourseDetailPage />} />
+            <Route path="cohorts/:id" element={<CohortPage />} />
             <Route path="about" element={<AboutPage />} />
             <Route path="contact" element={<ContactPage />} />
             {/* Legacy auth URLs — sign-in/signup now happen exclusively in the auth modal */}
@@ -107,6 +111,22 @@ function App() {
                     element={
                         <ProtectedRoute roles={['admin', 'instructor']}>
                             <CourseFormPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="admin/cohorts"
+                    element={
+                        <ProtectedRoute roles={['admin', 'instructor']}>
+                            <CohortsListPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="admin/cohorts/:id"
+                    element={
+                        <ProtectedRoute roles={['admin', 'instructor']}>
+                            <CohortDetailPage />
                         </ProtectedRoute>
                     }
                 />

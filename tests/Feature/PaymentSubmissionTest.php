@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Enums\NotificationChannel;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentSubmissionStatus;
 use App\Models\AuditLog;
+use App\Models\Notification;
 use App\Models\Order;
 use App\Models\PaymentSubmission;
 use App\Models\User;
@@ -46,6 +48,38 @@ it('rejects a submission that exceeds the remaining balance', function (): void 
     ]);
 
     $response->assertUnprocessable();
+});
+
+it('notifies every admin when a student submits a payment', function (): void {
+    Storage::fake('r2');
+    $admin = User::factory()->admin()->create();
+    $otherAdmin = User::factory()->admin()->create();
+    $instructor = User::factory()->instructor()->create();
+    $student = User::factory()->student()->create(['name' => 'Amina Student']);
+    $order = Order::factory()->for($student, 'student')->create(['amount' => '100.00']);
+
+    $this->actingAs($student)->postJson("/api/v1/orders/{$order->id}/payment-submissions", [
+        'amount' => 40,
+        'receipt' => fakeReceipt(),
+    ])->assertCreated();
+
+    $submission = PaymentSubmission::first();
+
+    foreach ([$admin, $otherAdmin] as $recipient) {
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $recipient->id,
+            'type' => 'payment_submitted',
+            'channel' => NotificationChannel::InApp->value,
+            'related_entity_type' => 'payment_submission',
+            'related_entity_id' => $submission->id,
+        ]);
+    }
+
+    expect(Notification::where('user_id', $instructor->id)->where('type', 'payment_submitted')->exists())->toBeFalse();
+
+    $notification = Notification::where('user_id', $admin->id)->where('type', 'payment_submitted')->first();
+    expect($notification->title)->toContain('Amina Student')
+        ->and($notification->body)->toContain('40');
 });
 
 it('rejects a second submission while one is already pending', function (): void {
@@ -124,6 +158,22 @@ it('confirming a submission that completes the balance moves the order to paid a
     expect($order->paid_at)->not->toBeNull();
 });
 
+it('notifies the student when their payment is confirmed', function (): void {
+    $admin = User::factory()->admin()->create();
+    $student = User::factory()->student()->create();
+    $order = Order::factory()->for($student, 'student')->create(['amount' => '100.00', 'status' => OrderStatus::Pending]);
+    $submission = PaymentSubmission::factory()->for($order)->create(['amount' => '40.00']);
+
+    $this->actingAs($admin)->patchJson("/api/v1/admin/payment-submissions/{$submission->id}/confirm")->assertOk();
+
+    $this->assertDatabaseHas('notifications', [
+        'user_id' => $student->id,
+        'type' => 'payment_confirmed',
+        'related_entity_type' => 'payment_submission',
+        'related_entity_id' => $submission->id,
+    ]);
+});
+
 it('rejecting a submission leaves the order untouched and allows a resubmission', function (): void {
     Storage::fake('r2');
     $admin = User::factory()->admin()->create();
@@ -144,6 +194,25 @@ it('rejecting a submission leaves the order untouched and allows a resubmission'
         'amount' => 40,
         'receipt' => fakeReceipt(),
     ])->assertCreated();
+});
+
+it('stores the rejection reason and notifies the student with it', function (): void {
+    $admin = User::factory()->admin()->create();
+    $student = User::factory()->student()->create();
+    $order = Order::factory()->for($student, 'student')->create(['amount' => '100.00', 'status' => OrderStatus::Pending]);
+    $submission = PaymentSubmission::factory()->for($order)->create(['amount' => '40.00']);
+
+    $response = $this->actingAs($admin)->patchJson("/api/v1/admin/payment-submissions/{$submission->id}/reject", [
+        'reason' => "Receipt doesn't match the submitted amount.",
+    ]);
+
+    $response->assertOk();
+    $response->assertJsonPath('data.rejection_reason', "Receipt doesn't match the submitted amount.");
+    expect($submission->fresh()->rejection_reason)->toBe("Receipt doesn't match the submitted amount.");
+
+    $notification = Notification::where('user_id', $student->id)->where('type', 'payment_rejected')->first();
+    expect($notification)->not->toBeNull()
+        ->and($notification->body)->toContain("Receipt doesn't match the submitted amount.");
 });
 
 it('denies a non-admin from confirming or rejecting a submission', function (): void {

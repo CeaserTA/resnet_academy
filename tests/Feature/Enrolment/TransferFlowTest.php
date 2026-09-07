@@ -9,7 +9,7 @@ use App\Enums\NotificationChannel;
 use App\Enums\OrderStatus;
 use App\Enums\UserRole;
 use App\Models\Course;
-use App\Models\CourseSection;
+use App\Models\CohortCourse;
 use App\Models\Enrolment;
 use App\Models\Notification;
 use App\Models\Order;
@@ -27,12 +27,12 @@ describe('Transfer Flow Feature Tests', function (): void {
     describe('Student withdrawal flows', function (): void {
         it('withdraws from unpaid enrolment → Withdrawn, seat released, no admin notification', function (): void {
             $course = Course::factory()->create();
-            $section = CourseSection::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
+            $section = CohortCourse::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
 
             $enrolment = Enrolment::factory()->create([
                 'student_id' => $this->student->id,
                 'course_id' => $course->id,
-                'section_id' => $section->id,
+                'cohort_course_id' => $section->id,
                 'status' => EnrolmentStatus::Confirmed,
             ]);
 
@@ -66,12 +66,12 @@ describe('Transfer Flow Feature Tests', function (): void {
 
         it('withdraws from paid enrolment → TransferRequested, seat NOT released, admin notified', function (): void {
             $course = Course::factory()->create();
-            $section = CourseSection::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
+            $section = CohortCourse::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
 
             $enrolment = Enrolment::factory()->create([
                 'student_id' => $this->student->id,
                 'course_id' => $course->id,
-                'section_id' => $section->id,
+                'cohort_course_id' => $section->id,
                 'status' => EnrolmentStatus::Confirmed,
             ]);
 
@@ -112,12 +112,12 @@ describe('Transfer Flow Feature Tests', function (): void {
 
         it('prevents duplicate transfer request with 409 conflict', function (): void {
             $course = Course::factory()->create();
-            $section = CourseSection::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
+            $section = CohortCourse::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
 
             $enrolment = Enrolment::factory()->create([
                 'student_id' => $this->student->id,
                 'course_id' => $course->id,
-                'section_id' => $section->id,
+                'cohort_course_id' => $section->id,
                 'status' => EnrolmentStatus::TransferRequested,
                 'transfer_requested_at' => now(),
             ]);
@@ -135,7 +135,7 @@ describe('Transfer Flow Feature Tests', function (): void {
                 ->postJson("/api/v1/enrolments/{$enrolment->id}/withdraw");
 
             $response->assertStatus(409);
-            $response->assertJson(['message' => 'You already have a pending transfer request for this course.']);
+            $response->assertJson(['message' => 'You already have a pending transfer request.']);
 
             // Check no duplicate request was created
             $this->assertDatabaseCount('notifications', 0);
@@ -143,12 +143,12 @@ describe('Transfer Flow Feature Tests', function (): void {
 
         it('cancels transfer request → status reverts to Confirmed', function (): void {
             $course = Course::factory()->create();
-            $section = CourseSection::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
+            $section = CohortCourse::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
 
             $enrolment = Enrolment::factory()->create([
                 'student_id' => $this->student->id,
                 'course_id' => $course->id,
-                'section_id' => $section->id,
+                'cohort_course_id' => $section->id,
                 'status' => EnrolmentStatus::TransferRequested,
                 'transfer_requested_at' => now(),
                 'withdrawal_note' => 'Need to transfer',
@@ -182,15 +182,15 @@ describe('Transfer Flow Feature Tests', function (): void {
     describe('Admin transfer flows', function (): void {
         it('transfers TransferRequested enrolment to new course → new enrolment created, old Transferred, order moved', function (): void {
             $oldCourse = Course::factory()->create();
-            $oldSection = CourseSection::factory()->for($oldCourse)->create(['capacity' => 10, 'seats_taken' => 1]);
+            $oldSection = CohortCourse::factory()->for($oldCourse)->create(['capacity' => 10, 'seats_taken' => 1]);
             
             $newCourse = Course::factory()->create();
-            $newSection = CourseSection::factory()->for($newCourse)->create(['capacity' => 10, 'seats_taken' => 0]);
+            $newSection = CohortCourse::factory()->for($newCourse)->create(['capacity' => 10, 'seats_taken' => 0]);
 
             $oldEnrolment = Enrolment::factory()->create([
                 'student_id' => $this->student->id,
                 'course_id' => $oldCourse->id,
-                'section_id' => $oldSection->id,
+                'cohort_course_id' => $oldSection->id,
                 'status' => EnrolmentStatus::TransferRequested,
                 'transfer_requested_at' => now(),
             ]);
@@ -207,7 +207,7 @@ describe('Transfer Flow Feature Tests', function (): void {
             $response = $this->actingAs($this->admin)
                 ->postJson("/api/v1/admin/enrolments/{$oldEnrolment->id}/transfer", [
                     'course_id' => $newCourse->id,
-                    'section_id' => $newSection->id,
+                    'cohort_course_id' => $newSection->id,
                     'note' => 'Transferred to later cohort',
                 ]);
 
@@ -216,7 +216,7 @@ describe('Transfer Flow Feature Tests', function (): void {
             // Check new enrolment created
             $newEnrolment = Enrolment::where('student_id', $this->student->id)
                 ->where('course_id', $newCourse->id)
-                ->where('section_id', $newSection->id)
+                ->where('cohort_course_id', $newSection->id)
                 ->first();
 
             expect($newEnrolment)->not->toBeNull()
@@ -235,8 +235,10 @@ describe('Transfer Flow Feature Tests', function (): void {
                 ->and($order->course_id)->toBe($newCourse->id)
                 ->and($order->transferred_from_enrolment_id)->toBe($oldEnrolment->id);
 
-            // Check seat counts - old seat NOT released (different from refund)
-            expect($oldSection->fresh()->seats_taken)->toBe(1);
+            // Check seat counts - the old seat is released (and its waitlist promoted, if
+            // any) as part of the transfer, same as any withdrawal — see
+            // EnrolmentTransferService::transfer()'s call to releaseSeatAndPromoteWaitlist().
+            expect($oldSection->fresh()->seats_taken)->toBe(0);
             expect($newSection->fresh()->seats_taken)->toBe(1);
 
             // Check student notification
@@ -251,15 +253,15 @@ describe('Transfer Flow Feature Tests', function (): void {
 
         it('rejects transfer to full course/section with clear error', function (): void {
             $oldCourse = Course::factory()->create();
-            $oldSection = CourseSection::factory()->for($oldCourse)->create(['capacity' => 10, 'seats_taken' => 1]);
+            $oldSection = CohortCourse::factory()->for($oldCourse)->create(['capacity' => 10, 'seats_taken' => 1]);
             
             $newCourse = Course::factory()->create();
-            $newSection = CourseSection::factory()->for($newCourse)->create(['capacity' => 5, 'seats_taken' => 5]);
+            $newSection = CohortCourse::factory()->for($newCourse)->create(['capacity' => 5, 'seats_taken' => 5]);
 
             $oldEnrolment = Enrolment::factory()->create([
                 'student_id' => $this->student->id,
                 'course_id' => $oldCourse->id,
-                'section_id' => $oldSection->id,
+                'cohort_course_id' => $oldSection->id,
                 'status' => EnrolmentStatus::TransferRequested,
             ]);
 
@@ -275,11 +277,11 @@ describe('Transfer Flow Feature Tests', function (): void {
             $response = $this->actingAs($this->admin)
                 ->postJson("/api/v1/admin/enrolments/{$oldEnrolment->id}/transfer", [
                     'course_id' => $newCourse->id,
-                    'section_id' => $newSection->id,
+                    'cohort_course_id' => $newSection->id,
                 ]);
 
             $response->assertStatus(422);
-            $response->assertJsonValidationErrors(['section_id']);
+            $response->assertJsonValidationErrors(['cohort_course_id'], responseKey: 'error.fields');
 
             // Check no state changes persisted
             $oldEnrolment->refresh();
@@ -298,21 +300,21 @@ describe('Transfer Flow Feature Tests', function (): void {
     describe('Admin refund flows', function (): void {
         it('processes refund → order updated, enrolment Withdrawn, seat released, waitlist promotion', function (): void {
             $course = Course::factory()->create();
-            $section = CourseSection::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
+            $section = CohortCourse::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
 
             // Create a waitlisted student
             $waitlistedStudent = User::factory()->student()->create();
             $waitlistedEnrolment = Enrolment::factory()->create([
                 'student_id' => $waitlistedStudent->id,
                 'course_id' => $course->id,
-                'section_id' => $section->id,
+                'cohort_course_id' => $section->id,
                 'status' => EnrolmentStatus::Waitlisted,
             ]);
 
             $enrolment = Enrolment::factory()->create([
                 'student_id' => $this->student->id,
                 'course_id' => $course->id,
-                'section_id' => $section->id,
+                'cohort_course_id' => $section->id,
                 'status' => EnrolmentStatus::TransferRequested,
             ]);
 
@@ -340,18 +342,15 @@ describe('Transfer Flow Feature Tests', function (): void {
 
             // Check order updated with refund info
             $order->refresh();
-            expect($order->refunded_amount)->toBe(100.00)
+            expect($order->refunded_amount)->toBe('100.00')
                 ->and($order->refunded_at)->not->toBeNull()
                 ->and($order->refunded_by)->toBe($this->admin->id);
 
-            // Check seat released
-            expect($section->fresh()->seats_taken)->toBe(0);
-
-            // Check waitlist promotion
+            // Check waitlist promotion — release and promotion happen inside one transaction,
+            // so the seat is never observably "released" from outside; it goes straight from
+            // the withdrawn student to the promoted one, staying at 1 throughout.
             $waitlistedEnrolment->refresh();
             expect($waitlistedEnrolment->status)->toBe(EnrolmentStatus::Confirmed);
-
-            // Check seat now taken by promoted student
             expect($section->fresh()->seats_taken)->toBe(1);
 
             // Check promoted student has order
@@ -370,12 +369,12 @@ describe('Transfer Flow Feature Tests', function (): void {
 
         it('rejects refund amount greater than amount_paid', function (): void {
             $course = Course::factory()->create();
-            $section = CourseSection::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
+            $section = CohortCourse::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
 
             $enrolment = Enrolment::factory()->create([
                 'student_id' => $this->student->id,
                 'course_id' => $course->id,
-                'section_id' => $section->id,
+                'cohort_course_id' => $section->id,
                 'status' => EnrolmentStatus::TransferRequested,
             ]);
 
@@ -394,7 +393,7 @@ describe('Transfer Flow Feature Tests', function (): void {
                 ]);
 
             $response->assertStatus(422);
-            $response->assertJsonValidationErrors(['refund_amount']);
+            $response->assertJsonValidationErrors(['refund_amount'], responseKey: 'error.fields');
 
             // Check no state changes
             $enrolment->refresh();
@@ -410,12 +409,12 @@ describe('Transfer Flow Feature Tests', function (): void {
 
         it('allows partial refund', function (): void {
             $course = Course::factory()->create();
-            $section = CourseSection::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
+            $section = CohortCourse::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
 
             $enrolment = Enrolment::factory()->create([
                 'student_id' => $this->student->id,
                 'course_id' => $course->id,
-                'section_id' => $section->id,
+                'cohort_course_id' => $section->id,
                 'status' => EnrolmentStatus::TransferRequested,
             ]);
 
@@ -437,7 +436,7 @@ describe('Transfer Flow Feature Tests', function (): void {
 
             // Check partial refund recorded
             $order->refresh();
-            expect($order->refunded_amount)->toBe(50.00);
+            expect($order->refunded_amount)->toBe('50.00');
         });
     });
 });

@@ -12,8 +12,8 @@ export function useEnrol() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: ({ courseId, sectionId }: { courseId: number; sectionId?: number }) =>
-            enrolInCourse(courseId, sectionId),
+        mutationFn: ({ courseId, cohortCourseId }: { courseId: number; cohortCourseId: number }) =>
+            enrolInCourse(courseId, cohortCourseId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['enrolments', 'me'] });
         },

@@ -44,18 +44,19 @@ final class ProgressEngine
      * (course view) and on a schedule (architecture.md §5.2), so it must be safe to call
      * repeatedly and idempotently.
      * 
-     * With course sections: if student is enrolled in a section and module has unlock_offset_days,
-     * use section.start_date + offset instead of scheduled_start_at.
+     * With cohorts: if the student is enrolled in a cohort offering and the module has
+     * unlock_offset_days, use cohort.start_date + offset instead of scheduled_start_at.
      */
     public function evaluateCourseUnlocks(User $student, Course $course): void
     {
-        // Get the student's enrollment for this course to check for section_id
+        // Get the student's enrollment for this course to check for its cohort
         $enrolment = $course->enrolments()
             ->where('student_id', $student->id)
             ->where('status', \App\Enums\EnrolmentStatus::Confirmed)
+            ->with('cohortCourse.cohort')
             ->first();
 
-        $section = $enrolment?->section;
+        $cohortCourse = $enrolment?->cohortCourse;
         $previousCompleted = true;
 
         foreach ($this->applicableModules($student, $course) as $module) {
@@ -64,8 +65,8 @@ final class ProgressEngine
                 ['status' => ModuleProgressStatus::Locked],
             );
 
-            // Determine if schedule has been reached based on section vs self-paced
-            $scheduleReached = $this->isModuleScheduleReached($module, $section);
+            // Determine if schedule has been reached based on the student's cohort offering
+            $scheduleReached = $this->isModuleScheduleReached($module, $cohortCourse);
 
             if ($progress->status === ModuleProgressStatus::Locked && $scheduleReached && $previousCompleted) {
                 $progress->update([
@@ -82,19 +83,20 @@ final class ProgressEngine
 
     /**
      * Determine if a module's schedule requirement has been met.
-     * 
-     * - If enrolled in a section AND module has unlock_offset_days: check (section.start_date + offset) <= now
+     *
+     * - If enrolled in a cohort offering AND module has unlock_offset_days: check
+     *   (cohort.start_date + offset) <= now
      * - Otherwise: check scheduled_start_at is null or has passed
      */
-    private function isModuleScheduleReached(Module $module, ?\App\Models\CourseSection $section): bool
+    private function isModuleScheduleReached(Module $module, ?\App\Models\CohortCourse $cohortCourse): bool
     {
-        // Section-relative scheduling takes precedence if both section and offset exist
-        if ($section !== null && $module->unlock_offset_days !== null) {
-            $unlockDate = $section->start_date->addDays($module->unlock_offset_days);
+        // Cohort-relative scheduling takes precedence if both the cohort and offset exist
+        if ($cohortCourse !== null && $module->unlock_offset_days !== null) {
+            $unlockDate = $cohortCourse->cohort->start_date->addDays($module->unlock_offset_days);
             return $unlockDate->isPast() || $unlockDate->isToday();
         }
 
-        // Fall back to absolute scheduled_start_at for self-paced courses
+        // Fall back to absolute scheduled_start_at when no cohort-relative offset is set
         return $module->scheduled_start_at === null || $module->scheduled_start_at->isPast();
     }
 

@@ -26,7 +26,7 @@ export async function confirmPaymentSubmission(submissionId: number): Promise<Pa
     return data.data;
 }
 
-export async function rejectPaymentSubmission(submissionId: number): Promise<PaymentSubmission> {
-    const { data } = await apiClient.patch<{ data: PaymentSubmission }>(`/admin/payment-submissions/${submissionId}/reject`);
+export async function rejectPaymentSubmission(submissionId: number, reason: string): Promise<PaymentSubmission> {
+    const { data } = await apiClient.patch<{ data: PaymentSubmission }>(`/admin/payment-submissions/${submissionId}/reject`, { reason });
     return data.data;
 }

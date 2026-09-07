@@ -25,7 +25,7 @@ final class StoreModuleRequest extends FormRequest
             'order_index' => ['nullable', 'integer', 'min:0'],
             'scheduled_start_at' => ['nullable', 'date'],
             'group_ids' => ['nullable', 'array'],
-            'group_ids.*' => [Rule::exists('groups_cohorts', 'id')->where('course_id', $course->id)],
+            'group_ids.*' => [Rule::exists('groups', 'id')->where('course_id', $course->id)],
         ];
     }
 }

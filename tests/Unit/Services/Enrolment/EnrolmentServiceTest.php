@@ -8,7 +8,7 @@ use App\Enums\OrderStatus;
 use App\Enums\UserRole;
 use App\Exceptions\EnrolmentAlreadyHasPendingTransferException;
 use App\Models\Course;
-use App\Models\CourseSection;
+use App\Models\CohortCourse;
 use App\Models\Enrolment;
 use App\Models\Order;
 use App\Models\User;
@@ -28,12 +28,12 @@ describe('EnrolmentService', function (): void {
         it('withdraws directly when no payment has been made', function (): void {
             $student = User::factory()->student()->create();
             $course = Course::factory()->create();
-            $section = CourseSection::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
+            $section = CohortCourse::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
 
             $enrolment = Enrolment::factory()->create([
                 'student_id' => $student->id,
                 'course_id' => $course->id,
-                'section_id' => $section->id,
+                'cohort_course_id' => $section->id,
                 'status' => EnrolmentStatus::Confirmed,
             ]);
 
@@ -55,12 +55,12 @@ describe('EnrolmentService', function (): void {
         it('withdraws directly when order does not exist', function (): void {
             $student = User::factory()->student()->create();
             $course = Course::factory()->create();
-            $section = CourseSection::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
+            $section = CohortCourse::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
 
             $enrolment = Enrolment::factory()->create([
                 'student_id' => $student->id,
                 'course_id' => $course->id,
-                'section_id' => $section->id,
+                'cohort_course_id' => $section->id,
                 'status' => EnrolmentStatus::Confirmed,
             ]);
 
@@ -73,12 +73,12 @@ describe('EnrolmentService', function (): void {
         it('creates transfer request when payment has been made', function (): void {
             $student = User::factory()->student()->create();
             $course = Course::factory()->create();
-            $section = CourseSection::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
+            $section = CohortCourse::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
 
             $enrolment = Enrolment::factory()->create([
                 'student_id' => $student->id,
                 'course_id' => $course->id,
-                'section_id' => $section->id,
+                'cohort_course_id' => $section->id,
                 'status' => EnrolmentStatus::Confirmed,
             ]);
 
@@ -104,12 +104,12 @@ describe('EnrolmentService', function (): void {
         it('throws exception when duplicate transfer request is attempted', function (): void {
             $student = User::factory()->student()->create();
             $course = Course::factory()->create();
-            $section = CourseSection::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
+            $section = CohortCourse::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
 
             $enrolment = Enrolment::factory()->create([
                 'student_id' => $student->id,
                 'course_id' => $course->id,
-                'section_id' => $section->id,
+                'cohort_course_id' => $section->id,
                 'status' => EnrolmentStatus::TransferRequested,
                 'transfer_requested_at' => now(),
             ]);
@@ -131,12 +131,12 @@ describe('EnrolmentService', function (): void {
         it('saves withdrawal note when provided', function (): void {
             $student = User::factory()->student()->create();
             $course = Course::factory()->create();
-            $section = CourseSection::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
+            $section = CohortCourse::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
 
             $enrolment = Enrolment::factory()->create([
                 'student_id' => $student->id,
                 'course_id' => $course->id,
-                'section_id' => $section->id,
+                'cohort_course_id' => $section->id,
                 'status' => EnrolmentStatus::Confirmed,
             ]);
 
@@ -159,12 +159,12 @@ describe('EnrolmentService', function (): void {
         it('handles null withdrawal note', function (): void {
             $student = User::factory()->student()->create();
             $course = Course::factory()->create();
-            $section = CourseSection::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
+            $section = CohortCourse::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
 
             $enrolment = Enrolment::factory()->create([
                 'student_id' => $student->id,
                 'course_id' => $course->id,
-                'section_id' => $section->id,
+                'cohort_course_id' => $section->id,
                 'status' => EnrolmentStatus::Confirmed,
             ]);
 
@@ -187,12 +187,12 @@ describe('EnrolmentService', function (): void {
         it('cancels transfer request and reverts to Confirmed status', function (): void {
             $student = User::factory()->student()->create();
             $course = Course::factory()->create();
-            $section = CourseSection::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
+            $section = CohortCourse::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
 
             $enrolment = Enrolment::factory()->create([
                 'student_id' => $student->id,
                 'course_id' => $course->id,
-                'section_id' => $section->id,
+                'cohort_course_id' => $section->id,
                 'status' => EnrolmentStatus::TransferRequested,
                 'transfer_requested_at' => now(),
                 'withdrawal_note' => 'Original note',
@@ -208,12 +208,12 @@ describe('EnrolmentService', function (): void {
         it('throws exception when enrolment is not in TransferRequested state', function (): void {
             $student = User::factory()->student()->create();
             $course = Course::factory()->create();
-            $section = CourseSection::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
+            $section = CohortCourse::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
 
             $enrolment = Enrolment::factory()->create([
                 'student_id' => $student->id,
                 'course_id' => $course->id,
-                'section_id' => $section->id,
+                'cohort_course_id' => $section->id,
                 'status' => EnrolmentStatus::Confirmed,
             ]);
 
@@ -225,12 +225,12 @@ describe('EnrolmentService', function (): void {
         it('throws exception when enrolment is already Withdrawn', function (): void {
             $student = User::factory()->student()->create();
             $course = Course::factory()->create();
-            $section = CourseSection::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
+            $section = CohortCourse::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
 
             $enrolment = Enrolment::factory()->create([
                 'student_id' => $student->id,
                 'course_id' => $course->id,
-                'section_id' => $section->id,
+                'cohort_course_id' => $section->id,
                 'status' => EnrolmentStatus::Withdrawn,
             ]);
 
@@ -242,12 +242,12 @@ describe('EnrolmentService', function (): void {
         it('throws exception when enrolment is Waitlisted', function (): void {
             $student = User::factory()->student()->create();
             $course = Course::factory()->create();
-            $section = CourseSection::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
+            $section = CohortCourse::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
 
             $enrolment = Enrolment::factory()->create([
                 'student_id' => $student->id,
                 'course_id' => $course->id,
-                'section_id' => $section->id,
+                'cohort_course_id' => $section->id,
                 'status' => EnrolmentStatus::Waitlisted,
             ]);
 
@@ -261,12 +261,12 @@ describe('EnrolmentService', function (): void {
         it('throws exception when trying to change to TransferRequested via changeStatus', function (): void {
             $student = User::factory()->student()->create();
             $course = Course::factory()->create();
-            $section = CourseSection::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
+            $section = CohortCourse::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
 
             $enrolment = Enrolment::factory()->create([
                 'student_id' => $student->id,
                 'course_id' => $course->id,
-                'section_id' => $section->id,
+                'cohort_course_id' => $section->id,
                 'status' => EnrolmentStatus::Confirmed,
             ]);
 
@@ -278,12 +278,12 @@ describe('EnrolmentService', function (): void {
         it('throws exception when trying to change to Transferred via changeStatus', function (): void {
             $student = User::factory()->student()->create();
             $course = Course::factory()->create();
-            $section = CourseSection::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
+            $section = CohortCourse::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
 
             $enrolment = Enrolment::factory()->create([
                 'student_id' => $student->id,
                 'course_id' => $course->id,
-                'section_id' => $section->id,
+                'cohort_course_id' => $section->id,
                 'status' => EnrolmentStatus::Confirmed,
             ]);
 

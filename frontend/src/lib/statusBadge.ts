@@ -6,6 +6,7 @@ import {
     CheckCircle2,
     Circle,
     Clock,
+    CreditCard,
     GraduationCap,
     LifeBuoy,
     Lock,
@@ -21,6 +22,8 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import type { BadgeTone } from '@/components/ui/Badge';
 import type {
+    CohortCourseStatus,
+    CohortStatus,
     CourseApplicationStatus,
     CourseProgressStatus,
     CourseStatus,
@@ -66,6 +69,28 @@ const orderStatusMap: Record<OrderStatus, StatusDisplay> = {
 
 export function courseStatusDisplay(status: CourseStatus): StatusDisplay {
     return courseStatusMap[status];
+}
+
+const cohortStatusMap: Record<CohortStatus, StatusDisplay> = {
+    draft: { label: 'Draft', tone: 'warning', icon: Circle },
+    published: { label: 'Published', tone: 'success', icon: CheckCircle2 },
+    archived: { label: 'Archived', tone: 'neutral', icon: Lock },
+};
+
+export function cohortStatusDisplay(status: CohortStatus): StatusDisplay {
+    return cohortStatusMap[status];
+}
+
+const cohortCourseStatusMap: Record<CohortCourseStatus, StatusDisplay> = {
+    draft: { label: 'Draft', tone: 'warning', icon: Circle },
+    open: { label: 'Open', tone: 'success', icon: CheckCircle2 },
+    in_progress: { label: 'In progress', tone: 'progress', icon: TrendingUp },
+    completed: { label: 'Completed', tone: 'neutral', icon: Lock },
+    closed: { label: 'Closed', tone: 'danger', icon: XCircle },
+};
+
+export function cohortCourseStatusDisplay(status: CohortCourseStatus): StatusDisplay {
+    return cohortCourseStatusMap[status];
 }
 
 export function enrolmentStatusDisplay(status: EnrolmentStatus): StatusDisplay {
@@ -203,6 +228,9 @@ const notificationTypeMap: Record<string, StatusDisplay> = {
     application_approved: { label: 'Application approved', tone: 'success', icon: CheckCircle2 },
     application_waitlisted: { label: 'Application waitlisted', tone: 'warning', icon: Clock },
     application_rejected: { label: 'Application update', tone: 'warning', icon: XCircle },
+    payment_submitted: { label: 'Payment submitted', tone: 'warning', icon: CreditCard },
+    payment_confirmed: { label: 'Payment confirmed', tone: 'success', icon: CheckCircle2 },
+    payment_rejected: { label: 'Payment rejected', tone: 'danger', icon: XCircle },
 };
 
 const defaultNotificationTypeDisplay: StatusDisplay = { label: 'Notification', tone: 'neutral', icon: Circle };

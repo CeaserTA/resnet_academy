@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\CourseEnrolmentPolicy;
 use App\Enums\EnrolmentSource;
+use App\Enums\EnrolmentStatus;
 use App\Exceptions\EnrolmentAlreadyHasPendingTransferException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreEnrolmentRequest;
@@ -29,7 +30,7 @@ final class EnrolmentController extends Controller
     {
         $enrolments = Enrolment::query()
             ->where('student_id', $request->user()->id)
-            ->with(['course.category', 'order.paymentSubmissions'])
+            ->with(['course.category', 'order.paymentSubmissions', 'cohortCourse.cohort'])
             ->orderBy('applied_at', 'desc')
             ->paginate(15);
 
@@ -49,14 +50,28 @@ final class EnrolmentController extends Controller
             throw ValidationException::withMessages(['course_id' => 'This course requires an application — you can’t enrol directly.']);
         }
 
+        // Mirrors CourseApplicationService::apply()'s existing-enrolment guard — without this,
+        // a duplicate self-enrol attempt (e.g. a double click) falls through to the DB's unique
+        // constraint on (student_id, cohort_course_id) as an unhandled 500 instead of a clean
+        // validation error.
+        $alreadyActive = Enrolment::query()
+            ->where('student_id', $request->user()->id)
+            ->where('cohort_course_id', $request->validated('cohort_course_id'))
+            ->whereIn('status', [EnrolmentStatus::Confirmed, EnrolmentStatus::Waitlisted, EnrolmentStatus::TransferRequested])
+            ->exists();
+
+        if ($alreadyActive) {
+            throw ValidationException::withMessages(['cohort_course_id' => 'You are already enrolled in this course/cohort.']);
+        }
+
         $enrolment = $this->enrolmentService->enrol(
             $request->user(),
             $course,
             EnrolmentSource::Self,
-            $request->validated('section_id')
+            $request->validated('cohort_course_id')
         );
 
-        return (new EnrolmentResource($enrolment->load(['course.category', 'order.paymentSubmissions', 'section'])))
+        return (new EnrolmentResource($enrolment->load(['course.category', 'order.paymentSubmissions', 'cohortCourse.cohort'])))
             ->response()
             ->setStatusCode(201);
     }

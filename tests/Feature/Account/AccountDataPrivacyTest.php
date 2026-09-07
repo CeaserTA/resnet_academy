@@ -7,6 +7,7 @@ use App\Enums\UserStatus;
 use App\Http\Controllers\Api\V1\AccountController;
 use App\Models\AuditLog;
 use App\Models\Course;
+use App\Models\CohortCourse;
 use App\Models\User;
 use App\Services\Enrolment\EnrolmentService;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ it('exports the authenticated user\'s own data and audits the export', function 
     $admin = User::factory()->admin()->create();
     $student = User::factory()->student()->create();
     $course = Course::factory()->create(['created_by' => $admin->id]);
-    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
 
     $response = $this->actingAs($student)->getJson('/api/v1/me/data-export')->assertOk();
 

@@ -55,8 +55,9 @@ class ClearSeededDataExceptUsers extends Command
                 
                 // Enrolments
                 'course_applications',
-                'course_sections',
                 'enrolments',
+                'cohort_courses',
+                'cohorts',
                 
                 // Progress tracking
                 'video_watch_pings',
@@ -98,7 +99,7 @@ class ClearSeededDataExceptUsers extends Command
                 
                 // Groups
                 'group_member',
-                'groups_cohorts',
+                'groups',
                 
                 // Courses
                 'course_change_logs',

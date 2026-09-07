@@ -44,11 +44,11 @@ final class Module extends Model
     /**
      * If empty, this module applies to every student in the course (FR-7).
      *
-     * @return BelongsToMany<GroupsCohort, $this>
+     * @return BelongsToMany<Group, $this>
      */
     public function groups(): BelongsToMany
     {
-        return $this->belongsToMany(GroupsCohort::class, 'module_groups', 'module_id', 'group_id');
+        return $this->belongsToMany(Group::class, 'module_groups', 'module_id', 'group_id');
     }
 
     /**

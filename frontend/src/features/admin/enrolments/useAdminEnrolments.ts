@@ -32,7 +32,7 @@ export function useTransferEnrolment() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: ({ enrolmentId, payload }: { enrolmentId: number; payload: { course_id: number; section_id?: number; note?: string } }) =>
+        mutationFn: ({ enrolmentId, payload }: { enrolmentId: number; payload: { course_id: number; cohort_course_id: number; note?: string } }) =>
             transferEnrolment(enrolmentId, payload),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin', 'transfer-requests'] });

@@ -45,7 +45,12 @@ function ViewApplicationModal({ application, onClose }: { application: CourseApp
                     <span className="text-ink-600">Applied</span>
                     <span className="text-ink-900">{new Date(application.applied_at).toLocaleString()}</span>
                 </div>
-                {application.reviewer && (
+                {application.approved_automatically ? (
+                    <div className="flex items-center justify-between gap-4">
+                        <span className="text-ink-600">Reviewed by</span>
+                        <span className="text-ink-900">Auto-approved (eligibility check)</span>
+                    </div>
+                ) : application.reviewer && (
                     <div className="flex items-center justify-between gap-4">
                         <span className="text-ink-600">Reviewed by</span>
                         <span className="text-ink-900">
@@ -54,12 +59,30 @@ function ViewApplicationModal({ application, onClose }: { application: CourseApp
                     </div>
                 )}
 
-                {(application.course.application_questions ?? []).map((question, index) => (
-                    <div key={index} className="border-t border-surface-100 pt-3">
-                        <p className="font-medium text-ink-900">{question}</p>
-                        <p className="mt-1 text-ink-600">{application.answers?.[index] || '—'}</p>
+                {application.eligibility_score !== null && (
+                    <div className="flex items-center justify-between gap-4">
+                        <span className="text-ink-600">Eligibility score</span>
+                        <span className={application.eligibility_passed ? 'text-emerald-700' : 'text-amber-700'}>
+                            {application.eligibility_score}%
+                            {application.course.application_pass_threshold != null && (
+                                <> (needs {application.course.application_pass_threshold}%)</>
+                            )}
+                        </span>
                     </div>
-                ))}
+                )}
+
+                {(application.course.application_questions ?? []).map((question, index) => {
+                    const answer = application.answers?.[index];
+                    const isCorrect = question.correct_answer !== undefined && answer === question.correct_answer;
+                    return (
+                        <div key={index} className="border-t border-surface-100 pt-3">
+                            <p className="font-medium text-ink-900">{question.text}</p>
+                            <p className={cn('mt-1', isCorrect ? 'text-emerald-700' : 'text-ink-600')}>
+                                {answer === undefined || answer === null ? '—' : answer ? 'Yes' : 'No'}
+                            </p>
+                        </div>
+                    );
+                })}
 
                 {application.portfolio_url && (
                     <div className="border-t border-surface-100 pt-3">

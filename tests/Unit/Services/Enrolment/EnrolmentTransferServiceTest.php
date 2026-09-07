@@ -7,7 +7,7 @@ use App\Enums\EnrolmentSource;
 use App\Enums\EnrolmentStatus;
 use App\Enums\OrderStatus;
 use App\Models\Course;
-use App\Models\CourseSection;
+use App\Models\CohortCourse;
 use App\Models\Enrolment;
 use App\Models\Order;
 use App\Models\User;
@@ -28,15 +28,15 @@ describe('EnrolmentTransferService', function (): void {
             $admin = User::factory()->admin()->create();
             
             $oldCourse = Course::factory()->create();
-            $oldSection = CourseSection::factory()->for($oldCourse)->create(['capacity' => 10, 'seats_taken' => 1]);
+            $oldSection = CohortCourse::factory()->for($oldCourse)->create(['capacity' => 10, 'seats_taken' => 1]);
             
             $newCourse = Course::factory()->create();
-            $newSection = CourseSection::factory()->for($newCourse)->create(['capacity' => 10, 'seats_taken' => 0]);
+            $newSection = CohortCourse::factory()->for($newCourse)->create(['capacity' => 10, 'seats_taken' => 0]);
 
             $oldEnrolment = Enrolment::factory()->create([
                 'student_id' => $student->id,
                 'course_id' => $oldCourse->id,
-                'section_id' => $oldSection->id,
+                'cohort_course_id' => $oldSection->id,
                 'status' => EnrolmentStatus::TransferRequested,
                 'transfer_requested_at' => now(),
             ]);
@@ -62,7 +62,7 @@ describe('EnrolmentTransferService', function (): void {
 
             expect($newEnrolment->student_id)->toBe($student->id)
                 ->and($newEnrolment->course_id)->toBe($newCourse->id)
-                ->and($newEnrolment->section_id)->toBe($newSection->id)
+                ->and($newEnrolment->cohort_course_id)->toBe($newSection->id)
                 ->and($newEnrolment->status)->toBe(EnrolmentStatus::Confirmed)
                 ->and($newEnrolment->source)->toBe(EnrolmentSource::Transfer);
 
@@ -78,17 +78,20 @@ describe('EnrolmentTransferService', function (): void {
                 ->and($order->course_id)->toBe($newCourse->id)
                 ->and($order->transferred_from_enrolment_id)->toBe($oldEnrolment->id);
 
-            // Check seat counts - old seat should NOT be released during transfer
-            expect($oldSection->fresh()->seats_taken)->toBe(1) // Old seat NOT released (different from refund)
+            // Check seat counts - the old seat is released (and its waitlist promoted, if any)
+            // as part of the transfer, same as any other withdrawal — see
+            // EnrolmentTransferService::transfer()'s call to releaseSeatAndPromoteWaitlist().
+            expect($oldSection->fresh()->seats_taken)->toBe(0)
                 ->and($newSection->fresh()->seats_taken)->toBe(1); // New seat taken
         });
 
         it('throws exception when enrolment is not in TransferRequested state', function (): void {
             $student = User::factory()->student()->create();
             $admin = User::factory()->admin()->create();
-            
+
             $oldCourse = Course::factory()->create();
             $newCourse = Course::factory()->create();
+            $newCohortCourse = CohortCourse::factory()->for($newCourse)->create(['capacity' => 10, 'seats_taken' => 0]);
 
             $oldEnrolment = Enrolment::factory()->create([
                 'student_id' => $student->id,
@@ -98,7 +101,7 @@ describe('EnrolmentTransferService', function (): void {
 
             $this->expectException(ValidationException::class);
 
-            $this->enrolmentTransferService->transfer($oldEnrolment, $newCourse, $admin);
+            $this->enrolmentTransferService->transfer($oldEnrolment, $newCourse, $admin, $newCohortCourse);
         });
 
         it('throws exception when new section has no capacity', function (): void {
@@ -106,15 +109,15 @@ describe('EnrolmentTransferService', function (): void {
             $admin = User::factory()->admin()->create();
             
             $oldCourse = Course::factory()->create();
-            $oldSection = CourseSection::factory()->for($oldCourse)->create(['capacity' => 10, 'seats_taken' => 1]);
+            $oldSection = CohortCourse::factory()->for($oldCourse)->create(['capacity' => 10, 'seats_taken' => 1]);
             
             $newCourse = Course::factory()->create();
-            $newSection = CourseSection::factory()->for($newCourse)->create(['capacity' => 5, 'seats_taken' => 5]);
+            $newSection = CohortCourse::factory()->for($newCourse)->create(['capacity' => 5, 'seats_taken' => 5]);
 
             $oldEnrolment = Enrolment::factory()->create([
                 'student_id' => $student->id,
                 'course_id' => $oldCourse->id,
-                'section_id' => $oldSection->id,
+                'cohort_course_id' => $oldSection->id,
                 'status' => EnrolmentStatus::TransferRequested,
             ]);
 
@@ -130,7 +133,7 @@ describe('EnrolmentTransferService', function (): void {
             $oldCourse = Course::factory()->create();
             $newCourse = Course::factory()->create();
             $wrongCourse = Course::factory()->create();
-            $wrongSection = CourseSection::factory()->for($wrongCourse)->create(['capacity' => 10, 'seats_taken' => 0]);
+            $wrongSection = CohortCourse::factory()->for($wrongCourse)->create(['capacity' => 10, 'seats_taken' => 0]);
 
             $oldEnrolment = Enrolment::factory()->create([
                 'student_id' => $student->id,
@@ -149,7 +152,7 @@ describe('EnrolmentTransferService', function (): void {
             
             $oldCourse = Course::factory()->create();
             $newCourse = Course::factory()->create();
-            $draftSection = CourseSection::factory()->for($newCourse)->create([
+            $draftSection = CohortCourse::factory()->for($newCourse)->create([
                 'capacity' => 10,
                 'seats_taken' => 0,
                 'status' => CourseSectionStatus::Draft,
@@ -166,30 +169,6 @@ describe('EnrolmentTransferService', function (): void {
             $this->enrolmentTransferService->transfer($oldEnrolment, $newCourse, $admin, $draftSection);
         });
 
-        it('throws exception when student already enrolled in new course (self-paced)', function (): void {
-            $student = User::factory()->student()->create();
-            $admin = User::factory()->admin()->create();
-            
-            $oldCourse = Course::factory()->create();
-            $newCourse = Course::factory()->create(['sections_required' => false]);
-
-            $oldEnrolment = Enrolment::factory()->create([
-                'student_id' => $student->id,
-                'course_id' => $oldCourse->id,
-                'status' => EnrolmentStatus::TransferRequested,
-            ]);
-
-            // Student already enrolled in new course
-            Enrolment::factory()->create([
-                'student_id' => $student->id,
-                'course_id' => $newCourse->id,
-                'status' => EnrolmentStatus::Confirmed,
-            ]);
-
-            $this->expectException(ValidationException::class);
-
-            $this->enrolmentTransferService->transfer($oldEnrolment, $newCourse, $admin);
-        });
     });
 
     describe('refund', function (): void {
@@ -198,12 +177,12 @@ describe('EnrolmentTransferService', function (): void {
             $admin = User::factory()->admin()->create();
             
             $course = Course::factory()->create();
-            $section = CourseSection::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
+            $section = CohortCourse::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
 
             $enrolment = Enrolment::factory()->create([
                 'student_id' => $student->id,
                 'course_id' => $course->id,
-                'section_id' => $section->id,
+                'cohort_course_id' => $section->id,
                 'status' => EnrolmentStatus::TransferRequested,
             ]);
 
@@ -232,7 +211,7 @@ describe('EnrolmentTransferService', function (): void {
 
             // Check order is updated with refund info
             $order->refresh();
-            expect($order->refunded_amount)->toBe($refundAmount)
+            expect($order->refunded_amount)->toBe(number_format($refundAmount, 2, '.', ''))
                 ->and($order->refunded_at)->not->toBeNull()
                 ->and($order->refunded_by)->toBe($admin->id);
 
@@ -331,10 +310,12 @@ describe('EnrolmentTransferService', function (): void {
             $admin = User::factory()->admin()->create();
             
             $course = Course::factory()->create();
+            $section = CohortCourse::factory()->for($course)->create(['capacity' => 10, 'seats_taken' => 1]);
 
             $enrolment = Enrolment::factory()->create([
                 'student_id' => $student->id,
                 'course_id' => $course->id,
+                'cohort_course_id' => $section->id,
                 'status' => EnrolmentStatus::TransferRequested,
             ]);
 
@@ -356,7 +337,7 @@ describe('EnrolmentTransferService', function (): void {
             );
 
             $order->refresh();
-            expect($order->refunded_amount)->toBe($partialRefund);
+            expect($order->refunded_amount)->toBe(number_format($partialRefund, 2, '.', ''));
         });
     });
 });

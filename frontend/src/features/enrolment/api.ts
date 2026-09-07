@@ -6,10 +6,10 @@ export async function fetchMyEnrolments(page = 1): Promise<PaginatedResponse<Enr
     return data;
 }
 
-export async function enrolInCourse(courseId: number, sectionId?: number): Promise<Enrolment> {
+export async function enrolInCourse(courseId: number, cohortCourseId: number): Promise<Enrolment> {
     const { data } = await apiClient.post<{ data: Enrolment }>('/enrolments', {
         course_id: courseId,
-        ...(sectionId !== undefined ? { section_id: sectionId } : {}),
+        cohort_course_id: cohortCourseId,
     });
     return data.data;
 }

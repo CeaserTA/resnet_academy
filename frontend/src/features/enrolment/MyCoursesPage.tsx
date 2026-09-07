@@ -29,11 +29,7 @@ import { Alert } from '@/components/ui/Alert';
 import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ProgressBar } from '@/components/ui/ProgressBar';
-import {
-    courseProgressStatusDisplay,
-    enrolmentStatusDisplay,
-    paymentSubmissionStatusDisplay,
-} from '@/lib/statusBadge';
+import { courseProgressStatusDisplay, enrolmentStatusDisplay } from '@/lib/statusBadge';
 import { findNextIncompleteItem, itemLinkFor } from '@/lib/courseSequence';
 import { ApiError } from '@/lib/api/client';
 import type { CourseReview, Enrolment, ProgressDashboardRow } from '@/lib/api/types';
@@ -49,7 +45,7 @@ function formatAmount(amount: string | number, currency: string): string {
 
 // ─── Make payment modal ───────────────────────────────────────────────────────
 
-function MakePaymentModal({ enrolments, onClose }: { enrolments: Enrolment[]; onClose: () => void }) {
+function MakePaymentModal({ enrolments, onClose, onSubmitted }: { enrolments: Enrolment[]; onClose: () => void; onSubmitted: () => void }) {
     const submitPayment = useSubmitPayment();
     const [selected, setSelected] = useState<Enrolment | null>(() => (enrolments.length === 1 ? enrolments[0] : null));
     const [amount, setAmount] = useState(() =>
@@ -80,6 +76,7 @@ function MakePaymentModal({ enrolments, onClose }: { enrolments: Enrolment[]; on
         if (!receipt) { setError('Attach a receipt image.'); return; }
         try {
             await submitPayment.mutateAsync({ orderId: selected.order.id, amount: numericAmount, receipt });
+            onSubmitted();
             onClose();
         } catch (err) {
             setError(err instanceof ApiError ? err.message : 'Could not submit the payment. Try again.');
@@ -185,7 +182,6 @@ function EnrolmentCard({ enrolment, progress, review, onWithdraw, onCancelTransf
     const status = enrolmentStatusDisplay(enrolment.status);
     const order = enrolment.order;
     const pendingSubmission = order?.pending_submission ?? null;
-    const pendingSubmissionStatus = pendingSubmission ? paymentSubmissionStatusDisplay(pendingSubmission.status) : null;
     const progressStatus = progress ? courseProgressStatusDisplay(progress.status) : null;
     const isTransferRequested = enrolment.status === 'transfer_requested';
 
@@ -217,9 +213,6 @@ function EnrolmentCard({ enrolment, progress, review, onWithdraw, onCancelTransf
                 <div>
                     <div className="flex items-center gap-2">
                         <Badge label={status.label} tone={status.tone} icon={status.icon} />
-                        {pendingSubmissionStatus && (
-                            <Badge label={pendingSubmissionStatus.label} tone={pendingSubmissionStatus.tone} icon={pendingSubmissionStatus.icon} />
-                        )}
                     </div>
                     <Link to={`/learn/courses/${enrolment.course.id}`}>
                         <h3 className="mt-2 line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-tight text-ink-900 hover:text-blue-600">
@@ -259,18 +252,11 @@ function EnrolmentCard({ enrolment, progress, review, onWithdraw, onCancelTransf
                     </div>
                 )}
 
-                {order && order.remaining_balance > 0 && (
+                {order && order.remaining_balance > 0 && !pendingSubmission && (
                     <div className="flex flex-col gap-1.5 border-t border-surface-100 pt-2">
-                        {pendingSubmission && pendingSubmissionStatus ? (
-                            <div className="flex items-center justify-between text-xs">
-                                <span className="text-ink-600">{formatAmount(pendingSubmission.amount, order.currency)} submitted</span>
-                                <Badge label={pendingSubmissionStatus.label} tone={pendingSubmissionStatus.tone} icon={pendingSubmissionStatus.icon} />
-                            </div>
-                        ) : (
-                            <p className="text-xs text-ink-600">
-                                Amount owed: <span className="font-medium text-ink-900">{formatAmount(order.remaining_balance, order.currency)}</span>
-                            </p>
-                        )}
+                        <p className="text-xs text-ink-600">
+                            Amount owed: <span className="font-medium text-ink-900">{formatAmount(order.remaining_balance, order.currency)}</span>
+                        </p>
                     </div>
                 )}
 
@@ -339,7 +325,6 @@ export function MyCoursesPage() {
     const { data: progressRows } = useProgressDashboard();
     const { data: myReviews } = useMyReviews();
     const dismissApplication = useDismissCourseApplication();
-    const withdrawEnrolment = useWithdrawEnrolment();
     const cancelTransferRequest = useCancelTransferRequest();
 
     const [withdrawingEnrolment, setWithdrawingEnrolment] = useState<Enrolment | null>(null);
@@ -349,6 +334,7 @@ export function MyCoursesPage() {
     const [showProfileModal, setShowProfileModal] = useState(false);
     const [transferSuccessMessage, setTransferSuccessMessage] = useState<string | null>(null);
     const [withdrawSuccessMessage, setWithdrawSuccessMessage] = useState<string | null>(null);
+    const [paymentSubmittedMessage, setPaymentSubmittedMessage] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchProfileStatus = async () => {
@@ -438,6 +424,9 @@ export function MyCoursesPage() {
             {withdrawSuccessMessage && (
                 <Alert variant="success" message={withdrawSuccessMessage} onDismiss={() => setWithdrawSuccessMessage(null)} />
             )}
+            {paymentSubmittedMessage && (
+                <Alert variant="success" message={paymentSubmittedMessage} onDismiss={() => setPaymentSubmittedMessage(null)} />
+            )}
 
             {/* Overview strip */}
             <OverviewStrip activeEnrolments={activeEnrolments} progressRows={progressRows ?? []} />
@@ -512,7 +501,13 @@ export function MyCoursesPage() {
 
             {/* Modals */}
             {isMakingPayment && (
-                <MakePaymentModal enrolments={payableEnrolments} onClose={() => setIsMakingPayment(false)} />
+                <MakePaymentModal
+                    enrolments={payableEnrolments}
+                    onClose={() => setIsMakingPayment(false)}
+                    onSubmitted={() =>
+                        setPaymentSubmittedMessage("Payment submitted — we'll notify you once an admin confirms it.")
+                    }
+                />
             )}
             {withdrawingEnrolment && (
                 <WithdrawConfirmModal enrolment={withdrawingEnrolment} onClose={() => setWithdrawingEnrolment(null)} onWithdrawSuccess={handleWithdrawSuccess} />

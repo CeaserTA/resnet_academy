@@ -40,64 +40,106 @@ final class CourseApplicationService
     ) {}
 
     /**
-     * @param  array<int, string>  $answers
+     * @param  array<int, bool>  $answers
      */
-    public function apply(User $student, Course $course, array $answers, ?string $portfolioUrl, ?string $alternativeProofText, ?int $sectionId = null): CourseApplication
+    public function apply(User $student, Course $course, array $answers, ?string $portfolioUrl, ?string $alternativeProofText, int $cohortCourseId): CourseApplication
     {
         if ($course->enrolment_policy !== CourseEnrolmentPolicy::Application) {
             throw ValidationException::withMessages(['course_id' => 'This course does not require an application.']);
         }
 
-        // Check for existing confirmed enrollment (section-aware)
-        $existingEnrolmentQuery = $course->enrolments()
+        // Check for existing confirmed enrollment in this specific cohort offering
+        $existingEnrolment = $course->enrolments()
             ->where('student_id', $student->id)
-            ->where('status', EnrolmentStatus::Confirmed);
+            ->where('status', EnrolmentStatus::Confirmed)
+            ->where('cohort_course_id', $cohortCourseId)
+            ->exists();
 
-        if ($sectionId !== null) {
-            $existingEnrolmentQuery->where('section_id', $sectionId);
-        } else {
-            $existingEnrolmentQuery->whereNull('section_id');
+        if ($existingEnrolment) {
+            throw ValidationException::withMessages(['course_id' => 'You are already enrolled in this course/cohort.']);
         }
 
-        if ($existingEnrolmentQuery->exists()) {
-            throw ValidationException::withMessages(['course_id' => 'You are already enrolled in this course/section.']);
-        }
-
-        // Check for existing pending application for this specific (course, section) combination
-        // Allow multiple pending applications across different sections
-        $existingApplicationQuery = $course->applications()
+        // Check for existing pending application for this specific (course, cohort offering)
+        // combination — allow multiple pending applications across different cohort offerings.
+        $existingApplication = $course->applications()
             ->where('student_id', $student->id)
-            ->where('status', CourseApplicationStatus::Pending);
+            ->where('status', CourseApplicationStatus::Pending)
+            ->where('cohort_course_id', $cohortCourseId)
+            ->exists();
 
-        if ($sectionId !== null) {
-            $existingApplicationQuery->where('section_id', $sectionId);
-        } else {
-            $existingApplicationQuery->whereNull('section_id');
+        if ($existingApplication) {
+            throw ValidationException::withMessages(['course_id' => 'You already have a pending application for this course/cohort.']);
         }
 
-        if ($existingApplicationQuery->exists()) {
-            throw ValidationException::withMessages(['course_id' => 'You already have a pending application for this course/section.']);
+        return DB::transaction(function () use ($student, $course, $answers, $portfolioUrl, $alternativeProofText, $cohortCourseId): CourseApplication {
+            [$score, $passed] = $this->gradeEligibility($course, $answers);
+
+            $application = CourseApplication::create([
+                'student_id' => $student->id,
+                'course_id' => $course->id,
+                'cohort_course_id' => $cohortCourseId,
+                'status' => CourseApplicationStatus::Pending,
+                'answers' => $answers,
+                'eligibility_score' => $score,
+                'eligibility_passed' => $passed,
+                'portfolio_url' => $portfolioUrl,
+                'alternative_proof_text' => $alternativeProofText,
+            ]);
+
+            $this->auditLogger->log(
+                action: 'course_application.submitted',
+                entityType: 'course_application',
+                entityId: $application->id,
+                actorId: $student->id,
+                meta: [
+                    'course_id' => $course->id,
+                    'cohort_course_id' => $cohortCourseId,
+                    'eligibility_score' => $score,
+                    'eligibility_passed' => $passed,
+                ],
+            );
+
+            // A passing score clears the applicant automatically — no reviewer needed. Anything
+            // else (including a course with no eligibility questions to grade at all) falls back
+            // to the existing manual review queue untouched.
+            if ($passed) {
+                return $this->decide($application, reviewer: null);
+            }
+
+            return $application;
+        });
+    }
+
+    /**
+     * Grades an applicant's Yes/No answers against each question's admin-defined correct
+     * answer and checks the result against the course's pass threshold (default 100%, i.e.
+     * every question must be answered correctly, when the course doesn't set one).
+     *
+     * A course with no eligibility questions defined has nothing to grade — it always falls
+     * back to manual review rather than auto-passing on a vacuous 0-of-0 score.
+     *
+     * @param  array<int, bool>  $answers
+     * @return array{0: int|null, 1: bool} [score as a 0-100 percentage or null, passed]
+     */
+    private function gradeEligibility(Course $course, array $answers): array
+    {
+        $questions = $course->application_questions ?? [];
+
+        if ($questions === []) {
+            return [null, false];
         }
 
-        $application = CourseApplication::create([
-            'student_id' => $student->id,
-            'course_id' => $course->id,
-            'section_id' => $sectionId,
-            'status' => CourseApplicationStatus::Pending,
-            'answers' => $answers,
-            'portfolio_url' => $portfolioUrl,
-            'alternative_proof_text' => $alternativeProofText,
-        ]);
+        $correctCount = 0;
+        foreach ($questions as $index => $question) {
+            if (($answers[$index] ?? null) === (bool) ($question['correct_answer'] ?? false)) {
+                $correctCount++;
+            }
+        }
 
-        $this->auditLogger->log(
-            action: 'course_application.submitted',
-            entityType: 'course_application',
-            entityId: $application->id,
-            actorId: $student->id,
-            meta: ['course_id' => $course->id, 'section_id' => $sectionId],
-        );
+        $score = (int) round($correctCount / count($questions) * 100);
+        $threshold = $course->application_pass_threshold ?? 100;
 
-        return $application;
+        return [$score, $score >= $threshold];
     }
 
     /**
@@ -125,67 +167,96 @@ final class CourseApplicationService
                 throw ValidationException::withMessages(['status' => 'This application has already been decided.']);
             }
 
-            $application->update([
-                'status' => CourseApplicationStatus::Approved,
-                'reviewed_by' => $reviewer->id,
-                'reviewed_at' => Carbon::now(),
-            ]);
-
-            // Enroll the student (may be confirmed or waitlisted depending on section capacity)
-            $enrolment = $this->enrolmentService->enrol(
-                $application->student,
-                $application->course,
-                EnrolmentSource::Self,
-                $application->section_id
-            );
-
-            $this->auditLogger->log(
-                action: 'course_application.approved',
-                entityType: 'course_application',
-                entityId: $application->id,
-                actorId: $reviewer->id,
-                meta: [
-                    'course_id' => $application->course_id,
-                    'section_id' => $application->section_id,
-                    'student_id' => $application->student_id,
-                    'decided_by_role' => $reviewer->role->value,
-                    'enrolment_status' => $enrolment->status->value,
-                ],
-            );
-
-            if ($enrolment->status === EnrolmentStatus::Waitlisted) {
-                $this->notificationDispatcher->notify(
-                    user: $application->student,
-                    type: 'application_waitlisted',
-                    title: "Your application to {$application->course->title} was approved — you're on the waitlist",
-                    body: 'The section is currently full, so you hold a waitlisted spot. We will notify you as soon as a seat opens up.',
-                    relatedEntityType: 'course_application',
-                    relatedEntityId: $application->id,
-                );
-
-                return $application->fresh();
-            }
-
-            $this->notificationDispatcher->notify(
-                user: $application->student,
-                type: 'application_approved',
-                title: "Your application to {$application->course->title} was approved",
-                body: 'You are now enrolled — check your courses to get started.',
-                relatedEntityType: 'course_application',
-                relatedEntityId: $application->id,
-            );
-
-            // Auto-cancel other pending applications for the same course — only once the
-            // student actually holds a confirmed seat.
-            $this->autoCancelOtherApplications($application);
-
-            return $application->fresh();
+            return $this->decide($application, $reviewer);
         });
     }
 
     /**
+     * Shared approval path for both a human reviewer's decision (`$reviewer` set) and the
+     * system's automatic approval when eligibility answers clear the course's pass threshold
+     * (`$reviewer` null) — everything past "who decided this" (enrolling the student,
+     * notifying them, auto-cancelling sibling applications) is identical either way.
+     *
+     * Called from inside `apply()`'s and `approve()`'s own transactions — never opens one of
+     * its own.
+     */
+    private function decide(CourseApplication $application, ?User $reviewer): CourseApplication
+    {
+        $application->update([
+            'status' => CourseApplicationStatus::Approved,
+            'reviewed_by' => $reviewer?->id,
+            'reviewed_at' => Carbon::now(),
+            'approved_automatically' => $reviewer === null,
+        ]);
+
+        // Enroll the student (may be confirmed or waitlisted depending on cohort capacity)
+        $enrolment = $this->enrolmentService->enrol(
+            $application->student,
+            $application->course,
+            EnrolmentSource::Self,
+            $application->cohort_course_id
+        );
+
+        $this->auditLogger->log(
+            action: 'course_application.approved',
+            entityType: 'course_application',
+            entityId: $application->id,
+            actorId: $reviewer?->id,
+            meta: [
+                'course_id' => $application->course_id,
+                'cohort_course_id' => $application->cohort_course_id,
+                'student_id' => $application->student_id,
+                'decided_by_role' => $reviewer?->role->value ?? 'system',
+                'enrolment_status' => $enrolment->status->value,
+            ],
+        );
+
+        if ($enrolment->status === EnrolmentStatus::Waitlisted) {
+            $this->notificationDispatcher->notify(
+                user: $application->student,
+                type: 'application_waitlisted',
+                title: "Your application to {$application->course->title} was approved — you're on the waitlist",
+                body: 'This cohort is currently full, so you hold a waitlisted spot. We will notify you as soon as a seat opens up.',
+                relatedEntityType: 'course_application',
+                relatedEntityId: $application->id,
+            );
+
+            return $this->withEnrolmentStatus($application->fresh(), $enrolment);
+        }
+
+        $this->notificationDispatcher->notify(
+            user: $application->student,
+            type: 'application_approved',
+            title: "Your application to {$application->course->title} was approved",
+            body: 'You are now enrolled — check your courses to get started.',
+            relatedEntityType: 'course_application',
+            relatedEntityId: $application->id,
+        );
+
+        // Auto-cancel other pending applications for the same course — only once the
+        // student actually holds a confirmed seat.
+        $this->autoCancelOtherApplications($application);
+
+        return $this->withEnrolmentStatus($application->fresh(), $enrolment);
+    }
+
+    /**
+     * Stamps the resulting enrolment's status onto the (already-approved) application as a
+     * transient, non-persisted attribute — CourseApplicationResource reads it so the caller of
+     * apply()/approve() can tell a confirmed seat from a waitlisted one immediately, without a
+     * second request. Never written to the database and never present on an application
+     * fetched any other way.
+     */
+    private function withEnrolmentStatus(CourseApplication $application, Enrolment $enrolment): CourseApplication
+    {
+        $application->setAttribute('enrolment_status', $enrolment->status->value);
+
+        return $application;
+    }
+
+    /**
      * Auto-cancel other pending applications for the same course after approval.
-     * A student should not hold an enrollment in one section while pending on another.
+     * A student should not hold an enrollment in one cohort offering while pending on another.
      */
     private function autoCancelOtherApplications(CourseApplication $approvedApplication): void
     {
@@ -201,7 +272,7 @@ final class CourseApplicationService
                 'status' => CourseApplicationStatus::Rejected,
                 'reviewed_by' => $approvedApplication->reviewed_by,
                 'reviewed_at' => Carbon::now(),
-                'rejection_reason' => 'Auto-cancelled because you were enrolled in another section of this course.',
+                'rejection_reason' => 'Auto-cancelled because you were enrolled in another cohort offering of this course.',
             ]);
 
             $this->auditLogger->log(
@@ -211,9 +282,9 @@ final class CourseApplicationService
                 actorId: $approvedApplication->student_id,
                 meta: [
                     'course_id' => $application->course_id,
-                    'section_id' => $application->section_id,
+                    'cohort_course_id' => $application->cohort_course_id,
                     'approved_application_id' => $approvedApplication->id,
-                    'approved_section_id' => $approvedApplication->section_id,
+                    'approved_cohort_course_id' => $approvedApplication->cohort_course_id,
                 ],
             );
         }
@@ -282,7 +353,7 @@ final class CourseApplicationService
                             ->where('reviewed_at', '>=', Carbon::now()->subDays(self::REJECTION_VISIBILITY_DAYS));
                     });
             })
-            ->with(['course.category', 'course.instructors', 'reviewer', 'section'])
+            ->with(['course.category', 'course.instructors', 'reviewer', 'cohortCourse.cohort'])
             ->orderBy('created_at', 'desc')
             ->get();
 

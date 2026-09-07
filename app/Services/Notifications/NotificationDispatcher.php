@@ -15,6 +15,7 @@ use App\Models\Enrolment;
 use App\Models\ForumThread;
 use App\Models\Module;
 use App\Models\Notification;
+use App\Models\PaymentSubmission;
 use App\Models\Ticket;
 use App\Models\User;
 
@@ -250,6 +251,72 @@ final class NotificationDispatcher
             relatedEntityType: 'enrolment',
             relatedEntityId: $newEnrolment->id,
             channel: NotificationChannel::Email, // Financial action - use email
+        );
+    }
+
+    /**
+     * Notify all admins that a student submitted a claimed payment awaiting review
+     * (`PaymentSubmissionService::submit()`).
+     */
+    public function notifyAdminsOfPaymentSubmitted(PaymentSubmission $submission): void
+    {
+        $order = $submission->order;
+        $studentName = $order->student->name;
+        $courseName = $order->course->title;
+
+        $adminUsers = User::where('role', UserRole::Admin)->get();
+
+        foreach ($adminUsers as $admin) {
+            $this->notify(
+                user: $admin,
+                type: 'payment_submitted',
+                title: "{$studentName} submitted a payment for {$courseName}",
+                body: "Amount: {$submission->amount} {$order->currency}. Review it to confirm or reject.",
+                relatedEntityType: 'payment_submission',
+                relatedEntityId: $submission->id,
+            );
+        }
+    }
+
+    /**
+     * Notify a student that their submitted payment was confirmed.
+     */
+    public function notifyStudentOfPaymentConfirmed(PaymentSubmission $submission): void
+    {
+        $order = $submission->order;
+        $courseName = $order->course->title;
+
+        $this->notify(
+            user: $order->student,
+            type: 'payment_confirmed',
+            title: "Your payment for {$courseName} was confirmed",
+            body: "{$submission->amount} {$order->currency} was applied to your order.",
+            relatedEntityType: 'payment_submission',
+            relatedEntityId: $submission->id,
+        );
+    }
+
+    /**
+     * Notify a student that their submitted payment was rejected, so they know to resubmit.
+     */
+    public function notifyStudentOfPaymentRejected(PaymentSubmission $submission): void
+    {
+        $order = $submission->order;
+        $courseName = $order->course->title;
+
+        $body = "Your submission of {$submission->amount} {$order->currency} wasn't accepted.";
+        if ($submission->rejection_reason) {
+            $body .= " Reason: {$submission->rejection_reason}";
+        }
+        $body .= ' You can submit a new payment from your dashboard.';
+
+        $this->notify(
+            user: $order->student,
+            type: 'payment_rejected',
+            title: "Your payment for {$courseName} was rejected",
+            body: $body,
+            relatedEntityType: 'payment_submission',
+            relatedEntityId: $submission->id,
         );
     }
 

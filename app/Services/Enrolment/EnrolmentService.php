@@ -10,8 +10,8 @@ use App\Enums\EnrolmentStatus;
 use App\Enums\OrderStatus;
 use App\Exceptions\EnrolmentAlreadyHasPendingTransferException;
 use App\Jobs\SendEnrolmentConfirmationEmail;
+use App\Models\CohortCourse;
 use App\Models\Course;
-use App\Models\CourseSection;
 use App\Models\Enrolment;
 use App\Models\Order;
 use App\Models\User;
@@ -26,7 +26,8 @@ use Illuminate\Validation\ValidationException;
  * FR-2/FR-3: every application auto-confirms, no eligibility gate. The only asynchronous
  * part is the per-course confirmation email delay.
  *
- * With course sections: enrollments may be waitlisted if section capacity is reached.
+ * Every enrolment belongs to a specific course-within-a-cohort (`CohortCourse`) — there is no
+ * self-paced mode. Enrolments may be waitlisted if that offering's capacity is reached.
  */
 final class EnrolmentService
 {
@@ -37,67 +38,39 @@ final class EnrolmentService
     ) {}
 
     /**
-     * Enroll a student in a course, optionally in a specific section.
+     * Enroll a student in a course-within-a-cohort.
      *
-     * Uses pessimistic locking (SELECT ... FOR UPDATE) on the section row to prevent
+     * Uses pessimistic locking (SELECT ... FOR UPDATE) on the cohort_course row to prevent
      * race conditions when checking/incrementing seats_taken.
      */
-    public function enrol(User $student, Course $course, EnrolmentSource $source, ?int $sectionId = null, ?User $importedBy = null): Enrolment
+    public function enrol(User $student, Course $course, EnrolmentSource $source, int $cohortCourseId, ?User $importedBy = null): Enrolment
     {
-        return DB::transaction(function () use ($student, $course, $source, $sectionId, $importedBy) {
-            $section = null;
-            $status = EnrolmentStatus::Confirmed;
+        return DB::transaction(function () use ($student, $course, $source, $cohortCourseId, $importedBy) {
             $appliedAt = Carbon::now();
 
-            // If section_id provided, lock the section row and check capacity
-            if ($sectionId !== null) {
-                $section = CourseSection::where('id', $sectionId)
-                    ->where('course_id', $course->id)
-                    ->lockForUpdate()
-                    ->firstOrFail();
+            $cohortCourse = CohortCourse::where('id', $cohortCourseId)
+                ->where('course_id', $course->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-                // Validate section is in acceptable status
-                if ($section->status === CourseSectionStatus::Draft) {
-                    throw ValidationException::withMessages(['section_id' => 'This section is not yet open for enrollment.']);
-                }
+            $status = match ($cohortCourse->status) {
+                CourseSectionStatus::Open => EnrolmentStatus::Confirmed,
+                CourseSectionStatus::Draft => throw ValidationException::withMessages(['cohort_course_id' => 'This cohort is not yet open for enrollment.']),
+                CourseSectionStatus::Closed => throw ValidationException::withMessages(['cohort_course_id' => 'This cohort is closed for enrollment.']),
+                CourseSectionStatus::InProgress => throw ValidationException::withMessages(['cohort_course_id' => 'This cohort has already started and is no longer accepting enrollments.']),
+                CourseSectionStatus::Completed => throw ValidationException::withMessages(['cohort_course_id' => 'This cohort has already completed.']),
+            };
 
-                if ($section->status === CourseSectionStatus::Closed) {
-                    throw ValidationException::withMessages(['section_id' => 'This section is closed for enrollment.']);
-                }
-
-                // Check capacity - if full, create as waitlisted
-                if ($section->capacity !== null && $section->seats_taken >= $section->capacity) {
-                    $status = EnrolmentStatus::Waitlisted;
-                }
-            } else {
-                // No section provided - check if course requires sections
-                if ($course->sections_required) {
-                    $hasActiveSections = $course->sections()
-                        ->whereNotIn('status', [CourseSectionStatus::Draft, CourseSectionStatus::Completed])
-                        ->exists();
-
-                    if ($hasActiveSections) {
-                        throw ValidationException::withMessages(['section_id' => 'This course requires enrollment in a specific section.']);
-                    }
-                }
-
-                // Explicit check for duplicate self-paced enrollment (MySQL allows multiple NULL in unique constraint)
-                $existingSelfPacedEnrolment = Enrolment::where('student_id', $student->id)
-                    ->where('course_id', $course->id)
-                    ->whereNull('section_id')
-                    ->where('status', EnrolmentStatus::Confirmed)
-                    ->exists();
-
-                if ($existingSelfPacedEnrolment) {
-                    throw ValidationException::withMessages(['course_id' => 'You are already enrolled in this course.']);
-                }
+            // Check capacity - if full, create as waitlisted
+            if ($cohortCourse->capacity !== null && $cohortCourse->seats_taken >= $cohortCourse->capacity) {
+                $status = EnrolmentStatus::Waitlisted;
             }
 
             // Create the enrollment
             $enrolment = Enrolment::create([
                 'student_id' => $student->id,
                 'course_id' => $course->id,
-                'section_id' => $sectionId,
+                'cohort_course_id' => $cohortCourse->id,
                 'status' => $status,
                 'source' => $source,
                 'imported_by' => $importedBy?->id,
@@ -107,16 +80,16 @@ final class EnrolmentService
 
             // Only increment seats_taken and create order if confirmed (not waitlisted)
             if ($status === EnrolmentStatus::Confirmed) {
-                if ($section !== null) {
-                    $section->increment('seats_taken');
-                }
+                $cohortCourse->increment('seats_taken');
+
+                [$amount, $currency] = $cohortCourse->resolvedPrice();
 
                 Order::create([
                     'student_id' => $student->id,
                     'course_id' => $course->id,
                     'enrolment_id' => $enrolment->id,
-                    'amount' => $course->price,
-                    'currency' => $course->currency,
+                    'amount' => $amount,
+                    'currency' => $currency,
                     'status' => OrderStatus::Pending,
                 ]);
 
@@ -126,7 +99,7 @@ final class EnrolmentService
                     entityId: $enrolment->id,
                     // @phpstan-ignore nullsafe.neverNull (false positive: $importedBy is null for self-enrolment)
                     actorId: $importedBy?->id ?? $student->id,
-                    meta: ['course_id' => $course->id, 'section_id' => $sectionId, 'source' => $source->value],
+                    meta: ['course_id' => $course->id, 'cohort_course_id' => $cohortCourse->id, 'source' => $source->value],
                 );
 
                 SendEnrolmentConfirmationEmail::dispatch($enrolment->id)
@@ -141,7 +114,7 @@ final class EnrolmentService
                     entityId: $enrolment->id,
                     // @phpstan-ignore nullsafe.neverNull (same false positive as the confirmed branch above)
                     actorId: $importedBy?->id ?? $student->id,
-                    meta: ['course_id' => $course->id, 'section_id' => $sectionId, 'source' => $source->value],
+                    meta: ['course_id' => $course->id, 'cohort_course_id' => $cohortCourse->id, 'source' => $source->value],
                 );
             }
 
@@ -192,7 +165,7 @@ final class EnrolmentService
                 meta: [
                     'from' => $previousStatus->value,
                     'to' => EnrolmentStatus::TransferRequested->value,
-                    'section_id' => $enrolment->section_id,
+                    'cohort_course_id' => $enrolment->cohort_course_id,
                     'note' => $note,
                 ],
             );
@@ -222,34 +195,45 @@ final class EnrolmentService
                 meta: [
                     'from' => $previousStatus->value,
                     'to' => EnrolmentStatus::Withdrawn->value,
-                    'section_id' => $enrolment->section_id,
+                    'cohort_course_id' => $enrolment->cohort_course_id,
                 ],
             );
 
-            // If this was a confirmed enrollment in a section, handle waitlist promotion
-            if ($previousStatus === EnrolmentStatus::Confirmed && $enrolment->section_id !== null) {
-                $section = CourseSection::where('id', $enrolment->section_id)
-                    ->lockForUpdate()
-                    ->first();
-
-                if ($section) {
-                    $section->decrement('seats_taken');
-
-                    // Promote oldest waitlisted enrollment
-                    $waitlisted = Enrolment::where('section_id', $section->id)
-                        ->where('status', EnrolmentStatus::Waitlisted)
-                        ->orderBy('created_at', 'asc')
-                        ->lockForUpdate()
-                        ->first();
-
-                    if ($waitlisted) {
-                        $this->promoteFromWaitlist($waitlisted, $section);
-                    }
-                }
+            // If this was a confirmed enrollment, release the seat and promote the waitlist.
+            if ($previousStatus === EnrolmentStatus::Confirmed) {
+                $this->releaseSeatAndPromoteWaitlist($enrolment);
             }
 
             return $enrolment->fresh();
         });
+    }
+
+    /**
+     * Release the seat held by a confirmed enrolment and promote the oldest waitlisted
+     * student for the same cohort_course, if any. Shared by direct (unpaid) withdrawal here
+     * and by `EnrolmentTransferService::refund()`/`transfer()`.
+     */
+    public function releaseSeatAndPromoteWaitlist(Enrolment $enrolment): void
+    {
+        $cohortCourse = CohortCourse::where('id', $enrolment->cohort_course_id)
+            ->lockForUpdate()
+            ->first();
+
+        if ($cohortCourse === null) {
+            return;
+        }
+
+        $cohortCourse->decrement('seats_taken');
+
+        $waitlisted = Enrolment::where('cohort_course_id', $cohortCourse->id)
+            ->where('status', EnrolmentStatus::Waitlisted)
+            ->orderBy('created_at', 'asc')
+            ->lockForUpdate()
+            ->first();
+
+        if ($waitlisted) {
+            $this->promoteFromWaitlist($waitlisted, $cohortCourse);
+        }
     }
 
     /**
@@ -286,7 +270,7 @@ final class EnrolmentService
                 meta: [
                     'from' => $previousStatus->value,
                     'to' => EnrolmentStatus::Confirmed->value,
-                    'section_id' => $enrolment->section_id,
+                    'cohort_course_id' => $enrolment->cohort_course_id,
                 ],
             );
 
@@ -297,7 +281,7 @@ final class EnrolmentService
     /**
      * Admin-driven status change between the lifecycle states. Withdrawals delegate to
      * withdraw() so seat release + waitlist promotion still happen; confirming re-runs the
-     * section capacity check and the confirmed side-effects (order, email, progress eval).
+     * cohort_course capacity check and the confirmed side-effects (order, email, progress eval).
      */
     public function changeStatus(Enrolment $enrolment, EnrolmentStatus $newStatus, User $actor): Enrolment
     {
@@ -322,34 +306,30 @@ final class EnrolmentService
             $previousStatus = $enrolment->status;
 
             if ($newStatus === EnrolmentStatus::Confirmed) {
-                $section = null;
+                $cohortCourse = CohortCourse::where('id', $enrolment->cohort_course_id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
 
-                if ($enrolment->section_id !== null) {
-                    $section = CourseSection::where('id', $enrolment->section_id)
-                        ->lockForUpdate()
-                        ->firstOrFail();
-
-                    if ($section->capacity !== null && $section->seats_taken >= $section->capacity) {
-                        throw ValidationException::withMessages([
-                            'status' => 'This section has no free seats. Increase its capacity before confirming.',
-                        ]);
-                    }
+                if ($cohortCourse->capacity !== null && $cohortCourse->seats_taken >= $cohortCourse->capacity) {
+                    throw ValidationException::withMessages([
+                        'status' => 'This cohort has no free seats. Increase its capacity before confirming.',
+                    ]);
                 }
 
                 $enrolment->update(['status' => EnrolmentStatus::Confirmed]);
 
-                if ($section !== null) {
-                    $section->increment('seats_taken');
-                }
+                $cohortCourse->increment('seats_taken');
 
                 // Waitlisted enrolments never got an order — create it on confirmation.
                 if (! $enrolment->order()->exists()) {
+                    [$amount, $currency] = $cohortCourse->resolvedPrice();
+
                     Order::create([
                         'student_id' => $enrolment->student_id,
                         'course_id' => $enrolment->course_id,
                         'enrolment_id' => $enrolment->id,
-                        'amount' => $enrolment->course->price,
-                        'currency' => $enrolment->course->currency,
+                        'amount' => $amount,
+                        'currency' => $currency,
                         'status' => OrderStatus::Pending,
                     ]);
                 }
@@ -360,12 +340,12 @@ final class EnrolmentService
                 $this->progressEngine->evaluateCourseUnlocks($enrolment->student, $enrolment->course);
             } else {
                 // Demotion to waitlisted — release the seat if one was held.
-                if ($previousStatus === EnrolmentStatus::Confirmed && $enrolment->section_id !== null) {
-                    $section = CourseSection::where('id', $enrolment->section_id)
+                if ($previousStatus === EnrolmentStatus::Confirmed) {
+                    $cohortCourse = CohortCourse::where('id', $enrolment->cohort_course_id)
                         ->lockForUpdate()
                         ->first();
 
-                    $section?->decrement('seats_taken');
+                    $cohortCourse?->decrement('seats_taken');
                 }
 
                 $enrolment->update(['status' => EnrolmentStatus::Waitlisted]);
@@ -379,7 +359,7 @@ final class EnrolmentService
                 meta: [
                     'from' => $previousStatus->value,
                     'to' => $newStatus->value,
-                    'section_id' => $enrolment->section_id,
+                    'cohort_course_id' => $enrolment->cohort_course_id,
                 ],
             );
 
@@ -390,22 +370,25 @@ final class EnrolmentService
     /**
      * Promote a waitlisted enrollment to confirmed status.
      * Creates order, queues confirmation email, initializes progress.
-     * 
-     * Public method - can be called by EnrolmentService::withdraw() or CourseSectionService::update()
+     *
+     * Public method - can be called by EnrolmentService itself (waitlist release paths) or
+     * CohortCourseService::update() (capacity increase).
      */
-    public function promoteFromWaitlist(Enrolment $enrolment, CourseSection $section): void
+    public function promoteFromWaitlist(Enrolment $enrolment, CohortCourse $cohortCourse): void
     {
         $enrolment->update(['status' => EnrolmentStatus::Confirmed]);
 
-        $section->increment('seats_taken');
+        $cohortCourse->increment('seats_taken');
+
+        [$amount, $currency] = $cohortCourse->resolvedPrice();
 
         // Create order for the promoted student
         Order::create([
             'student_id' => $enrolment->student_id,
             'course_id' => $enrolment->course_id,
             'enrolment_id' => $enrolment->id,
-            'amount' => $enrolment->course->price,
-            'currency' => $enrolment->course->currency,
+            'amount' => $amount,
+            'currency' => $currency,
             'status' => OrderStatus::Pending,
         ]);
 
@@ -414,7 +397,7 @@ final class EnrolmentService
             entityType: 'enrolment',
             entityId: $enrolment->id,
             actorId: $enrolment->student_id,
-            meta: ['course_id' => $enrolment->course_id, 'section_id' => $section->id],
+            meta: ['course_id' => $enrolment->course_id, 'cohort_course_id' => $cohortCourse->id],
         );
 
         // Send notification about promotion
@@ -422,7 +405,7 @@ final class EnrolmentService
             user: $enrolment->student,
             type: 'waitlist_promoted',
             title: "You've been enrolled in {$enrolment->course->title}",
-            body: "A seat opened up in {$section->name} and you've been promoted from the waitlist.",
+            body: "A seat opened up in {$cohortCourse->cohort->name} and you've been promoted from the waitlist.",
             relatedEntityType: 'enrolment',
             relatedEntityId: $enrolment->id,
         );

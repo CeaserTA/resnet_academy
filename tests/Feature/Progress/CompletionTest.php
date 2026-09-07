@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Enums\EnrolmentSource;
 use App\Enums\ModuleProgressStatus;
 use App\Models\Course;
+use App\Models\CohortCourse;
 use App\Models\Module;
 use App\Models\ModuleItem;
 use App\Models\ModuleProgress;
@@ -25,7 +26,7 @@ it('only completes a video once watch percent reaches 90', function (): void {
     $resource = Resource::factory()->for($module)->video()->create();
     ModuleItem::create(['module_id' => $module->id, 'item_type' => 'resource', 'item_id' => $resource->id, 'order_index' => 1, 'is_required' => true]);
 
-    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
     $engine = app(ProgressEngine::class);
 
     $engine->recordVideoPing($student, $resource, 200); // 200/600 = 33%
@@ -50,7 +51,7 @@ it('does not let an optional resource block module completion', function (): voi
     $optional = Resource::factory()->for($module)->externalLink()->create();
     ModuleItem::create(['module_id' => $module->id, 'item_type' => 'resource', 'item_id' => $optional->id, 'order_index' => 2, 'is_required' => false]);
 
-    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
     app(ProgressEngine::class)->markRead($student, $required);
 
     expect(
@@ -69,7 +70,7 @@ it('does not complete a module while a required resource is still incomplete', f
     $second = Resource::factory()->for($module)->reading()->create();
     ModuleItem::create(['module_id' => $module->id, 'item_type' => 'resource', 'item_id' => $second->id, 'order_index' => 2, 'is_required' => true]);
 
-    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
     app(ProgressEngine::class)->markRead($student, $first);
 
     expect(

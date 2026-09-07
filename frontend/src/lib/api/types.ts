@@ -9,6 +9,8 @@ export type CourseApplicationStatus = 'pending' | 'approved' | 'rejected';
 export type ReviewStatus = 'pending' | 'approved' | 'rejected';
 export type OrderStatus = 'pending' | 'partial' | 'paid';
 export type PaymentSubmissionStatus = 'pending' | 'confirmed' | 'rejected';
+export type CohortStatus = 'draft' | 'published' | 'archived';
+export type CohortCourseStatus = 'draft' | 'open' | 'in_progress' | 'completed' | 'closed';
 
 export interface User {
     id: number;
@@ -51,10 +53,12 @@ export interface Course {
     level: CourseLevel;
     enrolment_policy: EnrolmentPolicy;
     advisory_require_attestation: boolean;
-    application_questions: string[] | null;
+    // `correct_answer` is only present for admins/instructors — a student applying to the
+    // course never receives it (see CourseResource).
+    application_questions: { text: string; correct_answer?: boolean }[] | null;
+    application_pass_threshold: number | null;
     application_allow_alternative_proof: boolean;
     application_require_portfolio_url: boolean;
-    sections_required: boolean;
     thumbnail_url: string | null;
     prerequisites_text: string | null;
     price: string;
@@ -69,6 +73,75 @@ export interface Course {
     updated_at: string;
 }
 
+/** A single course's offering within a cohort — capacity/instructor/status/price are per
+ * offering; name/dates come from the parent Cohort. */
+export interface CohortCourse {
+    id: number;
+    course_id: number;
+    cohort_id: number;
+    cohort_name?: string;
+    start_date?: string;
+    end_date?: string;
+    application_deadline?: string;
+    capacity: number | null;
+    seats_taken: number;
+    enrolled_count?: number;
+    seats_available?: number | null;
+    status: CohortCourseStatus;
+    price: string;
+    currency: string;
+    price_override: string | null;
+    currency_override: string | null;
+    primary_instructor_id?: number;
+    primary_instructor?: { id: number; name: string; email: string };
+    course?: Course;
+    cohort?: Cohort;
+    // Analytics fields — only present for admin/instructor, not for students/guests
+    waitlisted_count?: number;
+    applications_pending_count?: number;
+    is_full: boolean;
+    is_accepting_applications: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+/** An intake, e.g. "September 2026 Intake" — offers one or more courses, each with its own
+ * capacity/instructor via CohortCourse. */
+export interface Cohort {
+    id: number;
+    name: string;
+    start_date: string;
+    end_date: string;
+    application_deadline: string | null;
+    status: CohortStatus;
+    courses: CohortCourse[];
+    course_count?: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CohortAnalyticsCourseRow {
+    cohort_course_id: number;
+    course: { id: number; title: string };
+    total_enrolled: number;
+    completed: number;
+    in_progress: number;
+    withdrawn: number;
+    waitlisted: number;
+}
+
+export interface CohortAnalytics {
+    cohort: { id: number; name: string; status: CohortStatus };
+    courses: CohortAnalyticsCourseRow[];
+    totals: {
+        total_enrolled: number;
+        completed: number;
+        in_progress: number;
+        withdrawn: number;
+        waitlisted: number;
+    };
+}
+
 export interface PaymentSubmission {
     id: number;
     order_id: number;
@@ -76,6 +149,7 @@ export interface PaymentSubmission {
     receipt_url: string;
     receipt_original_name: string | null;
     status: PaymentSubmissionStatus;
+    rejection_reason: string | null;
     reviewed_at: string | null;
     created_at: string;
 }
@@ -103,6 +177,7 @@ export interface Enrolment {
     status: EnrolmentStatus;
     source: EnrolmentSource;
     course: Course;
+    cohort_course: { id: number; cohort_id: number; cohort_name: string | null } | null;
     applied_at: string;
     confirmation_email_due_at: string;
     confirmation_email_sent_at: string | null;
@@ -116,7 +191,7 @@ export interface AdminEnrolment {
     id: number;
     student: { id: number; name: string; email: string };
     course: { id: number; title: string; enrolment_policy: EnrolmentPolicy };
-    section: { id: number; name: string } | null;
+    cohort_course: { id: number; cohort_id: number; cohort_name: string | null } | null;
     status: EnrolmentStatus;
     source: EnrolmentSource;
     progress_percent: number;
@@ -132,12 +207,18 @@ export interface CourseApplication {
     status: CourseApplicationStatus;
     student: User;
     course: Course;
-    section: {
+    cohort_course: {
         id: number;
-        name: string;
+        cohort_id: number;
+        cohort_name: string | null;
         status: string;
     } | null | undefined;
-    answers: string[] | null;
+    answers: boolean[] | null;
+    eligibility_score: number | null;
+    eligibility_passed: boolean | null;
+    approved_automatically: boolean;
+    /** Transient — only present on the response returned immediately after submit/approve. */
+    enrolment_status: 'confirmed' | 'waitlisted' | null;
     portfolio_url: string | null;
     alternative_proof_text: string | null;
     rejection_reason: string | null;

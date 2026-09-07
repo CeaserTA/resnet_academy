@@ -22,7 +22,7 @@ final class Enrolment extends Model
     protected $fillable = [
         'student_id',
         'course_id',
-        'section_id',
+        'cohort_course_id',
         'status',
         'source',
         'imported_by',
@@ -60,11 +60,11 @@ final class Enrolment extends Model
     }
 
     /**
-     * @return BelongsTo<CourseSection, $this>
+     * @return BelongsTo<CohortCourse, $this>
      */
-    public function section(): BelongsTo
+    public function cohortCourse(): BelongsTo
     {
-        return $this->belongsTo(CourseSection::class, 'section_id');
+        return $this->belongsTo(CohortCourse::class, 'cohort_course_id');
     }
 
     public function importedBy(): BelongsTo

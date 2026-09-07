@@ -2,6 +2,7 @@ import { type ReactNode, useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router';
 import {
     BookOpen,
+    CalendarRange,
     ChevronLeft,
     ChevronRight,
     ClipboardList,
@@ -46,6 +47,7 @@ function navItemsForRole(role: string): NavItem[] {
     if (role === 'admin') {
         return [
             { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
+            { to: '/admin/cohorts', label: 'Cohorts', icon: CalendarRange },
             { to: '/admin/courses', label: 'Courses', icon: BookOpen },
             ...communicationItems,
             { to: '/admin/applications', label: 'Applications', icon: FileCheck, divider: true },
@@ -61,6 +63,7 @@ function navItemsForRole(role: string): NavItem[] {
     if (role === 'instructor') {
         return [
             { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
+            { to: '/admin/cohorts', label: 'Cohorts', icon: CalendarRange },
             { to: '/admin/courses', label: 'My courses', icon: BookOpen },
             ...communicationItems,
             { to: '/admin/applications', label: 'Applications', icon: FileCheck, divider: true },

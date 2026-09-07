@@ -1,9 +1,9 @@
 import { apiClient } from '@/lib/api/client';
-import type { AdminEnrolment, Enrolment, EnrolmentSource, EnrolmentStatus, PaginatedResponse } from '@/lib/api/types';
+import type { AdminEnrolment, EnrolmentSource, EnrolmentStatus, PaginatedResponse } from '@/lib/api/types';
 
-export async function importEnrolmentsCsv(courseId: number, file: File): Promise<void> {
+export async function importEnrolmentsCsv(cohortCourseId: number, file: File): Promise<void> {
     const formData = new FormData();
-    formData.append('course_id', String(courseId));
+    formData.append('cohort_course_id', String(cohortCourseId));
     formData.append('file', file);
 
     await apiClient.post('/enrolments/import', formData, {
@@ -38,7 +38,7 @@ export async function getTransferRequests(): Promise<AdminEnrolment[]> {
 
 export async function transferEnrolment(
     enrolmentId: number,
-    payload: { course_id: number; section_id?: number; note?: string }
+    payload: { course_id: number; cohort_course_id: number; note?: string }
 ): Promise<AdminEnrolment> {
     const { data } = await apiClient.post<{ data: AdminEnrolment }>(`/admin/enrolments/${enrolmentId}/transfer`, payload);
     return data.data;
