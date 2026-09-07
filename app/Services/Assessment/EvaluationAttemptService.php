@@ -15,6 +15,7 @@ use App\Services\Audit\AuditLogger;
 use App\Services\Notifications\NotificationDispatcher;
 use App\Services\Progress\ProgressEngine;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -47,34 +48,43 @@ final class EvaluationAttemptService
             'This evaluation is no longer available.',
         );
 
-        $existing = EvaluationAttempt::query()
-            ->where('evaluation_id', $evaluation->id)
-            ->where('student_id', $student->id)
-            ->where('status', EvaluationAttemptStatus::InProgress)
-            ->first();
+        // evaluation_attempts has no unique constraint on (evaluation_id, student_id,
+        // attempt_number), and the "in-progress attempt" / "attempt count vs max_attempts" checks
+        // below read-then-create with no row to lockForUpdate() on before the first attempt
+        // exists. An atomic cache lock scoped to this student+evaluation closes that race without
+        // serializing unrelated students the way locking the shared Evaluation row would.
+        $lock = Cache::lock("evaluation-attempt-start:{$evaluation->id}:{$student->id}", 10);
 
-        if ($existing) {
-            return $existing;
-        }
+        return $lock->block(5, function () use ($student, $evaluation, $now): EvaluationAttempt {
+            $existing = EvaluationAttempt::query()
+                ->where('evaluation_id', $evaluation->id)
+                ->where('student_id', $student->id)
+                ->where('status', EvaluationAttemptStatus::InProgress)
+                ->first();
 
-        $attemptCount = EvaluationAttempt::query()
-            ->where('evaluation_id', $evaluation->id)
-            ->where('student_id', $student->id)
-            ->count();
+            if ($existing) {
+                return $existing;
+            }
 
-        abort_if(
-            $evaluation->max_attempts !== null && $attemptCount >= $evaluation->max_attempts,
-            403,
-            'You have used all the attempts allowed for this evaluation.',
-        );
+            $attemptCount = EvaluationAttempt::query()
+                ->where('evaluation_id', $evaluation->id)
+                ->where('student_id', $student->id)
+                ->count();
 
-        return EvaluationAttempt::create([
-            'evaluation_id' => $evaluation->id,
-            'student_id' => $student->id,
-            'attempt_number' => $attemptCount + 1,
-            'started_at' => $now,
-            'status' => EvaluationAttemptStatus::InProgress,
-        ]);
+            abort_if(
+                $evaluation->max_attempts !== null && $attemptCount >= $evaluation->max_attempts,
+                403,
+                'You have used all the attempts allowed for this evaluation.',
+            );
+
+            return EvaluationAttempt::create([
+                'evaluation_id' => $evaluation->id,
+                'student_id' => $student->id,
+                'attempt_number' => $attemptCount + 1,
+                'started_at' => $now,
+                'status' => EvaluationAttemptStatus::InProgress,
+            ]);
+        });
     }
 
     /**
@@ -101,15 +111,21 @@ final class EvaluationAttemptService
      */
     public function submit(EvaluationAttempt $attempt, array $answers): EvaluationAttempt
     {
-        // Attempt results are strictly immutable once completed: a re-submit must never
-        // append or overwrite answers (it would also double-count in the gradebook).
-        abort_if(
-            $attempt->isCompleted(),
-            422,
-            'This attempt has already been submitted and can no longer be modified.',
-        );
-
         return DB::transaction(function () use ($attempt, $answers): EvaluationAttempt {
+            // Re-fetch and lock the attempt row *inside* the transaction before the immutability
+            // check: checking isCompleted() on the caller's already-loaded, unlocked instance let
+            // two concurrent submit() calls for the same attempt both pass the guard and each
+            // create a full set of answer rows / finalize the score.
+            $attempt = EvaluationAttempt::whereKey($attempt->id)->lockForUpdate()->firstOrFail();
+
+            // Attempt results are strictly immutable once completed: a re-submit must never
+            // append or overwrite answers (it would also double-count in the gradebook).
+            abort_if(
+                $attempt->isCompleted(),
+                422,
+                'This attempt has already been submitted and can no longer be modified.',
+            );
+
             $evaluation = $attempt->evaluation;
 
             if ($evaluation->time_limit_minutes !== null) {

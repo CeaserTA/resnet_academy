@@ -14,6 +14,7 @@ use App\Services\Audit\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 
 final class ModuleController extends Controller
 {
@@ -56,11 +57,15 @@ final class ModuleController extends Controller
             $data['order_index'] = ((int) $course->modules()->max('order_index')) + 1;
         }
 
-        $module = $course->modules()->create($data);
+        $module = DB::transaction(function () use ($course, $data, $groupIds): Module {
+            $module = $course->modules()->create($data);
 
-        if ($groupIds !== []) {
-            $module->groups()->sync($groupIds);
-        }
+            if ($groupIds !== []) {
+                $module->groups()->sync($groupIds);
+            }
+
+            return $module;
+        });
 
         return new ModuleResource($module->load(['groups', 'resources']));
     }
@@ -71,11 +76,13 @@ final class ModuleController extends Controller
         $groupIds = $data['group_ids'] ?? null;
         unset($data['group_ids']);
 
-        $module->update($data);
+        DB::transaction(function () use ($module, $data, $groupIds): void {
+            $module->update($data);
 
-        if ($groupIds !== null) {
-            $module->groups()->sync($groupIds);
-        }
+            if ($groupIds !== null) {
+                $module->groups()->sync($groupIds);
+            }
+        });
 
         return new ModuleResource($module->load(['groups', 'resources']));
     }

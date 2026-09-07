@@ -9,6 +9,7 @@ use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\User;
 use App\Services\Notifications\NotificationDispatcher;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -20,17 +21,32 @@ final class CertificateService
 {
     public function __construct(private readonly NotificationDispatcher $notificationDispatcher) {}
 
+    /**
+     * Note: this is called from inside callers that already hold their own transaction
+     * (EvaluationAttemptService::finalizeScore(), ProgressEngine::rollupModuleCompletion()), so
+     * DB::transaction() here nests as a savepoint rather than a fresh top-level transaction. That
+     * is safe under Laravel's savepoint semantics as long as nothing between the layers catches
+     * and swallows an exception from this method — true today, but worth re-checking if that
+     * ever changes.
+     */
     public function issueForCourseCompletion(User $student, Course $course): Certificate
     {
-        $certificate = Certificate::query()->firstOrCreate(
-            ['student_id' => $student->id, 'course_id' => $course->id],
-            ['certificate_number' => $this->generateCertificateNumber(), 'issued_at' => now()],
-        );
+        $certificate = DB::transaction(function () use ($student, $course): Certificate {
+            $certificate = Certificate::query()->firstOrCreate(
+                ['student_id' => $student->id, 'course_id' => $course->id],
+                ['certificate_number' => $this->generateCertificateNumber(), 'issued_at' => now()],
+            );
 
-        if ($certificate->wasRecentlyCreated) {
-            GenerateCertificatePdf::dispatch($certificate->id);
-            $this->notificationDispatcher->notifyCertificateIssued($certificate);
-        }
+            if ($certificate->wasRecentlyCreated) {
+                // Deferred to after the transaction commits: dispatched inline, a worker on a
+                // non-database queue driver could pick this job up before the certificate row
+                // (and the outer transaction it may be nested in) actually commits.
+                GenerateCertificatePdf::dispatch($certificate->id)->afterCommit();
+                $this->notificationDispatcher->notifyCertificateIssued($certificate);
+            }
+
+            return $certificate;
+        });
 
         return $certificate;
     }

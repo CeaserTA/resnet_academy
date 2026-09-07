@@ -14,6 +14,7 @@ use App\Services\Audit\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
@@ -49,24 +50,36 @@ final class UserController extends Controller
      */
     public function store(StorePrivilegedUserRequest $request): JsonResponse
     {
-        $user = User::create([
-            'role' => $request->validated('role'),
-            'name' => $request->validated('name'),
-            'email' => $request->validated('email'),
-            'password_hash' => Hash::make(Str::random(64)),
-        ]);
-        $user->refresh();
+        [$user, $token] = DB::transaction(function () use ($request): array {
+            $user = User::create([
+                'role' => $request->validated('role'),
+                'name' => $request->validated('name'),
+                'email' => $request->validated('email'),
+                'password_hash' => Hash::make(Str::random(64)),
+            ]);
+            $user->refresh();
 
-        $token = Password::broker()->createToken($user);
+            // Password::broker()->createToken() deletes any existing token for the email then
+            // inserts a new one (two more writes to password_reset_tokens) — kept in the same
+            // transaction as the user create and the audit log so a failure anywhere in this
+            // sequence leaves no half-provisioned account with no audit trail.
+            $token = Password::broker()->createToken($user);
+
+            $this->auditLogger->log(
+                action: 'user.provisioned',
+                entityType: 'user',
+                entityId: $user->id,
+                actorId: $request->user()->id,
+                meta: ['role' => $user->role->value],
+            );
+
+            return [$user, $token];
+        });
+
+        // Sent only after the transaction commits: UserProvisionedQueued is a queued
+        // notification, and queuing it *inside* the transaction risks a worker picking it up
+        // (and finding no committed user row) before the transaction actually commits.
         $user->notify(new UserProvisionedQueued($token));
-
-        $this->auditLogger->log(
-            action: 'user.provisioned',
-            entityType: 'user',
-            entityId: $user->id,
-            actorId: $request->user()->id,
-            meta: ['role' => $user->role->value],
-        );
 
         return (new UserResource($user))->response()->setStatusCode(201);
     }
@@ -90,17 +103,19 @@ final class UserController extends Controller
             $changes['user.status_changed'] = ['from' => $user->status->value, 'to' => $request->validated('status')];
         }
 
-        $user->update($request->validated());
+        DB::transaction(function () use ($user, $request, $changes): void {
+            $user->update($request->validated());
 
-        foreach ($changes as $action => $meta) {
-            $this->auditLogger->log(
-                action: $action,
-                entityType: 'user',
-                entityId: $user->id,
-                actorId: $request->user()->id,
-                meta: $meta,
-            );
-        }
+            foreach ($changes as $action => $meta) {
+                $this->auditLogger->log(
+                    action: $action,
+                    entityType: 'user',
+                    entityId: $user->id,
+                    actorId: $request->user()->id,
+                    meta: $meta,
+                );
+            }
+        });
 
         return new UserResource($user->fresh());
     }

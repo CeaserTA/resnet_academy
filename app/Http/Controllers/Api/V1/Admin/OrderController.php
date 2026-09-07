@@ -16,6 +16,7 @@ use App\Services\Audit\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Payments management: every order across every student, unlike `EnrolmentController::index()`
@@ -79,27 +80,35 @@ final class OrderController extends Controller
      */
     public function update(UpdateOrderRequest $request, Order $order): OrderResource
     {
-        $amountPaid = min((float) $request->validated('amount_paid'), (float) $order->amount);
-        $status = $order->deriveStatus($amountPaid);
+        DB::transaction(function () use ($request, $order): void {
+            // Lock the order row inside the transaction: this manual entry path and
+            // PaymentSubmissionService::confirm() both derive status from amount_paid, so without
+            // a shared lock a concurrent request on either path can compute from the same stale
+            // value and overwrite the other's update (lost update on a money field).
+            $order = $order->newQuery()->whereKey($order->id)->lockForUpdate()->firstOrFail();
 
-        $previousAmountPaid = $order->amount_paid;
+            $amountPaid = min((float) $request->validated('amount_paid'), (float) $order->amount);
+            $status = $order->deriveStatus($amountPaid);
 
-        $order->update([
-            'amount_paid' => $amountPaid,
-            'status' => $status,
-            'payment_method' => $request->has('payment_method') ? $request->validated('payment_method') : $order->payment_method,
-            'paid_at' => $status === OrderStatus::Paid ? ($order->paid_at ?? now()) : $order->paid_at,
-        ]);
+            $previousAmountPaid = $order->amount_paid;
 
-        if ((float) $previousAmountPaid !== $amountPaid) {
-            $this->auditLogger->log(
-                action: 'order.payment_recorded',
-                entityType: 'order',
-                entityId: $order->id,
-                actorId: $request->user()->id,
-                meta: ['from' => (float) $previousAmountPaid, 'to' => $amountPaid, 'status' => $status->value],
-            );
-        }
+            $order->update([
+                'amount_paid' => $amountPaid,
+                'status' => $status,
+                'payment_method' => $request->has('payment_method') ? $request->validated('payment_method') : $order->payment_method,
+                'paid_at' => $status === OrderStatus::Paid ? ($order->paid_at ?? now()) : $order->paid_at,
+            ]);
+
+            if ((float) $previousAmountPaid !== $amountPaid) {
+                $this->auditLogger->log(
+                    action: 'order.payment_recorded',
+                    entityType: 'order',
+                    entityId: $order->id,
+                    actorId: $request->user()->id,
+                    meta: ['from' => (float) $previousAmountPaid, 'to' => $amountPaid, 'status' => $status->value],
+                );
+            }
+        });
 
         return new OrderResource($order->fresh(['student', 'course']));
     }

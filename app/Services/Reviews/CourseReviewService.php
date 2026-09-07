@@ -11,6 +11,7 @@ use App\Models\CourseReview;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -33,81 +34,92 @@ final class CourseReviewService
             throw ValidationException::withMessages(['course_id' => 'You must complete this course before reviewing it.']);
         }
 
-        $existing = CourseReview::query()
-            ->where('student_id', $student->id)
-            ->where('course_id', $course->id)
-            ->first();
+        return DB::transaction(function () use ($student, $course, $rating, $reviewText): CourseReview {
+            // Lock the existing row (if any) so two concurrent submissions can't both read no
+            // conflicting "already approved" state and both write; the unique constraint on
+            // (student_id, course_id) still backstops a genuinely first-ever submission racing
+            // with itself.
+            $existing = CourseReview::query()
+                ->where('student_id', $student->id)
+                ->where('course_id', $course->id)
+                ->lockForUpdate()
+                ->first();
 
-        if ($existing && $existing->status === ReviewStatus::Approved) {
-            throw ValidationException::withMessages(['course_id' => 'You have already reviewed this course.']);
-        }
+            if ($existing && $existing->status === ReviewStatus::Approved) {
+                throw ValidationException::withMessages(['course_id' => 'You have already reviewed this course.']);
+            }
 
-        if ($existing) {
-            $existing->update([
-                'rating' => $rating,
-                'review_text' => $reviewText,
-                'status' => ReviewStatus::Pending,
-                'admin_notes' => null,
-                'reviewed_by' => null,
-                'reviewed_at' => null,
-            ]);
-            $review = $existing->fresh();
-        } else {
-            $review = CourseReview::create([
-                'student_id' => $student->id,
-                'course_id' => $course->id,
-                'rating' => $rating,
-                'review_text' => $reviewText,
-                'status' => ReviewStatus::Pending,
-            ]);
-        }
+            if ($existing) {
+                $existing->update([
+                    'rating' => $rating,
+                    'review_text' => $reviewText,
+                    'status' => ReviewStatus::Pending,
+                    'admin_notes' => null,
+                    'reviewed_by' => null,
+                    'reviewed_at' => null,
+                ]);
+                $review = $existing->fresh();
+            } else {
+                $review = CourseReview::create([
+                    'student_id' => $student->id,
+                    'course_id' => $course->id,
+                    'rating' => $rating,
+                    'review_text' => $reviewText,
+                    'status' => ReviewStatus::Pending,
+                ]);
+            }
 
-        $this->auditLogger->log(
-            action: 'course_review.submitted',
-            entityType: 'course_review',
-            entityId: $review->id,
-            actorId: $student->id,
-            meta: ['course_id' => $course->id, 'rating' => $rating],
-        );
+            $this->auditLogger->log(
+                action: 'course_review.submitted',
+                entityType: 'course_review',
+                entityId: $review->id,
+                actorId: $student->id,
+                meta: ['course_id' => $course->id, 'rating' => $rating],
+            );
 
-        return $review;
+            return $review;
+        });
     }
 
     public function approve(CourseReview $review, User $admin): CourseReview
     {
-        $review->update([
-            'status' => ReviewStatus::Approved,
-            'reviewed_by' => $admin->id,
-            'reviewed_at' => Carbon::now(),
-        ]);
+        DB::transaction(function () use ($review, $admin): void {
+            $review->update([
+                'status' => ReviewStatus::Approved,
+                'reviewed_by' => $admin->id,
+                'reviewed_at' => Carbon::now(),
+            ]);
 
-        $this->auditLogger->log(
-            action: 'course_review.approved',
-            entityType: 'course_review',
-            entityId: $review->id,
-            actorId: $admin->id,
-            meta: ['course_id' => $review->course_id, 'student_id' => $review->student_id],
-        );
+            $this->auditLogger->log(
+                action: 'course_review.approved',
+                entityType: 'course_review',
+                entityId: $review->id,
+                actorId: $admin->id,
+                meta: ['course_id' => $review->course_id, 'student_id' => $review->student_id],
+            );
+        });
 
         return $review->fresh();
     }
 
     public function reject(CourseReview $review, User $admin, ?string $adminNotes): CourseReview
     {
-        $review->update([
-            'status' => ReviewStatus::Rejected,
-            'admin_notes' => $adminNotes,
-            'reviewed_by' => $admin->id,
-            'reviewed_at' => Carbon::now(),
-        ]);
+        DB::transaction(function () use ($review, $admin, $adminNotes): void {
+            $review->update([
+                'status' => ReviewStatus::Rejected,
+                'admin_notes' => $adminNotes,
+                'reviewed_by' => $admin->id,
+                'reviewed_at' => Carbon::now(),
+            ]);
 
-        $this->auditLogger->log(
-            action: 'course_review.rejected',
-            entityType: 'course_review',
-            entityId: $review->id,
-            actorId: $admin->id,
-            meta: ['course_id' => $review->course_id, 'student_id' => $review->student_id],
-        );
+            $this->auditLogger->log(
+                action: 'course_review.rejected',
+                entityType: 'course_review',
+                entityId: $review->id,
+                actorId: $admin->id,
+                meta: ['course_id' => $review->course_id, 'student_id' => $review->student_id],
+            );
+        });
 
         return $review->fresh();
     }
@@ -118,15 +130,17 @@ final class CourseReviewService
             throw ValidationException::withMessages(['is_featured' => 'Only approved reviews can be featured.']);
         }
 
-        $review->update(['is_featured' => $featured]);
+        DB::transaction(function () use ($review, $admin, $featured): void {
+            $review->update(['is_featured' => $featured]);
 
-        $this->auditLogger->log(
-            action: 'course_review.featured',
-            entityType: 'course_review',
-            entityId: $review->id,
-            actorId: $admin->id,
-            meta: ['course_id' => $review->course_id, 'is_featured' => $featured],
-        );
+            $this->auditLogger->log(
+                action: 'course_review.featured',
+                entityType: 'course_review',
+                entityId: $review->id,
+                actorId: $admin->id,
+                meta: ['course_id' => $review->course_id, 'is_featured' => $featured],
+            );
+        });
 
         return $review->fresh();
     }

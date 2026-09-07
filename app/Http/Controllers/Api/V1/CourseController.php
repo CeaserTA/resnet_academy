@@ -19,6 +19,7 @@ use App\Services\Storage\MediaStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 
 final class CourseController extends Controller
 {
@@ -87,12 +88,16 @@ final class CourseController extends Controller
             $data['thumbnail_url'] = $this->mediaStorage->store($request->file('thumbnail'), 'courses');
         }
 
-        $course = Course::create([...$data, 'created_by' => $request->user()->id]);
-        $course->refresh();
+        $course = DB::transaction(function () use ($data, $instructorIds, $request): Course {
+            $course = Course::create([...$data, 'created_by' => $request->user()->id]);
+            $course->refresh();
 
-        if ($instructorIds !== []) {
-            $course->instructors()->sync($instructorIds);
-        }
+            if ($instructorIds !== []) {
+                $course->instructors()->sync($instructorIds);
+            }
+
+            return $course;
+        });
 
         return new CourseResource($course->load(['category', 'instructors']));
     }
@@ -113,26 +118,36 @@ final class CourseController extends Controller
             $data['thumbnail_url'] = $this->mediaStorage->store($request->file('thumbnail'), 'courses');
         }
 
-        $course->update($data);
+        DB::transaction(function () use ($course, $data, $instructorIds, $changeSummary, $request): void {
+            // Lock the course row before touching current_version: increment() issues an atomic
+            // `SET current_version = current_version + 1` at the DB layer, but Eloquent then sets
+            // the *local* attribute from the old in-memory value rather than re-reading the row, so
+            // two concurrent edits could previously log duplicate version_number values in
+            // course_change_log even though the underlying counter itself incremented correctly.
+            $course = $course->newQuery()->whereKey($course->id)->lockForUpdate()->firstOrFail();
 
-        if ($instructorIds !== null) {
-            $course->instructors()->sync($instructorIds);
-        }
+            $course->update($data);
 
-        if ($changeSummary !== null) {
-            $course->increment('current_version');
+            if ($instructorIds !== null) {
+                $course->instructors()->sync($instructorIds);
+            }
 
-            CourseChangeLog::create([
-                'course_id' => $course->id,
-                'version_number' => $course->current_version,
-                'changed_by' => $request->user()->id,
-                'change_summary' => $changeSummary,
-            ]);
+            if ($changeSummary !== null) {
+                $course->increment('current_version');
+                $course->refresh();
 
-            $this->notificationDispatcher->notifyCourseChanged($course, $changeSummary);
-        }
+                CourseChangeLog::create([
+                    'course_id' => $course->id,
+                    'version_number' => $course->current_version,
+                    'changed_by' => $request->user()->id,
+                    'change_summary' => $changeSummary,
+                ]);
 
-        return new CourseResource($course->load(['category', 'instructors']));
+                $this->notificationDispatcher->notifyCourseChanged($course, $changeSummary);
+            }
+        });
+
+        return new CourseResource($course->fresh(['category', 'instructors']));
     }
 
     public function destroy(Course $course): Response
