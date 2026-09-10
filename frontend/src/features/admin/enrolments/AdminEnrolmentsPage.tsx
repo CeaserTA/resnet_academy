@@ -164,7 +164,7 @@ export function AdminEnrolmentsPage() {
                                     {/* Course & section */}
                                     <div className="min-w-0">
                                         <p className="truncate text-sm text-ink-900">{enrolment.course.title}</p>
-                                        <p className="truncate text-xs text-ink-400">{enrolment.section?.name ?? 'Self-paced'}</p>
+                                        <p className="truncate text-xs text-ink-400">{enrolment.cohort_course?.cohort_name ?? '—'}</p>
                                     </div>
 
                                     {/* Source */}

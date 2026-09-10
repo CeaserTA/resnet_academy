@@ -42,6 +42,14 @@ final class EnrolmentPolicy
     }
 
     /**
+     * Cancel a pending transfer request - same authorization as withdraw.
+     */
+    public function cancelTransferRequest(User $user, Enrolment $enrolment): bool
+    {
+        return $user->role === UserRole::Admin || $enrolment->student_id === $user->id;
+    }
+
+    /**
      * Class-level gate on whether the admin roster is reachable at all — per-course scoping
      * to an instructor's own courses happens in the controller, not here.
      */

@@ -36,9 +36,9 @@ const createTestCourse = (overrides?: Partial<Course>): Course => ({
     enrolment_policy: 'application' as const,
     advisory_require_attestation: false,
     application_questions: null,
+    application_pass_threshold: null,
     application_allow_alternative_proof: false,
     application_require_portfolio_url: false,
-    sections_required: false,
     thumbnail_url: null,
     prerequisites_text: null,
     price: '0.00',
@@ -98,7 +98,7 @@ describe('ApplicationModal', () => {
         mockMutateAsync.mockRejectedValueOnce(apiError);
 
         renderWithProviders(
-            <ApplicationModal course={course} onClose={mockOnClose} onSubmitted={mockOnSubmitted} />
+            <ApplicationModal course={course} onClose={mockOnClose} onSubmitted={mockOnSubmitted} cohortCourseId={1} />
         );
 
         // Submit the application
@@ -134,7 +134,7 @@ describe('ApplicationModal', () => {
         mockMutateAsync.mockRejectedValueOnce(apiError);
 
         renderWithProviders(
-            <ApplicationModal course={course} onClose={mockOnClose} onSubmitted={mockOnSubmitted} />
+            <ApplicationModal course={course} onClose={mockOnClose} onSubmitted={mockOnSubmitted} cohortCourseId={1} />
         );
 
         // Initially shows submit button
@@ -175,7 +175,7 @@ describe('ApplicationModal', () => {
         mockMutateAsync.mockRejectedValueOnce(apiError);
 
         renderWithProviders(
-            <ApplicationModal course={course} onClose={mockOnClose} onSubmitted={mockOnSubmitted} />
+            <ApplicationModal course={course} onClose={mockOnClose} onSubmitted={mockOnSubmitted} cohortCourseId={1} />
         );
 
         const submitButton = screen.getByRole('button', { name: /submit application/i });
@@ -203,7 +203,7 @@ describe('ApplicationModal', () => {
         mockMutateAsync.mockRejectedValueOnce(apiError);
 
         renderWithProviders(
-            <ApplicationModal course={course} onClose={mockOnClose} onSubmitted={mockOnSubmitted} />
+            <ApplicationModal course={course} onClose={mockOnClose} onSubmitted={mockOnSubmitted} cohortCourseId={1} />
         );
 
         // Trigger error
@@ -228,7 +228,7 @@ describe('ApplicationModal', () => {
      */
     it('hides the application form when profile incomplete error is displayed', async () => {
         const course = createTestCourse({
-            application_questions: ['Why do you want to join?'],
+            application_questions: [{ text: 'Why do you want to join?', correct_answer: true }],
         });
         const user = userEvent.setup();
 
@@ -242,18 +242,19 @@ describe('ApplicationModal', () => {
         mockMutateAsync.mockRejectedValueOnce(apiError);
 
         renderWithProviders(
-            <ApplicationModal course={course} onClose={mockOnClose} onSubmitted={mockOnSubmitted} />
+            <ApplicationModal course={course} onClose={mockOnClose} onSubmitted={mockOnSubmitted} cohortCourseId={1} />
         );
 
         // Initially shows application form
-        expect(screen.getByLabelText(/why do you want to join/i)).toBeInTheDocument();
+        expect(screen.getByText(/why do you want to join/i)).toBeInTheDocument();
 
+        await user.click(screen.getByRole('radio', { name: 'Yes' }));
         const submitButton = screen.getByRole('button', { name: /submit application/i });
         await user.click(submitButton);
 
         // After error, form should be hidden
         await waitFor(() => {
-            expect(screen.queryByLabelText(/why do you want to join/i)).not.toBeInTheDocument();
+            expect(screen.queryByText(/why do you want to join/i)).not.toBeInTheDocument();
         });
     });
 
@@ -273,7 +274,7 @@ describe('ApplicationModal', () => {
         mockMutateAsync.mockRejectedValueOnce(apiError);
 
         renderWithProviders(
-            <ApplicationModal course={course} onClose={mockOnClose} onSubmitted={mockOnSubmitted} />
+            <ApplicationModal course={course} onClose={mockOnClose} onSubmitted={mockOnSubmitted} cohortCourseId={1} />
         );
 
         const submitButton = screen.getByRole('button', { name: /submit application/i });
@@ -298,7 +299,7 @@ describe('ApplicationModal', () => {
         mockMutateAsync.mockResolvedValueOnce({ id: 1 });
 
         renderWithProviders(
-            <ApplicationModal course={course} onClose={mockOnClose} onSubmitted={mockOnSubmitted} />
+            <ApplicationModal course={course} onClose={mockOnClose} onSubmitted={mockOnSubmitted} cohortCourseId={1} />
         );
 
         const submitButton = screen.getByRole('button', { name: /submit application/i });
@@ -315,7 +316,7 @@ describe('ApplicationModal - draft persistence', () => {
     const mockOnClose = vi.fn();
     const mockOnSubmitted = vi.fn();
     const questionCourse = () =>
-        createTestCourse({ application_questions: ['Why do you want to join?'] });
+        createTestCourse({ application_questions: [{ text: 'Why do you want to join?', correct_answer: true }] });
 
     beforeEach(() => {
         vi.clearAllMocks();
@@ -323,56 +324,58 @@ describe('ApplicationModal - draft persistence', () => {
         sessionStorage.clear();
     });
 
-    it('auto-saves answers to sessionStorage as the student types', async () => {
+    it('auto-saves the answer to sessionStorage as the student picks it', async () => {
         const user = userEvent.setup();
 
         renderWithProviders(
-            <ApplicationModal course={questionCourse()} onClose={mockOnClose} onSubmitted={mockOnSubmitted} />
+            <ApplicationModal course={questionCourse()} onClose={mockOnClose} onSubmitted={mockOnSubmitted} cohortCourseId={1} />
         );
 
-        await user.type(screen.getByLabelText(/why do you want to join/i), 'I love code');
+        await user.click(screen.getByRole('radio', { name: 'Yes' }));
 
         const stored = JSON.parse(sessionStorage.getItem('pending_app_answers_1') ?? '{}');
-        expect(stored.answers).toEqual(['I love code']);
+        expect(stored.answers).toEqual([true]);
         expect(stored.portfolioUrl).toBe('');
         expect(stored.alternativeProofText).toBe('');
     });
 
-    it('restores saved draft answers on mount', () => {
+    it('restores a saved draft answer on mount', () => {
         sessionStorage.setItem('pending_app_answers_1', JSON.stringify({
-            answers: ['My saved answer'],
+            answers: [false],
             portfolioUrl: '',
             alternativeProofText: '',
         }));
 
         renderWithProviders(
-            <ApplicationModal course={questionCourse()} onClose={mockOnClose} onSubmitted={mockOnSubmitted} />
+            <ApplicationModal course={questionCourse()} onClose={mockOnClose} onSubmitted={mockOnSubmitted} cohortCourseId={1} />
         );
 
-        expect(screen.getByLabelText(/why do you want to join/i)).toHaveValue('My saved answer');
+        expect(screen.getByRole('radio', { name: 'No' })).toHaveAttribute('aria-checked', 'true');
+        expect(screen.getByRole('radio', { name: 'Yes' })).toHaveAttribute('aria-checked', 'false');
     });
 
     it('ignores a corrupt draft payload instead of crashing', () => {
         sessionStorage.setItem('pending_app_answers_1', '{not-valid-json');
 
         renderWithProviders(
-            <ApplicationModal course={questionCourse()} onClose={mockOnClose} onSubmitted={mockOnSubmitted} />
+            <ApplicationModal course={questionCourse()} onClose={mockOnClose} onSubmitted={mockOnSubmitted} cohortCourseId={1} />
         );
 
-        expect(screen.getByLabelText(/why do you want to join/i)).toHaveValue('');
+        expect(screen.getByRole('radio', { name: 'Yes' })).toHaveAttribute('aria-checked', 'false');
+        expect(screen.getByRole('radio', { name: 'No' })).toHaveAttribute('aria-checked', 'false');
     });
 
     it('clears the draft after successful submission', async () => {
         const user = userEvent.setup();
         mockMutateAsync.mockResolvedValueOnce({ id: 1 });
         sessionStorage.setItem('pending_app_answers_1', JSON.stringify({
-            answers: ['draft'],
+            answers: [true],
             portfolioUrl: '',
             alternativeProofText: '',
         }));
 
         renderWithProviders(
-            <ApplicationModal course={questionCourse()} onClose={mockOnClose} onSubmitted={mockOnSubmitted} />
+            <ApplicationModal course={questionCourse()} onClose={mockOnClose} onSubmitted={mockOnSubmitted} cohortCourseId={1} />
         );
 
         await user.click(screen.getByRole('button', { name: /submit application/i }));
@@ -387,13 +390,13 @@ describe('ApplicationModal - draft persistence', () => {
         const user = userEvent.setup();
         mockMutateAsync.mockRejectedValueOnce(new ApiError(500, 'server_error', 'Internal server error', null));
         sessionStorage.setItem('pending_app_answers_1', JSON.stringify({
-            answers: ['draft'],
+            answers: [true],
             portfolioUrl: '',
             alternativeProofText: '',
         }));
 
         renderWithProviders(
-            <ApplicationModal course={questionCourse()} onClose={mockOnClose} onSubmitted={mockOnSubmitted} />
+            <ApplicationModal course={questionCourse()} onClose={mockOnClose} onSubmitted={mockOnSubmitted} cohortCourseId={1} />
         );
 
         await user.click(screen.getByRole('button', { name: /submit application/i }));
@@ -402,5 +405,20 @@ describe('ApplicationModal - draft persistence', () => {
             expect(screen.getByText('Internal server error')).toBeInTheDocument();
         });
         expect(sessionStorage.getItem('pending_app_answers_1')).not.toBeNull();
+    });
+
+    it('blocks submission with an inline error when a question is left unanswered', async () => {
+        const user = userEvent.setup();
+
+        renderWithProviders(
+            <ApplicationModal course={questionCourse()} onClose={mockOnClose} onSubmitted={mockOnSubmitted} cohortCourseId={1} />
+        );
+
+        await user.click(screen.getByRole('button', { name: /submit application/i }));
+
+        await waitFor(() => {
+            expect(screen.getByText(/answer every question/i)).toBeInTheDocument();
+        });
+        expect(mockMutateAsync).not.toHaveBeenCalled();
     });
 });

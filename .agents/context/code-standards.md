@@ -35,7 +35,7 @@ here and `ai-workflow-rules.md` disagree, this file wins for *style*; that file 
   PHP 8.1 native enums (`EnrolmentStatus::Confirmed`), not `SCREAMING_SNAKE`.
 - Models are singular (`Enrolment`, `ModuleItem`), tables are the plural snake_case name from
   `schema.sql` (`enrolments`, `module_items`) — set `protected $table` explicitly if Laravel's
-  auto-pluralization would guess wrong (e.g. `GroupsCohort` model → `groups_cohorts` table).
+  auto-pluralization would guess wrong (e.g. `CohortCourse` model → `cohort_courses` table).
 - Booleans: `is_`/`has_`/`can_` prefix (`isRequired`, `hasPassed`), matching the `is_required`
   style already used in `schema.sql`.
 - Enum-backed status columns get a PHP enum class in `app/Enums/`, one per column

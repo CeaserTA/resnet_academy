@@ -11,9 +11,12 @@ import { VerifyEmailNoticePage } from '@/features/auth/VerifyEmailNoticePage';
 import { CertificateVerifyPage } from '@/features/progress/CertificateVerifyPage';
 import { CourseDetailPage } from '@/features/catalogue/CourseDetailPage';
 import { CataloguePage } from '@/features/catalogue/CataloguePage';
+import { CohortPage } from '@/features/catalogue/CohortPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { CourseListPage } from '@/features/admin/courses/CourseListPage';
 import { CourseFormPage } from '@/features/admin/courses/CourseFormPage';
+import { CohortsListPage } from '@/features/cohorts/CohortsListPage';
+import { CohortDetailPage } from '@/features/cohorts/CohortDetailPage';
 import { ProvisionUserPage } from '@/features/admin/users/ProvisionUserPage';
 import { CourseBuilderPage } from '@/features/courseStructure/CourseBuilderPage';
 import { CoursePlayerPage } from '@/features/learning/CoursePlayerPage';
@@ -37,6 +40,7 @@ import { ProfileCompletionPage } from '@/features/profile/ProfileCompletionPage'
 import { PaymentsPage } from '@/features/admin/payments/PaymentsPage';
 import { ApplicationsPage } from '@/features/admin/applications/ApplicationsPage';
 import { AdminEnrolmentsPage } from '@/features/admin/enrolments/AdminEnrolmentsPage';
+import { AdminTransferRequestsPage } from '@/features/admin/enrolments/AdminTransferRequestsPage';
 import { ReviewsPage } from '@/features/admin/reviews/ReviewsPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
@@ -64,6 +68,7 @@ function App() {
             />
             <Route path="courses" element={<CataloguePage />} />
             <Route path="courses/:id" element={<CourseDetailPage />} />
+            <Route path="cohorts/:id" element={<CohortPage />} />
             <Route path="about" element={<AboutPage />} />
             <Route path="contact" element={<ContactPage />} />
             {/* Legacy auth URLs — sign-in/signup now happen exclusively in the auth modal */}
@@ -111,6 +116,22 @@ function App() {
                     }
                 />
                 <Route
+                    path="admin/cohorts"
+                    element={
+                        <ProtectedRoute roles={['admin', 'instructor']}>
+                            <CohortsListPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="admin/cohorts/:id"
+                    element={
+                        <ProtectedRoute roles={['admin', 'instructor']}>
+                            <CohortDetailPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
                     path="admin/applications"
                     element={
                         <ProtectedRoute roles={['admin', 'instructor']}>
@@ -123,6 +144,14 @@ function App() {
                     element={
                         <ProtectedRoute roles={['admin', 'instructor']}>
                             <AdminEnrolmentsPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="admin/transfer-requests"
+                    element={
+                        <ProtectedRoute roles={['admin']}>
+                            <AdminTransferRequestsPage />
                         </ProtectedRoute>
                     }
                 />

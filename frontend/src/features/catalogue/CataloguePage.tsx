@@ -4,23 +4,20 @@ import {
     BookOpen,
     BookX,
     CalendarDays,
-    CheckCircle2,
     Clock,
     Search,
-    User,
 } from 'lucide-react';
 import { LandingHeader } from '@/components/layout/LandingHeader';
 import { Footer } from '@/components/landing/Footer';
 import { useAuthModal } from '@/lib/auth/AuthModalContext';
-import { useCategories, useCourseModules, useCourses } from '@/features/catalogue/useCourses';
-import { usePublicSections } from '@/features/sections/useSections';
-import type { PublicSection } from '@/features/sections/types';
+import { useCategories, useCourses } from '@/features/catalogue/useCourses';
+import { useCohorts, usePublicCohortOfferings } from '@/features/cohorts/useCohorts';
 import { CourseCarousel } from '@/components/landing/CourseCarousel';
 import { courseImageMap } from '@/features/catalogue/courseImages';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { cn } from '@/lib/utils';
-import type { Course, Module } from '@/lib/api/types';
+import type { Cohort } from '@/lib/api/types';
 import type { CourseFilters } from '@/features/catalogue/api';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -33,16 +30,29 @@ function formatDate(dateStr: string): string {
     });
 }
 
-function levelLabel(level: Course['level']): string {
-    return { beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced' }[level] ?? level;
+// ─── Cohort helpers ────────────────────────────────────────────────────────────
+
+/** A cohort is "ongoing" if any of its courses are already running. */
+function isOngoing(cohort: Cohort): boolean {
+    return cohort.courses.some((c) => c.status === 'in_progress');
+}
+
+/** A cohort is "upcoming" if it isn't ongoing but at least one course is still open. */
+function isUpcoming(cohort: Cohort): boolean {
+    return !isOngoing(cohort) && cohort.courses.some((c) => c.status === 'open');
+}
+
+function cohortImage(cohort: Cohort): string | null {
+    const firstCourse = cohort.courses[0]?.course;
+    if (!firstCourse) return null;
+    return firstCourse.thumbnail_url ?? courseImageMap[firstCourse.slug] ?? null;
 }
 
 // ─── Ongoing cohort — large featured card ────────────────────────────────────
 
-function OngoingCohortCard({ section }: { section: PublicSection }) {
-    const { data: modules, isLoading } = useCourseModules(section.course.id);
-    const instructor = section.primary_instructor || section.course.instructors[0] || null;
-    const image = section.course.thumbnail_url ?? courseImageMap[section.course.slug] ?? null;
+function OngoingCohortCard({ cohort }: { cohort: Cohort }) {
+    const image = cohortImage(cohort);
+    const courseCount = cohort.courses.length;
 
     return (
         <div className="overflow-hidden rounded-2xl border border-[#e8ecf1] bg-white shadow-sm lg:flex">
@@ -52,7 +62,7 @@ function OngoingCohortCard({ section }: { section: PublicSection }) {
                     {image ? (
                         <img
                             src={image}
-                            alt={section.course.title}
+                            alt={cohort.name}
                             className="h-full w-full object-cover"
                         />
                     ) : (
@@ -72,106 +82,56 @@ function OngoingCohortCard({ section }: { section: PublicSection }) {
             <div className="flex flex-col gap-5 p-6 lg:p-8">
                 {/* Header */}
                 <div>
-                    {section.course.category && (
-                        <span className="inline-flex items-center rounded-full bg-blue-600 px-2.5 py-0.5 text-xs font-medium text-white">
-                            {section.course.category.name}
-                        </span>
-                    )}
-                    <h3 className="mt-2 text-xl font-bold text-ink-900 sm:text-2xl">
-                        {section.course.title}
+                    <h3 className="text-xl font-bold text-ink-900 sm:text-2xl">
+                        {cohort.name}
                     </h3>
-                    <p className="mt-1 text-sm font-medium text-blue-600">{section.name}</p>
-                    {section.course.description && (
-                        <p className="mt-1 text-sm leading-6 text-[#64748b] line-clamp-2">
-                            {section.course.description}
-                        </p>
-                    )}
+                    <p className="mt-1 text-sm text-[#64748b]">
+                        {courseCount} course{courseCount !== 1 ? 's' : ''} in this cohort
+                    </p>
                 </div>
 
                 {/* Meta row */}
-                <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                     <div className="flex items-start gap-2">
                         <CalendarDays className="mt-0.5 size-4 shrink-0 text-blue-500" aria-hidden="true" />
                         <div>
                             <dt className="text-xs font-medium uppercase tracking-wide text-[#94a3b8]">Started</dt>
-                            <dd className="text-ink-700">{formatDate(section.start_date)}</dd>
-                        </div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-blue-500" aria-hidden="true" />
-                        <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-[#94a3b8]">Level</dt>
-                            <dd className="text-ink-700">{levelLabel(section.course.level)}</dd>
+                            <dd className="text-ink-700">{formatDate(cohort.start_date)}</dd>
                         </div>
                     </div>
                     <div className="flex items-start gap-2">
                         <Clock className="mt-0.5 size-4 shrink-0 text-blue-500" aria-hidden="true" />
                         <div>
                             <dt className="text-xs font-medium uppercase tracking-wide text-[#94a3b8]">Ends</dt>
-                            <dd className="text-ink-700">{formatDate(section.end_date)}</dd>
+                            <dd className="text-ink-700">{formatDate(cohort.end_date)}</dd>
                         </div>
                     </div>
-                    {instructor && (
-                        <div className="flex items-start gap-2">
-                            <User className="mt-0.5 size-4 shrink-0 text-blue-500" aria-hidden="true" />
-                            <div>
-                                <dt className="text-xs font-medium uppercase tracking-wide text-[#94a3b8]">Instructor</dt>
-                                <dd className="text-ink-700">{instructor.name}</dd>
-                            </div>
-                        </div>
-                    )}
                 </dl>
 
-                {/* Seat availability */}
-                {section.capacity !== null && section.enrolled_count !== undefined && (
-                    <div className="flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm">
-                        <User className="size-4 shrink-0 text-blue-600" aria-hidden="true" />
-                        <span className="font-medium text-blue-900">
-                            {section.enrolled_count} / {section.capacity} enrolled
-                            {section.seats_available !== null && section.seats_available > 0 && (
-                                <span className="ml-1 text-blue-700">
-                                    ({section.seats_available} seats left)
-                                </span>
-                            )}
-                        </span>
-                    </div>
-                )}
-
-                {/* Course units */}
+                {/* Courses in this cohort */}
                 <div>
                     <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#94a3b8]">
-                        Course Units
+                        Courses
                     </p>
-                    {isLoading ? (
-                        <p className="text-xs text-[#94a3b8]">Loading modules…</p>
-                    ) : modules && modules.length > 0 ? (
-                        <ul className="flex flex-wrap gap-2">
-                            {modules.slice(0, 6).map((mod: Module) => (
-                                <li
-                                    key={mod.id}
-                                    className="rounded-full border border-[#e8ecf1] bg-[#f8fafc] px-3 py-1 text-xs text-ink-700"
-                                >
-                                    {mod.title}
-                                </li>
-                            ))}
-                            {modules.length > 6 && (
-                                <li className="rounded-full border border-[#e8ecf1] bg-[#f8fafc] px-3 py-1 text-xs text-[#94a3b8]">
-                                    +{modules.length - 6} more
-                                </li>
-                            )}
-                        </ul>
-                    ) : (
-                        <p className="text-xs text-[#94a3b8]">No modules listed yet.</p>
-                    )}
+                    <ul className="flex flex-wrap gap-2">
+                        {cohort.courses.map((cc) => (
+                            <li
+                                key={cc.id}
+                                className="rounded-full border border-[#e8ecf1] bg-[#f8fafc] px-3 py-1 text-xs text-ink-700"
+                            >
+                                {cc.course?.title}
+                            </li>
+                        ))}
+                    </ul>
                 </div>
 
                 {/* CTA */}
                 <div className="mt-auto pt-2">
                     <Link
-                        to={`/courses/${section.course.id}`}
+                        to={`/cohorts/${cohort.id}`}
                         className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
                     >
-                        View Course
+                        View cohort &amp; courses
                     </Link>
                 </div>
             </div>
@@ -181,16 +141,16 @@ function OngoingCohortCard({ section }: { section: PublicSection }) {
 
 // ─── Upcoming cohort — compact card ──────────────────────────────────────────
 
-function UpcomingCohortCard({ section }: { section: PublicSection }) {
-    const instructor = section.primary_instructor || section.course.instructors[0] || null;
-    const image = section.course.thumbnail_url ?? courseImageMap[section.course.slug] ?? null;
+function UpcomingCohortCard({ cohort }: { cohort: Cohort }) {
+    const image = cohortImage(cohort);
+    const courseCount = cohort.courses.length;
 
     return (
         <div className="flex flex-col overflow-hidden rounded-2xl border border-[#e8ecf1] bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
             {/* Image */}
             <div className="relative aspect-video w-full overflow-hidden bg-[#eff6ff]">
                 {image ? (
-                    <img src={image} alt={section.course.title} className="h-full w-full object-cover" />
+                    <img src={image} alt={cohort.name} className="h-full w-full object-cover" />
                 ) : (
                     <div className="flex h-full w-full items-center justify-center text-blue-200">
                         <BookOpen className="size-10" aria-hidden="true" />
@@ -203,48 +163,29 @@ function UpcomingCohortCard({ section }: { section: PublicSection }) {
 
             {/* Body */}
             <div className="flex flex-1 flex-col gap-3 p-4">
-                {section.course.category && (
-                    <span className="inline-flex w-fit items-center rounded-full bg-blue-600 px-2.5 py-0.5 text-xs font-medium text-white">
-                        {section.course.category.name}
-                    </span>
-                )}
-                <h3 className="text-sm font-semibold leading-snug text-ink-900">{section.course.title}</h3>
-                <p className="text-xs font-medium text-blue-600">{section.name}</p>
+                <h3 className="text-sm font-semibold leading-snug text-ink-900">{cohort.name}</h3>
+                <p className="text-xs text-[#64748b]">
+                    {courseCount} course{courseCount !== 1 ? 's' : ''} available
+                </p>
 
                 <dl className="space-y-1.5 text-xs text-[#64748b]">
                     <div className="flex items-center gap-1.5">
                         <CalendarDays className="size-3.5 shrink-0 text-blue-400" aria-hidden="true" />
-                        <span>Starts {formatDate(section.start_date)}</span>
+                        <span>Starts {formatDate(cohort.start_date)}</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                        <CheckCircle2 className="size-3.5 shrink-0 text-blue-400" aria-hidden="true" />
-                        <span>{levelLabel(section.course.level)}</span>
-                    </div>
-                    {instructor && (
-                        <div className="flex items-center gap-1.5">
-                            <User className="size-3.5 shrink-0 text-blue-400" aria-hidden="true" />
-                            <span>{instructor.name}</span>
-                        </div>
-                    )}
-                    {section.capacity !== null && section.seats_available !== null && (
+                    {cohort.application_deadline && (
                         <div className="flex items-center gap-1.5">
                             <Clock className="size-3.5 shrink-0 text-blue-400" aria-hidden="true" />
-                            {section.is_full ? (
-                                <span className="font-medium text-amber-700">Full</span>
-                            ) : section.seats_available <= 5 ? (
-                                <span className="font-medium text-amber-700">Only {section.seats_available} seats left</span>
-                            ) : (
-                                <span>{section.seats_available} seats available</span>
-                            )}
+                            <span>Apply by {formatDate(cohort.application_deadline)}</span>
                         </div>
                     )}
                 </dl>
 
                 <Link
-                    to={`/courses/${section.course.id}`}
+                    to={`/cohorts/${cohort.id}`}
                     className="mt-auto inline-flex w-full items-center justify-center rounded-md border border-blue-600 px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-50"
                 >
-                    Register Now
+                    View cohort
                 </Link>
             </div>
         </div>
@@ -254,8 +195,8 @@ function UpcomingCohortCard({ section }: { section: PublicSection }) {
 // ─── Cohort Schedule section ──────────────────────────────────────────────────
 
 function CohortSchedule() {
-    const { data, isLoading } = usePublicSections();
-    const sections = data ?? [];
+    const { data, isLoading } = useCohorts({ status: 'published' });
+    const cohorts = data ?? [];
 
     if (isLoading) {
         return (
@@ -267,7 +208,10 @@ function CohortSchedule() {
         );
     }
 
-    if (sections.length === 0) {
+    const ongoing = cohorts.filter(isOngoing);
+    const upcoming = cohorts.filter(isUpcoming);
+
+    if (ongoing.length === 0 && upcoming.length === 0) {
         return (
             <section id="cohorts" className="border-t border-[#e8ecf1] bg-[#f8fafc] px-4 py-16 sm:px-6 lg:px-8">
                 <div className="mx-auto max-w-7xl">
@@ -284,9 +228,6 @@ function CohortSchedule() {
             </section>
         );
     }
-
-    const ongoing = sections.filter((s) => s.status === 'in_progress');
-    const upcoming = sections.filter((s) => s.status === 'open');
 
     return (
         <section id="cohorts" className="border-t border-[#e8ecf1] bg-[#f8fafc] px-4 py-16 sm:px-6 lg:px-8">
@@ -308,8 +249,8 @@ function CohortSchedule() {
                             Ongoing Cohorts
                         </h3>
                         <div className="space-y-6">
-                            {ongoing.map((section) => (
-                                <OngoingCohortCard key={section.id} section={section} />
+                            {ongoing.map((cohort) => (
+                                <OngoingCohortCard key={cohort.id} cohort={cohort} />
                             ))}
                         </div>
                     </div>
@@ -323,8 +264,8 @@ function CohortSchedule() {
                             Upcoming Cohorts
                         </h3>
                         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                            {upcoming.map((section) => (
-                                <UpcomingCohortCard key={section.id} section={section} />
+                            {upcoming.map((cohort) => (
+                                <UpcomingCohortCard key={cohort.id} cohort={cohort} />
                             ))}
                         </div>
                     </div>
@@ -356,10 +297,23 @@ export function CataloguePage() {
     );
 
     // Fetch all published courses once; filter client-side
-    const { data, isLoading } = useCourses(apiFilters);
+    const { data, isLoading: coursesLoading } = useCourses(apiFilters);
     const { data: categories } = useCategories();
+    const { data: cohortOfferings, isLoading: offeringsLoading } = usePublicCohortOfferings();
 
-    const allCourses = data?.data ?? [];
+    const isLoading = coursesLoading || offeringsLoading;
+
+    // Only courses with at least one published cohort offering belong in the public
+    // catalogue grid/search — a course with no cohort to enrol into isn't actually
+    // available yet. Direct /courses/:id links stay reachable regardless.
+    const courseIdsWithCohorts = useMemo(
+        () => new Set((cohortOfferings ?? []).map((offering) => offering.course.id)),
+        [cohortOfferings],
+    );
+    const allCourses = useMemo(
+        () => (data?.data ?? []).filter((c) => courseIdsWithCohorts.has(c.id)),
+        [data, courseIdsWithCohorts],
+    );
 
     const filtered = useMemo(() => {
         return allCourses.filter((c) => {

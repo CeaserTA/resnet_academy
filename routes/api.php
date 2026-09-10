@@ -15,11 +15,12 @@ use App\Http\Controllers\Api\V1\AssignmentController;
 use App\Http\Controllers\Api\V1\AssignmentSubmissionController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CertificateController;
+use App\Http\Controllers\Api\V1\CohortController;
+use App\Http\Controllers\Api\V1\CohortCourseController;
 use App\Http\Controllers\Api\V1\ConversationController;
 use App\Http\Controllers\Api\V1\CourseApplicationController;
 use App\Http\Controllers\Api\V1\CourseController;
 use App\Http\Controllers\Api\V1\CourseReviewController;
-use App\Http\Controllers\Api\V1\CourseSectionController;
 use App\Http\Controllers\Api\V1\EnrolmentController;
 use App\Http\Controllers\Api\V1\EnrolmentImportController;
 use App\Http\Controllers\Api\V1\EvaluationAttemptController;
@@ -55,8 +56,9 @@ Route::prefix('v1')->group(function (): void {
     Route::get('/courses', [CourseController::class, 'index']);
     Route::get('/courses/{course}', [CourseController::class, 'show']);
     Route::get('/courses/{course}/modules', [ModuleController::class, 'index']);
-    Route::get('/courses/{course}/sections', [CourseSectionController::class, 'index']);
-    Route::get('/sections/public', [CourseSectionController::class, 'public']); // Public cohorts for landing/catalogue pages
+    Route::get('/courses/{course}/cohort-courses', [CohortCourseController::class, 'forCourse']);
+    Route::get('/cohorts', [CohortController::class, 'index']); // Public cohort browse for landing/catalogue pages
+    Route::get('/cohorts/{cohort}', [CohortController::class, 'show']);
     Route::get('/resources/{resource}', [ResourceController::class, 'show']);
 
     // Public reviews (approved only) — landing page testimonials, no auth required.
@@ -75,12 +77,17 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('/courses/{course}', [CourseController::class, 'update']);
         Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
 
-        // Course sections (cohorts) — admin/instructor management of sections.
-        // index (GET) is in the public block above to allow guest/student access.
-        Route::post('/courses/{course}/sections', [CourseSectionController::class, 'store']);
-        Route::get('/sections/{section}', [CourseSectionController::class, 'show']);
-        Route::patch('/sections/{section}', [CourseSectionController::class, 'update']);
-        Route::delete('/sections/{section}', [CourseSectionController::class, 'destroy']);
+        // Cohorts (intakes) — admin management; browse (index/show) is in the public block above.
+        Route::post('/cohorts', [CohortController::class, 'store']);
+        Route::patch('/cohorts/{cohort}', [CohortController::class, 'update']);
+        Route::delete('/cohorts/{cohort}', [CohortController::class, 'destroy']);
+
+        // Cohort courses — one course's offering within a cohort (capacity/instructor/price
+        // override). forCourse (GET) is in the public block above to allow guest/student access.
+        Route::post('/cohorts/{cohort}/courses', [CohortCourseController::class, 'store']);
+        Route::get('/cohort-courses/{cohortCourse}', [CohortCourseController::class, 'show']);
+        Route::patch('/cohort-courses/{cohortCourse}', [CohortCourseController::class, 'update']);
+        Route::delete('/cohort-courses/{cohortCourse}', [CohortCourseController::class, 'destroy']);
 
         Route::get('/me/data-export', [AccountController::class, 'export']);
         Route::post('/me/avatar', [AccountController::class, 'updateAvatar']);
@@ -96,6 +103,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/enrolments', [EnrolmentController::class, 'store']);
         Route::post('/enrolments/import', [EnrolmentImportController::class, 'store']);
         Route::post('/enrolments/{enrolment}/withdraw', [EnrolmentController::class, 'withdraw']);
+        Route::post('/enrolments/{enrolment}/cancel-transfer-request', [EnrolmentController::class, 'cancelTransferRequest']);
 
         Route::get('/course-applications', [CourseApplicationController::class, 'index']);
         Route::get('/course-applications/me', [CourseApplicationController::class, 'mine']);
@@ -125,6 +133,9 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('/admin/payment-submissions/{paymentSubmission}/reject', [AdminPaymentSubmissionController::class, 'reject']);
         Route::get('/admin/enrolments', [AdminEnrolmentController::class, 'index']);
         Route::patch('/admin/enrolments/{enrolment}/status', [AdminEnrolmentController::class, 'updateStatus']);
+        Route::get('/admin/enrolments/transfer-requests', [AdminEnrolmentController::class, 'transferRequests']);
+        Route::post('/admin/enrolments/{enrolment}/transfer', [AdminEnrolmentController::class, 'transfer']);
+        Route::post('/admin/enrolments/{enrolment}/refund', [AdminEnrolmentController::class, 'refund']);
 
         // Course structure (FR-6/FR-7/FR-8) — admin/instructor writes via Policies.
         Route::post('/courses/{course}/modules', [ModuleController::class, 'store']);
@@ -204,6 +215,7 @@ Route::prefix('v1')->group(function (): void {
         // at-risk flags, engagement metrics, admin/instructor only.
         Route::get('/courses/{course}/analytics', [AnalyticsController::class, 'courseAnalytics']);
         Route::post('/courses/{course}/at-risk-notice', [AnalyticsController::class, 'notifyAtRisk']);
+        Route::get('/admin/cohorts/{cohort}/report', [AnalyticsController::class, 'cohortAnalytics']);
 
         // Messaging (FR-15/16/17) — one generic conversations/messages system covers
         // Admin<->Instructor, Instructor<->Student, Admin<->Student; read receipts on show().

@@ -33,9 +33,10 @@ vi.mock('@/features/catalogue/useStudentSections', () => ({
     })),
 }));
 
+const { enrolMutateMock } = vi.hoisted(() => ({ enrolMutateMock: vi.fn() }));
 vi.mock('@/features/enrolment/useEnrolments', () => ({
     useEnrol: vi.fn(() => ({
-        mutateAsync: vi.fn(),
+        mutateAsync: enrolMutateMock,
         isPending: false,
     })),
 }));
@@ -106,10 +107,10 @@ const mockCourse: Course = {
     level: 'beginner',
     enrolment_policy: 'application',
     advisory_require_attestation: false,
-    application_questions: ['Question 1'],
+    application_questions: [{ text: 'Question 1', correct_answer: true }],
+    application_pass_threshold: null,
     application_allow_alternative_proof: true,
     application_require_portfolio_url: false,
-    sections_required: true,
     thumbnail_url: null,
     prerequisites_text: null,
     price: '100.00',
@@ -166,6 +167,12 @@ describe('CourseDetailPage - Application Submission Confirmation', () => {
         mockAuthUser = mockStudent;
         mockGetProfileStatus.mockResolvedValue(completeProfileStatus);
         sessionStorage.clear();
+        // Exactly one open cohort offering — auto-selected, so the CTA is clickable without
+        // an explicit selection step in these submission-flow tests.
+        mockSectionsData = [
+            { id: 1, cohort_name: 'Cohort A', status: 'open' as const, start_date: '2024-02-01', capacity: 30, enrolled_count: 15 },
+        ];
+        mockSectionsLoading = false;
     });
 
     it('shows success alert after application submission', async () => {
@@ -173,8 +180,10 @@ describe('CourseDetailPage - Application Submission Confirmation', () => {
 
         renderPage();
 
-        // Open application modal
+        // Open application modal — the CTA is only clickable once the (auto-selected) cohort
+        // offering has landed.
         const applyButton = await screen.findByText('Apply to enrol');
+        await waitFor(() => expect(applyButton).not.toBeDisabled());
         await user.click(applyButton);
 
         // Submit application (mock)
@@ -194,6 +203,7 @@ describe('CourseDetailPage - Application Submission Confirmation', () => {
         renderPage();
 
         const applyButton = await screen.findByText('Apply to enrol');
+        await waitFor(() => expect(applyButton).not.toBeDisabled());
         await user.click(applyButton);
 
         const submitButton = screen.getByText('Submit Mock Application');
@@ -246,7 +256,7 @@ describe('CourseDetailPage - Application Submission Confirmation', () => {
     });
 });
 
-describe('CourseDetailPage - CTA Gating with sections_required', () => {
+describe('CourseDetailPage - cohort selection gating', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockAuthUser = mockStudent;
@@ -258,68 +268,53 @@ describe('CourseDetailPage - CTA Gating with sections_required', () => {
         mockCourseData = { ...mockCourse };
     });
 
-    it('sections_required=false + sections exist + none selected → CTA enabled', async () => {
-        mockCourseData = { ...mockCourse, enrolment_policy: 'open', sections_required: false };
+    it('multiple open cohort offerings exist → earliest is auto-targeted, CTA enabled', async () => {
+        // The course belongs to a cohort; it isn't something the student picks. With more
+        // than one open offering, the earliest-starting one is targeted automatically.
+        mockCourseData = { ...mockCourse, enrolment_policy: 'open' };
         mockSectionsData = [
-            { id: 1, name: 'Section A', status: 'open' as const, start_date: '2024-02-01', capacity: 30, enrolled_count: 15 },
+            { id: 2, cohort_name: 'Cohort B', status: 'open' as const, start_date: '2024-03-01', capacity: 30, enrolled_count: 5 },
+            { id: 1, cohort_name: 'Cohort A', status: 'open' as const, start_date: '2024-02-01', capacity: 30, enrolled_count: 15 },
         ];
 
         renderPage();
 
-        // CTA should be enabled
-        const enrolButton = await screen.findByText('Enrol now');
-        expect(enrolButton).not.toBeDisabled();
-    });
-
-    it('sections_required=true + sections exist + none selected → CTA disabled', async () => {
-        mockCourseData = { ...mockCourse, enrolment_policy: 'open', sections_required: true };
-        mockSectionsData = [
-            { id: 1, name: 'Section A', status: 'open' as const, start_date: '2024-02-01', capacity: 30, enrolled_count: 15 },
-        ];
-
-        renderPage();
-
-        // CTA should be disabled
-        const enrolButton = await screen.findByText('Enrol now');
-        expect(enrolButton).toBeDisabled();
-    });
-
-    it('sections_required=true + sections exist + one selected → CTA enabled', async () => {
-        mockCourseData = { ...mockCourse, enrolment_policy: 'open', sections_required: true };
-        mockSectionsData = [
-            { id: 1, name: 'Section A', status: 'open' as const, start_date: '2024-02-01', capacity: 30, enrolled_count: 15 },
-        ];
-
-        renderPage();
-
-        // Select a section
-        const user = userEvent.setup();
-        const sectionButton = await screen.findByText('Section A');
-        await user.click(sectionButton);
-
-        // CTA should now be enabled
         await waitFor(() => {
-            const enrolButton = screen.getByText('Enrol now');
-            expect(enrolButton).not.toBeDisabled();
+            expect(screen.getByText('Enrol now')).not.toBeDisabled();
+        });
+        // Earliest-starting offering (Cohort A) is the one shown, not a picker.
+        expect(await screen.findByText('Cohort A')).toBeInTheDocument();
+        expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+    });
+
+    it('exactly one open cohort offering → auto-selected, CTA enabled without a click', async () => {
+        mockCourseData = { ...mockCourse, enrolment_policy: 'open' };
+        mockSectionsData = [
+            { id: 1, cohort_name: 'Cohort A', status: 'open' as const, start_date: '2024-02-01', capacity: 30, enrolled_count: 15 },
+        ];
+
+        renderPage();
+
+        await waitFor(() => {
+            expect(screen.getByText('Enrol now')).not.toBeDisabled();
         });
     });
 
-    it('sections_required=false + no sections → CTA enabled, picker hidden', async () => {
-        mockCourseData = { ...mockCourse, enrolment_policy: 'open', sections_required: false };
+    it('no cohort offerings → CTA disabled, "not currently open" message shown', async () => {
+        mockCourseData = { ...mockCourse, enrolment_policy: 'open' };
         mockSectionsData = [];
 
         renderPage();
 
-        // CTA should be enabled
         const enrolButton = await screen.findByText('Enrol now');
-        expect(enrolButton).not.toBeDisabled();
+        expect(enrolButton).toBeDisabled();
 
-        // Section picker should not be visible
         expect(screen.queryByTestId('sections-loading')).not.toBeInTheDocument();
+        expect(screen.getByText(/Not currently open for enrolment/i)).toBeInTheDocument();
     });
 
-    it('sections loading → CTA disabled regardless of sections_required', async () => {
-        mockCourseData = { ...mockCourse, enrolment_policy: 'open', sections_required: false };
+    it('cohort offerings loading → CTA disabled, loading skeleton shown', async () => {
+        mockCourseData = { ...mockCourse, enrolment_policy: 'open' };
         mockSectionsData = [];
         mockSectionsLoading = true; // Loading state
 
@@ -333,32 +328,19 @@ describe('CourseDetailPage - CTA Gating with sections_required', () => {
         expect(screen.getByTestId('sections-loading')).toBeInTheDocument();
     });
 
-    it('shows helper text when sections_required=false and sections exist', async () => {
-        mockCourseData = { ...mockCourse, enrolment_policy: 'open', sections_required: false };
+    it('shows the cohort as read-only info once offerings have loaded, not a picker', async () => {
+        mockCourseData = { ...mockCourse, enrolment_policy: 'open' };
         mockSectionsData = [
-            { id: 1, name: 'Section A', status: 'open' as const, start_date: '2024-02-01', capacity: 30, enrolled_count: 15 },
+            { id: 1, cohort_name: 'Cohort A', status: 'open' as const, start_date: '2024-02-01', capacity: 30, enrolled_count: 15 },
         ];
 
         renderPage();
 
-        // Helper text should be visible
         await waitFor(() => {
-            expect(screen.getByText(/Optional: choose a section to join a cohort, or enroll self-paced below/i)).toBeInTheDocument();
+            expect(screen.getByText('Cohort A')).toBeInTheDocument();
         });
-    });
-
-    it('does not show helper text when sections_required=true', async () => {
-        mockCourseData = { ...mockCourse, enrolment_policy: 'open', sections_required: true };
-        mockSectionsData = [
-            { id: 1, name: 'Section A', status: 'open' as const, start_date: '2024-02-01', capacity: 30, enrolled_count: 15 },
-        ];
-
-        renderPage();
-
-        // Helper text should NOT be visible
-        await waitFor(() => {
-            expect(screen.queryByText(/Optional: choose a section to join a cohort, or enroll self-paced below/i)).not.toBeInTheDocument();
-        });
+        expect(screen.queryByText(/Choose which cohort/i)).not.toBeInTheDocument();
+        expect(screen.queryByRole('radio')).not.toBeInTheDocument();
     });
 });
 
@@ -367,7 +349,11 @@ describe('CourseDetailPage - Application Journey & State Retention', () => {
         vi.clearAllMocks();
         mockAuthUser = mockStudent;
         mockGetProfileStatus.mockResolvedValue(completeProfileStatus);
-        mockSectionsData = [];
+        // Exactly one open cohort offering — auto-selected, so the CTA is clickable without
+        // an explicit selection step in these journey tests.
+        mockSectionsData = [
+            { id: 1, cohort_name: 'Cohort A', status: 'open' as const, start_date: '2024-02-01', capacity: 30, enrolled_count: 15 },
+        ];
         mockSectionsLoading = false;
         mockCourseData = { ...mockCourse };
         sessionStorage.clear();
@@ -399,7 +385,9 @@ describe('CourseDetailPage - Application Journey & State Retention', () => {
 
         renderPage();
 
-        await user.click(await screen.findByText('Apply to enrol'));
+        const applyButton = await screen.findByText('Apply to enrol');
+        await waitFor(() => expect(applyButton).not.toBeDisabled());
+        await user.click(applyButton);
 
         expect(await screen.findByTestId('application-modal')).toBeInTheDocument();
         expect(screen.queryByRole('dialog', { name: 'Complete your profile' })).not.toBeInTheDocument();
@@ -411,12 +399,37 @@ describe('CourseDetailPage - Application Journey & State Retention', () => {
 
         renderPage();
 
-        await user.click(await screen.findByText('Apply to enrol'));
+        const applyButton = await screen.findByText('Apply to enrol');
+        await waitFor(() => expect(applyButton).not.toBeDisabled());
+        await user.click(applyButton);
 
         await waitFor(() => {
             expect(JSON.parse(sessionStorage.getItem('pending_enrolment_intent') ?? 'null')).toEqual({
                 courseId: 1,
                 action: 'apply',
+            });
+        });
+        // The auth modal opens in place (no redirect) so the saved intent can resume the flow
+        await waitFor(() => {
+            expect(screen.getByText('Log in to Resnet Academy')).toBeInTheDocument();
+        });
+    });
+
+    it('saves guest intent with enrol action for open policy courses when unauthenticated', async () => {
+        mockAuthUser = null;
+        mockCourseData = { ...mockCourse, enrolment_policy: 'open' as const };
+        const user = userEvent.setup();
+
+        renderPage();
+
+        const enrolButton = await screen.findByText('Enrol now');
+        await waitFor(() => expect(enrolButton).not.toBeDisabled());
+        await user.click(enrolButton);
+
+        await waitFor(() => {
+            expect(JSON.parse(sessionStorage.getItem('pending_enrolment_intent') ?? 'null')).toEqual({
+                courseId: 1,
+                action: 'enrol',
             });
         });
         // The auth modal opens in place (no redirect) so the saved intent can resume the flow
@@ -435,6 +448,20 @@ describe('CourseDetailPage - Application Journey & State Retention', () => {
         expect(sessionStorage.getItem('pending_enrolment_intent')).toBeNull();
     });
 
+    it('auto-resumes the enrolment flow using the auto-selected cohort offering', async () => {
+        // Exactly one open cohort offering is seeded (see beforeEach), so it's auto-selected —
+        // the guest-intent auto-resume effect can then call enrol() without any extra click.
+        mockCourseData = { ...mockCourse, enrolment_policy: 'open' as const };
+        sessionStorage.setItem('pending_enrolment_intent', JSON.stringify({ courseId: 1, action: 'enrol' }));
+
+        renderPage();
+
+        await waitFor(() => {
+            expect(enrolMutateMock).toHaveBeenCalledWith({ courseId: 1, cohortCourseId: 1 });
+        });
+        expect(sessionStorage.getItem('pending_enrolment_intent')).toBeNull();
+    });
+
     it('ignores guest intent for a different course', async () => {
         sessionStorage.setItem('pending_enrolment_intent', JSON.stringify({ courseId: 999, action: 'apply' }));
 
@@ -442,6 +469,18 @@ describe('CourseDetailPage - Application Journey & State Retention', () => {
 
         await screen.findByText('Apply to enrol');
         expect(screen.queryByTestId('application-modal')).not.toBeInTheDocument();
+        // Intent for another course is left untouched
+        expect(sessionStorage.getItem('pending_enrolment_intent')).not.toBeNull();
+    });
+
+    it('ignores guest intent with enrol action for a different course', async () => {
+        mockCourseData = { ...mockCourse, enrolment_policy: 'open' as const };
+        sessionStorage.setItem('pending_enrolment_intent', JSON.stringify({ courseId: 999, action: 'enrol' }));
+
+        renderPage();
+
+        await screen.findByText('Enrol now');
+        expect(enrolMutateMock).not.toHaveBeenCalled();
         // Intent for another course is left untouched
         expect(sessionStorage.getItem('pending_enrolment_intent')).not.toBeNull();
     });

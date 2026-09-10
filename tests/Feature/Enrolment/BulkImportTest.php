@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Enums\EnrolmentSource;
 use App\Jobs\ImportEnrolmentsFromCsv;
+use App\Models\CohortCourse;
 use App\Models\Course;
 use App\Models\Enrolment;
 use App\Models\User;
@@ -19,16 +20,17 @@ it('does not create duplicate enrolments on repeated bulk import', function (): 
 
     $admin = User::factory()->admin()->create();
     $course = Course::factory()->create();
+    $cohortCourse = CohortCourse::factory()->for($course)->open()->create();
     $existingStudent = User::factory()->student()->create(['email' => 'already@resnet.test']);
     $newStudent = User::factory()->student()->create(['email' => 'new@resnet.test']);
 
-    app(EnrolmentService::class)->enrol($existingStudent, $course, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($existingStudent, $course, EnrolmentSource::Self, $cohortCourse->id);
 
     $csv = "email\nalready@resnet.test\nnew@resnet.test\n";
     $path = Storage::disk('local')->path('bulk.csv');
     Storage::disk('local')->put('bulk.csv', $csv);
 
-    $result = app(BulkEnrolmentImporter::class)->import($course, $path, $admin);
+    $result = app(BulkEnrolmentImporter::class)->import($cohortCourse, $path, $admin);
 
     expect($result['imported'])->toBe(1);
     expect($result['skipped'])->toHaveCount(1);
@@ -39,10 +41,11 @@ it('queues the CSV import instead of running it inline', function (): void {
     Bus::fake();
     $admin = User::factory()->admin()->create();
     $course = Course::factory()->create();
+    $cohortCourse = CohortCourse::factory()->for($course)->open()->create();
     $file = UploadedFile::fake()->createWithContent('roster.csv', "email\nsomeone@resnet.test\n");
 
     $response = $this->actingAs($admin)->postJson('/api/v1/enrolments/import', [
-        'course_id' => $course->id,
+        'cohort_course_id' => $cohortCourse->id,
         'file' => $file,
     ]);
 
@@ -53,10 +56,11 @@ it('queues the CSV import instead of running it inline', function (): void {
 it('denies bulk import to non-admins', function (): void {
     $instructor = User::factory()->instructor()->create();
     $course = Course::factory()->create();
+    $cohortCourse = CohortCourse::factory()->for($course)->open()->create();
     $file = UploadedFile::fake()->createWithContent('roster.csv', "email\nsomeone@resnet.test\n");
 
     $response = $this->actingAs($instructor)->postJson('/api/v1/enrolments/import', [
-        'course_id' => $course->id,
+        'cohort_course_id' => $cohortCourse->id,
         'file' => $file,
     ]);
 

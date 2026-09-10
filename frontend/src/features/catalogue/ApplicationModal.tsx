@@ -9,15 +9,16 @@ import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
 import { useSubmitCourseApplication } from '@/features/courseApplications/useCourseApplications';
 import { ApiError } from '@/lib/api/client';
-import type { Course } from '@/lib/api/types';
+import { cn } from '@/lib/utils';
+import type { Course, CourseApplication } from '@/lib/api/types';
 
 /**
- * Draft persistence: answers are saved to sessionStorage as the student types, so
- * leaving the modal (e.g. to complete the profile) never loses what was typed.
- * Cleared strictly on successful submission.
+ * Draft persistence: answers are saved to sessionStorage as the student answers each
+ * question, so leaving the modal (e.g. to complete the profile) never loses progress.
+ * Cleared strictly on successful submission. `null` means "not yet answered".
  */
 interface ApplicationDraft {
-    answers: string[];
+    answers: (boolean | null)[];
     portfolioUrl: string;
     alternativeProofText: string;
 }
@@ -28,7 +29,9 @@ function readApplicationDraft(storageKey: string): ApplicationDraft | null {
     try {
         const parsed = JSON.parse(saved) as Partial<ApplicationDraft>;
         return {
-            answers: Array.isArray(parsed.answers) ? parsed.answers.map((answer) => String(answer ?? '')) : [],
+            answers: Array.isArray(parsed.answers)
+                ? parsed.answers.map((answer) => (typeof answer === 'boolean' ? answer : null))
+                : [],
             portfolioUrl: typeof parsed.portfolioUrl === 'string' ? parsed.portfolioUrl : '',
             alternativeProofText: typeof parsed.alternativeProofText === 'string' ? parsed.alternativeProofText : '',
         };
@@ -37,16 +40,53 @@ function readApplicationDraft(storageKey: string): ApplicationDraft | null {
     }
 }
 
+// ─── Yes/No toggle for a single eligibility question ─────────────────────────
+
+function YesNoQuestion({
+    text,
+    value,
+    onChange,
+}: {
+    text: string;
+    value: boolean | null;
+    onChange: (value: boolean) => void;
+}) {
+    return (
+        <div>
+            <p className="mb-2 text-sm font-medium text-ink-900">{text}</p>
+            <div className="flex gap-2" role="radiogroup" aria-label={text}>
+                {([true, false] as const).map((option) => (
+                    <button
+                        key={String(option)}
+                        type="button"
+                        role="radio"
+                        aria-checked={value === option}
+                        onClick={() => onChange(option)}
+                        className={cn(
+                            'rounded-lg border px-4 py-1.5 text-sm font-medium transition-colors',
+                            value === option
+                                ? 'border-blue-600 bg-blue-600 text-white'
+                                : 'border-surface-200 bg-white text-ink-700 hover:border-blue-300',
+                        )}
+                    >
+                        {option ? 'Yes' : 'No'}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 export function ApplicationModal({
     course,
     onClose,
     onSubmitted,
-    sectionId,
+    cohortCourseId,
 }: {
     course: Course;
     onClose: () => void;
-    onSubmitted: () => void;
-    sectionId?: number;
+    onSubmitted: (application: CourseApplication) => void;
+    cohortCourseId: number;
 }) {
     const submitApplication = useSubmitCourseApplication();
     const navigate = useNavigate();
@@ -55,8 +95,8 @@ export function ApplicationModal({
 
     // Restore any saved draft once on mount (lazy initializers run in order)
     const [draft] = useState<ApplicationDraft | null>(() => readApplicationDraft(draftStorageKey));
-    const [answers, setAnswers] = useState<string[]>(() =>
-        questions.map((_, index) => draft?.answers[index] ?? ''),
+    const [answers, setAnswers] = useState<(boolean | null)[]>(() =>
+        questions.map((_, index) => draft?.answers[index] ?? null),
     );
     const [portfolioUrl, setPortfolioUrl] = useState(draft?.portfolioUrl ?? '');
     const [alternativeProof, setAlternativeProof] = useState(draft?.alternativeProofText ?? '');
@@ -74,7 +114,7 @@ export function ApplicationModal({
         }));
     };
 
-    const handleAnswerChange = (index: number, value: string) => {
+    const handleAnswerChange = (index: number, value: boolean) => {
         const updated = answers.map((answer, i) => (i === index ? value : answer));
         setAnswers(updated);
         persistDraft({ answers: updated, portfolioUrl, alternativeProofText: alternativeProof });
@@ -84,22 +124,27 @@ export function ApplicationModal({
         setError(null);
         setProfileIncompleteError(null);
 
+        if (answers.some((answer) => answer === null)) {
+            setError('Please answer every question before submitting.');
+            return;
+        }
+
         if (course.application_require_portfolio_url && !portfolioUrl.trim()) {
             setError('A portfolio/link URL is required for this course.');
             return;
         }
 
         try {
-            await submitApplication.mutateAsync({
+            const application = await submitApplication.mutateAsync({
                 course_id: course.id,
-                section_id: sectionId,
-                answers,
+                cohort_course_id: cohortCourseId,
+                answers: answers as boolean[],
                 portfolio_url: portfolioUrl.trim() || undefined,
                 alternative_proof_text: alternativeProof.trim() || undefined,
             });
             // Submission succeeded — the draft is now a real application, so drop it.
             sessionStorage.removeItem(draftStorageKey);
-            onSubmitted();
+            onSubmitted(application);
         } catch (err) {
             // Requirement 5.2, 5.3, 5.4: Detect 403 error with profile_incomplete code
             if (err instanceof ApiError && err.code === 'profile_incomplete') {
@@ -192,12 +237,11 @@ export function ApplicationModal({
                         )}
 
                         {questions.map((question, index) => (
-                            <Textarea
+                            <YesNoQuestion
                                 key={index}
-                                label={question}
-                                rows={3}
-                                value={answers[index] ?? ''}
-                                onChange={(e) => handleAnswerChange(index, e.target.value)}
+                                text={question.text}
+                                value={answers[index] ?? null}
+                                onChange={(value) => handleAnswerChange(index, value)}
                             />
                         ))}
 

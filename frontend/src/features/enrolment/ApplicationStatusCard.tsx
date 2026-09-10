@@ -40,9 +40,9 @@ export function ApplicationStatusCard({
             <h3 className="mt-3 text-lg">{application.course.title}</h3>
             <p className="mt-1 text-sm text-ink-600">
                 Applied {new Date(application.applied_at).toLocaleDateString()}
-                {application.section && (
+                {application.cohort_course && (
                     <span className="ml-2 text-ink-400">
-                        · Section: {application.section.name}
+                        · Cohort: {application.cohort_course.cohort_name}
                     </span>
                 )}
             </p>

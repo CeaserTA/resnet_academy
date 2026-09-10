@@ -12,6 +12,7 @@ use App\Models\Course;
 use App\Services\Notifications\NotificationDispatcher;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 
 final class AnnouncementController extends Controller
 {
@@ -28,13 +29,17 @@ final class AnnouncementController extends Controller
 
     public function store(StoreAnnouncementRequest $request, Course $course): AnnouncementResource
     {
-        $announcement = $course->announcements()->create([
-            'posted_by' => $request->user()->id,
-            'title' => $request->validated('title'),
-            'body' => $request->validated('body'),
-        ]);
+        $announcement = DB::transaction(function () use ($course, $request): Announcement {
+            $announcement = $course->announcements()->create([
+                'posted_by' => $request->user()->id,
+                'title' => $request->validated('title'),
+                'body' => $request->validated('body'),
+            ]);
 
-        $this->notificationDispatcher->notifyAnnouncementPosted($announcement->load('course'));
+            $this->notificationDispatcher->notifyAnnouncementPosted($announcement->load('course'));
+
+            return $announcement;
+        });
 
         return new AnnouncementResource($announcement->load('postedBy'));
     }

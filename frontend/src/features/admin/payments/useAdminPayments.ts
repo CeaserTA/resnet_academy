@@ -45,7 +45,8 @@ export function useRejectPaymentSubmission() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: rejectPaymentSubmission,
+        mutationFn: ({ submissionId, reason }: { submissionId: number; reason: string }) =>
+            rejectPaymentSubmission(submissionId, reason),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] });
             queryClient.invalidateQueries({ queryKey: ['admin', 'orders-summary'] });

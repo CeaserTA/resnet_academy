@@ -23,10 +23,22 @@ final class CourseApplicationResource extends JsonResource
             'status' => $this->status->value,
             'student' => new UserResource($this->whenLoaded('student')),
             'course' => new CourseResource($this->whenLoaded('course')),
-            'section' => $this->whenLoaded('section', fn () => $this->section
-                ? ['id' => $this->section->id, 'name' => $this->section->name, 'status' => $this->section->status->value]
+            'cohort_course' => $this->whenLoaded('cohortCourse', fn () => $this->cohortCourse
+                ? [
+                    'id' => $this->cohortCourse->id,
+                    'cohort_id' => $this->cohortCourse->cohort_id,
+                    'cohort_name' => $this->cohortCourse->cohort?->name,
+                    'status' => $this->cohortCourse->status->value,
+                ]
                 : null),
             'answers' => $this->answers,
+            'eligibility_score' => $this->eligibility_score,
+            'eligibility_passed' => $this->eligibility_passed,
+            'approved_automatically' => $this->approved_automatically,
+            // Transient — only present on the response returned immediately by submit/approve
+            // in this same request; never persisted, so it's absent on any application fetched
+            // any other way (review queue, dashboard reload, etc).
+            'enrolment_status' => $this->getAttribute('enrolment_status'),
             'portfolio_url' => $this->portfolio_url,
             'alternative_proof_text' => $this->alternative_proof_text,
             'rejection_reason' => $this->rejection_reason,

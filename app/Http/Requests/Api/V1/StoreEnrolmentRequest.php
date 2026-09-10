@@ -23,7 +23,14 @@ final class StoreEnrolmentRequest extends FormRequest
                 'integer',
                 Rule::exists('courses', 'id')->where('status', 'published'),
             ],
-            'section_id' => ['nullable', 'integer', 'exists:course_sections,id'],
+            // Scoped to the same course_id — mirrors StoreCourseApplicationRequest — so a
+            // mismatched pair fails validation with a clean 422 instead of falling through to
+            // EnrolmentService::enrol()'s firstOrFail() 404.
+            'cohort_course_id' => [
+                'required',
+                'integer',
+                Rule::exists('cohort_courses', 'id')->where('course_id', $this->integer('course_id')),
+            ],
         ];
     }
 }

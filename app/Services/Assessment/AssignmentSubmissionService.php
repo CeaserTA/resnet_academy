@@ -14,6 +14,7 @@ use App\Services\Audit\AuditLogger;
 use App\Services\Notifications\NotificationDispatcher;
 use App\Services\Progress\ProgressEngine;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -42,28 +43,39 @@ final class AssignmentSubmissionService
             ? $this->latePenaltyCalculator->penaltyPercentFor($assignment->latePenaltyPolicy, $assignment->due_at, $submittedAt)
             : 0.0;
 
-        $attemptNumber = AssignmentSubmission::query()
-            ->where('assignment_id', $assignment->id)
-            ->where('student_id', $student->id)
-            ->max('attempt_number') + 1;
+        // assignment_submissions has no unique constraint on (assignment_id, student_id,
+        // attempt_number), and there's no existing row to lockForUpdate() before a student's
+        // first submission. An atomic cache lock scoped to this student+assignment prevents two
+        // concurrent submissions (e.g. a double-click) from both computing the same
+        // attempt_number, without serializing unrelated students submitting the same assignment.
+        $lock = Cache::lock("assignment-submission:{$assignment->id}:{$student->id}", 10);
 
-        $submission = AssignmentSubmission::create([
-            'assignment_id' => $assignment->id,
-            'student_id' => $student->id,
-            'attempt_number' => $attemptNumber,
-            'file_url' => $data['file_url'] ?? null,
-            'text_content' => $data['text_content'] ?? null,
-            'submitted_at' => $submittedAt,
-            'is_late' => $isLate,
-            'late_penalty_percent' => $penaltyPercent,
-            'status' => SubmissionStatus::Submitted,
-        ]);
+        return $lock->block(5, function () use ($student, $assignment, $submittedAt, $isLate, $penaltyPercent, $data): AssignmentSubmission {
+            return DB::transaction(function () use ($student, $assignment, $submittedAt, $isLate, $penaltyPercent, $data): AssignmentSubmission {
+                $attemptNumber = AssignmentSubmission::query()
+                    ->where('assignment_id', $assignment->id)
+                    ->where('student_id', $student->id)
+                    ->max('attempt_number') + 1;
 
-        $this->engagementTracker->track($student, $assignment->module->course, 'assignment_submitted', ['assignment_id' => $assignment->id]);
+                $submission = AssignmentSubmission::create([
+                    'assignment_id' => $assignment->id,
+                    'student_id' => $student->id,
+                    'attempt_number' => $attemptNumber,
+                    'file_url' => $data['file_url'] ?? null,
+                    'text_content' => $data['text_content'] ?? null,
+                    'submitted_at' => $submittedAt,
+                    'is_late' => $isLate,
+                    'late_penalty_percent' => $penaltyPercent,
+                    'status' => SubmissionStatus::Submitted,
+                ]);
 
-        $this->progressEngine->rollupModuleCompletion($student, $assignment->module);
+                $this->engagementTracker->track($student, $assignment->module->course, 'assignment_submitted', ['assignment_id' => $assignment->id]);
 
-        return $submission;
+                $this->progressEngine->rollupModuleCompletion($student, $assignment->module);
+
+                return $submission;
+            });
+        });
     }
 
     /**

@@ -24,7 +24,7 @@ final class UpdateModuleRequest extends FormRequest
             'order_index' => ['sometimes', 'required', 'integer', 'min:0'],
             'scheduled_start_at' => ['nullable', 'date'],
             'group_ids' => ['nullable', 'array'],
-            'group_ids.*' => [Rule::exists('groups_cohorts', 'id')->where('course_id', $module->course_id)],
+            'group_ids.*' => [Rule::exists('groups', 'id')->where('course_id', $module->course_id)],
         ];
     }
 }

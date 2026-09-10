@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Alert } from '@/components/ui/Alert';
-import { cn } from '@/lib/utils';
 
 /**
  * ForumsIndexPage - Unified view of all forums from enrolled courses
@@ -123,7 +122,7 @@ export function ForumsIndexPage() {
                                     {forum.unread_count > 0 && (
                                         <Badge
                                             label={`${forum.unread_count} unread`}
-                                            tone="info"
+                                            tone="progress"
                                         />
                                     )}
                                 </div>

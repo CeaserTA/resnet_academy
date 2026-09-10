@@ -21,6 +21,7 @@ final class PaymentSubmission extends Model
         'receipt_path',
         'receipt_original_name',
         'status',
+        'rejection_reason',
         'reviewed_by',
         'reviewed_at',
     ];

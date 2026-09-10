@@ -38,11 +38,14 @@ function makeEnrolment(overrides: Partial<AdminEnrolment> & Pick<AdminEnrolment,
     return {
         student: { id: 10, name: 'Amara Kintu', email: 'amara@example.com' },
         course: { id: 1, title: 'Advanced Laravel', enrolment_policy: 'application' },
-        section: { id: 5, name: 'Cohort 3' },
+        cohort_course: { id: 5, cohort_id: 1, cohort_name: 'Cohort 3' },
         status: 'confirmed',
         source: 'self',
         progress_percent: 40,
         applied_at: '2026-07-18T09:12:00Z',
+        transfer_requested_at: null,
+        withdrawal_note: null,
+        order: null,
         created_at: '2026-07-18T09:12:00Z',
         ...overrides,
     };
@@ -54,33 +57,42 @@ const { MOCK_ENROLMENTS } = vi.hoisted(() => {
             id: 1,
             student: { id: 10, name: 'Amara Kintu', email: 'amara@example.com' },
             course: { id: 1, title: 'Advanced Laravel', enrolment_policy: 'application' },
-            section: { id: 5, name: 'Cohort 3' },
+            cohort_course: { id: 5, cohort_id: 1, cohort_name: 'Cohort 3' },
             status: 'confirmed',
             source: 'self',
             progress_percent: 40,
             applied_at: '2026-07-18T09:12:00Z',
+            transfer_requested_at: null,
+            withdrawal_note: null,
+            order: null,
             created_at: '2026-07-18T09:12:00Z',
         },
         {
             id: 2,
             student: { id: 11, name: 'Priya Shah', email: 'priya@example.com' },
             course: { id: 2, title: 'UX Design Fundamentals', enrolment_policy: 'open' },
-            section: null,
+            cohort_course: null,
             status: 'waitlisted',
             source: 'admin_bulk',
             progress_percent: 0,
             applied_at: '2026-07-17T11:05:00Z',
+            transfer_requested_at: null,
+            withdrawal_note: null,
+            order: null,
             created_at: '2026-07-17T11:05:00Z',
         },
         {
             id: 3,
             student: { id: 12, name: 'Kevin Ssemwogerere', email: 'kevin@example.com' },
             course: { id: 2, title: 'UX Design Fundamentals', enrolment_policy: 'open' },
-            section: null,
+            cohort_course: null,
             status: 'withdrawn',
             source: 'self',
             progress_percent: 10,
             applied_at: '2026-07-16T10:20:00Z',
+            transfer_requested_at: null,
+            withdrawal_note: null,
+            order: null,
             created_at: '2026-07-16T10:20:00Z',
         },
     ];
@@ -140,8 +152,8 @@ it('renders the roster with student, course, derived source labels and status ba
     // Course title appears both in the filter select and in the row.
     expect(screen.getAllByText('Advanced Laravel')).toHaveLength(2);
     expect(screen.getByText('Cohort 3')).toBeInTheDocument();
-    // Two rows have no section.
-    expect(screen.getAllByText('Self-paced')).toHaveLength(2);
+    // Two rows have no cohort offering.
+    expect(screen.getAllByText('—')).toHaveLength(2);
 
     // Source labels: approved-application enrolments keep source "self" server-side.
     expect(screen.getByText('Approved Application')).toBeInTheDocument();

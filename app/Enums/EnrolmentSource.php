@@ -8,4 +8,5 @@ enum EnrolmentSource: string
 {
     case Self = 'self';
     case AdminBulk = 'admin_bulk';
+    case Transfer = 'transfer';
 }

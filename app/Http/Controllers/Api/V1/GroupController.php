@@ -10,7 +10,7 @@ use App\Http\Requests\Api\V1\StoreGroupRequest;
 use App\Http\Requests\Api\V1\UpdateGroupRequest;
 use App\Http\Resources\GroupResource;
 use App\Models\Course;
-use App\Models\GroupsCohort;
+use App\Models\Group;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
@@ -28,14 +28,14 @@ final class GroupController extends Controller
         return new GroupResource($group->load('members'));
     }
 
-    public function update(UpdateGroupRequest $request, GroupsCohort $group): GroupResource
+    public function update(UpdateGroupRequest $request, Group $group): GroupResource
     {
         $group->update($request->validated());
 
         return new GroupResource($group->load('members'));
     }
 
-    public function destroy(GroupsCohort $group): Response
+    public function destroy(Group $group): Response
     {
         $this->authorize('delete', $group);
 
@@ -44,14 +44,14 @@ final class GroupController extends Controller
         return response()->noContent();
     }
 
-    public function addMember(AddGroupMemberRequest $request, GroupsCohort $group): GroupResource
+    public function addMember(AddGroupMemberRequest $request, Group $group): GroupResource
     {
         $group->members()->syncWithoutDetaching([$request->validated('student_id') => ['added_at' => now()]]);
 
         return new GroupResource($group->load('members'));
     }
 
-    public function removeMember(GroupsCohort $group, int $student): Response
+    public function removeMember(Group $group, int $student): Response
     {
         $this->authorize('update', $group);
 

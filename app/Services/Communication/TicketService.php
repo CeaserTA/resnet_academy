@@ -44,21 +44,23 @@ final class TicketService
 
     public function reply(Ticket $ticket, User $sender, string $body): TicketMessage
     {
-        $message = TicketMessage::create([
-            'ticket_id' => $ticket->id,
-            'sender_id' => $sender->id,
-            'body' => $body,
-        ]);
+        return DB::transaction(function () use ($ticket, $sender, $body): TicketMessage {
+            $message = TicketMessage::create([
+                'ticket_id' => $ticket->id,
+                'sender_id' => $sender->id,
+                'body' => $body,
+            ]);
 
-        if ($sender->id === $ticket->student_id) {
-            if ($ticket->assigned_to !== null) {
-                $this->notificationDispatcher->notifyTicketReply($ticket->assignedTo, $ticket, $sender);
+            if ($sender->id === $ticket->student_id) {
+                if ($ticket->assigned_to !== null) {
+                    $this->notificationDispatcher->notifyTicketReply($ticket->assignedTo, $ticket, $sender);
+                }
+            } else {
+                $this->notificationDispatcher->notifyTicketReply($ticket->student, $ticket, $sender);
             }
-        } else {
-            $this->notificationDispatcher->notifyTicketReply($ticket->student, $ticket, $sender);
-        }
 
-        return $message;
+            return $message;
+        });
     }
 
     /**

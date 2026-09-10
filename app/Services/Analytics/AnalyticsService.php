@@ -14,6 +14,8 @@ use App\Models\Assignment;
 use App\Models\AssignmentSubmission;
 use App\Models\AuditLog;
 use App\Models\Certificate;
+use App\Models\Cohort;
+use App\Models\CohortCourse;
 use App\Models\Course;
 use App\Models\CourseReview;
 use App\Models\EngagementEvent;
@@ -117,6 +119,59 @@ final class AnalyticsService
     }
 
     /**
+     * Cohort-level reporting for the admin: per-course-offering enrolment/completion counts
+     * plus cohort totals — how many students have completed, are still in progress, withdrew,
+     * or are waitlisted, broken down by each course offered in the cohort.
+     *
+     * Completion reuses the same signal as `courseAnalytics()`: a `Certificate` row is issued
+     * once per (student, course) regardless of which cohort they took it in, so no separate
+     * cohort-scoped completion signal is needed — enrolments are scoped by `cohort_course_id`
+     * so offerings of the same course in different cohorts don't bleed into each other.
+     *
+     * @return array<string, mixed>
+     */
+    public function cohortAnalytics(Cohort $cohort): array
+    {
+        $cohortCourses = $cohort->cohortCourses()->with('course')->get();
+
+        $courses = $cohortCourses->map(function (CohortCourse $cohortCourse): array {
+            $enrolments = Enrolment::query()
+                ->where('cohort_course_id', $cohortCourse->id)
+                ->get();
+
+            $confirmed = $enrolments->where('status', EnrolmentStatus::Confirmed);
+
+            $completedStudentIds = Certificate::query()
+                ->where('course_id', $cohortCourse->course_id)
+                ->pluck('student_id');
+
+            $completedCount = $completedStudentIds->intersect($confirmed->pluck('student_id'))->count();
+
+            return [
+                'cohort_course_id' => $cohortCourse->id,
+                'course' => ['id' => $cohortCourse->course->id, 'title' => $cohortCourse->course->title],
+                'total_enrolled' => $confirmed->count(),
+                'completed' => $completedCount,
+                'in_progress' => $confirmed->count() - $completedCount,
+                'withdrawn' => $enrolments->where('status', EnrolmentStatus::Withdrawn)->count(),
+                'waitlisted' => $enrolments->where('status', EnrolmentStatus::Waitlisted)->count(),
+            ];
+        })->values();
+
+        return [
+            'cohort' => ['id' => $cohort->id, 'name' => $cohort->name, 'status' => $cohort->status->value],
+            'courses' => $courses->all(),
+            'totals' => [
+                'total_enrolled' => $courses->sum('total_enrolled'),
+                'completed' => $courses->sum('completed'),
+                'in_progress' => $courses->sum('in_progress'),
+                'withdrawn' => $courses->sum('withdrawn'),
+                'waitlisted' => $courses->sum('waitlisted'),
+            ],
+        ];
+    }
+
+    /**
      * "Send Mass Notice" — sends a real in-app reminder (`NotificationDispatcher` has no
      * email/SMS/push fan-out yet, see its own class doc) to every student currently flagged
      * at-risk by the same rule `courseAnalytics()` uses.
@@ -134,9 +189,11 @@ final class AnalyticsService
 
         $atRiskEnrolments = $this->atRiskEnrolments($course, $enrolments, $completedStudentIds, $lastEngagementByStudent);
 
-        foreach ($atRiskEnrolments as $enrolment) {
-            $this->notificationDispatcher->notifyAtRiskReminder($enrolment->student, $course, $message);
-        }
+        DB::transaction(function () use ($atRiskEnrolments, $course, $message): void {
+            foreach ($atRiskEnrolments as $enrolment) {
+                $this->notificationDispatcher->notifyAtRiskReminder($enrolment->student, $course, $message);
+            }
+        });
 
         return $atRiskEnrolments->count();
     }

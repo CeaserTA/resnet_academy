@@ -20,7 +20,7 @@ final class EnrolmentImportController extends Controller
         $storedPath = $request->file('file')->store('enrolment-imports');
 
         ImportEnrolmentsFromCsv::dispatch(
-            $request->validated('course_id'),
+            $request->validated('cohort_course_id'),
             $storedPath,
             $request->user()->id,
         );

@@ -8,6 +8,7 @@ use App\Models\Assignment;
 use App\Models\AssignmentSubmission;
 use App\Models\Certificate;
 use App\Models\Course;
+use App\Models\CohortCourse;
 use App\Models\EngagementEvent;
 use App\Models\Module;
 use App\Models\ModuleProgress;
@@ -22,7 +23,7 @@ beforeEach(function (): void {
 
 function enrolBackdated(Course $course, User $student, int $daysAgo): void
 {
-    $enrolment = app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self);
+    $enrolment = app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
     $enrolment->update(['applied_at' => now()->subDays($daysAgo)]);
 }
 

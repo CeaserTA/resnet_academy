@@ -4,11 +4,17 @@ import { Spinner } from '@/components/ui/Spinner';
 import { CourseCard } from '@/features/catalogue/CourseCard';
 import { courseImageMap, courseDurationMap } from '@/features/catalogue/courseImages';
 import { useCourses } from '@/features/catalogue/useCourses';
+import { usePublicCohortOfferings } from '@/features/cohorts/useCohorts';
 
 export function CoursePreviews() {
-  const { data, isLoading } = useCourses({ status: 'published' });
+  const { data, isLoading: coursesLoading } = useCourses({ status: 'published' });
+  const { data: cohortOfferings, isLoading: offeringsLoading } = usePublicCohortOfferings();
+  const isLoading = coursesLoading || offeringsLoading;
+
+  // Only preview courses that actually have a cohort to enrol into.
+  const courseIdsWithCohorts = new Set((cohortOfferings ?? []).map((offering) => offering.course.id));
   // Show first 3 on the homepage; full list is on /courses
-  const courses = (data?.data ?? []).slice(0, 3);
+  const courses = (data?.data ?? []).filter((c) => courseIdsWithCohorts.has(c.id)).slice(0, 3);
 
   return (
     <section id="courses" className="border-t border-[#e8ecf1] bg-[#eff6ff] px-4 py-14 sm:px-6 lg:px-8">

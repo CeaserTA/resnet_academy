@@ -23,6 +23,10 @@ const TONE_CLASSES: Record<BadgeTone, { icon: string; value: string }> = {
         icon: 'bg-danger-600/10 text-danger-600',
         value: 'text-danger-600',
     },
+    info: {
+        icon: 'bg-cyan-600/10 text-cyan-600',
+        value: 'text-cyan-600',
+    },
 };
 
 interface StatWidgetProps {

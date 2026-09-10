@@ -32,7 +32,11 @@ final class StoreCourseRequest extends FormRequest
             'enrolment_policy' => ['sometimes', new Enum(CourseEnrolmentPolicy::class)],
             'advisory_require_attestation' => ['nullable', 'boolean'],
             'application_questions' => ['nullable', 'array', 'max:10'],
-            'application_questions.*' => ['string', 'max:300'],
+            'application_questions.*.text' => ['required', 'string', 'max:300'],
+            'application_questions.*.correct_answer' => ['required', 'boolean'],
+            // Minimum % of eligibility questions a student must answer correctly to be
+            // auto-enrolled instead of waiting on manual review — null defaults to 100.
+            'application_pass_threshold' => ['nullable', 'integer', 'min:1', 'max:100'],
             'application_allow_alternative_proof' => ['nullable', 'boolean'],
             'application_require_portfolio_url' => ['nullable', 'boolean'],
             // Either paste a URL or upload an image — 'thumbnail' takes precedence when both are

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Enums\CohortStatus;
+use App\Enums\CourseSectionStatus;
 use App\Enums\EnrolmentSource;
 use App\Enums\EnrolmentStatus;
 use App\Enums\EvaluationAttemptStatus;
@@ -28,6 +30,8 @@ use App\Models\AssignmentSubmissionRubricScore;
 use App\Models\AuditLog;
 use App\Models\Category;
 use App\Models\Certificate;
+use App\Models\Cohort;
+use App\Models\CohortCourse;
 use App\Models\Conversation;
 use App\Models\Course;
 use App\Models\CourseChangeLog;
@@ -39,7 +43,7 @@ use App\Models\EvaluationAttempt;
 use App\Models\EvaluationAttemptAnswer;
 use App\Models\ForumPost;
 use App\Models\ForumPostReport;
-use App\Models\GroupsCohort;
+use App\Models\Group;
 use App\Models\LatePenaltyPolicy;
 use App\Models\LiveSessionAttendance;
 use App\Models\Message;
@@ -118,7 +122,8 @@ final class DatabaseSeeder extends Seeder
         $this->seedModuleItems($resources, $assignments, $evaluations);
         $this->seedProgressTracking($students, $resources, $modules);
 
-        $enrolments = $this->seedEnrolments($students, $courses);
+        $cohortCoursesByCourseId = $this->seedCohorts($courses, $admins);
+        $enrolments = $this->seedEnrolments($students, $courses, $cohortCoursesByCourseId);
         $orders = $this->seedOrders($enrolments);
         $this->seedPaymentSubmissions($orders, $admins);
         $this->seedCertificates($enrolments);
@@ -232,13 +237,13 @@ final class DatabaseSeeder extends Seeder
     }
 
     /**
-     * @return Collection<int, GroupsCohort>
+     * @return Collection<int, Group>
      */
     private function seedGroupsAndMembers(Collection $courses, Collection $students): Collection
     {
-        $groups = $courses->map(fn (Course $course): GroupsCohort => GroupsCohort::factory()->create(['course_id' => $course->id]));
+        $groups = $courses->map(fn (Course $course): Group => Group::factory()->create(['course_id' => $course->id]));
 
-        $groups->each(function (GroupsCohort $group, int $i) use ($students): void {
+        $groups->each(function (Group $group, int $i) use ($students): void {
             $picks = [$students[$i % $students->count()], $students[($i + 1) % $students->count()], $students[($i + 2) % $students->count()]];
 
             foreach (array_unique(array_map(fn (User $u): int => $u->id, $picks)) as $studentId) {
@@ -626,9 +631,40 @@ final class DatabaseSeeder extends Seeder
     }
 
     /**
+     * Every seeded course is offered under one shared "September 2026 Intake" cohort — the
+     * demo data is deliberately simple; admins build real multi-cohort structures by hand
+     * through the cohort management UI.
+     *
+     * @return Collection<int, CohortCourse> keyed by course_id
+     */
+    private function seedCohorts(Collection $courses, Collection $admins): Collection
+    {
+        $cohort = Cohort::create([
+            'name' => 'September 2026 Intake',
+            'start_date' => now()->subMonth(),
+            'end_date' => now()->addMonths(5),
+            'application_deadline' => now()->subMonths(2),
+            'status' => CohortStatus::Published,
+            'created_by' => $admins->first()->id,
+        ]);
+
+        return $courses->mapWithKeys(fn (Course $course): array => [
+            $course->id => CohortCourse::create([
+                'cohort_id' => $cohort->id,
+                'course_id' => $course->id,
+                'capacity' => null,
+                'seats_taken' => 0,
+                'status' => CourseSectionStatus::Open,
+                'primary_instructor_id' => null,
+            ]),
+        ]);
+    }
+
+    /**
+     * @param  Collection<int, CohortCourse>  $cohortCoursesByCourseId  keyed by course_id
      * @return Collection<int, Enrolment>
      */
-    private function seedEnrolments(Collection $students, Collection $courses): Collection
+    private function seedEnrolments(Collection $students, Collection $courses, Collection $cohortCoursesByCourseId): Collection
     {
         $enrolments = new Collection;
         $used = [];
@@ -647,6 +683,7 @@ final class DatabaseSeeder extends Seeder
             $enrolments->push(Enrolment::create([
                 'student_id' => $student->id,
                 'course_id' => $course->id,
+                'cohort_course_id' => $cohortCoursesByCourseId[$course->id]->id,
                 'status' => EnrolmentStatus::Confirmed,
                 'source' => $i % 4 === 0 ? EnrolmentSource::AdminBulk : EnrolmentSource::Self,
                 'applied_at' => $appliedAt,

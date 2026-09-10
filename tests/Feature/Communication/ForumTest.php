@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Enums\EnrolmentSource;
 use App\Models\Course;
+use App\Models\CohortCourse;
 use App\Models\ForumPost;
 use App\Models\ForumTag;
 use App\Models\ForumThread;
@@ -21,7 +22,7 @@ function setUpForumCourseWithStudent(): array
     $student = User::factory()->student()->create();
     $course = Course::factory()->create(['created_by' => $admin->id]);
     $course->instructors()->attach($instructor->id, ['is_primary' => true, 'assigned_at' => now()]);
-    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
 
     return compact('admin', 'instructor', 'student', 'course');
 }
@@ -29,7 +30,7 @@ function setUpForumCourseWithStudent(): array
 it('lets an enrolled student create a discussion and reply, notifying the discussion author', function (): void {
     ['student' => $student, 'course' => $course] = setUpForumCourseWithStudent();
     $otherStudentEnrolled = User::factory()->student()->create();
-    app(EnrolmentService::class)->enrol($otherStudentEnrolled, $course, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($otherStudentEnrolled, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
 
     $thread = $this->actingAs($student)->postJson("/api/v1/courses/{$course->id}/forum/threads", [
         'title' => 'When does it unlock?',
@@ -140,7 +141,7 @@ it('lets the author edit their own discussion body and swap its attachment', fun
 it('denies a non-owner from editing someone else\'s discussion', function (): void {
     ['student' => $student, 'course' => $course] = setUpForumCourseWithStudent();
     $otherStudent = User::factory()->student()->create();
-    app(EnrolmentService::class)->enrol($otherStudent, $course, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($otherStudent, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
 
     $created = $this->actingAs($student)->postJson("/api/v1/courses/{$course->id}/forum/threads", [
         'title' => 'Original title',
@@ -194,7 +195,7 @@ it('deletes only a reply post, leaving the discussion and other replies intact',
 it('scopes the "mine" filter to the caller\'s own discussions', function (): void {
     ['student' => $student, 'course' => $course] = setUpForumCourseWithStudent();
     $otherStudent = User::factory()->student()->create();
-    app(EnrolmentService::class)->enrol($otherStudent, $course, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($otherStudent, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
 
     $this->actingAs($student)->postJson("/api/v1/courses/{$course->id}/forum/threads", ['title' => 'Mine', 'body' => 'Mine.'])
         ->assertCreated();
@@ -387,7 +388,7 @@ it('bumps last_activity_at when a reply is posted, but not on an edit', function
 it('marks a discussion read on open, flipping unread to false on the next list fetch', function (): void {
     ['student' => $student, 'course' => $course] = setUpForumCourseWithStudent();
     $otherStudent = User::factory()->student()->create();
-    app(EnrolmentService::class)->enrol($otherStudent, $course, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($otherStudent, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
 
     $created = $this->actingAs($otherStudent)->postJson("/api/v1/courses/{$course->id}/forum/threads", [
         'title' => 'Unread test',

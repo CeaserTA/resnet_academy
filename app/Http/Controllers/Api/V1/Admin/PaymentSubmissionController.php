@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Admin\RejectPaymentSubmissionRequest;
 use App\Http\Resources\PaymentSubmissionResource;
 use App\Models\PaymentSubmission;
 use App\Models\User;
@@ -28,11 +29,13 @@ final class PaymentSubmissionController extends Controller
         return new PaymentSubmissionResource($submission);
     }
 
-    public function reject(Request $request, PaymentSubmission $paymentSubmission): PaymentSubmissionResource
+    public function reject(RejectPaymentSubmissionRequest $request, PaymentSubmission $paymentSubmission): PaymentSubmissionResource
     {
-        $this->authorize('update', User::class);
-
-        $submission = $this->paymentSubmissionService->reject($paymentSubmission, $request->user());
+        $submission = $this->paymentSubmissionService->reject(
+            $paymentSubmission,
+            $request->user(),
+            $request->validated('reason'),
+        );
 
         return new PaymentSubmissionResource($submission);
     }

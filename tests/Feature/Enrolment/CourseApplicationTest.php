@@ -5,9 +5,9 @@ declare(strict_types=1);
 use App\Enums\CourseApplicationStatus;
 use App\Enums\CourseEnrolmentPolicy;
 use App\Enums\CourseSectionStatus;
+use App\Models\CohortCourse;
 use App\Models\Course;
 use App\Models\CourseApplication;
-use App\Models\CourseSection;
 use App\Models\Enrolment;
 use App\Models\User;
 use Illuminate\Support\Facades\Bus;
@@ -27,10 +27,12 @@ it('still allows direct enrolment for Open and Advisory courses', function (): v
     $student = User::factory()->student()->create();
     $open = Course::factory()->create(['enrolment_policy' => CourseEnrolmentPolicy::Open]);
     $advisory = Course::factory()->create(['enrolment_policy' => CourseEnrolmentPolicy::Advisory]);
+    $openCohortCourse = CohortCourse::factory()->for($open)->open()->create();
+    $advisoryCohortCourse = CohortCourse::factory()->for($advisory)->open()->create();
 
-    $this->actingAs($student)->postJson('/api/v1/enrolments', ['course_id' => $open->id])->assertCreated();
+    $this->actingAs($student)->postJson('/api/v1/enrolments', ['course_id' => $open->id, 'cohort_course_id' => $openCohortCourse->id])->assertCreated();
     $this->actingAs(User::factory()->student()->create())
-        ->postJson('/api/v1/enrolments', ['course_id' => $advisory->id])
+        ->postJson('/api/v1/enrolments', ['course_id' => $advisory->id, 'cohort_course_id' => $advisoryCohortCourse->id])
         ->assertCreated();
 });
 
@@ -38,12 +40,16 @@ it('submits an application for an Application-policy course', function (): void 
     $student = User::factory()->student()->create();
     $course = Course::factory()->create([
         'enrolment_policy' => CourseEnrolmentPolicy::Application,
-        'application_questions' => ['Why do you want to take this course?'],
+        // Answered incorrectly below, so this stays pending — auto-approval is covered by its
+        // own tests further down.
+        'application_questions' => [['text' => 'Do you have prior coding experience?', 'correct_answer' => true]],
     ]);
+    $cohortCourse = CohortCourse::factory()->for($course)->open()->create();
 
     $response = $this->actingAs($student)->postJson('/api/v1/course-applications', [
         'course_id' => $course->id,
-        'answers' => ['Because I want to level up.'],
+        'cohort_course_id' => $cohortCourse->id,
+        'answers' => [false],
         'portfolio_url' => 'https://example.com/portfolio',
         'alternative_proof_text' => 'I built a side project.',
     ]);
@@ -53,7 +59,121 @@ it('submits an application for an Application-policy course', function (): void 
         'student_id' => $student->id,
         'course_id' => $course->id,
         'status' => 'pending',
+        'eligibility_score' => 0,
+        'eligibility_passed' => false,
     ]);
+});
+
+it('auto-approves and enrols a student who clears the course pass threshold', function (): void {
+    Bus::fake();
+    $student = User::factory()->student()->create();
+    $course = Course::factory()->create([
+        'enrolment_policy' => CourseEnrolmentPolicy::Application,
+        'application_questions' => [
+            ['text' => 'Do you have prior coding experience?', 'correct_answer' => true],
+            ['text' => 'Can you commit 10 hours a week?', 'correct_answer' => true],
+        ],
+        'application_pass_threshold' => 50,
+    ]);
+    $cohortCourse = CohortCourse::factory()->for($course)->open()->create();
+
+    // One right, one wrong — 50%, exactly meeting the threshold.
+    $response = $this->actingAs($student)->postJson('/api/v1/course-applications', [
+        'course_id' => $course->id,
+        'cohort_course_id' => $cohortCourse->id,
+        'answers' => [true, false],
+    ]);
+
+    $response->assertCreated();
+    $response->assertJsonPath('data.status', 'approved');
+    $response->assertJsonPath('data.eligibility_score', 50);
+    $response->assertJsonPath('data.eligibility_passed', true);
+    $response->assertJsonPath('data.approved_automatically', true);
+    $response->assertJsonPath('data.enrolment_status', 'confirmed');
+    $this->assertDatabaseHas('course_applications', [
+        'student_id' => $student->id,
+        'course_id' => $course->id,
+        'status' => 'approved',
+        'approved_automatically' => true,
+        'reviewed_by' => null,
+    ]);
+    $this->assertDatabaseHas('enrolments', [
+        'student_id' => $student->id,
+        'course_id' => $course->id,
+        'status' => 'confirmed',
+    ]);
+});
+
+it('falls back to manual review when eligibility answers score below the pass threshold', function (): void {
+    $student = User::factory()->student()->create();
+    $course = Course::factory()->create([
+        'enrolment_policy' => CourseEnrolmentPolicy::Application,
+        'application_questions' => [
+            ['text' => 'Do you have prior coding experience?', 'correct_answer' => true],
+            ['text' => 'Can you commit 10 hours a week?', 'correct_answer' => true],
+        ],
+        'application_pass_threshold' => 80,
+    ]);
+    $cohortCourse = CohortCourse::factory()->for($course)->open()->create();
+
+    // 50% — below the 80% threshold.
+    $response = $this->actingAs($student)->postJson('/api/v1/course-applications', [
+        'course_id' => $course->id,
+        'cohort_course_id' => $cohortCourse->id,
+        'answers' => [true, false],
+    ]);
+
+    $response->assertCreated();
+    $response->assertJsonPath('data.status', 'pending');
+    $response->assertJsonPath('data.eligibility_score', 50);
+    $response->assertJsonPath('data.eligibility_passed', false);
+    $this->assertDatabaseMissing('enrolments', ['student_id' => $student->id, 'course_id' => $course->id]);
+});
+
+it('falls back to manual review when the course defines no eligibility questions', function (): void {
+    $student = User::factory()->student()->create();
+    $course = Course::factory()->create(['enrolment_policy' => CourseEnrolmentPolicy::Application]);
+    $cohortCourse = CohortCourse::factory()->for($course)->open()->create();
+
+    $response = $this->actingAs($student)->postJson('/api/v1/course-applications', [
+        'course_id' => $course->id,
+        'cohort_course_id' => $cohortCourse->id,
+        'answers' => [],
+    ]);
+
+    $response->assertCreated();
+    $response->assertJsonPath('data.status', 'pending');
+    $response->assertJsonPath('data.eligibility_score', null);
+    $response->assertJsonPath('data.eligibility_passed', false);
+});
+
+it('defaults the pass threshold to 100% when the course does not set one', function (): void {
+    Bus::fake();
+    $student = User::factory()->student()->create();
+    $course = Course::factory()->create([
+        'enrolment_policy' => CourseEnrolmentPolicy::Application,
+        'application_questions' => [
+            ['text' => 'Do you have prior coding experience?', 'correct_answer' => true],
+            ['text' => 'Can you commit 10 hours a week?', 'correct_answer' => true],
+        ],
+        'application_pass_threshold' => null,
+    ]);
+    $cohortCourse = CohortCourse::factory()->for($course)->open()->create();
+
+    // One right, one wrong is not good enough when the default threshold is 100%.
+    $partial = $this->actingAs($student)->postJson('/api/v1/course-applications', [
+        'course_id' => $course->id,
+        'cohort_course_id' => $cohortCourse->id,
+        'answers' => [true, false],
+    ]);
+    $partial->assertJsonPath('data.status', 'pending');
+
+    $fullMarks = $this->actingAs(User::factory()->student()->create())->postJson('/api/v1/course-applications', [
+        'course_id' => $course->id,
+        'cohort_course_id' => $cohortCourse->id,
+        'answers' => [true, true],
+    ]);
+    $fullMarks->assertJsonPath('data.status', 'approved');
 });
 
 it('rejects an application for a non-Application-policy course', function (): void {
@@ -68,9 +188,10 @@ it('rejects an application for a non-Application-policy course', function (): vo
 it('rejects a duplicate pending application to the same course', function (): void {
     $student = User::factory()->student()->create();
     $course = Course::factory()->create(['enrolment_policy' => CourseEnrolmentPolicy::Application]);
+    $cohortCourse = CohortCourse::factory()->for($course)->open()->create();
 
-    $this->actingAs($student)->postJson('/api/v1/course-applications', ['course_id' => $course->id, 'answers' => []])->assertCreated();
-    $response = $this->actingAs($student)->postJson('/api/v1/course-applications', ['course_id' => $course->id, 'answers' => []]);
+    $this->actingAs($student)->postJson('/api/v1/course-applications', ['course_id' => $course->id, 'cohort_course_id' => $cohortCourse->id, 'answers' => []])->assertCreated();
+    $response = $this->actingAs($student)->postJson('/api/v1/course-applications', ['course_id' => $course->id, 'cohort_course_id' => $cohortCourse->id, 'answers' => []]);
 
     $response->assertUnprocessable();
 });
@@ -79,19 +200,19 @@ it('rejects a section that belongs to a different course than the application', 
     $student = User::factory()->student()->create();
     $course = Course::factory()->create(['enrolment_policy' => CourseEnrolmentPolicy::Application]);
     $otherCourse = Course::factory()->create();
-    $foreignSection = CourseSection::factory()->create([
+    $foreignSection = CohortCourse::factory()->create([
         'course_id' => $otherCourse->id,
         'status' => CourseSectionStatus::Open,
     ]);
 
     $response = $this->actingAs($student)->postJson('/api/v1/course-applications', [
         'course_id' => $course->id,
-        'section_id' => $foreignSection->id,
+        'cohort_course_id' => $foreignSection->id,
     ]);
 
     $response->assertUnprocessable();
     $response->assertJsonPath('error.code', 'validation_failed');
-    expect(array_keys($response->json('error.fields')))->toContain('section_id');
+    expect(array_keys($response->json('error.fields')))->toContain('cohort_course_id');
     $this->assertDatabaseMissing('course_applications', ['student_id' => $student->id]);
 });
 
@@ -101,9 +222,12 @@ it('requires a portfolio URL when the course demands one', function (): void {
         'enrolment_policy' => CourseEnrolmentPolicy::Application,
         'application_require_portfolio_url' => true,
     ]);
+    $cohortCourse = CohortCourse::factory()->for($course)->open()->create();
 
     $response = $this->actingAs($student)->postJson('/api/v1/course-applications', [
         'course_id' => $course->id,
+        'cohort_course_id' => $cohortCourse->id,
+        'answers' => [],
     ]);
 
     $response->assertUnprocessable();
@@ -113,6 +237,8 @@ it('requires a portfolio URL when the course demands one', function (): void {
     // With the portfolio supplied the same application goes through
     $this->actingAs($student)->postJson('/api/v1/course-applications', [
         'course_id' => $course->id,
+        'cohort_course_id' => $cohortCourse->id,
+        'answers' => [],
         'portfolio_url' => 'https://example.com/portfolio',
     ])->assertCreated();
 });
@@ -123,9 +249,12 @@ it('does not require a portfolio URL when the course does not demand one', funct
         'enrolment_policy' => CourseEnrolmentPolicy::Application,
         'application_require_portfolio_url' => false,
     ]);
+    $cohortCourse = CohortCourse::factory()->for($course)->open()->create();
 
     $this->actingAs($student)->postJson('/api/v1/course-applications', [
         'course_id' => $course->id,
+        'cohort_course_id' => $cohortCourse->id,
+        'answers' => [],
     ])->assertCreated();
 });
 
@@ -373,14 +502,13 @@ it('allows course application submission when profile is complete', function ():
         'city' => 'New York',
         'highest_qualification' => 'Bachelor\'s Degree',
     ]);
-    $course = Course::factory()->create([
-        'enrolment_policy' => CourseEnrolmentPolicy::Application,
-        'application_questions' => ['Why do you want to take this course?'],
-    ]);
+    $course = Course::factory()->create(['enrolment_policy' => CourseEnrolmentPolicy::Application]);
+    $cohortCourse = CohortCourse::factory()->for($course)->open()->create();
 
     $response = $this->actingAs($student)->postJson('/api/v1/course-applications', [
         'course_id' => $course->id,
-        'answers' => ['I want to advance my career.'],
+        'cohort_course_id' => $cohortCourse->id,
+        'answers' => [],
     ]);
 
     $response->assertCreated();

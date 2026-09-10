@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Textarea';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Modal } from '@/components/ui/Modal';
@@ -18,7 +19,7 @@ import {
 } from '@/features/admin/payments/useAdminPayments';
 import { orderStatusDisplay, paymentSubmissionStatusDisplay } from '@/lib/statusBadge';
 import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
-import type { Order, OrderStatus, PaymentSummaryCurrency } from '@/lib/api/types';
+import type { Order, OrderStatus, PaymentSubmission, PaymentSummaryCurrency } from '@/lib/api/types';
 
 type Tab = OrderStatus;
 
@@ -204,6 +205,96 @@ function ReviewPaymentModal({ order, onClose }: { order: Order; onClose: () => v
     );
 }
 
+function ConfirmPaymentModal({ order, submission, onClose }: { order: Order; submission: PaymentSubmission; onClose: () => void }) {
+    const confirmSubmission = useConfirmPaymentSubmission();
+
+    const handleConfirm = async () => {
+        await confirmSubmission.mutateAsync(submission.id);
+        onClose();
+    };
+
+    return (
+        <Modal
+            isOpen
+            onClose={onClose}
+            title={`Confirm payment for order #${order.id}?`}
+            footer={
+                <>
+                    <Button variant="ghost" onClick={onClose}>
+                        Cancel
+                    </Button>
+                    <Button onClick={handleConfirm} isLoading={confirmSubmission.isPending}>
+                        Confirm payment
+                    </Button>
+                </>
+            }
+        >
+            <div className="flex flex-col gap-3 text-sm">
+                <p className="text-ink-600">
+                    This applies <span className="font-medium text-ink-900">{formatAmount(submission.amount, order.currency)}</span> from{' '}
+                    <span className="font-medium text-ink-900">{order.student?.name ?? 'this student'}</span> to their order. This can&apos;t be undone.
+                </p>
+                {submission && (
+                    <a href={submission.receipt_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
+                        View submitted receipt
+                    </a>
+                )}
+            </div>
+        </Modal>
+    );
+}
+
+function RejectPaymentModal({ order, submission, onClose }: { order: Order; submission: PaymentSubmission; onClose: () => void }) {
+    const rejectSubmission = useRejectPaymentSubmission();
+    const [reason, setReason] = useState('');
+    const trimmedReason = reason.trim();
+
+    const handleReject = async () => {
+        if (!trimmedReason) return;
+        await rejectSubmission.mutateAsync({ submissionId: submission.id, reason: trimmedReason });
+        onClose();
+    };
+
+    return (
+        <Modal
+            isOpen
+            onClose={onClose}
+            title={`Reject payment for order #${order.id}?`}
+            footer={
+                <>
+                    <Button variant="ghost" onClick={onClose}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="destructive"
+                        onClick={handleReject}
+                        isLoading={rejectSubmission.isPending}
+                        disabled={!trimmedReason}
+                    >
+                        Reject payment
+                    </Button>
+                </>
+            }
+        >
+            <div className="flex flex-col gap-3 text-sm">
+                <p className="text-ink-600">
+                    <span className="font-medium text-ink-900">{order.student?.name ?? 'This student'}</span>&apos;s submission of{' '}
+                    <span className="font-medium text-ink-900">{formatAmount(submission.amount, order.currency)}</span> will be marked rejected. They&apos;ll
+                    be notified and can submit a new payment.
+                </p>
+                <Textarea
+                    label="Reason (shown to the student)"
+                    rows={3}
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder="e.g. Receipt amount doesn't match the submitted amount."
+                    required
+                />
+            </div>
+        </Modal>
+    );
+}
+
 function ReceiptCell({ order }: { order: Order }) {
     if (order.pending_submission) {
         return (
@@ -231,11 +322,11 @@ export function PaymentsPage() {
     usePageHeader('Payments', 'Every order across every student.');
     const [tab, setTab] = useState<Tab>('pending');
     const { data, isLoading } = useOrders(tab);
-    const confirmSubmission = useConfirmPaymentSubmission();
-    const rejectSubmission = useRejectPaymentSubmission();
 
     const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
     const [reviewingOrder, setReviewingOrder] = useState<Order | null>(null);
+    const [confirmingOrder, setConfirmingOrder] = useState<Order | null>(null);
+    const [rejectingOrder, setRejectingOrder] = useState<Order | null>(null);
 
     const orders = data?.data ?? [];
 
@@ -382,14 +473,16 @@ export function PaymentsPage() {
                                         {submission && (
                                             <>
                                                 <button
-                                                    onClick={() => confirmSubmission.mutate(submission.id)}
+                                                    onClick={() => setConfirmingOrder(order)}
+                                                    title="Confirm payment"
                                                     aria-label={`Confirm payment for order #${order.id}`}
-                                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-surface-100 hover:text-ink-900"
+                                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-success-600/10 hover:text-success-600"
                                                 >
                                                     <Check className="size-4 text-success-600" aria-hidden="true" />
                                                 </button>
                                                 <button
-                                                    onClick={() => rejectSubmission.mutate(submission.id)}
+                                                    onClick={() => setRejectingOrder(order)}
+                                                    title="Reject payment"
                                                     aria-label={`Reject payment for order #${order.id}`}
                                                     className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-danger-600/10 hover:text-danger-600"
                                                 >
@@ -399,6 +492,7 @@ export function PaymentsPage() {
                                         )}
                                         <button
                                             onClick={() => setViewingOrder(order)}
+                                            title="View order details"
                                             aria-label={`View order #${order.id}`}
                                             className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-surface-100 hover:text-ink-900"
                                         >
@@ -407,6 +501,7 @@ export function PaymentsPage() {
                                         {tab !== 'paid' && !submission && (
                                             <button
                                                 onClick={() => setReviewingOrder(order)}
+                                                title="Record a manual payment"
                                                 aria-label={`Review payment for order #${order.id}`}
                                                 className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-surface-100 hover:text-ink-900"
                                             >
@@ -423,6 +518,20 @@ export function PaymentsPage() {
 
             {viewingOrder && <ViewOrderModal order={viewingOrder} onClose={() => setViewingOrder(null)} />}
             {reviewingOrder && <ReviewPaymentModal order={reviewingOrder} onClose={() => setReviewingOrder(null)} />}
+            {confirmingOrder?.pending_submission && (
+                <ConfirmPaymentModal
+                    order={confirmingOrder}
+                    submission={confirmingOrder.pending_submission}
+                    onClose={() => setConfirmingOrder(null)}
+                />
+            )}
+            {rejectingOrder?.pending_submission && (
+                <RejectPaymentModal
+                    order={rejectingOrder}
+                    submission={rejectingOrder.pending_submission}
+                    onClose={() => setRejectingOrder(null)}
+                />
+            )}
         </div>
     );
 }

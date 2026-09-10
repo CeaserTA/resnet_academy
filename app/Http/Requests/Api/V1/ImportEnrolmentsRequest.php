@@ -18,7 +18,7 @@ final class ImportEnrolmentsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'course_id' => ['required', 'integer', Rule::exists('courses', 'id')],
+            'cohort_course_id' => ['required', 'integer', Rule::exists('cohort_courses', 'id')],
             'file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
         ];
     }

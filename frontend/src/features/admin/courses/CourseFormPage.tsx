@@ -30,7 +30,11 @@ const schema = z.object({
     level: z.enum(['beginner', 'intermediate', 'advanced']),
     enrolment_policy: z.enum(['open', 'advisory', 'application']),
     advisory_require_attestation: z.boolean().optional(),
-    application_questions: z.array(z.object({ text: z.string().min(1, "Question can't be empty") })).optional(),
+    application_questions: z.array(z.object({
+        text: z.string().min(1, "Question can't be empty"),
+        correct_answer: z.boolean(),
+    })).optional(),
+    application_pass_threshold: z.string().optional(),
     application_allow_alternative_proof: z.boolean().optional(),
     application_require_portfolio_url: z.boolean().optional(),
     description: z.string().optional(),
@@ -117,6 +121,7 @@ export function CourseFormPage() {
                 enrolment_policy: 'open',
                 advisory_require_attestation: false,
                 application_questions: [],
+                application_pass_threshold: '100',
                 application_allow_alternative_proof: true,
                 application_require_portfolio_url: false,
                 currency: 'UGX',
@@ -146,7 +151,13 @@ export function CourseFormPage() {
                 level: course.level,
                 enrolment_policy: course.enrolment_policy,
                 advisory_require_attestation: course.advisory_require_attestation,
-                application_questions: (course.application_questions ?? []).map((text) => ({ text })),
+                application_questions: (course.application_questions ?? []).map((q) => ({
+                    text: q.text,
+                    correct_answer: q.correct_answer ?? true,
+                })),
+                application_pass_threshold: course.application_pass_threshold != null
+                    ? String(course.application_pass_threshold)
+                    : '100',
                 application_allow_alternative_proof: course.application_allow_alternative_proof,
                 application_require_portfolio_url: course.application_require_portfolio_url,
                 description: course.description ?? '',
@@ -177,7 +188,9 @@ export function CourseFormPage() {
             price: Number(values.price),
             confirmation_delay_hours: Number(values.confirmation_delay_hours),
             category_id: values.category_id ? Number(values.category_id) : undefined,
-            application_questions: values.application_questions?.map((q) => q.text) ?? [],
+            application_pass_threshold: values.enrolment_policy === 'application' && values.application_pass_threshold
+                ? Number(values.application_pass_threshold)
+                : undefined,
             thumbnail: thumbnailFile ?? undefined,
         };
         try {
@@ -344,17 +357,45 @@ export function CourseFormPage() {
                             {enrolmentPolicy === 'application' && (
                                 <div className="space-y-3">
                                     <div>
-                                        <p className="mb-2 text-sm font-medium text-ink-900">Application questions</p>
+                                        <p className="mb-1 text-sm font-medium text-ink-900">Eligibility questions</p>
+                                        <p className="mb-2 text-xs text-ink-400">
+                                            Yes/No questions the system grades automatically. An applicant who meets
+                                            the pass threshold below is enrolled immediately — no review needed.
+                                        </p>
                                         <div className="space-y-2">
                                             {questionFields.map((field, index) => (
-                                                <div key={field.id} className="flex items-center gap-2">
-                                                    <div className="flex-1">
+                                                <div key={field.id} className="flex items-start gap-2 rounded-lg border border-surface-100 bg-surface-0 p-2">
+                                                    <div className="flex-1 space-y-1.5">
                                                         <Input
                                                             label={`Question ${index + 1}`}
                                                             labelClassName="sr-only"
                                                             placeholder={`Question ${index + 1}`}
                                                             error={errors.application_questions?.[index]?.text?.message}
                                                             {...register(`application_questions.${index}.text` as const)}
+                                                        />
+                                                        <Controller
+                                                            control={control}
+                                                            name={`application_questions.${index}.correct_answer` as const}
+                                                            render={({ field: correctAnswerField }) => (
+                                                                <div className="flex items-center gap-2 text-xs text-ink-600">
+                                                                    <span>Correct answer:</span>
+                                                                    {([true, false] as const).map((option) => (
+                                                                        <button
+                                                                            key={String(option)}
+                                                                            type="button"
+                                                                            onClick={() => correctAnswerField.onChange(option)}
+                                                                            className={cn(
+                                                                                'rounded-md border px-2.5 py-1 font-medium transition-colors',
+                                                                                correctAnswerField.value === option
+                                                                                    ? 'border-blue-600 bg-blue-600 text-white'
+                                                                                    : 'border-surface-200 bg-white text-ink-700 hover:border-blue-300',
+                                                                            )}
+                                                                        >
+                                                                            {option ? 'Yes' : 'No'}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            )}
                                                         />
                                                     </div>
                                                     <button
@@ -368,11 +409,22 @@ export function CourseFormPage() {
                                                 </div>
                                             ))}
                                         </div>
-                                        <Button type="button" size="sm" variant="secondary" className="mt-2" onClick={() => appendQuestion({ text: '' })}>
+                                        <Button type="button" size="sm" variant="secondary" className="mt-2" onClick={() => appendQuestion({ text: '', correct_answer: true })}>
                                             <Plus className="size-3.5" aria-hidden="true" />
                                             Add question
                                         </Button>
                                     </div>
+
+                                    {questionFields.length > 0 && (
+                                        <Input
+                                            label="Auto-approve pass threshold (%)"
+                                            type="number"
+                                            min={1}
+                                            max={100}
+                                            error={errors.application_pass_threshold?.message}
+                                            {...register('application_pass_threshold')}
+                                        />
+                                    )}
 
                                     <label className="flex items-center gap-2 text-sm text-ink-900">
                                         <input type="checkbox" {...register('application_require_portfolio_url')} />

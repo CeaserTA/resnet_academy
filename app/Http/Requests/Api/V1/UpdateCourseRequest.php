@@ -33,7 +33,9 @@ final class UpdateCourseRequest extends FormRequest
             'enrolment_policy' => ['sometimes', 'required', new Enum(CourseEnrolmentPolicy::class)],
             'advisory_require_attestation' => ['nullable', 'boolean'],
             'application_questions' => ['nullable', 'array', 'max:10'],
-            'application_questions.*' => ['string', 'max:300'],
+            'application_questions.*.text' => ['required', 'string', 'max:300'],
+            'application_questions.*.correct_answer' => ['required', 'boolean'],
+            'application_pass_threshold' => ['nullable', 'integer', 'min:1', 'max:100'],
             'application_allow_alternative_proof' => ['nullable', 'boolean'],
             'application_require_portfolio_url' => ['nullable', 'boolean'],
             // Either paste a URL or upload an image — 'thumbnail' takes precedence when both are

@@ -6,6 +6,7 @@ use App\Enums\EnrolmentSource;
 use App\Models\Assignment;
 use App\Models\AuditLog;
 use App\Models\Course;
+use App\Models\CohortCourse;
 use App\Models\Module;
 use App\Models\User;
 use App\Services\Enrolment\EnrolmentService;
@@ -23,7 +24,7 @@ it('audits an assignment grade change with the grader as actor', function (): vo
     $course->instructors()->attach($instructor->id, ['is_primary' => true, 'assigned_at' => now()]);
     $module = Module::factory()->for($course)->create();
     $assignment = Assignment::factory()->for($module)->create();
-    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
 
     $submission = $this->actingAs($student)->postJson("/api/v1/assignments/{$assignment->id}/submissions", [
         'text_content' => 'Answer.',
@@ -40,7 +41,7 @@ it('audits an assignment grade change with the grader as actor', function (): vo
 it('audits an enrolment withdrawal with the from/to status in meta', function (): void {
     $student = User::factory()->student()->create();
     $course = Course::factory()->create();
-    $enrolment = app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self);
+    $enrolment = app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
 
     $response = $this->actingAs($student)->postJson("/api/v1/enrolments/{$enrolment->id}/withdraw");
 
@@ -57,7 +58,7 @@ it('denies a student from withdrawing another students enrolment', function (): 
     $owner = User::factory()->student()->create();
     $other = User::factory()->student()->create();
     $course = Course::factory()->create();
-    $enrolment = app(EnrolmentService::class)->enrol($owner, $course, EnrolmentSource::Self);
+    $enrolment = app(EnrolmentService::class)->enrol($owner, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
 
     $response = $this->actingAs($other)->postJson("/api/v1/enrolments/{$enrolment->id}/withdraw");
 

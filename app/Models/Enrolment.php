@@ -22,13 +22,16 @@ final class Enrolment extends Model
     protected $fillable = [
         'student_id',
         'course_id',
-        'section_id',
+        'cohort_course_id',
         'status',
         'source',
         'imported_by',
         'applied_at',
         'confirmation_email_due_at',
         'confirmation_email_sent_at',
+        'transferred_to_id',
+        'transfer_requested_at',
+        'withdrawal_note',
     ];
 
     protected $casts = [
@@ -37,6 +40,7 @@ final class Enrolment extends Model
         'applied_at' => 'datetime',
         'confirmation_email_due_at' => 'datetime',
         'confirmation_email_sent_at' => 'datetime',
+        'transfer_requested_at' => 'datetime',
     ];
 
     /**
@@ -56,11 +60,11 @@ final class Enrolment extends Model
     }
 
     /**
-     * @return BelongsTo<CourseSection, $this>
+     * @return BelongsTo<CohortCourse, $this>
      */
-    public function section(): BelongsTo
+    public function cohortCourse(): BelongsTo
     {
-        return $this->belongsTo(CourseSection::class, 'section_id');
+        return $this->belongsTo(CohortCourse::class, 'cohort_course_id');
     }
 
     public function importedBy(): BelongsTo
@@ -71,5 +75,21 @@ final class Enrolment extends Model
     public function order(): HasOne
     {
         return $this->hasOne(Order::class);
+    }
+
+    /**
+     * @return BelongsTo<Enrolment, $this>
+     */
+    public function transferredTo(): BelongsTo
+    {
+        return $this->belongsTo(Enrolment::class, 'transferred_to_id');
+    }
+
+    /**
+     * @return HasOne<Enrolment, $this>
+     */
+    public function transferredFrom(): HasOne
+    {
+        return $this->hasOne(Enrolment::class, 'transferred_to_id');
     }
 }

@@ -8,6 +8,7 @@ use App\Enums\SubmissionStatus;
 use App\Models\Assignment;
 use App\Models\AssignmentSubmission;
 use App\Models\Course;
+use App\Models\CohortCourse;
 use App\Models\Evaluation;
 use App\Models\EvaluationAttempt;
 use App\Models\Module;
@@ -42,7 +43,7 @@ it('aggregates assignment and evaluation grades per student with a computed fina
         'passed' => false,
     ]);
 
-    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
 
     $response = $this->actingAs($instructor)->getJson("/api/v1/courses/{$course->id}/gradebook");
 

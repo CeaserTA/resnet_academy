@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api\V1;
 
-use App\Models\GroupsCohort;
+use App\Models\Group;
 use Illuminate\Foundation\Http\FormRequest;
 
 final class StoreGroupRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->can('create', [GroupsCohort::class, $this->route('course')]);
+        return $this->user()->can('create', [Group::class, $this->route('course')]);
     }
 
     public function rules(): array

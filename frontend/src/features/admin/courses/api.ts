@@ -10,7 +10,8 @@ export interface CoursePayload {
     level: string;
     enrolment_policy: string;
     advisory_require_attestation?: boolean;
-    application_questions?: string[];
+    application_questions?: { text: string; correct_answer: boolean }[];
+    application_pass_threshold?: number;
     application_allow_alternative_proof?: boolean;
     application_require_portfolio_url?: boolean;
     price: number;
@@ -34,7 +35,10 @@ function buildCourseFormData(payload: Partial<CoursePayload>): FormData {
     const formData = toFormData(rest);
 
     instructor_ids?.forEach((id) => formData.append('instructor_ids[]', String(id)));
-    application_questions?.forEach((question) => formData.append('application_questions[]', question));
+    application_questions?.forEach((question, index) => {
+        formData.append(`application_questions[${index}][text]`, question.text);
+        formData.append(`application_questions[${index}][correct_answer]`, question.correct_answer ? '1' : '0');
+    });
 
     return formData;
 }

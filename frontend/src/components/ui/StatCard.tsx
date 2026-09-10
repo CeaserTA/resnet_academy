@@ -9,6 +9,7 @@ const LABEL_CLASSES: Record<BadgeTone, string> = {
     neutral: 'text-ink-600',
     warning: 'text-amber-500',
     danger: 'text-danger-600',
+    info: 'text-cyan-600',
 };
 
 interface StatCardProps {

@@ -19,21 +19,27 @@ final class CourseApplication extends Model
     protected $fillable = [
         'student_id',
         'course_id',
-        'section_id',
+        'cohort_course_id',
         'status',
         'answers',
+        'eligibility_score',
+        'eligibility_passed',
         'portfolio_url',
         'alternative_proof_text',
         'rejection_reason',
         'dismissed_at',
         'reviewed_by',
         'reviewed_at',
+        'approved_automatically',
         'recommended_course_ids',
     ];
 
     protected $casts = [
         'status' => CourseApplicationStatus::class,
         'answers' => 'array',
+        'eligibility_score' => 'integer',
+        'eligibility_passed' => 'boolean',
+        'approved_automatically' => 'boolean',
         'recommended_course_ids' => 'array',
         'reviewed_at' => 'datetime',
         'dismissed_at' => 'datetime',
@@ -56,11 +62,11 @@ final class CourseApplication extends Model
     }
 
     /**
-     * @return BelongsTo<CourseSection, $this>
+     * @return BelongsTo<CohortCourse, $this>
      */
-    public function section(): BelongsTo
+    public function cohortCourse(): BelongsTo
     {
-        return $this->belongsTo(CourseSection::class, 'section_id');
+        return $this->belongsTo(CohortCourse::class, 'cohort_course_id');
     }
 
     /**

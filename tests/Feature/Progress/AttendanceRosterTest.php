@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Enums\EnrolmentSource;
 use App\Models\Course;
+use App\Models\CohortCourse;
 use App\Models\Module;
 use App\Models\ModuleItem;
 use App\Models\Resource;
@@ -22,8 +23,8 @@ it('lets the course instructor see who attended a live session and who did not',
     $resource = Resource::factory()->for($module)->liveSession()->create();
     ModuleItem::create(['module_id' => $module->id, 'item_type' => 'resource', 'item_id' => $resource->id, 'order_index' => 1, 'is_required' => false]);
 
-    app(EnrolmentService::class)->enrol($attended, $course, EnrolmentSource::Self);
-    app(EnrolmentService::class)->enrol($absent, $course, EnrolmentSource::Self);
+    app(EnrolmentService::class)->enrol($attended, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
+    app(EnrolmentService::class)->enrol($absent, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
     app(ProgressEngine::class)->markAttendance($attended, $resource);
 
     $response = $this->actingAs($instructor)->getJson("/api/v1/resources/{$resource->id}/attendance");
