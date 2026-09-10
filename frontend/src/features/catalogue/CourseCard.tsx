@@ -1,15 +1,6 @@
 ﻿import { Link } from 'react-router';
-import { ArrowRight, BookOpen, Clock } from 'lucide-react';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/Card';
+import { ArrowRight, Clock, Layers } from 'lucide-react';
 import type { Course } from '@/lib/api/types';
-
-// ─── helpers ────────────────────────────────────────────────────────────────
 
 const levelLabel: Record<Course['level'], string> = {
     beginner: 'Beginner',
@@ -20,6 +11,9 @@ const levelLabel: Record<Course['level'], string> = {
 function formatPrice(price: string, currency: string): string {
     const amount = Number(price);
     if (isNaN(amount)) return '';
+    if (currency === 'UGX') {
+        return `UGX ${new Intl.NumberFormat('en-UG').format(amount)}`;
+    }
     return new Intl.NumberFormat(undefined, {
         style: 'currency',
         currency,
@@ -27,97 +21,113 @@ function formatPrice(price: string, currency: string): string {
     }).format(amount);
 }
 
-// ─── props ───────────────────────────────────────────────────────────────────
-
 interface CourseCardProps {
     course: Course;
-    /** Optional override image src — falls back to `course.thumbnail_url` then placeholder. */
     imageSrc?: string;
-    /** Optional duration + format line, e.g. "6 weeks • Part-time" */
     duration?: string;
     format?: string;
 }
 
-// ─── component ───────────────────────────────────────────────────────────────
-
 export function CourseCard({ course, imageSrc, duration, format }: CourseCardProps) {
-    // Database thumbnail takes priority over static fallback map
     const image = course.thumbnail_url ?? imageSrc ?? null;
     const price = formatPrice(course.price, course.currency);
-    const durationLine = duration && format ? `${duration} • ${format}` : duration ?? null;
+    // First letter of course title for the placeholder
+    const initial = course.title.charAt(0).toUpperCase();
 
     return (
-        <Card className="group flex flex-col overflow-hidden rounded-2xl border border-[#e8ecf1] bg-white p-0 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
-            {/* ── Image header — 16:9 with absolute level badge ── */}
-            <div className="relative aspect-video w-full overflow-hidden bg-[#eff6ff]">
+        <div className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-sm transition-shadow duration-200 hover:shadow-md">
+
+            {/* ── Thumbnail ── */}
+            <div className="relative bg-blue-50">
+                {/* Level badge — top left */}
+                <span className="absolute left-3 top-3 z-10 rounded-full bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-ink-900 shadow-sm">
+                    {levelLabel[course.level] ?? course.level}
+                </span>
+
                 {image ? (
                     <img
                         src={image}
                         alt={course.title}
-                        className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                        className="h-44 w-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
                 ) : (
-                    <div className="flex h-full w-full items-center justify-center text-blue-300">
-                        <BookOpen className="size-8" aria-hidden="true" />
+                    /* Letter placeholder matching screenshot style */
+                    <div className="flex h-44 w-full items-center justify-center bg-blue-50">
+                        <span
+                            className="font-display text-7xl font-bold text-blue-200 select-none"
+                            aria-hidden="true"
+                        >
+                            {initial}
+                        </span>
                     </div>
                 )}
-
-                {/* Level badge — overlays top-left of the image */}
-                <span className="absolute left-3 top-3 inline-flex items-center rounded-full bg-white/90 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#334155] shadow-sm backdrop-blur-sm">
-                    {levelLabel[course.level] ?? course.level}
-                </span>
             </div>
 
-            {/* ── Card body ── */}
-            <CardHeader className="space-y-1.5 px-5 pb-0 pt-4">
+            {/* ── Body ── */}
+            <div className="flex flex-1 flex-col gap-3 p-5">
+
+                {/* Category pill */}
                 {course.category && (
-                    <span className="inline-flex w-fit items-center rounded-full bg-blue-600 px-2 py-0.5 text-[11px] font-medium text-white">
+                    <span className="inline-flex w-fit items-center rounded-full bg-primary px-3 py-1 text-[11px] font-semibold text-white">
                         {course.category.name}
                     </span>
                 )}
-                <CardTitle className="text-sm font-semibold leading-snug">{course.title}</CardTitle>
-                {course.description && (
-                    <CardDescription className="line-clamp-2 text-xs">
-                        {course.description}
-                    </CardDescription>
-                )}
-            </CardHeader>
 
-            <CardContent className="mt-auto space-y-3 px-5 pb-5 pt-3">
-                {/* Duration pill */}
-                {durationLine && (
-                    <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
-                        <Clock className="size-3 shrink-0" aria-hidden="true" />
-                        <span>{durationLine}</span>
+                {/* Title */}
+                <h3 className="text-base font-semibold leading-snug text-ink-900">
+                    {course.title}
+                </h3>
+
+                {/* Description */}
+                {course.description && (
+                    <p className="line-clamp-2 text-sm leading-6 text-ink-600">
+                        {course.description}
+                    </p>
+                )}
+
+                {/* Duration + hrs/week meta — light blue pill style */}
+                {(duration || format) && (
+                    <div className="flex items-center gap-2 text-xs">
+                        {duration && (
+                            <span className="flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-ink-600">
+                                <Clock className="size-3.5 text-primary" aria-hidden="true" />
+                                {duration}
+                            </span>
+                        )}
+                        {format && (
+                            <span className="flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-ink-600">
+                                <Layers className="size-3.5 text-primary" aria-hidden="true" />
+                                {format}
+                            </span>
+                        )}
                     </div>
                 )}
 
-                {/* Price */}
-                {price && (
-                    <div className="text-xs font-semibold text-[#0f172a]">{price}</div>
-                )}
-
                 {/* Divider */}
-                <hr className="border-[#e8ecf1]" />
+                <hr className="border-border" />
 
-                {/* Footer row: duration label + View Details link */}
-                <div className="flex items-center justify-between">
-                    {durationLine ? (
-                        <span className="text-xs text-[#64748b]">{durationLine}</span>
-                    ) : (
-                        <span />
-                    )}
-
-                    {/* Text link + arrow — bottom-right, no button chrome */}
+                {/* Price + CTA */}
+                <div className="mt-auto flex items-center justify-between gap-3">
+                    <div>
+                        {price && (
+                            <>
+                                <p className="text-[10px] font-medium uppercase tracking-wide text-ink-300">
+                                    Full course fee
+                                </p>
+                                <p className="text-base font-bold text-ink-900">{price}</p>
+                            </>
+                        )}
+                    </div>
                     <Link
                         to={`/courses/${course.id}`}
-                        className="group/link inline-flex items-center gap-1 text-xs font-semibold text-blue-600 transition-transform hover:translate-x-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                     >
-                        View Details
-                        <ArrowRight className="size-3.5 transition-transform duration-150 group-hover/link:translate-x-0.5" aria-hidden="true" />
+                        View course
+                        <ArrowRight className="size-3.5" aria-hidden="true" />
                     </Link>
                 </div>
-            </CardContent>
-        </Card>
+
+            </div>
+        </div>
     );
 }

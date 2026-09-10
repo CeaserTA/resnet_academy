@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&display=swap');
 @import 'tailwindcss';
 
 @theme {
@@ -48,8 +48,8 @@
     --color-input: #e8ecf1;
     --color-ring: #3b82f6;
 
-    --font-display: 'Sora', system-ui, sans-serif;
-    --font-body: 'Inter', system-ui, sans-serif;
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'Manrope', system-ui, sans-serif;
     --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
     /* shadcn/ui compatibility layer — aliases onto the tokens above, not new colors. Lets
@@ -75,6 +75,25 @@
     --color-popover: var(--color-surface-0);
     --color-popover-foreground: var(--color-ink-900);
     --radius: 0.5rem;
+
+    /* ── Guide-aligned semantic aliases ── */
+    --color-surface: var(--color-card);
+    --color-text: var(--color-foreground);
+    --color-danger: var(--color-destructive);
+    --color-focus: var(--color-ring);
+
+    /* ── Extended palette tokens ── */
+
+    /* Dark navy — for dark section backgrounds (e.g. CTA banner, hero overlays) */
+    --color-navy: oklch(0.38 0.15 264);
+    /* Text color to use on navy backgrounds */
+    --color-navy-foreground: oklch(0.99 0.003 250);
+
+    /* Off-white — subtle section background, slightly cooler than pure white */
+    --color-surface-muted: oklch(0.976 0.008 250);
+
+    /* Amber accent — use sparingly for warnings, highlights, ongoing badges */
+    --color-accent-amber: oklch(0.56 0.14 62);
 }
 
 
@@ -84,18 +103,15 @@
         @apply bg-background text-foreground font-body antialiased;
     }
 
-    /* Hide scrollbar while keeping scroll functional */
-    .scrollbar-hide {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-    }
-    .scrollbar-hide::-webkit-scrollbar {
-        display: none;
-    }
-
+    /* h1–h3 use the display font with tight tracking — editorial feel */
     h1,
     h2,
-    h3,
+    h3 {
+        @apply font-display font-semibold text-ink-900;
+        letter-spacing: -0.015em;
+    }
+
+    /* h4–h6 stay on body font */
     h4,
     h5,
     h6 {
@@ -104,5 +120,24 @@
 
     :focus-visible {
         @apply outline-2 outline-offset-2 outline-primary;
+    }
+}
+
+@utility scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+@keyframes circular-spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
     }
 }

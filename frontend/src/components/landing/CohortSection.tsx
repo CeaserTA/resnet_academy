@@ -37,79 +37,59 @@ function CohortCard({ cohort }: { cohort: Cohort }) {
     const courseCount = cohort.courses.length;
 
     return (
-        <div className="flex flex-col overflow-hidden rounded-2xl border border-[#e8ecf1] bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-md">
-            {/* Top accent bar */}
-            <div className="h-1.5 w-full bg-blue-600" />
-
-            <div className="flex flex-1 flex-col gap-5 p-6">
+        <div className="flex flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-sm transition-shadow duration-200 hover:shadow-md">
+            <div className="flex flex-1 flex-col gap-4 p-5">
                 {/* Header */}
                 <div className="flex items-start justify-between gap-3">
                     <div>
-                        <p className="text-xs font-semibold uppercase tracking-widest text-blue-600">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-ink-300">
                             {courseCount} course{courseCount !== 1 ? 's' : ''}
                         </p>
-                        <h3 className="mt-1 text-lg font-bold text-ink-900">{cohort.name}</h3>
+                        <h3 className="mt-1 text-base font-semibold text-ink-900">{cohort.name}</h3>
                     </div>
-                    {/* Status badge */}
                     <span
                         className={cn(
-                            'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium',
+                            'inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-medium',
                             ongoing
-                                ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                                : 'bg-amber-100 text-amber-700 border-amber-200',
+                                ? 'bg-emerald-50 text-emerald-700'
+                                : 'bg-amber-50 text-amber-700',
                         )}
                     >
-                        <span className={cn('size-1.5 rounded-full', ongoing ? 'bg-emerald-500' : 'bg-amber-500')} aria-hidden="true" />
-                        {ongoing ? 'Ongoing' : 'Registration Open'}
+                        {ongoing ? 'Ongoing' : 'Registration open'}
                     </span>
                 </div>
 
-                {/* Courses in this cohort */}
-                <ul className="flex flex-wrap gap-2">
+                {/* Course tags */}
+                <ul className="flex flex-wrap gap-1.5">
                     {cohort.courses.map((cc) => (
                         <li
                             key={cc.id}
-                            className="rounded-full border border-[#e8ecf1] bg-[#f8fafc] px-3 py-1 text-xs text-ink-700"
+                            className="rounded-full border border-border bg-surface-50 px-3 py-0.5 text-xs text-ink-600"
                         >
                             {cc.course?.title}
                         </li>
                     ))}
                 </ul>
 
-                {/* Meta grid */}
-                <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-                    <div className="flex items-start gap-2">
-                        <CalendarDays className="mt-0.5 size-4 shrink-0 text-blue-500" aria-hidden="true" />
-                        <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-[#94a3b8]">
-                                {ongoing ? 'Started' : 'Starts'}
-                            </dt>
-                            <dd className="text-ink-700">{formatDate(cohort.start_date)}</dd>
-                        </div>
+                {/* Meta */}
+                <dl className="grid grid-cols-2 gap-2 text-xs text-ink-600">
+                    <div className="flex items-center gap-1.5">
+                        <CalendarDays className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
+                        <dd>{formatDate(cohort.start_date)}</dd>
                     </div>
-                    <div className="flex items-start gap-2">
-                        <Clock className="mt-0.5 size-4 shrink-0 text-blue-500" aria-hidden="true" />
-                        <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-[#94a3b8]">Ends</dt>
-                            <dd className="text-ink-700">{formatDate(cohort.end_date)}</dd>
-                        </div>
+                    <div className="flex items-center gap-1.5">
+                        <Clock className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
+                        <dd>{formatDate(cohort.end_date)}</dd>
                     </div>
                 </dl>
 
                 {/* CTA */}
-                <div className="mt-auto pt-2">
-                    <Link
-                        to={`/cohorts/${cohort.id}`}
-                        className={cn(
-                            'inline-flex w-full items-center justify-center rounded-md px-4 py-2.5 text-sm font-medium transition-colors',
-                            ongoing
-                                ? 'border border-blue-600 text-blue-700 hover:bg-blue-50'
-                                : 'bg-blue-600 text-white hover:bg-blue-700',
-                        )}
-                    >
-                        {ongoing ? 'View cohort' : 'View cohort & register'}
-                    </Link>
-                </div>
+                <Link
+                    to={`/cohorts/${cohort.id}`}
+                    className="mt-auto inline-flex w-full items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                >
+                    View cohort &amp; register
+                </Link>
             </div>
         </div>
     );
@@ -141,28 +121,30 @@ export function CohortSection() {
         return (
             <section
                 id="cohorts"
-                className="border-t border-[#e8ecf1] bg-[#f8fafc] px-4 py-8 sm:px-6 lg:px-8"
+                className="border-t border-border bg-white px-4 py-10 sm:px-6 lg:px-8"
             >
                 <div className="mx-auto max-w-7xl">
                     {/* Heading */}
-                    <div className="mx-auto mb-8 max-w-2xl text-center">
-                        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-blue-600">
-                            Cohort Schedule
-                        </p>
-                        <h2 className="mt-4 text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl">
-                            Upcoming & Ongoing Cohorts
-                        </h2>
-                        <p className="mt-4 text-base leading-7 text-[#64748b]">
-                            Join a structured cohort for guided learning, peer accountability,
-                            and direct mentor access.
-                        </p>
+                    <div className="mb-8 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                                Cohort Schedule
+                            </p>
+                            <h2 className="mt-2 text-3xl text-ink-900 sm:text-4xl">
+                                Choose your intake.
+                            </h2>
+                            <p className="mt-2 max-w-md text-sm leading-6 text-ink-600">
+                                Cohorts are capped so every learner gets mentor time. Registration closes
+                                once seats run out.
+                            </p>
+                        </div>
                     </div>
 
                     {/* Empty state */}
-                    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#cbd5e1] bg-white py-16 text-center">
-                        <CalendarDays className="size-10 text-[#cbd5e1]" aria-hidden="true" />
-                        <p className="mt-4 text-base font-medium text-[#64748b]">No cohorts scheduled yet</p>
-                        <p className="mt-1 text-sm text-[#94a3b8]">Check back soon — new cohorts are added regularly.</p>
+                    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-surface-50 py-14 text-center">
+                        <CalendarDays className="size-9 text-ink-300" aria-hidden="true" />
+                        <p className="mt-4 text-sm font-medium text-ink-600">No cohorts scheduled yet</p>
+                        <p className="mt-1 text-xs text-ink-300">Check back soon — new cohorts are added regularly.</p>
                     </div>
                 </div>
             </section>
@@ -172,33 +154,41 @@ export function CohortSection() {
     return (
         <section
             id="cohorts"
-            className="border-t border-[#e8ecf1] bg-[#f8fafc] px-4 py-8 sm:px-6 lg:px-8"
+            className="border-t border-border bg-white px-4 py-10 sm:px-6 lg:px-8"
         >
             <div className="mx-auto max-w-7xl">
                 {/* Heading */}
-                <div className="mx-auto mb-8 max-w-2xl text-center">
-                    <p className="text-sm font-semibold uppercase tracking-[0.24em] text-blue-600">
-                        Cohort Schedule
-                    </p>
-                    <h2 className="mt-4 text-3xl font-bold tracking-tight text-ink-900 sm:text-4xl">
-                        Upcoming & Ongoing Cohorts
-                    </h2>
-                    <p className="mt-4 text-base leading-7 text-[#64748b]">
-                        Join a structured cohort for guided learning, peer accountability,
-                        and direct mentor access.
-                    </p>
+                <div className="mb-8 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                            Cohort Schedule
+                        </p>
+                        <h2 className="mt-2 text-3xl text-ink-900 sm:text-4xl">
+                            Choose your intake.
+                        </h2>
+                        <p className="mt-2 max-w-md text-sm leading-6 text-ink-600">
+                            Cohorts are capped so every learner gets mentor time. Registration closes
+                            once seats run out.
+                        </p>
+                    </div>
+                    <Link
+                        to="/cohorts"
+                        className="shrink-0 self-start rounded-full border border-border px-4 py-2 text-sm font-semibold text-ink-900 transition-colors hover:border-primary hover:text-primary sm:self-auto"
+                    >
+                        Full schedule
+                    </Link>
                 </div>
 
                 {/* Cards */}
-                <div className="space-y-8">
+                <div className="space-y-6">
                     {/* Ongoing cohorts */}
                     {ongoing.length > 0 && (
                         <div>
-                            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-ink-900">
-                                <span className="size-2.5 rounded-full bg-emerald-500" aria-hidden="true" />
-                                Ongoing Cohorts
-                            </h3>
-                            <div className="grid gap-6 sm:grid-cols-2">
+                            <p className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-ink-300">
+                                <span className="size-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
+                                Ongoing
+                            </p>
+                            <div className="grid gap-5 sm:grid-cols-2">
                                 {ongoing.map((cohort) => (
                                     <CohortCard key={cohort.id} cohort={cohort} />
                                 ))}
@@ -209,27 +199,17 @@ export function CohortSection() {
                     {/* Upcoming cohorts */}
                     {upcoming.length > 0 && (
                         <div>
-                            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-ink-900">
-                                <span className="size-2.5 rounded-full bg-amber-400" aria-hidden="true" />
-                                Upcoming Cohorts
-                            </h3>
-                            <div className="grid gap-6 sm:grid-cols-2">
+                            <p className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-ink-300">
+                                <span className="size-1.5 rounded-full bg-amber-400" aria-hidden="true" />
+                                Registration Open
+                            </p>
+                            <div className="grid gap-5 sm:grid-cols-2">
                                 {upcoming.map((cohort) => (
                                     <CohortCard key={cohort.id} cohort={cohort} />
                                 ))}
                             </div>
                         </div>
                     )}
-                </div>
-
-                {/* View all — proper button */}
-                <div className="mt-8 flex justify-center">
-                    <Link
-                        to="/courses"
-                        className="inline-flex items-center gap-2 rounded-lg border border-[#3b82f6] px-5 py-2.5 text-sm font-semibold text-[#3b82f6] transition-colors hover:bg-blue-50"
-                    >
-                        View all courses →
-                    </Link>
                 </div>
             </div>
         </section>

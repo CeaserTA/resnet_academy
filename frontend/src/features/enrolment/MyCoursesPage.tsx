@@ -150,10 +150,10 @@ function WithdrawConfirmModal({ enrolment, onClose, onWithdrawSuccess }: { enrol
             footer={
                 <>
                     <Button variant="ghost" onClick={onClose}>Cancel</Button>
-                    <Button variant="destructive" onClick={async () => { 
-                        const result = await withdrawEnrolment.mutateAsync({ enrolmentId: enrolment.id }); 
+                    <Button variant="destructive" onClick={async () => {
+                        const result = await withdrawEnrolment.mutateAsync({ enrolmentId: enrolment.id });
                         onWithdrawSuccess(result.status);
-                        onClose(); 
+                        onClose();
                     }} isLoading={withdrawEnrolment.isPending}>
                         Withdraw
                     </Button>
@@ -191,10 +191,10 @@ function EnrolmentCard({ enrolment, progress, review, onWithdraw, onCancelTransf
     return (
         <Card className="flex flex-col gap-0 p-0 overflow-hidden">
             {/* Thumbnail */}
-            <Link to={`/learn/courses/${enrolment.course.id}`} className="block">
+            <Link to={`/learn/courses/${enrolment.course.id}`} className="block" aria-label={`View ${enrolment.course.title}`}>
                 <div className="h-32 w-full overflow-hidden bg-surface-100">
                     {enrolment.course.thumbnail_url ? (
-                        <img src={enrolment.course.thumbnail_url} alt="" className="h-full w-full object-cover transition duration-300 hover:scale-105" />
+                        <img src={enrolment.course.thumbnail_url} alt={enrolment.course.title} className="h-full w-full object-cover transition duration-300 hover:scale-105" />
                     ) : (
                         <div className="flex h-full items-center justify-center">
                             <BookOpen className="size-8 text-ink-300" aria-hidden="true" />

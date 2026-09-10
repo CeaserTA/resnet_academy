@@ -23,10 +23,13 @@ export const courseImageMap: Record<string, string> = {
  * is added to the courses DB schema.
  */
 export const courseDurationMap: Record<string, { duration: string; format: string }> = {
-    'web-foundations': { duration: '4 weeks', format: 'Part-time' },
-    'search-engine-optimization': { duration: '5 weeks', format: 'Part-time' },
-    'progressive-web-app-development': { duration: '6 weeks', format: 'Part-time' },
-    'vuejs-and-laravel': { duration: '10 weeks', format: 'Full cohort' },
-    'full-stack': { duration: '8 weeks', format: 'Full cohort' },
-    'dynamic-web': { duration: '6 weeks', format: 'Part-time' },
+    'web-foundations': { duration: '4 weeks', format: '4 hrs/week' },
+    'search-engine-optimization': { duration: '5 weeks', format: '4 hrs/week' },
+    'progressive-web-app-development': { duration: '6 weeks', format: '6 hrs/week' },
+    'vuejs-and-laravel': { duration: '10 weeks', format: '8 hrs/week' },
+    'full-stack': { duration: '8 weeks', format: '8 hrs/week' },
+    'dynamic-web': { duration: '6 weeks', format: '6 hrs/week' },
+    'wordpress-development': { duration: '8 weeks', format: '8 hrs/week' },
+    'database-querying-schema-design': { duration: '9 weeks', format: '8 hrs/week' },
+    'data-analytics-with-google-analytics': { duration: '6 weeks', format: '5 hrs/week' },
 };

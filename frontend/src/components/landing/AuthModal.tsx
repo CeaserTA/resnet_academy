@@ -73,7 +73,7 @@ export function AuthModal({ open, mode, onModeChange, onClose, redirectTo = '/da
     <Dialog.Root open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(95vw,520px)] max-w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-[32px] border border-[#e8ecf1] bg-[#fafbfc] p-6 shadow-2xl focus:outline-none">
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(95vw,520px)] max-w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-[32px] border border-[#e8ecf1] bg-[#fafbfc] p-6 shadow-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2">
           <div className="flex items-start justify-between gap-4">
             <div>
               <Dialog.Title className="text-2xl font-semibold text-ink-900">
@@ -89,9 +89,10 @@ export function AuthModal({ open, mode, onModeChange, onClose, redirectTo = '/da
             <Dialog.Close asChild>
               <button
                 type="button"
-                className="rounded-full border border-transparent p-2 text-[#64748b] transition hover:bg-surface-100 hover:text-ink-900"
+                className="rounded-full border border-transparent p-2 text-[#64748b] transition hover:bg-surface-100 hover:text-ink-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
-                <X className="size-5" />
+                <X className="size-5" aria-hidden="true" />
+                <span className="sr-only">Close</span>
               </button>
             </Dialog.Close>
           </div>
@@ -104,7 +105,7 @@ export function AuthModal({ open, mode, onModeChange, onClose, redirectTo = '/da
                   type="button"
                   onClick={() => onModeChange(item)}
                   className={cn(
-                    'rounded-full px-4 py-2 text-sm font-medium transition',
+                    'rounded-full px-4 py-2 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                     item === mode
                       ? 'bg-blue-600 text-white'
                       : 'text-[#64748b] hover:bg-blue-50 hover:text-blue-700',
