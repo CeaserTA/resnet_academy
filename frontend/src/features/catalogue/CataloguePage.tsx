@@ -3,9 +3,18 @@ import { Link, useSearchParams } from 'react-router';
 import {
     BookOpen,
     BookX,
+    Briefcase,
     CalendarDays,
+    ChevronDown,
     Clock,
+    Code2,
+    FolderOpen,
+    Headphones,
+    MessageSquare,
     Search,
+    Trophy,
+    Users,
+    Zap,
 } from 'lucide-react';
 import { LandingHeader } from '@/components/layout/LandingHeader';
 import { Footer } from '@/components/landing/Footer';
@@ -19,6 +28,77 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { cn } from '@/lib/utils';
 import type { Cohort } from '@/lib/api/types';
 import type { CourseFilters } from '@/features/catalogue/api';
+
+// ─── How to choose ────────────────────────────────────────────────────────────
+
+const pathways = [
+    {
+        icon: Code2,
+        tag: 'Starting from zero',
+        title: 'Frontend Foundations',
+        description: 'Best if you have never coded or want strong HTML, CSS and JavaScript fundamentals.',
+    },
+    {
+        icon: Zap,
+        tag: 'Ready to specialise',
+        title: 'PHP & MySQL Backend',
+        description: 'Choose this when you understand the web basics and want to build secure, data-driven applications.',
+    },
+    {
+        icon: Briefcase,
+        tag: 'Ready for client work',
+        title: 'WordPress Development',
+        description: 'Ideal for designers and developers who want to deliver complete business websites.',
+    },
+];
+
+// ─── What every course includes ───────────────────────────────────────────────
+
+const includes = [
+    { icon: FolderOpen, title: 'Portfolio projects', description: 'Build work you can confidently show clients and employers.' },
+    { icon: Users, title: 'Small cohorts', description: 'Get individual attention and learn alongside committed peers.' },
+    { icon: Headphones, title: 'Mentor feedback', description: 'Receive practical reviews from people doing the work today.' },
+    { icon: Trophy, title: 'Course certificate', description: 'Earn proof of completion after meeting project requirements.' },
+    { icon: Briefcase, title: 'Career preparation', description: 'Improve your CV, portfolio presentation and interview readiness.' },
+    { icon: MessageSquare, title: 'Alumni community', description: 'Keep learning through peer support and mentor connections.' },
+];
+
+// ─── Learning journey ─────────────────────────────────────────────────────────
+
+const journey = [
+    { number: '01', label: 'Choose your pathway' },
+    { number: '02', label: 'Learn with your cohort' },
+    { number: '03', label: 'Build reviewed projects' },
+    { number: '04', label: 'Graduate ready to show your work' },
+];
+
+// ─── FAQ ──────────────────────────────────────────────────────────────────────
+
+const faqs = [
+    { q: 'Do I need coding experience?', a: 'No prior experience is needed for our beginner courses. Frontend Foundations starts from absolute zero — just bring a laptop and the willingness to learn.' },
+    { q: 'Can I pay the course fee in instalments?', a: 'Yes. We offer a flexible payment plan where you pay a deposit to secure your seat and clear the balance before or during the course. Contact us to arrange.' },
+    { q: 'Are classes online or in person?', a: 'It depends on the course. Some are fully online, others are in-person in Kampala, and a few run as hybrid. Each course card shows its delivery mode.' },
+    { q: 'Will I receive a certificate?', a: 'Yes. Every graduate who completes the project requirements receives a publicly verifiable certificate you can share on LinkedIn or send to employers.' },
+    { q: 'What happens if I miss a session?', a: 'Session recordings are shared in the cohort channel within 24 hours. If you miss more than two sessions, your mentor will reach out to help you catch up.' },
+    { q: 'How do I know which course is right for me?', a: 'Use the "Which course fits you best?" guide on this page, or contact us directly. We are happy to talk through your background and goals.' },
+];
+
+function FaqItem({ q, a }: { q: string; a: string }) {
+    const [open, setOpen] = useState(false);
+    return (
+        <div className="border-t border-border">
+            <button
+                onClick={() => setOpen(!open)}
+                aria-expanded={open}
+                className="flex w-full items-center justify-between gap-4 py-4 text-left text-sm font-semibold text-ink-900 hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+                {q}
+                <ChevronDown className={cn('size-4 shrink-0 text-ink-300 transition-transform duration-200', open && 'rotate-180')} aria-hidden="true" />
+            </button>
+            {open && <p className="pb-4 text-sm leading-7 text-ink-600">{a}</p>}
+        </div>
+    );
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -339,30 +419,33 @@ export function CataloguePage() {
 
             <main>
                 {/* ── Section 1: Header + Filters ─────────────────────────────── */}
-                <div className="overflow-hidden bg-[#dbeafe]">
+                <div className="overflow-hidden bg-blue-100">
                     <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-2 lg:items-stretch">
                         {/* Left: text + search */}
-                        <div className="flex flex-col justify-center px-4 py-14 sm:px-6 lg:py-20 lg:pl-8 xl:pl-0">
-                            <h1 className="text-4xl font-bold tracking-tight text-ink-900 sm:text-5xl">
-                                Browse Our Courses
+                        <div className="flex flex-col justify-center px-4 py-12 sm:px-6 lg:py-16 lg:pl-8 xl:pl-0">
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                                Course Finder
+                            </p>
+                            <h1 className="mt-3 text-4xl text-ink-900 sm:text-5xl">
+                                Find the right place to begin.
                             </h1>
-                            <p className="mt-4 max-w-lg text-lg leading-8 text-[#334155]">
-                                Choose your learning path with our structured, project-based courses
-                                designed to take you from beginner to job-ready developer.
+                            <p className="mt-4 max-w-lg text-base leading-7 text-ink-600">
+                                Search by a skill you want to learn, then narrow the results by subject or
+                                experience level.
                             </p>
 
                             {/* Search */}
                             <div className="relative mt-8 max-w-md">
                                 <Search
-                                    className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#94a3b8]"
+                                    className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-300"
                                     aria-hidden="true"
                                 />
                                 <input
                                     type="search"
-                                    placeholder="Search courses…"
+                                    placeholder="Try JavaScript, PHP or WordPress"
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
-                                    className="w-full rounded-xl border border-[#cbd5e1] bg-white py-2.5 pl-9 pr-4 text-sm text-ink-900 placeholder:text-[#94a3b8] focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                    className="w-full rounded-full border border-border bg-white py-2.5 pl-9 pr-4 text-sm text-ink-900 placeholder:text-ink-300 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                                 />
                             </div>
                         </div>
@@ -374,11 +457,7 @@ export function CataloguePage() {
                                 alt="Students browsing courses"
                                 className="absolute inset-0 h-full w-full object-cover object-center"
                             />
-                            {/* Gradient fade on left edge to blend into bg */}
-                            <div
-                                aria-hidden="true"
-                                className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-[#dbeafe] to-transparent"
-                            />
+                            <div aria-hidden="true" className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-blue-100 to-transparent" />
                         </div>
 
                         {/* Mobile: image below text */}
@@ -400,11 +479,12 @@ export function CataloguePage() {
                             <div className="flex flex-wrap gap-2">
                                 <button
                                     onClick={() => setActiveCategory(undefined)}
+                                    aria-pressed={activeCategory === undefined}
                                     className={cn(
-                                        'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
+                                        'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                                         activeCategory === undefined
-                                            ? 'border-blue-600 bg-blue-600 text-white'
-                                            : 'border-[#e8ecf1] bg-white text-[#334155] hover:border-blue-300 hover:text-blue-700',
+                                            ? 'border-primary bg-primary text-white'
+                                            : 'border-border bg-white text-ink-600 hover:border-primary hover:text-primary',
                                     )}
                                 >
                                     All
@@ -413,11 +493,12 @@ export function CataloguePage() {
                                     <button
                                         key={cat.id}
                                         onClick={() => setActiveCategory(activeCategory === cat.id ? undefined : cat.id)}
+                                        aria-pressed={activeCategory === cat.id}
                                         className={cn(
-                                            'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
+                                            'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                                             activeCategory === cat.id
-                                                ? 'border-blue-600 bg-blue-600 text-white'
-                                                : 'border-[#e8ecf1] bg-white text-[#334155] hover:border-blue-300 hover:text-blue-700',
+                                                ? 'border-primary bg-primary text-white'
+                                                : 'border-border bg-white text-ink-600 hover:border-primary hover:text-primary',
                                         )}
                                     >
                                         {cat.name}
@@ -431,7 +512,7 @@ export function CataloguePage() {
 
                         {/* Divider */}
                         {categories && categories.length > 0 && (
-                            <span className="hidden h-5 w-px bg-[#e8ecf1] sm:block" aria-hidden="true" />
+                            <span className="hidden h-5 w-px bg-border sm:block" aria-hidden="true" />
                         )}
 
                         {/* Level chips */}
@@ -440,11 +521,12 @@ export function CataloguePage() {
                                 <button
                                     key={value}
                                     onClick={() => setActiveLevel(activeLevel === value ? undefined : value)}
+                                    aria-pressed={activeLevel === value}
                                     className={cn(
-                                        'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
+                                        'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                                         activeLevel === value
-                                            ? 'border-blue-600 bg-blue-600 text-white'
-                                            : 'border-[#e8ecf1] bg-white text-[#334155] hover:border-blue-300 hover:text-blue-700',
+                                            ? 'border-primary bg-primary text-white'
+                                            : 'border-border bg-white text-ink-600 hover:border-primary hover:text-primary',
                                     )}
                                 >
                                     {label}
@@ -495,6 +577,114 @@ export function CataloguePage() {
 
                 {/* ── Section 3: Cohort Schedule ───────────────────────────────── */}
                 {!isLoading && <CohortSchedule />}
+
+                {/* ── Section 4: How to choose ─────────────────────────────────── */}
+                <section className="border-t border-border bg-surface-50 px-4 py-12 sm:px-6 lg:px-8">
+                    <div className="mx-auto max-w-7xl">
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Choose with confidence</p>
+                        <h2 className="mt-3 text-3xl text-ink-900 sm:text-4xl">Which course fits you best?</h2>
+                        <p className="mt-3 max-w-lg text-sm leading-7 text-ink-600">
+                            Your best starting point depends on what you already know and what you want to build next.
+                        </p>
+                        <div className="mt-8 grid gap-px rounded-2xl border border-border bg-border sm:grid-cols-3">
+                            {pathways.map(({ icon: Icon, tag, title, description }) => (
+                                <div key={title} className="flex flex-col gap-3 bg-white p-6 first:rounded-tl-2xl first:rounded-bl-2xl last:rounded-tr-2xl last:rounded-br-2xl">
+                                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50">
+                                        <Icon className="size-5 text-primary" aria-hidden="true" />
+                                    </div>
+                                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{tag}</p>
+                                    <h3 className="text-lg text-ink-900">{title}</h3>
+                                    <p className="text-sm leading-6 text-ink-600">{description}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                {/* ── Section 5: What every course includes ────────────────────── */}
+                <section className="border-t border-border bg-white px-4 py-12 sm:px-6 lg:px-8">
+                    <div className="mx-auto max-w-7xl">
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Included in every course</p>
+                        <h2 className="mt-3 text-3xl text-ink-900 sm:text-4xl">Support that continues beyond class.</h2>
+                        <p className="mt-3 max-w-lg text-sm leading-7 text-ink-600">
+                            Each pathway combines technical practice with the feedback and career preparation needed to use your new skills.
+                        </p>
+                        <div className="mt-8 grid gap-x-8 gap-y-6 border-t border-border pt-8 sm:grid-cols-2 lg:grid-cols-3">
+                            {includes.map(({ icon: Icon, title, description }) => (
+                                <div key={title} className="flex items-start gap-4 border-b border-border pb-6">
+                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50">
+                                        <Icon className="size-5 text-primary" aria-hidden="true" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-semibold text-ink-900">{title}</p>
+                                        <p className="mt-1 text-sm leading-6 text-ink-600">{description}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                {/* ── Section 6: Learning journey ──────────────────────────────── */}
+                <section className="bg-navy px-4 py-14 sm:px-6 lg:px-8">
+                    <div className="mx-auto max-w-7xl">
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">Your learning journey</p>
+                        <h2 className="mt-3 text-3xl text-navy-foreground sm:text-4xl">From first lesson to finished portfolio.</h2>
+                        <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+                            {journey.map(({ number, label }) => (
+                                <div key={number} className="flex flex-col gap-3">
+                                    <div className="h-px w-full bg-white/20" aria-hidden="true" />
+                                    <p className="font-display text-2xl font-semibold text-accent-amber">{number}</p>
+                                    <p className="text-sm leading-6 text-navy-foreground/80">{label}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                {/* ── Section 7: FAQ ───────────────────────────────────────────── */}
+                <section className="border-t border-border bg-white px-4 py-12 sm:px-6 lg:px-8">
+                    <div className="mx-auto max-w-7xl">
+                        <div className="grid gap-10 lg:grid-cols-3">
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Frequently asked questions</p>
+                                <h2 className="mt-3 text-3xl text-ink-900">Know before you enrol.</h2>
+                                <p className="mt-3 text-sm leading-7 text-ink-600">Clear answers to the questions learners ask most often.</p>
+                            </div>
+                            <div className="lg:col-span-2">
+                                {faqs.map((faq) => <FaqItem key={faq.q} q={faq.q} a={faq.a} />)}
+                                <div className="border-t border-border" />
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* ── Section 8: Final enrolment prompt ───────────────────────── */}
+                <section className="border-t border-border bg-surface-50 px-4 py-12 sm:px-6 lg:px-8">
+                    <div className="mx-auto max-w-7xl flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
+                        <div>
+                            <h2 className="text-2xl text-ink-900 sm:text-3xl">Ready to find your cohort?</h2>
+                            <p className="mt-2 text-sm leading-7 text-ink-600">
+                                Browse available intakes or reach out if you need help choosing the right course.
+                            </p>
+                        </div>
+                        <div className="flex shrink-0 flex-wrap gap-3">
+                            <a
+                                href="#cohorts"
+                                className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                            >
+                                <CalendarDays className="size-4" aria-hidden="true" />
+                                View cohorts
+                            </a>
+                            <Link
+                                to="/contact"
+                                className="inline-flex items-center rounded-full border border-border px-6 py-2.5 text-sm font-semibold text-ink-900 transition-colors hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                            >
+                                Contact us
+                            </Link>
+                        </div>
+                    </div>
+                </section>
             </main>
 
             <Footer
