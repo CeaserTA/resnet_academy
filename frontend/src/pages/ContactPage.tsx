@@ -153,7 +153,7 @@ export function ContactPage() {
                 </div>
 
                 {/* §2 Form + Contact info + Office hours */}
-                <section className="bg-surface-50 px-4 pb-16 pt-10 sm:px-6 lg:px-8">
+                <section className="bg-surface-50 px-4 pb-10 pt-10 sm:px-6 lg:px-8">
                     <div className="mx-auto max-w-7xl">
                         <div className="grid gap-8 lg:grid-cols-3">
 
@@ -297,7 +297,7 @@ export function ContactPage() {
                 </section>
 
                 {/* §3 Map + FAQ side by side */}
-                <section className="border-t border-border bg-surface-50 px-4 py-12 sm:px-6 lg:px-8">
+                <section className="bg-surface-50 px-4 pb-12 pt-0 sm:px-6 lg:px-8">
                     <div className="mx-auto max-w-7xl">
                         <div className="grid gap-10 lg:grid-cols-2">
 

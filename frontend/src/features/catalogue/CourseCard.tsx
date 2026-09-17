@@ -26,14 +26,12 @@ export interface CourseCardProps {
     imageSrc?: string;
     duration?: string;
     format?: string;
-    /** e.g. 'In-person' | 'Online' | 'Hybrid' */
     delivery?: string;
-    /** Short skill tags e.g. ['HTML', 'CSS', 'JavaScript'] */
     skills?: string[];
-    /** Display string e.g. 'September 2026' */
     nextCohort?: string;
-    /** One-line project outcome shown below description */
     outcome?: string;
+    /** Index in the grid — used for staggered entrance animation */
+    index?: number;
 }
 
 export function CourseCard({
@@ -45,6 +43,7 @@ export function CourseCard({
     skills,
     nextCohort,
     outcome,
+    index = 0,
 }: CourseCardProps) {
     const image = course.thumbnail_url ?? imageSrc ?? null;
     const price = formatPrice(course.price, course.currency);
@@ -55,6 +54,10 @@ export function CourseCard({
             to={`/courses/${course.id}`}
             className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-sm transition-shadow duration-200 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             aria-label={`View ${course.title}`}
+            style={{
+                animation: 'card-enter 0.4s ease both',
+                animationDelay: `${index * 80}ms`,
+            }}
         >
             {/* ── Thumbnail ── */}
             <div className="relative bg-blue-50">

@@ -51,7 +51,7 @@ export function CoursePreviews() {
           )}
 
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {courses.map((course) => {
+            {courses.map((course, i) => {
               const meta = courseDurationMap[course.slug];
               return (
                 <CourseCard
@@ -60,6 +60,7 @@ export function CoursePreviews() {
                   imageSrc={courseImageMap[course.slug]}
                   duration={meta?.duration}
                   format={meta?.format}
+                  index={i}
                 />
               );
             })}

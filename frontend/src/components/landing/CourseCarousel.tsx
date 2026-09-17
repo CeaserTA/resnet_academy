@@ -49,7 +49,7 @@ export function CourseCarousel({ courses }: CourseCarouselProps) {
             {/* Viewport — Embla requires overflow:hidden on this element */}
             <div className="overflow-hidden" ref={emblaRef}>
                 <div className="flex gap-5">
-                    {courses.map((course) => {
+                    {courses.map((course, i) => {
                         const meta = courseDurationMap[course.slug];
                         return (
                             <div
@@ -61,6 +61,7 @@ export function CourseCarousel({ courses }: CourseCarouselProps) {
                                     imageSrc={courseImageMap[course.slug]}
                                     duration={meta?.duration}
                                     format={meta?.format}
+                                    index={i}
                                 />
                             </div>
                         );
