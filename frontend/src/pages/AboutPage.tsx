@@ -12,6 +12,7 @@ import {
 import { LandingHeader } from '@/components/layout/LandingHeader';
 import { Footer } from '@/components/landing/Footer';
 import { useAuthModal } from '@/lib/auth/AuthModalContext';
+import { StatCard } from '@/components/ui/StatCard';
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -149,7 +150,6 @@ export function AboutPage() {
                                 </div>
                             </div>
 
-                            {/* Right — stat strip on dark */}
                             <div className="hidden lg:flex lg:items-end lg:justify-end">
                                 <div className="grid grid-cols-2 gap-4">
                                     {[
@@ -158,10 +158,12 @@ export function AboutPage() {
                                         { value: '4', label: 'Active mentors' },
                                         { value: '2023', label: 'Founded' },
                                     ].map(({ value, label }) => (
-                                        <div key={label} className="rounded-xl border border-white/10 bg-white/5 px-5 py-4">
-                                            <p className="text-2xl font-bold text-white">{value}</p>
-                                            <p className="mt-1 text-xs text-white/50">{label}</p>
-                                        </div>
+                                        <StatCard
+                                            key={label}
+                                            value={value}
+                                            label={label}
+                                            className="border-white/10 bg-white/5 [&_dd]:text-white [&_dt]:text-white/70"
+                                        />
                                     ))}
                                 </div>
                             </div>
@@ -275,11 +277,7 @@ export function AboutPage() {
                         </h2>
                         <dl className="mt-8 grid grid-cols-2 gap-5 sm:grid-cols-4">
                             {stats.map(({ value, label, note }) => (
-                                <div key={label} className="flex flex-col rounded-xl border border-border bg-surface-50 px-5 py-6">
-                                    <dd className="text-4xl font-bold text-primary">{value}</dd>
-                                    <dt className="mt-1 text-sm font-medium text-ink-900">{label}</dt>
-                                    <p className="mt-1 text-xs text-ink-300">{note}</p>
-                                </div>
+                                <StatCard key={label} value={value} label={label} note={note} />
                             ))}
                         </dl>
                         <p className="mt-4 text-xs text-ink-300">
