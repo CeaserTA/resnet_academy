@@ -47,9 +47,29 @@ export function Hero({ onJoinCohortClick }: HeroProps) {
                             </span>
                         </div>
 
-                        {/* Heading */}
+                        {/* Heading — word-by-word reveal on load */}
                         <h1 className="mt-5 text-4xl leading-[1.1] text-ink-900 sm:text-5xl xl:text-5xl">
-                            Learn. Build. <span className="text-primary">Launch.</span>
+                            {['Learn.', 'Build.'].map((word, i) => (
+                                <span
+                                    key={word}
+                                    className="inline-block"
+                                    style={{
+                                        animation: 'word-reveal 0.5s cubic-bezier(0.16,1,0.3,1) both',
+                                        animationDelay: `${i * 120}ms`,
+                                    }}
+                                >
+                                    {word}{' '}
+                                </span>
+                            ))}
+                            <span
+                                className="inline-block text-primary"
+                                style={{
+                                    animation: 'word-reveal 0.5s cubic-bezier(0.16,1,0.3,1) both',
+                                    animationDelay: '240ms',
+                                }}
+                            >
+                                Launch.
+                            </span>
                         </h1>
 
                         {/* Subheading */}
