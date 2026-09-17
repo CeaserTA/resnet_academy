@@ -359,8 +359,8 @@ export function CourseDetailPage() {
 
                 {/* Back link */}
                 <Link
-                    to="/"
-                    className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-sm font-medium text-white/80 backdrop-blur-sm transition hover:bg-white/20 sm:left-6 lg:left-8"
+                    to="/courses"
+                    className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-navy/80 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:left-6 lg:left-8"
                 >
                     <ArrowLeft className="size-4" aria-hidden="true" />
                     Back
