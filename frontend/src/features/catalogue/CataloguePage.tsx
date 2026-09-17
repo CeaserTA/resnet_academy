@@ -418,58 +418,36 @@ export function CataloguePage() {
             />
 
             <main>
-                {/* ── Section 1: Header + Filters ─────────────────────────────── */}
-                <div className="overflow-hidden bg-blue-100">
-                    <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-2 lg:items-stretch">
-                        {/* Left: text + search */}
-                        <div className="flex flex-col justify-center px-4 py-12 sm:px-6 lg:py-16 lg:pl-8 xl:pl-0">
-                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                                Course Finder
-                            </p>
-                            <h1 className="mt-3 text-4xl text-ink-900 sm:text-5xl">
-                                Find the right place to begin.
-                            </h1>
-                            <p className="mt-4 max-w-lg text-base leading-7 text-ink-600">
-                                Search by a skill you want to learn, then narrow the results by subject or
-                                experience level.
-                            </p>
+                {/* §1 Course finder header */}
+                <section className="border-b border-border bg-surface-50 px-4 py-12 sm:px-6 lg:px-8">
+                    <div className="mx-auto max-w-7xl">
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                            Course Finder
+                        </p>
+                        <h1 className="mt-3 text-4xl text-ink-900 sm:text-5xl">
+                            Find the right place to begin.
+                        </h1>
+                        <p className="mt-3 max-w-lg text-base leading-7 text-ink-600">
+                            Search by a skill you want to learn, then narrow the results by subject or
+                            experience level.
+                        </p>
 
-                            {/* Search */}
-                            <div className="relative mt-8 max-w-md">
-                                <Search
-                                    className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-300"
-                                    aria-hidden="true"
-                                />
-                                <input
-                                    type="search"
-                                    placeholder="Try JavaScript, PHP or WordPress"
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    className="w-full rounded-full border border-border bg-white py-2.5 pl-9 pr-4 text-sm text-ink-900 placeholder:text-ink-300 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Right: image — bleeds to edge on desktop */}
-                        <div className="relative hidden lg:block">
-                            <img
-                                src="/images/browse-courses.jpg"
-                                alt="Students browsing courses"
-                                className="absolute inset-0 h-full w-full object-cover object-center"
-                            />
-                            <div aria-hidden="true" className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-blue-100 to-transparent" />
-                        </div>
-
-                        {/* Mobile: image below text */}
-                        <div className="h-52 w-full overflow-hidden lg:hidden">
-                            <img
-                                src="/images/browse-courses.jpg"
-                                alt="Students browsing courses"
-                                className="h-full w-full object-cover object-center"
-                            />
+                        {/* Quick facts strip */}
+                        <div className="mt-8 flex flex-wrap gap-6 border-t border-border pt-6">
+                            {[
+                                { icon: FolderOpen, label: 'Project-based learning' },
+                                { icon: Users, label: 'Expert mentor support' },
+                                { icon: Trophy, label: 'Verified certificate' },
+                                { icon: CalendarDays, label: 'Flexible payment plans' },
+                            ].map(({ icon: Icon, label }) => (
+                                <div key={label} className="flex items-center gap-2 text-sm text-ink-600">
+                                    <Icon className="size-4 text-primary" aria-hidden="true" />
+                                    {label}
+                                </div>
+                            ))}
                         </div>
                     </div>
-                </div>
+                </section>
 
                 <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
                     {/* Filter row */}

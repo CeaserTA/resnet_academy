@@ -109,19 +109,26 @@ export function AboutPage() {
             <main>
 
                 {/* §1 Hero ─────────────────────────────────────────────────── */}
-                <section className="bg-blue-100 px-4 py-16 sm:px-6 lg:px-8">
-                    <div className="mx-auto max-w-7xl">
+                <section className="relative overflow-hidden bg-ink-900 px-4 py-16 sm:px-6 lg:px-8">
+                    {/* Subtle image overlay */}
+                    <img
+                        src="/images/students.jpg"
+                        alt=""
+                        aria-hidden="true"
+                        className="absolute inset-0 h-full w-full object-cover opacity-10"
+                    />
+                    <div className="relative z-10 mx-auto max-w-7xl">
                         <div className="grid items-start gap-12 lg:grid-cols-2">
 
                             {/* Left */}
                             <div>
-                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">
                                     About ResNet Academy
                                 </p>
-                                <h1 className="mt-4 text-4xl text-ink-900 sm:text-5xl">
+                                <h1 className="mt-4 text-4xl text-white sm:text-5xl">
                                     Building practical developers,<br className="hidden sm:block" /> one project at a time.
                                 </h1>
-                                <p className="mt-5 max-w-md text-base leading-7 text-ink-600">
+                                <p className="mt-5 max-w-md text-base leading-7 text-white/70">
                                     ResNet Academy trains learners across Uganda and East Africa in
                                     modern web technologies — through real projects, expert mentors,
                                     and cohort-based learning.
@@ -129,26 +136,34 @@ export function AboutPage() {
                                 <div className="mt-8 flex flex-wrap gap-3">
                                     <Link
                                         to="/courses"
-                                        className="inline-flex items-center rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                                        className="inline-flex items-center rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                                     >
                                         Explore courses
                                     </Link>
                                     <a
                                         href="#cohorts"
-                                        className="inline-flex items-center rounded-full border border-border px-6 py-2.5 text-sm font-semibold text-ink-900 transition-colors hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                                        className="inline-flex items-center rounded-full border border-white/20 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:border-white/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                                     >
                                         View cohorts
                                     </a>
                                 </div>
                             </div>
 
-                            {/* Right — single strong photo */}
-                            <div className="overflow-hidden rounded-2xl shadow-sm">
-                                <img
-                                    src="/images/students.jpg"
-                                    alt="ResNet Academy students working on projects"
-                                    className="h-80 w-full object-cover lg:h-96"
-                                />
+                            {/* Right — stat strip on dark */}
+                            <div className="hidden lg:flex lg:items-end lg:justify-end">
+                                <div className="grid grid-cols-2 gap-4">
+                                    {[
+                                        { value: '200+', label: 'Learners trained' },
+                                        { value: '6', label: 'Cohorts completed' },
+                                        { value: '4', label: 'Active mentors' },
+                                        { value: '2023', label: 'Founded' },
+                                    ].map(({ value, label }) => (
+                                        <div key={label} className="rounded-xl border border-white/10 bg-white/5 px-5 py-4">
+                                            <p className="text-2xl font-bold text-white">{value}</p>
+                                            <p className="mt-1 text-xs text-white/50">{label}</p>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -250,7 +265,7 @@ export function AboutPage() {
                 </section>
 
                 {/* §4 Verified results ────────────────────────────────────── */}
-                <section className="border-t border-border bg-white px-4 py-12 sm:px-6 lg:px-8">
+                <section className="border-t border-border bg-surface-50 px-4 py-12 sm:px-6 lg:px-8">
                     <div className="mx-auto max-w-7xl">
                         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
                             By the numbers
@@ -415,7 +430,7 @@ export function AboutPage() {
                 </section>
 
                 {/* §8 Learner story ───────────────────────────────────────── */}
-                <section className="border-t border-border bg-white px-4 py-12 sm:px-6 lg:px-8">
+                <section className="border-t border-border bg-surface-50 px-4 py-12 sm:px-6 lg:px-8">
                     <div className="mx-auto max-w-7xl">
                         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
                             Graduate outcomes
