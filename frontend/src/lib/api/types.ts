@@ -177,7 +177,13 @@ export interface Enrolment {
     status: EnrolmentStatus;
     source: EnrolmentSource;
     course: Course;
-    cohort_course: { id: number; cohort_id: number; cohort_name: string | null } | null;
+    cohort_course: {
+        id: number;
+        cohort_id: number;
+        cohort_name: string | null;
+        cohort_start_date: string | null;
+        cohort_end_date: string | null;
+    } | null;
     applied_at: string;
     confirmation_email_due_at: string;
     confirmation_email_sent_at: string | null;
@@ -612,7 +618,7 @@ export interface Gradebook {
 
 // --- Progress dashboard, certificates & attendance (Phase 4) ----------------------------
 
-export type CourseProgressStatus = 'not_started' | 'in_progress' | 'completed';
+export type CourseProgressStatus = 'upcoming' | 'not_started' | 'in_progress' | 'completed';
 
 export interface CertificateSummary {
     id: number;
@@ -628,6 +634,8 @@ export interface ProgressDashboardRow {
     course: { id: number; title: string };
     status: CourseProgressStatus;
     percent_complete: number;
+    /** The day this intake's content opens. Null for a self-paced enrolment. */
+    starts_on: string | null;
     modules: ModuleProgressEntry[];
     certificate: CertificateSummary | null;
 }

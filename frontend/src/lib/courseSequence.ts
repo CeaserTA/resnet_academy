@@ -118,9 +118,17 @@ export function describeLockedModule(
     module: Module,
     allModules: Module[],
     progressByModuleId: Map<number, ModuleProgressEntry>,
+    /** The day the student's cohort opens, when it is still in the future. */
+    cohortStartsOn?: string | null,
 ): string | null {
     if (module.group_ids && module.group_ids.length > 0) {
         return null;
+    }
+
+    // The cohort start gates every module in the intake, so it outranks the module's own
+    // schedule and the sequential rule — both of which only matter once the course has begun.
+    if (cohortStartsOn && new Date(cohortStartsOn) > new Date()) {
+        return `Starts ${new Date(cohortStartsOn).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}`;
     }
 
     if (module.scheduled_start_at && new Date(module.scheduled_start_at) > new Date()) {

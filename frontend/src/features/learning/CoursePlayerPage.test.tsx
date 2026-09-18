@@ -111,7 +111,7 @@ const { course, modules, progress, progressRows, student } = vi.hoisted(() => {
     ];
 
     const progressRows: ProgressDashboardRow[] = [
-        { course: { id: 1, title: 'Intro to Testing' }, status: 'in_progress', percent_complete: 50, modules: [], certificate: null },
+        { course: { id: 1, title: 'Intro to Testing' }, status: 'in_progress', percent_complete: 50, starts_on: null, modules: [], certificate: null },
     ];
 
     const student: User = {
@@ -269,8 +269,9 @@ const completedProgressRows: ProgressDashboardRow[] = [
         course: { id: 1, title: 'Intro to Testing' },
         status: 'completed',
         percent_complete: 100,
+        starts_on: null,
         modules: [],
-        certificate: { certificate_number: 'CERT-1', certificate_url: null },
+        certificate: { id: 1, certificate_number: 'CERT-1', certificate_url: null },
     },
 ];
 

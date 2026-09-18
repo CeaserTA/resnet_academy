@@ -7,6 +7,7 @@ namespace App\Http\Requests\Api\V1;
 use App\Enums\ResourceType;
 use App\Models\Resource;
 use App\Rules\FileHasExtension;
+use App\Rules\WithinCohortSchedule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
@@ -58,7 +59,7 @@ final class StoreResourceRequest extends FormRequest
             // live_session
             'provider' => ['required_if:type,live_session', Rule::in(['zoom', 'google_meet'])],
             'meeting_url' => ['required_if:type,live_session', 'url', 'max:500'],
-            'scheduled_at' => ['required_if:type,live_session', 'date'],
+            'scheduled_at' => ['required_if:type,live_session', 'date', new WithinCohortSchedule($this->route('module')?->course)],
             'duration_minutes' => ['required_if:type,live_session', 'integer', 'min:1'],
             // Optional at creation — a recording only exists after the session has run.
             'recording_url' => ['nullable', 'url', 'max:500'],

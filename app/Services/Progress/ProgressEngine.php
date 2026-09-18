@@ -24,6 +24,7 @@ use App\Models\VideoWatchPing;
 use App\Services\Analytics\EngagementTracker;
 use App\Services\Certification\CertificateService;
 use App\Services\Notifications\NotificationDispatcher;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -87,6 +88,13 @@ final class ProgressEngine
                     $this->notificationDispatcher->notifyModuleUnlocked($student, $module);
                 }
 
+                // Re-lock a module that was opened before its schedule applied — rows unlocked by
+                // the older rule that ignored the cohort start date. Only ever NotStarted, so no
+                // work in progress is taken away.
+                if ($progress->status === ModuleProgressStatus::NotStarted && ! $scheduleReached) {
+                    $progress->update(['status' => ModuleProgressStatus::Locked, 'unlocked_at' => null]);
+                }
+
                 $previousCompleted = $progress->status === ModuleProgressStatus::Completed;
             }
         });
@@ -95,21 +103,37 @@ final class ProgressEngine
     /**
      * Determine if a module's schedule requirement has been met.
      *
-     * - If enrolled in a cohort offering AND module has unlock_offset_days: check
-     *   (cohort.start_date + offset) <= now
+     * - The cohort's start date is a floor: nothing in an intake opens before the intake begins,
+     *   whatever the module's own schedule says. Applying immediately on enrolment was how a
+     *   student could open module content months ahead of their cohort.
+     * - Then, if the module has unlock_offset_days: check (cohort.start_date + offset) <= now
      * - Otherwise: check scheduled_start_at is null or has passed
      */
     private function isModuleScheduleReached(Module $module, ?CohortCourse $cohortCourse): bool
     {
+        // Null for a self-paced enrolment, and for a `cohort_courses` row predating cohorts —
+        // neither carries a schedule, so neither gates anything.
+        $cohortStart = $this->cohortStartFor($cohortCourse);
+
+        if ($cohortStart !== null && $cohortStart->isFuture()) {
+            return false;
+        }
+
         // Cohort-relative scheduling takes precedence if both the cohort and offset exist
-        if ($cohortCourse !== null && $module->unlock_offset_days !== null) {
-            $unlockDate = $cohortCourse->cohort->start_date->addDays($module->unlock_offset_days);
+        if ($cohortStart !== null && $module->unlock_offset_days !== null) {
+            $unlockDate = $cohortStart->copy()->addDays($module->unlock_offset_days);
 
             return $unlockDate->isPast() || $unlockDate->isToday();
         }
 
         // Fall back to absolute scheduled_start_at when no cohort-relative offset is set
         return $module->scheduled_start_at === null || $module->scheduled_start_at->isPast();
+    }
+
+    /** The day the student's intake begins, or null when their enrolment has no cohort schedule. */
+    private function cohortStartFor(?CohortCourse $cohortCourse): ?CarbonInterface
+    {
+        return $cohortCourse?->cohort?->start_date?->copy()->startOfDay();
     }
 
     /**
@@ -257,7 +281,34 @@ final class ProgressEngine
     {
         $progress = ModuleProgress::where('student_id', $student->id)->where('module_id', $module->id)->first();
 
-        abort_if(! $progress || $progress->status === ModuleProgressStatus::Locked, 403, 'This module is locked.');
+        if ($progress && $progress->status !== ModuleProgressStatus::Locked) {
+            return;
+        }
+
+        abort(403, $this->lockedReason($student, $module));
+    }
+
+    /**
+     * Why this module won't open, in the student's terms. A course that hasn't started yet is the
+     * common case for a newly enrolled student, and "This module is locked" on its own reads like
+     * a dead end when the real answer is simply a date.
+     */
+    private function lockedReason(User $student, Module $module): string
+    {
+        $cohortStart = $this->cohortStartFor(
+            $module->course->enrolments()
+                ->where('student_id', $student->id)
+                ->where('status', EnrolmentStatus::Confirmed)
+                ->with('cohortCourse.cohort')
+                ->first()
+                ?->cohortCourse,
+        );
+
+        if ($cohortStart !== null && $cohortStart->isFuture()) {
+            return 'This course starts on '.$cohortStart->format('j M Y').'. Its content opens then.';
+        }
+
+        return 'This module is locked.';
     }
 
     public function recordVideoPing(User $student, Resource $resource, int $positionSeconds): void

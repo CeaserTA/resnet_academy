@@ -147,6 +147,8 @@ export function reviewStatusDisplay(status: ReviewStatus): StatusDisplay {
 }
 
 const courseProgressStatusMap: Record<CourseProgressStatus, StatusDisplay> = {
+    // Enrolled, but the cohort has not begun — content is legitimately closed, not merely untouched.
+    upcoming: { label: 'Upcoming', tone: 'neutral', icon: Clock },
     not_started: { label: 'Not started', tone: 'neutral', icon: Circle },
     in_progress: { label: 'In progress', tone: 'progress', icon: Circle },
     completed: { label: 'Completed', tone: 'success', icon: CheckCircle2 },

@@ -26,6 +26,10 @@ final class EnrolmentResource extends JsonResource
                         'id' => $this->cohortCourse->id,
                         'cohort_id' => $this->cohortCourse->cohort_id,
                         'cohort_name' => $this->cohortCourse->cohort?->name,
+                        // The intake's schedule: content stays locked until start_date, so the
+                        // student needs the date to make sense of a course they can't open yet.
+                        'cohort_start_date' => $this->cohortCourse->cohort?->start_date?->toDateString(),
+                        'cohort_end_date' => $this->cohortCourse->cohort?->end_date?->toDateString(),
                     ]
                     : null,
             ),
