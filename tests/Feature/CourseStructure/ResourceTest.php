@@ -108,6 +108,48 @@ it('uploads a document resource file to R2, stores the path, and resolves a full
     expect($response->json('data.details.file_url'))->toStartWith('http');
 });
 
+it('accepts a real docx/pptx even when the server content-sniffs it as a generic mime type', function (): void {
+    // Regression test: Laravel's `mimes:` rule checks UploadedFile::guessExtension(), which is
+    // derived from the file's *content* via PHP's fileinfo extension, not its filename. Real
+    // Word/PowerPoint files are OOXML zip archives, and depending on internal file ordering and
+    // the server's libmagic database, fileinfo frequently reports a generic
+    // application/octet-stream or application/zip for a perfectly valid .docx/.pptx — which
+    // `mimes:docx,pptx,...` then rejects even though the file is exactly what it claims to be.
+    // FileHasExtension validates the client-supplied filename extension instead, so this must
+    // succeed regardless of what the sniffed mime type happens to be.
+    Storage::fake('r2', ['url' => 'https://cdn.test']);
+    $admin = User::factory()->admin()->create();
+    $module = Module::factory()->create();
+
+    $response = $this->actingAs($admin)->post("/api/v1/modules/{$module->id}/resources", [
+        'type' => 'document',
+        'title' => 'Slide deck',
+        'file_type' => 'docx',
+        'file' => UploadedFile::fake()->create('slides.docx', 500, 'application/octet-stream'),
+    ]);
+
+    $response->assertCreated();
+});
+
+it('still rejects a file whose extension is not on the allowed list', function (): void {
+    Storage::fake('r2', ['url' => 'https://cdn.test']);
+    $admin = User::factory()->admin()->create();
+    $module = Module::factory()->create();
+
+    $response = $this->actingAs($admin)->postJson("/api/v1/modules/{$module->id}/resources", [
+        'type' => 'document',
+        'title' => 'Suspicious file',
+        'file_type' => 'pdf',
+        'file' => UploadedFile::fake()->create('payload.exe', 10, 'application/octet-stream'),
+    ]);
+
+    // This app renders validation failures as {"error":{"fields":{...}}}, not Laravel's default
+    // {"errors":{...}} shape, so assertJsonValidationErrors() (which looks for the latter)
+    // doesn't apply here — check the custom envelope directly instead.
+    $response->assertUnprocessable();
+    expect($response->json('error.fields.file'))->not->toBeNull();
+});
+
 it('uploads a scorm package to R2 via the package field', function (): void {
     Storage::fake('r2', ['url' => 'https://cdn.test']);
     $admin = User::factory()->admin()->create();

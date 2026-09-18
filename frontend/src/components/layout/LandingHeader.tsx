@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router';
 import { GraduationCap, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { useAuth } from '@/lib/auth/AuthContext';
 import { cn } from '@/lib/utils';
 
 interface LandingHeaderProps {
-    isAuthenticated?: boolean;
     onLoginClick: () => void;
     onSignupClick: () => void;
 }
@@ -20,7 +20,14 @@ interface IndicatorStyle {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function LandingHeader({ isAuthenticated = false, onLoginClick, onSignupClick }: LandingHeaderProps) {
+export function LandingHeader({ onLoginClick, onSignupClick }: LandingHeaderProps) {
+    // Read straight from the auth context rather than taking this as a prop. It used to be a
+    // prop defaulting to false, and four of the five pages rendering this header simply never
+    // passed it — so a logged-in user was shown "Log in"/"Sign up" on the catalogue, cohort,
+    // about and contact pages with no way back into the app.
+    const { user } = useAuth();
+    const isAuthenticated = !!user;
+
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
     const [indicator, setIndicator] = useState<IndicatorStyle>({ left: 0, width: 0, opacity: 0 });

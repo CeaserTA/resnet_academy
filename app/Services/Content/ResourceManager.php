@@ -132,6 +132,7 @@ final class ResourceManager
                 'meeting_url' => $data['meeting_url'],
                 'scheduled_at' => $data['scheduled_at'],
                 'duration_minutes' => $data['duration_minutes'],
+                'recording_url' => $data['recording_url'] ?? null,
             ]),
             ResourceType::DownloadableFile => ResourceDownloadableFile::create([
                 'resource_id' => $resource->id,
@@ -166,7 +167,7 @@ final class ResourceManager
             ResourceType::Reading => ['content_html'],
             ResourceType::ExternalLink => ['url'],
             ResourceType::Scorm => ['package_url', 'standard'],
-            ResourceType::LiveSession => ['provider', 'meeting_url', 'scheduled_at', 'duration_minutes'],
+            ResourceType::LiveSession => ['provider', 'meeting_url', 'scheduled_at', 'duration_minutes', 'recording_url'],
             ResourceType::DownloadableFile => ['file_url', 'file_size_kb'],
         };
 

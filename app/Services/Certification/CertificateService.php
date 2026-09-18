@@ -9,6 +9,9 @@ use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\User;
 use App\Services\Notifications\NotificationDispatcher;
+use App\Services\Storage\MediaStorageService;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -19,7 +22,11 @@ use Illuminate\Support\Str;
  */
 final class CertificateService
 {
-    public function __construct(private readonly NotificationDispatcher $notificationDispatcher) {}
+    public function __construct(
+        private readonly NotificationDispatcher $notificationDispatcher,
+        private readonly MediaStorageService $mediaStorage,
+        private readonly CertificatePrintData $printData,
+    ) {}
 
     /**
      * Note: this is called from inside callers that already hold their own transaction
@@ -49,6 +56,40 @@ final class CertificateService
         });
 
         return $certificate;
+    }
+
+    /**
+     * Renders and stores the PDF if it isn't there yet, returning the stored path either way.
+     *
+     * Both the queued job and the download endpoint go through here, which is what makes the
+     * certificate reachable even when no queue worker is running: whoever asks for it first
+     * renders it. Idempotent, so a worker that starts late simply finds the work already done.
+     */
+    public function ensurePdf(Certificate $certificate): string
+    {
+        if ($certificate->certificate_url !== null) {
+            return $certificate->certificate_url;
+        }
+
+        // A download racing the queued job (or another download) must not render and store the
+        // same PDF twice; whoever loses the lock re-reads the path the winner just wrote.
+        return Cache::lock("certificate-pdf:{$certificate->id}", 60)->block(15, function () use ($certificate): string {
+            $certificate->refresh();
+
+            if ($certificate->certificate_url !== null) {
+                return $certificate->certificate_url;
+            }
+
+            $pdf = Pdf::loadView('certificates.pdf', $this->printData->for($certificate));
+
+            // Stores the R2 *path*, not a full URL — CertificateResource/ProgressController
+            // resolve it to a URL at read time via MediaStorageService::url().
+            $path = "certificates/{$certificate->certificate_number}.pdf";
+            $this->mediaStorage->putRaw($path, $pdf->output());
+            $certificate->update(['certificate_url' => $path]);
+
+            return $path;
+        });
     }
 
     private function generateCertificateNumber(): string

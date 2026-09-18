@@ -21,5 +21,8 @@ export default defineConfig({
         globals: true,
         setupFiles: ['./src/test/setup.ts'],
         pool: 'threads',
+        // e2e/ holds Playwright specs, which import @playwright/test and cannot run under
+        // vitest — without this they are collected and reported as failures on every run.
+        exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
     },
 });

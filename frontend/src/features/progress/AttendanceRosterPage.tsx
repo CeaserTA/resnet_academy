@@ -33,7 +33,7 @@ export function AttendanceRosterPage() {
                         <tr>
                             <th className="px-4 py-2 font-medium text-ink-600">Student</th>
                             <th className="px-4 py-2 font-medium text-ink-600">Status</th>
-                            <th className="px-4 py-2 text-right font-medium text-ink-600">Marked at</th>
+                            <th className="px-4 py-2 text-right font-medium text-ink-600">Joined at</th>
                         </tr>
                     </thead>
                     <tbody>

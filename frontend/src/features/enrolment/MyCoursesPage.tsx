@@ -14,6 +14,7 @@ import {
 import { useMyEnrolments, useSubmitPayment, useWithdrawEnrolment, useCancelTransferRequest } from '@/features/enrolment/useEnrolments';
 import { useDismissCourseApplication, useMyCourseApplications } from '@/features/courseApplications/useCourseApplications';
 import { useProgressDashboard } from '@/features/progress/useProgress';
+import { certificateDownloadUrl } from '@/features/progress/api';
 import { ApplicationStatusCard } from '@/features/enrolment/ApplicationStatusCard';
 import { ReviewFormModal } from '@/features/reviews/ReviewFormModal';
 import { useMyReviews } from '@/features/reviews/useReviews';
@@ -233,9 +234,28 @@ function EnrolmentCard({ enrolment, progress, review, onWithdraw, onCancelTransf
                             </Button>
                         </Link>
                         {progress.certificate && (
-                            <a href={progress.certificate.certificate_url ?? undefined} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:underline">
+                            /*
+                                Always the download endpoint, never the stored file URL: that URL
+                                is null until the PDF has been rendered, which previously left an
+                                href-less anchor reading "Certificate generating…" that could
+                                never be clicked. The endpoint renders on demand, so the link is
+                                live as soon as the certificate is issued.
+
+                                rel="noopener" only — NOT "noreferrer", for the same reason as the
+                                live-session join link: this target is a Sanctum-authenticated API
+                                route, and the stateful middleware only honours the session cookie
+                                when the Origin/Referer header identifies this SPA. "noreferrer"
+                                strips it, so the logged-in student is treated as a guest and
+                                bounced to /login instead of getting their certificate.
+                            */
+                            <a
+                                href={certificateDownloadUrl(progress.certificate.id)}
+                                target="_blank"
+                                rel="noopener"
+                                className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:underline"
+                            >
                                 <Award className="size-3.5" aria-hidden="true" />
-                                {progress.certificate.certificate_url ? 'Download certificate' : 'Certificate generating…'}
+                                Download certificate
                             </a>
                         )}
                         {progress.certificate && (!review || review.status === 'rejected') && (

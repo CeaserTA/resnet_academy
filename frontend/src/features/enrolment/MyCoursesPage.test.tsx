@@ -109,6 +109,9 @@ vi.mock('@/features/courseApplications/api', () => ({
 
 vi.mock('@/features/progress/api', () => ({
     fetchProgressDashboard: vi.fn().mockResolvedValue(progressRows),
+    // The certificate link points at the download endpoint rather than the stored file URL,
+    // which is null until the PDF has been rendered.
+    certificateDownloadUrl: (certificateId: number) => `/api/v1/certificates/${certificateId}/download`,
 }));
 
 vi.mock('@/features/courseStructure/api', () => ({

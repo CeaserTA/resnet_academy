@@ -1,21 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { ChevronLeft, ChevronRight, CheckCircle2, ExternalLink, Pause, Play, Video } from 'lucide-react';
+import { Alert } from '@/components/ui/Alert';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { YouTubeEmbed } from '@/components/media/YouTubeEmbed';
+import { DocumentViewer } from '@/components/media/DocumentViewer';
 import { extractYouTubeVideoId } from '@/lib/youtube';
-import {
-    useMarkAttendance,
-    useMarkOpened,
-    useMarkRead,
-    useRecordVideoProgress,
-    useResource,
-    useCourseProgress,
-} from '@/features/learning/useLearning';
+import { liveSessionJoinUrl } from '@/features/learning/api';
+import { useMarkOpened, useMarkRead, useRecordVideoProgress, useResource, useCourseProgress } from '@/features/learning/useLearning';
 import { useCourseSequence } from '@/features/learning/useCourseSequence';
 import { ReadingLessonView } from '@/features/learning/ReadingLessonView';
 import { useCourse } from '@/features/catalogue/useCourses';
@@ -148,7 +144,6 @@ export function ResourceViewerPage() {
     const { data: resource, isLoading } = useResource(resourceId);
     const markRead = useMarkRead(courseId);
     const markOpened = useMarkOpened(courseId);
-    const markAttendance = useMarkAttendance(courseId);
     const { flatItems } = useCourseSequence(courseId);
 
     // Fix 3: calling useCourseProgress here guarantees the backend's evaluateCourseUnlocks()
@@ -235,7 +230,29 @@ export function ResourceViewerPage() {
                     </div>
                 )}
 
-                {(resource.type === 'document' || resource.type === 'downloadable_file') && (
+                {resource.type === 'document' && (
+                    <div className="flex flex-col gap-4">
+                        {/*
+                            Completion for documents follows the same explicit "Mark as read"
+                            convention as reading/SCORM resources (ProgressEngine::isResourceComplete
+                            checks marked_read_at for all three) — not the auto-fired "opened" signal
+                            external links and downloadable files use, which a different backend
+                            field tracks and which never satisfies the document completion check.
+                        */}
+                        <DocumentViewer fileUrl={resource.details.file_url} fileType={resource.details.file_type} title={resource.title} />
+                        {!isComplete && (
+                            <Button
+                                onClick={() => markRead.mutate(resource.id)}
+                                isLoading={markRead.isPending}
+                                className="self-start"
+                            >
+                                Mark as read
+                            </Button>
+                        )}
+                    </div>
+                )}
+
+                {resource.type === 'downloadable_file' && (
                     <div className="flex flex-col gap-4">
                         <a
                             href={resource.details.file_url ?? '#'}
@@ -265,23 +282,69 @@ export function ResourceViewerPage() {
                             {resource.details.scheduled_at && new Date(resource.details.scheduled_at).toLocaleString()}{' '}
                             ({resource.details.duration_minutes} min)
                         </p>
-                        <a
-                            href={resource.details.meeting_url ?? '#'}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-2 text-blue-600 hover:underline"
-                        >
-                            <ExternalLink className="size-4" aria-hidden="true" />
-                            Join session
-                        </a>
-                        {!isComplete && (
-                            <Button
-                                onClick={() => markAttendance.mutate(resource.id)}
-                                isLoading={markAttendance.isPending}
-                                className="self-start"
+                        {/*
+                            Phase 1 verified attendance: this links to the backend join-redirect
+                            endpoint, never to resource.details.meeting_url directly — the server
+                            records attendance only when this link is actually followed, then 302s
+                            to the real Zoom/Meet URL. There is no separate "mark as attended"
+                            action any more; joining IS how attendance gets recorded.
+
+                            rel="noopener" only — NOT "noreferrer". This link's target is a
+                            same-site Sanctum-authenticated API route, and Sanctum's
+                            EnsureFrontendRequestsAreStateful middleware only honors the session
+                            cookie when it recognizes the request as coming from this SPA, which
+                            it does by checking the Origin/Referer header against
+                            SANCTUM_STATEFUL_DOMAINS. "noreferrer" strips that header, so the
+                            already-logged-in student would get treated as a guest and bounced to
+                            the frontend's own /login page (see bootstrap/app.php's
+                            redirectGuestsTo). "noopener" alone still blocks the new tab from
+                            getting a window.opener handle back to this page, which is the actual
+                            security property target="_blank" needs here.
+                        */}
+                        {resource.details.access_state !== 'recording' && resource.details.access_state !== 'recording_pending' && (
+                            <a
+                                href={liveSessionJoinUrl(resource.id)}
+                                target="_blank"
+                                rel="noopener"
+                                className="inline-flex items-center gap-2 self-start text-blue-600 hover:underline"
                             >
-                                Mark as attended
-                            </Button>
+                                <ExternalLink className="size-4" aria-hidden="true" />
+                                Join session
+                            </a>
+                        )}
+
+                        {/*
+                            Once the join window closes the session can never be attended again,
+                            so the recording becomes the only route through what is a required
+                            item. Opening it completes the resource exactly as an external link
+                            does — same markOpened signal, same completion rule.
+                        */}
+                        {resource.details.access_state === 'recording' && resource.details.recording_url && (
+                            <div className="flex flex-col gap-2">
+                                <p className="text-sm text-ink-600">
+                                    This session has already taken place. Watch the recording to complete it.
+                                </p>
+                                <a
+                                    href={resource.details.recording_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    onClick={() => !isComplete && markOpened.mutate(resource.id)}
+                                    className="inline-flex items-center gap-2 self-start text-blue-600 hover:underline"
+                                >
+                                    <ExternalLink className="size-4" aria-hidden="true" />
+                                    Watch the recording
+                                </a>
+                            </div>
+                        )}
+
+                        {resource.details.access_state === 'recording_pending' && (
+                            <Alert
+                                variant="warning"
+                                message={
+                                    'This session has already taken place and the recording hasn’t been posted yet. '
+                                    + 'Check back soon — once your instructor adds it, you can watch it here to complete this item.'
+                                }
+                            />
                         )}
                     </div>
                 )}
