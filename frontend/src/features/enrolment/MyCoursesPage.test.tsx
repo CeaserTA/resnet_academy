@@ -82,7 +82,7 @@ const { course, enrolment, modules, progressRows } = vi.hoisted(() => {
     ];
 
     const progressRows: ProgressDashboardRow[] = [
-        { course: { id: 1, title: course.title }, status: 'in_progress', percent_complete: 25, modules: [], certificate: null },
+        { course: { id: 1, title: course.title }, status: 'in_progress', percent_complete: 25, starts_on: null, modules: [], certificate: null },
     ];
 
     return { course, enrolment, modules, progressRows };
@@ -181,8 +181,9 @@ const completedProgressRows: ProgressDashboardRow[] = [
         course: { id: 1, title: 'Intro to Testing' },
         status: 'completed',
         percent_complete: 100,
+        starts_on: null,
         modules: [],
-        certificate: { certificate_number: 'CERT-1', certificate_url: null },
+        certificate: { id: 1, certificate_number: 'CERT-1', certificate_url: null },
     },
 ];
 

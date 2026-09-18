@@ -423,3 +423,90 @@ nothing is being changed by a lookup anyway.
   It is baked into each PDF at render time and cannot be corrected afterwards without regenerating,
   so it must be right in production before any certificate is issued. The institution name and
   fallback signatory live alongside it in `config/certificates.php`.
+
+## Cohort date enforcement — access timing and date containment
+
+Two rules added: module content stays locked until the student's cohort begins, and a dated item
+under a course (live session, assignment deadline, evaluation window, module start) must fall
+inside that cohort's range.
+
+Verified in a browser against the dev data: "Frontend Development" runs in the January 2027 Intake
+(4 Jan – 4 May 2027) and today is 18 Sep 2026. A newly enrolled student's seat is confirmed, the
+dashboard reads **Upcoming — "Starts January 4, 2027. Your place is reserved"** with no Start
+button, and the course page leads with the date instead of a page of unexplained locked rows.
+Moving the cohort start to yesterday unlocked the module (NOT STARTED, openable) with no other
+change; moving it back re-locked it. As admin, a live session dated 10 Nov 2026 was refused with
+*"This date must fall within the January 2027 Intake cohort, which runs 4 Jan 2027 to 4 May 2027"*,
+and the same session at 10 Feb 2027 was created normally.
+
+### F14 — Content opened months before the cohort started
+
+**Severity:** high — students could work through a course before the intake it belongs to began.
+
+[ProgressEngine::isModuleScheduleReached()](app/Services/Progress/ProgressEngine.php) consulted the
+cohort's start date **only** when the module carried `unlock_offset_days`. With that null (the
+default, and true of every module in the dev data) it fell through to `scheduled_start_at`, and
+with that null too it returned `true`. So enrolling on a cohort starting 4 Jan 2027 unlocked
+Module 1 immediately, on 18 Sep 2026.
+
+**Fixed:** the cohort's start date is now a floor for every module in the intake — checked before
+the offset and the absolute date, both of which still apply on top of it. A module that was opened
+under the old rule and has not been started is re-locked; anything in progress or completed is left
+alone. Enrolment itself is untouched: the seat is still reserved immediately.
+
+### F15 — The blocked student was told nothing useful
+
+**Severity:** medium — a correct block that reads as a broken page.
+
+`assertModuleUnlocked()` returned a flat *"This module is locked."* for every case, and
+`describeLockedModule()` in the UI knew only about `scheduled_start_at` and the sequential rule —
+neither of which applies before a cohort starts, so the module rendered locked with no reason at
+all.
+
+**Fixed:** the API answers *"This course starts on 4 Jan 2027. Its content opens then."*, the
+dashboard row carries a new `upcoming` status and `starts_on` date, and both the course page banner
+and the per-module reason show the date. `EnrolmentResource` now also exposes
+`cohort_start_date`/`cohort_end_date`, which it previously withheld while exposing the cohort's id
+and name — the client could name the intake but not say when it began.
+
+### F16 — `tsc --noEmit` checks nothing in this repo
+
+**Severity:** medium — the command most likely to be used as a pre-commit gate is a no-op, and it
+had already let real type errors through.
+
+`frontend/tsconfig.json` is `{"files": [], "references": [...]}`. With no files of its own,
+`npx tsc --noEmit` type-checks an empty program and exits 0 whatever the state of `src`. The real
+check is `tsc -b`, which is what `npm run build` runs.
+
+Running `tsc -b --force` surfaced four errors, two of them pre-existing and unrelated to this work:
+
+```
+src/features/enrolment/MyCoursesPage.test.tsx(185,9): error TS2741:
+  Property 'id' is missing in type '{ certificate_number: string; certificate_url: null; }'
+  but required in type 'CertificateSummary'.
+src/features/learning/CoursePlayerPage.test.tsx(273,9): error TS2741: (same)
+```
+
+Those fixtures went stale when `CertificateSummary` gained `id`, and nothing caught it. All four are
+fixed; **`tsc -b` is the command to use**, not `tsc --noEmit`.
+
+### Worth knowing
+
+- **A course can run in any number of cohorts.** `cohort_courses` is a join table with no unique
+  constraint on (course, cohort), so a course is a reusable template and each row is one intake.
+  Dated items, however, hang off the *course* — one absolute `scheduled_at` is shared by every
+  intake running it. Containment is therefore enforced only when a course belongs to exactly one
+  cohort; when it belongs to several, the save is refused naming them, rather than silently
+  validating against one. The cohort-relative alternative already exists for modules
+  (`unlock_offset_days`) and would need equivalents on live sessions, assignments and evaluations
+  before a course could carry dates across intakes.
+- **`unlock_offset_days` is honoured by the engine but cannot be set.** No admin UI, no
+  FormRequest, not in any API payload — the cohort-relative scheduling path is unreachable in
+  practice. Worth wiring up if courses are ever reused across intakes.
+- **`CohortFactory` used to date every test cohort in the future** (`dateTimeBetween('now',
+  '+6 months')`). Harmless while nothing depended on the cohort start; with this gate it would have
+  locked the content of every test that enrols through a cohort. The default is now an intake that
+  is already running, with `upcoming()` and `finished()` states for the others.
+- **A `cohort_courses` row can have a null `cohort_id`** (rows predating cohorts). The old offset
+  branch would have dereferenced null on such a row; both the gate and the validation rule now treat
+  "no cohort" as "no schedule to enforce".

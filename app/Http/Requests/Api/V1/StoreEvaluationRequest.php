@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Api\V1;
 
 use App\Models\Evaluation;
+use App\Rules\WithinCohortSchedule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -26,8 +27,8 @@ final class StoreEvaluationRequest extends FormRequest
             'time_limit_minutes' => ['nullable', 'integer', 'min:1'],
             'randomize_questions' => ['nullable', 'boolean'],
             'questions_per_attempt' => ['nullable', 'integer', 'min:1'],
-            'available_from' => ['nullable', 'date'],
-            'available_until' => ['nullable', 'date', 'after:available_from'],
+            'available_from' => ['nullable', 'date', new WithinCohortSchedule($this->route('module')?->course)],
+            'available_until' => ['nullable', 'date', 'after:available_from', new WithinCohortSchedule($this->route('module')?->course)],
             'is_required' => ['nullable', 'boolean'],
             'order_index' => ['nullable', 'integer', 'min:0'],
             'question_ids' => ['nullable', 'array'],

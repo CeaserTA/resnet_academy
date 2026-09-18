@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router';
 import {
     ArrowRight,
     BookOpen,
+    CalendarClock,
     CheckCircle2,
     ChevronDown,
     ChevronRight,
@@ -241,6 +242,8 @@ export function CoursePlayerPage() {
     const courseCompleted = isCourseCompleted(sortedModules, progressByModuleId);
 
     const progressRow = progressRows?.find((row) => row.course.id === courseId);
+    // Set only while the intake has not begun; every module is locked until then.
+    const cohortStartsOn = progressRow?.status === 'upcoming' ? progressRow.starts_on : null;
     const overallPercent = progressRow?.percent_complete ?? 0;
     const hasCompletedCourse = !!progressRow?.certificate;
     const myReview = myReviews?.find((review) => review.course?.id === courseId);
@@ -291,7 +294,27 @@ export function CoursePlayerPage() {
             </div>
 
             {/* Continue / completed banner */}
-            {nextIncompleteItem ? (
+            {cohortStartsOn ? (
+                /* Every module is locked until the intake begins, so the date leads rather than
+                   leaving a page of locked rows with no explanation. */
+                <div className="mt-3 flex items-start gap-3 rounded-lg border border-blue-600/30 bg-blue-50 p-3">
+                    <CalendarClock className="mt-0.5 size-5 shrink-0 text-blue-600" aria-hidden="true" />
+                    <div className="min-w-0">
+                        <p className="text-sm font-medium text-ink-900">
+                            This course starts on{' '}
+                            {new Date(cohortStartsOn).toLocaleDateString(undefined, {
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric',
+                            })}
+                        </p>
+                        <p className="mt-0.5 text-sm text-ink-600">
+                            Your place is reserved. The modules below open on that date — you can see what the course
+                            covers in the meantime.
+                        </p>
+                    </div>
+                </div>
+            ) : nextIncompleteItem ? (
                 <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-blue-600/30 bg-blue-50 p-3">
                     <div className="min-w-0">
                         <p className="text-xs font-medium text-blue-600">Continue where you left off</p>
@@ -322,7 +345,9 @@ export function CoursePlayerPage() {
                     const status = statusFor(module.id);
                     const display = statusDisplay[status];
                     const isLocked = status === 'locked';
-                    const lockedReason = isLocked ? describeLockedModule(module, sortedModules, progressByModuleId) : null;
+                    const lockedReason = isLocked
+                        ? describeLockedModule(module, sortedModules, progressByModuleId, cohortStartsOn)
+                        : null;
                     const expanded = isExpanded(module.id);
                     const reviewItem = status === 'completed' ? reviewItemForModule(module) : null;
 
