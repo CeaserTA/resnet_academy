@@ -162,7 +162,7 @@ function AttemptResult({ attempt }: { attempt: EvaluationAttempt }) {
             <>
                 <Alert
                     variant="success"
-                    message="Submitted. Some answers need your instructor's review before a final score appears here."
+                    message="Submitted. Review in progress — results will be available once your instructor has finished grading."
                 />
                 {reviewButton}
                 <AttemptReviewModal
@@ -471,17 +471,26 @@ export function EvaluationTakePage() {
 
     return (
         <div className="mx-auto max-w-2xl">
-            <Breadcrumbs
-                items={[
-                    { label: 'My Courses', to: '/dashboard' },
-                    { label: course?.title ?? '', to: `/learn/courses/${courseId}` },
-                    { label: `Attempt #${session.attempt.attempt_number}` },
-                ]}
-            />
-
-            <div className="mt-2 flex items-center justify-between">
-                <h1 className="text-2xl">Attempt #{session.attempt.attempt_number}</h1>
-                {deadline && !result && <CountdownBadge deadline={deadline} onExpire={handleSubmit} />}
+            {/*
+                Breadcrumbs and the countdown pin together as one bar. AppShell's <main> is the
+                scroll container (not the window), and sticky offsets resolve against its content
+                box — which sits inside main's padding — so the ::before strip paints the same
+                background up over that padding. Without it, question text scrolls visibly
+                through the gap above the bar. Keeping the breadcrumbs inside the sticky region
+                means that strip never hides anything.
+            */}
+            <div className="sticky top-0 z-20 flex flex-col gap-1 border-b border-surface-100 bg-surface-50 pb-3 pt-1 before:absolute before:inset-x-0 before:-top-8 before:h-8 before:bg-surface-50 before:content-['']">
+                <Breadcrumbs
+                    items={[
+                        { label: 'My Courses', to: '/dashboard' },
+                        { label: course?.title ?? '', to: `/learn/courses/${courseId}` },
+                        { label: `Attempt #${session.attempt.attempt_number}` },
+                    ]}
+                />
+                <div className="flex items-center justify-between gap-3">
+                    <h1 className="text-2xl">Attempt #{session.attempt.attempt_number}</h1>
+                    {deadline && !result && <CountdownBadge deadline={deadline} onExpire={handleSubmit} />}
+                </div>
             </div>
 
             {result ? (

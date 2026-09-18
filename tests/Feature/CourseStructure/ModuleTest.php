@@ -55,6 +55,28 @@ it('shows locked modules in the listing rather than hiding them', function (): v
     expect($response->json('data'))->toHaveCount(1);
 });
 
+it('tags every resource in the module listing with item_type=resource, alongside assignments and evaluations', function (): void {
+    // Regression test: ResourceItemResource previously omitted `item_type` entirely (unlike
+    // AssignmentItemResource/EvaluationItemResource, which both set it), so every resource
+    // failed the frontend's `item.item_type === 'resource'` filter and never rendered anywhere
+    // — in the admin course builder or the student course player — even though it existed in
+    // the database and the API response.
+    $admin = User::factory()->admin()->create();
+    $course = Course::factory()->create();
+    $module = Module::factory()->for($course)->create();
+    $resource = Resource::factory()->for($module)->reading()->create();
+    ModuleItem::create(['module_id' => $module->id, 'item_type' => 'resource', 'item_id' => $resource->id, 'order_index' => 1, 'is_required' => true]);
+
+    $response = $this->actingAs($admin)->getJson("/api/v1/courses/{$course->id}/modules");
+
+    $response->assertOk();
+    $items = collect($response->json('data'))->firstWhere('id', $module->id)['items'];
+
+    expect($items)->toHaveCount(1)
+        ->and($items[0]['item_type'])->toBe('resource')
+        ->and($items[0]['id'])->toBe($resource->id);
+});
+
 it('scopes a group to a course and syncs it onto a module', function (): void {
     $admin = User::factory()->admin()->create();
     $course = Course::factory()->create();

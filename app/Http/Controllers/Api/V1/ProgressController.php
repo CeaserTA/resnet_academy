@@ -20,6 +20,7 @@ use App\Models\User;
 use App\Services\Progress\ProgressEngine;
 use App\Services\Storage\MediaStorageService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
@@ -111,6 +112,9 @@ final class ProgressController extends Controller
                 'percent_complete' => $percentComplete,
                 'modules' => ModuleProgressResource::collection($moduleProgress)->resolve($request),
                 'certificate' => $certificate ? [
+                    // id is what the client builds the download link from — that endpoint
+                    // renders the PDF on demand, so the link works before the queued job runs.
+                    'id' => $certificate->id,
                     'certificate_number' => $certificate->certificate_number,
                     'certificate_url' => $this->mediaStorage->url($certificate->certificate_url),
                 ] : null,
@@ -141,16 +145,21 @@ final class ProgressController extends Controller
         return response()->noContent();
     }
 
-    public function markAttendance(Request $request, Resource $resource): Response
+    /**
+     * Phase 1 of verified attendance: a student is recorded as attended only by actually
+     * following this link, which is also the only place the real Zoom/Meet URL is ever
+     * revealed — students never see it rendered directly (see ResourceViewerPage.tsx).
+     */
+    public function joinLiveSession(Request $request, Resource $resource): RedirectResponse
     {
-        $this->progressEngine->markAttendance($request->user(), $resource);
+        $meetingUrl = $this->progressEngine->joinLiveSession($request->user(), $resource);
 
-        return response()->noContent();
+        return redirect()->away($meetingUrl);
     }
 
     /**
      * Business rule "Attendance tracking": the roster for a live_session resource, admin/
-     * course-teaching-instructor only.
+     * course-teaching-instructor only. Attended students are listed earliest-joined first.
      */
     public function attendanceRoster(Resource $resource): JsonResponse
     {
@@ -175,7 +184,7 @@ final class ProgressController extends Controller
                 'attended' => $record ? (bool) $record->attended : false,
                 'marked_at' => $record?->marked_at?->toIso8601String(),
             ];
-        });
+        })->sortBy(fn (array $row): string => $row['attended'] ? $row['marked_at'] : '9999');
 
         return response()->json(['data' => $roster->values()]);
     }

@@ -39,6 +39,7 @@ final class ResourceItemResource extends JsonResource
         }
 
         return [
+            'item_type' => 'resource',
             'id' => $this->id,
             'module_id' => $this->module_id,
             'type' => $this->type->value,
@@ -88,11 +89,41 @@ final class ResourceItemResource extends JsonResource
                 'meeting_url' => $this->liveSession?->meeting_url,
                 'scheduled_at' => $this->liveSession?->scheduled_at?->toIso8601String(),
                 'duration_minutes' => $this->liveSession?->duration_minutes,
+                'recording_url' => $this->liveSession?->recording_url,
+                // Derived server-side so the client never has to re-implement the join-window
+                // rule: 'live' while the session is joinable, 'recording' once it has passed and
+                // a recording exists, 'recording_pending' when it has passed and one does not.
+                'access_state' => $this->liveSessionAccessState(),
             ],
             ResourceType::DownloadableFile => [
                 'file_url' => $mediaStorage->url($this->downloadableFile?->file_url),
                 'file_size_kb' => $this->downloadableFile?->file_size_kb,
             ],
         };
+    }
+
+    /**
+     * 'upcoming'          — scheduled, not yet joinable
+     * 'live'              — inside the join window
+     * 'recording'         — session over, a recording is attached
+     * 'recording_pending' — session over, no recording yet (the state that used to strand students)
+     */
+    private function liveSessionAccessState(): ?string
+    {
+        $session = $this->liveSession;
+
+        if (! $session) {
+            return null;
+        }
+
+        if ($session->joinWindowIsOpen()) {
+            return 'live';
+        }
+
+        if (! $session->joinWindowHasClosed()) {
+            return 'upcoming';
+        }
+
+        return $session->isMissingRecording() ? 'recording_pending' : 'recording';
     }
 }

@@ -93,6 +93,10 @@ final class EvaluationAttemptController extends Controller
      * is hard-gated to submitted attempts and to viewers allowed by the 'view' policy
      * (attempt owner, course instructor, admin). In-progress attempts 422 here, never
      * leaking the key mid-attempt.
+     *
+     * A student whose attempt still has ungraded answers gets the summary shell with an empty
+     * question list (see AttemptReviewResource) — results are all-or-nothing for them, never a
+     * partial breakdown. Graders keep full visibility so they can actually grade it.
      */
     public function review(Request $request, EvaluationAttempt $attempt): AttemptReviewResource
     {
@@ -100,7 +104,7 @@ final class EvaluationAttemptController extends Controller
 
         abort_unless($attempt->isCompleted(), 422, 'This attempt has not been submitted yet.');
 
-        return new AttemptReviewResource($attempt->load('answers.question.options'));
+        return new AttemptReviewResource($attempt->load(['evaluation.module.course', 'answers.question.options']));
     }
 
     public function submit(SubmitEvaluationAttemptRequest $request, EvaluationAttempt $attempt): EvaluationAttemptResource

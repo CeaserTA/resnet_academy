@@ -3,14 +3,13 @@
 declare(strict_types=1);
 
 use App\Enums\EnrolmentSource;
-use App\Models\Course;
 use App\Models\CohortCourse;
+use App\Models\Course;
 use App\Models\Module;
 use App\Models\ModuleItem;
 use App\Models\Resource;
 use App\Models\User;
 use App\Services\Enrolment\EnrolmentService;
-use App\Services\Progress\ProgressEngine;
 
 it('lets the course instructor see who attended a live session and who did not', function (): void {
     $instructor = User::factory()->instructor()->create();
@@ -21,11 +20,14 @@ it('lets the course instructor see who attended a live session and who did not',
     $course->instructors()->attach($instructor->id, ['is_primary' => true, 'assigned_at' => now()]);
     $module = Module::factory()->for($course)->create();
     $resource = Resource::factory()->for($module)->liveSession()->create();
+    // Phase 1 verified attendance only records a join within the session's live window, so
+    // backdate it into that window rather than the factory's future-scheduled default.
+    $resource->liveSession()->update(['scheduled_at' => now()->subMinutes(10), 'duration_minutes' => 60]);
     ModuleItem::create(['module_id' => $module->id, 'item_type' => 'resource', 'item_id' => $resource->id, 'order_index' => 1, 'is_required' => false]);
 
     app(EnrolmentService::class)->enrol($attended, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
     app(EnrolmentService::class)->enrol($absent, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
-    app(ProgressEngine::class)->markAttendance($attended, $resource);
+    $this->actingAs($attended)->get("/api/v1/resources/{$resource->id}/join")->assertRedirect();
 
     $response = $this->actingAs($instructor)->getJson("/api/v1/resources/{$resource->id}/attendance");
 

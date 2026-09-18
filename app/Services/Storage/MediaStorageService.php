@@ -6,6 +6,7 @@ namespace App\Services\Storage;
 
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
@@ -36,12 +37,22 @@ final class MediaStorageService
     {
         $prefix = trim($prefix, '/');
 
-        $path = $file->store($prefix, self::DISK);
+        // Named explicitly with the client's original extension rather than $file->store()'s
+        // default (which names the file via UploadedFile::hashName(), built from
+        // guessExtension() — the extension PHP's fileinfo derives from the file's actual
+        // content). Real Word/PowerPoint documents are OOXML zip archives that fileinfo's magic
+        // database frequently misidentifies as something generic depending on internal file
+        // ordering, which previously could store e.g. a genuine "notes.docx" as "<hash>.txt" —
+        // still a valid upload, but served back with the wrong extension and Content-Type.
+        $extension = $file->getClientOriginalExtension();
+        $filename = Str::random(40).($extension !== '' ? ".{$extension}" : '');
+
+        $path = $file->storeAs($prefix, $filename, self::DISK);
 
         // R2 configured but upload failed — try the local public disk as a fallback
         // so development environments without working R2 credentials don't hard-crash.
         if ($path === false) {
-            $path = $file->store($prefix, 'public');
+            $path = $file->storeAs($prefix, $filename, 'public');
         }
 
         if ($path === false) {
@@ -53,10 +64,16 @@ final class MediaStorageService
 
     /**
      * For server-generated files (certificate PDFs) that never arrive as an UploadedFile.
+     *
+     * The r2 disk sets 'throw' => false, so a failed write returns false rather than raising.
+     * Without this check the caller would happily persist a path to a file that was never
+     * written, producing a stored URL that 404s.
      */
     public function putRaw(string $path, string $contents): void
     {
-        Storage::disk(self::DISK)->put($path, $contents);
+        if (! Storage::disk(self::DISK)->put($path, $contents)) {
+            throw new RuntimeException("Failed to store generated file at {$path}.");
+        }
     }
 
     /**

@@ -11,6 +11,7 @@ use App\Http\Requests\Api\V1\UpdateResourceRequest;
 use App\Http\Resources\ResourceItemResource;
 use App\Models\Module;
 use App\Models\Resource;
+use App\Services\Content\RecordingLinkChecker;
 use App\Services\Content\ResourceManager;
 use App\Services\Storage\MediaStorageService;
 use Illuminate\Http\Response;
@@ -20,6 +21,7 @@ final class ResourceController extends Controller
     public function __construct(
         private readonly ResourceManager $resourceManager,
         private readonly MediaStorageService $mediaStorage,
+        private readonly RecordingLinkChecker $recordingLinkChecker,
     ) {}
 
     public function show(Resource $resource): ResourceItemResource
@@ -40,9 +42,10 @@ final class ResourceController extends Controller
             $data['package_url'] = $this->mediaStorage->store($request->file('package'), "resources/{$module->course_id}");
         }
 
+        $recordingToCheck = $this->recordingUrlToCheck($data, null);
         $resource = $this->resourceManager->create($module, $data);
 
-        return new ResourceItemResource($resource);
+        return $this->withRecordingWarning(new ResourceItemResource($resource), $recordingToCheck);
     }
 
     public function update(UpdateResourceRequest $request, Resource $resource): ResourceItemResource
@@ -60,9 +63,49 @@ final class ResourceController extends Controller
             $data['package_url'] = $this->mediaStorage->store($request->file('package'), "resources/{$resource->module->course_id}");
         }
 
+        $recordingToCheck = $this->recordingUrlToCheck($data, $resource->liveSession?->recording_url);
         $resource = $this->resourceManager->update($resource, $data);
 
-        return new ResourceItemResource($resource);
+        return $this->withRecordingWarning(new ResourceItemResource($resource), $recordingToCheck);
+    }
+
+    /**
+     * The recording link worth spending an outbound HTTP check on: one that is actually being
+     * set, and (on update) one that has changed — otherwise every unrelated edit to a live
+     * session would re-fetch the same URL.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function recordingUrlToCheck(array $data, ?string $current): ?string
+    {
+        $incoming = $data['recording_url'] ?? null;
+
+        if (! is_string($incoming) || trim($incoming) === '' || $incoming === $current) {
+            return null;
+        }
+
+        return $incoming;
+    }
+
+    /**
+     * Surfaces a suspect recording link as a warning alongside the saved resource rather than
+     * rejecting the save. The admin is told immediately, at the moment they paste it, instead of
+     * a student finding out later that the link opens a sign-in wall — but a false positive
+     * (provider markup changes, a transient network failure) can never block legitimate work.
+     */
+    private function withRecordingWarning(ResourceItemResource $payload, ?string $url): ResourceItemResource
+    {
+        if ($url === null) {
+            return $payload;
+        }
+
+        $result = $this->recordingLinkChecker->check($url);
+
+        if ($result['ok']) {
+            return $payload;
+        }
+
+        return $payload->additional(['recording_link_warning' => $result['reason']]);
     }
 
     private function currentFileUrl(Resource $resource): ?string

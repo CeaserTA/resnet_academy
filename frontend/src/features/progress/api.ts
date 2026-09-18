@@ -11,6 +11,15 @@ export async function fetchMyCertificates(): Promise<Certificate[]> {
     return data.data;
 }
 
+/**
+ * A plain browser-navigable URL rather than an axios call — the endpoint redirects to the PDF,
+ * so it has to be followed by the browser. Sanctum's session cookie rides along on the
+ * top-level navigation, which is what authenticates it.
+ */
+export function certificateDownloadUrl(certificateId: number): string {
+    return `${import.meta.env.VITE_API_BASE_URL as string}/api/v1/certificates/${certificateId}/download`;
+}
+
 export async function verifyCertificate(certificateNumber: string): Promise<CertificateVerification> {
     const { data } = await apiClient.get<{ data: CertificateVerification }>(
         `/certificates/verify/${encodeURIComponent(certificateNumber)}`,

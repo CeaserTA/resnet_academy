@@ -41,6 +41,8 @@ import { ApplicationsPage } from '@/features/admin/applications/ApplicationsPage
 import { AdminEnrolmentsPage } from '@/features/admin/enrolments/AdminEnrolmentsPage';
 import { AdminTransferRequestsPage } from '@/features/admin/enrolments/AdminTransferRequestsPage';
 import { ReviewsPage } from '@/features/admin/reviews/ReviewsPage';
+import { AdminCertificatesPage } from '@/features/admin/certificates/AdminCertificatesPage';
+import { VerifyCertificateRedirect } from '@/features/progress/VerifyCertificateRedirect';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
 function App() {
@@ -50,6 +52,9 @@ function App() {
     // otherwise off-limits once authenticated (redirected to the dashboard), so this hash is the
     // one exception that lets an already-logged-in student still reach the course section there.
     const wantsCourseSection = location.hash === '#courses';
+    // Likewise for a scanned certificate QR code: it must show the verification result even when
+    // the person scanning it happens to be signed in.
+    const wantsVerification = new URLSearchParams(location.search).has('verify');
 
     return (
         <Routes>
@@ -58,7 +63,7 @@ function App() {
                 element={
                     isLoading ? (
                         <div />
-                    ) : user && !wantsCourseSection ? (
+                    ) : user && !wantsCourseSection && !wantsVerification ? (
                         <Navigate to="/dashboard" replace />
                     ) : (
                         <LandingPage />
@@ -75,7 +80,10 @@ function App() {
             <Route path="register" element={<Navigate to="/?auth=signup" replace />} />
             <Route path="forgot-password" element={<ForgotPasswordPage />} />
             <Route path="reset-password" element={<ResetPasswordPage />} />
-            <Route path="verify-certificate" element={<VerifyEmailNoticePage />} />
+            {/* Certificate verification is a modal opened from the site footer, not a page. This
+                URL is printed on certificates and encoded in their QR codes, so it forwards to the
+                home page carrying the certificate number for the footer to open the modal with. */}
+            <Route path="verify-certificate" element={<VerifyCertificateRedirect />} />
 
             <Route
                 element={
@@ -159,6 +167,14 @@ function App() {
                     element={
                         <ProtectedRoute roles={['admin']}>
                             <ReviewsPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="admin/certificates"
+                    element={
+                        <ProtectedRoute roles={['admin']}>
+                            <AdminCertificatesPage />
                         </ProtectedRoute>
                     }
                 />

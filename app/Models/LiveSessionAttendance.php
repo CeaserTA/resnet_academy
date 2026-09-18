@@ -24,11 +24,14 @@ final class LiveSessionAttendance extends Model
         'attended',
         'marked_at',
         'marked_by',
+        'joined_at',
+        'source',
     ];
 
     protected $casts = [
         'attended' => 'boolean',
         'marked_at' => 'datetime',
+        'joined_at' => 'datetime',
     ];
 
     /**

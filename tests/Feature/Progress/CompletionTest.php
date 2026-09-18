@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 use App\Enums\EnrolmentSource;
 use App\Enums\ModuleProgressStatus;
-use App\Models\Course;
 use App\Models\CohortCourse;
+use App\Models\Course;
 use App\Models\Module;
 use App\Models\ModuleItem;
 use App\Models\ModuleProgress;
@@ -73,7 +73,53 @@ it('does not complete a module while a required resource is still incomplete', f
     app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
     app(ProgressEngine::class)->markRead($student, $first);
 
+    // Not yet Completed (a required resource is still outstanding) — but no longer NotStarted
+    // either, since the student has engaged with the module. See "flips a not-started module to
+    // in_progress..." below for the dedicated regression test on that transition.
     expect(
         ModuleProgress::where('student_id', $student->id)->where('module_id', $module->id)->first()->status,
-    )->toBe(ModuleProgressStatus::NotStarted);
+    )->toBe(ModuleProgressStatus::InProgress);
+});
+
+it('completes a document resource via mark-as-read, the same signal reading and SCORM use', function (): void {
+    $student = User::factory()->student()->create();
+    $course = Course::factory()->create();
+    $module = Module::factory()->for($course)->create(['order_index' => 1]);
+    $resource = Resource::factory()->for($module)->document()->create();
+    ModuleItem::create(['module_id' => $module->id, 'item_type' => 'resource', 'item_id' => $resource->id, 'order_index' => 1, 'is_required' => true]);
+
+    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
+    $engine = app(ProgressEngine::class);
+
+    expect($engine->isResourceComplete($student, $resource))->toBeFalse();
+
+    $engine->markRead($student, $resource);
+
+    expect($engine->isResourceComplete($student, $resource))->toBeTrue();
+    expect(
+        ModuleProgress::where('student_id', $student->id)->where('module_id', $module->id)->first()->status,
+    )->toBe(ModuleProgressStatus::Completed);
+});
+
+it('flips a not-started module to in_progress the moment a student engages with any item in it, before it completes', function (): void {
+    $student = User::factory()->student()->create();
+    $course = Course::factory()->create();
+    $module = Module::factory()->for($course)->create(['order_index' => 1]);
+
+    $first = Resource::factory()->for($module)->reading()->create();
+    ModuleItem::create(['module_id' => $module->id, 'item_type' => 'resource', 'item_id' => $first->id, 'order_index' => 1, 'is_required' => true]);
+    $second = Resource::factory()->for($module)->reading()->create();
+    ModuleItem::create(['module_id' => $module->id, 'item_type' => 'resource', 'item_id' => $second->id, 'order_index' => 2, 'is_required' => true]);
+
+    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
+
+    expect(
+        ModuleProgress::where('student_id', $student->id)->where('module_id', $module->id)->first()->status,
+    )->toBe(ModuleProgressStatus::NotStarted, 'freshly unlocked, nothing touched yet');
+
+    app(ProgressEngine::class)->markRead($student, $first);
+
+    expect(
+        ModuleProgress::where('student_id', $student->id)->where('module_id', $module->id)->first()->status,
+    )->toBe(ModuleProgressStatus::InProgress, 'one of two required resources is done, but not the module itself');
 });

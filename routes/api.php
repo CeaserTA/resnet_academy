@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\AccountController;
 use App\Http\Controllers\Api\V1\Admin\AuditLogController;
+use App\Http\Controllers\Api\V1\Admin\CertificateController as AdminCertificateController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Api\V1\Admin\EnrolmentController as AdminEnrolmentController;
 use App\Http\Controllers\Api\V1\Admin\OrderController as AdminOrderController;
@@ -126,6 +127,10 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('/admin/users/{user}', [AdminUserController::class, 'update']);
         Route::get('/admin/audit-logs', [AuditLogController::class, 'index']);
         Route::get('/admin/dashboard-summary', [AdminDashboardController::class, 'summary']);
+        Route::get('/admin/live-sessions/missing-recordings', [AdminDashboardController::class, 'liveSessionsMissingRecordings']);
+        // Certificate support (admin-only — enforced by CertificatePolicy, not just the nav).
+        Route::get('/admin/certificates', [AdminCertificateController::class, 'index']);
+        Route::post('/admin/certificates/{certificate}/regenerate', [AdminCertificateController::class, 'regenerate']);
         Route::get('/admin/orders', [AdminOrderController::class, 'index']);
         Route::get('/admin/orders/summary', [AdminOrderController::class, 'summary']);
         Route::patch('/admin/orders/{order}', [AdminOrderController::class, 'update']);
@@ -164,11 +169,16 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/resources/{resource}/progress/watch', [ProgressController::class, 'watchVideo']);
         Route::post('/resources/{resource}/progress/mark-read', [ProgressController::class, 'markRead']);
         Route::post('/resources/{resource}/progress/mark-opened', [ProgressController::class, 'markOpened']);
-        Route::post('/resources/{resource}/progress/attendance', [ProgressController::class, 'markAttendance']);
+        // Phase 1 verified attendance: a student is only recorded as attended by following this
+        // link, which redirects straight to the real meeting URL — no self-report action exists.
+        Route::get('/resources/{resource}/join', [ProgressController::class, 'joinLiveSession'])->name('resources.join');
         Route::get('/resources/{resource}/attendance', [ProgressController::class, 'attendanceRoster']);
 
         // Certificates (architecture.md §5.4) — issued automatically by the Progress Engine.
         Route::get('/certificates', [CertificateController::class, 'index']);
+        // Declared before the {certificate} wildcard would otherwise be fine either way, but
+        // keeps the more specific route first as elsewhere in this file.
+        Route::get('/certificates/{certificate}/download', [CertificateController::class, 'download']);
         Route::get('/certificates/{certificate}', [CertificateController::class, 'show']);
 
         // Assignments (FR-16/FR-17) — CRUD via instructor/admin Policies, submission + grading below.
