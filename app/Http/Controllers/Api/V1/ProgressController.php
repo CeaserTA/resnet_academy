@@ -72,7 +72,7 @@ final class ProgressController extends Controller
         $enrolments = Enrolment::query()
             ->where('student_id', $student->id)
             ->where('status', EnrolmentStatus::Confirmed)
-            ->with('course')
+            ->with(['course', 'cohortCourse.cohort'])
             ->get();
 
         $rows = $enrolments->map(function (Enrolment $enrolment) use ($student, $request): array {
@@ -95,9 +95,15 @@ final class ProgressController extends Controller
                 fn (ModuleProgress $progress) => in_array($progress->status, [ModuleProgressStatus::InProgress, ModuleProgressStatus::Completed], true),
             );
 
+            // The intake this student sits the course in. Its start date gates content, so the
+            // dashboard reports the course as upcoming rather than showing it as startable.
+            $startsOn = $enrolment->cohortCourse?->cohort?->start_date?->copy()->startOfDay();
+            $hasNotStartedYet = $startsOn !== null && $startsOn->isFuture();
+
             $status = match (true) {
                 $totalCount > 0 && $completedCount === $totalCount => 'completed',
                 $hasAnyProgress => 'in_progress',
+                $hasNotStartedYet => 'upcoming',
                 default => 'not_started',
             };
 
@@ -110,6 +116,8 @@ final class ProgressController extends Controller
                 'course' => ['id' => $course->id, 'title' => $course->title],
                 'status' => $status,
                 'percent_complete' => $percentComplete,
+                // Null for a self-paced enrolment; otherwise the day this intake's content opens.
+                'starts_on' => $startsOn?->toDateString(),
                 'modules' => ModuleProgressResource::collection($moduleProgress)->resolve($request),
                 'certificate' => $certificate ? [
                     // id is what the client builds the download link from — that endpoint

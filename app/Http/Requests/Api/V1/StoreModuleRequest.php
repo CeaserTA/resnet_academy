@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Api\V1;
 
 use App\Models\Module;
+use App\Rules\WithinCohortSchedule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -23,7 +24,7 @@ final class StoreModuleRequest extends FormRequest
             'title' => ['required', 'string', 'max:200'],
             'description' => ['nullable', 'string'],
             'order_index' => ['nullable', 'integer', 'min:0'],
-            'scheduled_start_at' => ['nullable', 'date'],
+            'scheduled_start_at' => ['nullable', 'date', new WithinCohortSchedule($this->route('course'))],
             'group_ids' => ['nullable', 'array'],
             'group_ids.*' => [Rule::exists('groups', 'id')->where('course_id', $course->id)],
         ];

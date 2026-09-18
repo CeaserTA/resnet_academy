@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Api\V1;
 
 use App\Rules\FileHasExtension;
+use App\Rules\WithinCohortSchedule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -49,7 +50,7 @@ final class UpdateResourceRequest extends FormRequest
 
             'provider' => ['sometimes', Rule::in(['zoom', 'google_meet'])],
             'meeting_url' => ['sometimes', 'url', 'max:500'],
-            'scheduled_at' => ['sometimes', 'date'],
+            'scheduled_at' => ['sometimes', 'date', new WithinCohortSchedule($this->route('resource')?->module?->course)],
             'duration_minutes' => ['sometimes', 'integer', 'min:1'],
             // Nullable so a bad link can be cleared again, not just replaced.
             'recording_url' => ['nullable', 'url', 'max:500'],
