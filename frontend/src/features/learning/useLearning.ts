@@ -1,13 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useModules } from '@/features/courseStructure/useCourseStructure';
-import {
-    fetchCourseProgress,
-    fetchResource,
-    markAttendance,
-    markOpened,
-    markRead,
-    recordVideoProgress,
-} from '@/features/learning/api';
+import { fetchCourseProgress, fetchResource, markOpened, markRead, recordVideoProgress } from '@/features/learning/api';
 
 export function useResource(resourceId: number) {
     return useQuery({
@@ -69,15 +62,6 @@ export function useMarkOpened(courseId: number) {
 
     return useMutation({
         mutationFn: (resourceId: number) => markOpened(resourceId),
-        onSuccess: invalidate,
-    });
-}
-
-export function useMarkAttendance(courseId: number) {
-    const invalidate = useInvalidateProgress(courseId);
-
-    return useMutation({
-        mutationFn: (resourceId: number) => markAttendance(resourceId),
         onSuccess: invalidate,
     });
 }

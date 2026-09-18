@@ -23,6 +23,12 @@ export async function markOpened(resourceId: number): Promise<void> {
     await apiClient.post(`/resources/${resourceId}/progress/mark-opened`);
 }
 
-export async function markAttendance(resourceId: number): Promise<void> {
-    await apiClient.post(`/resources/${resourceId}/progress/attendance`);
+/**
+ * Phase 1 verified attendance: joining is a plain browser navigation (never an axios call) —
+ * the backend records attendance and 302s straight to the real Zoom/Meet URL, which is never
+ * exposed to the frontend directly. Session auth cookies ride along automatically since
+ * apiClient already uses `withCredentials`.
+ */
+export function liveSessionJoinUrl(resourceId: number): string {
+    return `${apiClient.defaults.baseURL}/resources/${resourceId}/join`;
 }

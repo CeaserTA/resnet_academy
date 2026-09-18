@@ -17,6 +17,7 @@ import {
     Star,
     Users,
     ArrowRight,
+    Award,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -54,6 +55,7 @@ function navItemsForRole(role: string): NavItem[] {
             { to: '/admin/enrolments', label: 'Enrolments', icon: Users },
             { to: '/admin/transfer-requests', label: 'Transfer Requests', icon: ArrowRight },
             { to: '/admin/reviews', label: 'Reviews', icon: Star },
+            { to: '/admin/certificates', label: 'Certificates', icon: Award },
             { to: '/admin/payments', label: 'Payments', icon: CreditCard },
             { to: '/admin/users', label: 'Team', icon: Users, divider: true },
             { to: '/admin/audit-log', label: 'Audit log', icon: ClipboardList },

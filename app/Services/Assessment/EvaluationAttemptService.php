@@ -14,6 +14,7 @@ use App\Services\Analytics\EngagementTracker;
 use App\Services\Audit\AuditLogger;
 use App\Services\Notifications\NotificationDispatcher;
 use App\Services\Progress\ProgressEngine;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -173,21 +174,51 @@ final class EvaluationAttemptService
     }
 
     /**
+     * Applies the given grades, then finalizes the attempt's score only once every one of its
+     * manually-graded answers has actually been reviewed — never after grading just some of
+     * them. The API contract (GradeEvaluationAttemptRequest) only requires at least one grade
+     * per call, so a grading UI is free to submit answers one at a time or all at once; this
+     * check is what makes either safe, rather than relying on today's grading page happening to
+     * submit every pending answer in a single batch.
+     *
      * @param  array<int, array{answer_id: int, is_correct?: bool, points_awarded: float}>  $answerGrades
      */
     public function gradeManualAnswers(User $grader, EvaluationAttempt $attempt, array $answerGrades): EvaluationAttempt
     {
         return DB::transaction(function () use ($grader, $attempt, $answerGrades): EvaluationAttempt {
             foreach ($answerGrades as $grade) {
-                EvaluationAttemptAnswer::query()
+                $answer = EvaluationAttemptAnswer::query()
                     ->where('id', $grade['answer_id'])
                     ->where('attempt_id', $attempt->id)
-                    ->update([
-                        'is_correct' => $grade['is_correct'] ?? null,
-                        'points_awarded' => $grade['points_awarded'],
-                        'graded_by' => $grader->id,
-                        'graded_at' => now(),
-                    ]);
+                    ->with('question')
+                    ->first();
+
+                if ($answer === null) {
+                    continue;
+                }
+
+                $pointsAwarded = (float) $grade['points_awarded'];
+
+                $answer->update([
+                    'is_correct' => $grade['is_correct'] ?? $this->deriveIsCorrect($answer, $pointsAwarded),
+                    'points_awarded' => $pointsAwarded,
+                    'graded_by' => $grader->id,
+                    'graded_at' => now(),
+                ]);
+            }
+
+            // `graded_at`, not `is_correct`, is what marks an answer reviewed: a partial-credit
+            // essay (7/10) is neither correct nor incorrect, so is_correct legitimately stays
+            // null on a fully-graded answer and cannot stand in for "still pending". Only
+            // manual questions are considered — auto-graded ones are scored at submit time and
+            // never carry a graded_at.
+            $stillPending = $attempt->answers()
+                ->whereNull('graded_at')
+                ->whereHas('question', fn (Builder $query) => $query->where('auto_gradable', false))
+                ->exists();
+
+            if ($stillPending) {
+                return $attempt->fresh();
             }
 
             $finalized = $this->finalizeScore($attempt);
@@ -202,6 +233,26 @@ final class EvaluationAttemptService
 
             return $finalized;
         });
+    }
+
+    /**
+     * Graders enter a points value, not a correct/incorrect verdict, so derive one where it is
+     * unambiguous: full marks is correct, nothing is incorrect, and partial credit is neither
+     * (null) — the awarded points carry that meaning instead.
+     */
+    private function deriveIsCorrect(EvaluationAttemptAnswer $answer, float $pointsAwarded): ?bool
+    {
+        $maxPoints = (float) $answer->question->points;
+
+        if ($pointsAwarded >= $maxPoints) {
+            return true;
+        }
+
+        if ($pointsAwarded <= 0.0) {
+            return false;
+        }
+
+        return null;
     }
 
     private function finalizeScore(EvaluationAttempt $attempt): EvaluationAttempt

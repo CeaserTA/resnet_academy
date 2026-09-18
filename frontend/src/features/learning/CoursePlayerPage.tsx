@@ -28,7 +28,6 @@ import { ReviewFormModal } from '@/features/reviews/ReviewFormModal';
 import { useMyReviews } from '@/features/reviews/useReviews';
 import {
     describeLockedModule,
-    findNextIncompleteItem,
     findNextIncompleteItemInUnlockedModules,
     flattenModuleItems,
     isCourseCompleted,
@@ -255,15 +254,14 @@ export function CoursePlayerPage() {
         return manualToggles[moduleId] ?? isDefaultExpanded(moduleId);
     }
 
-    function actionForModule(module: Module, status: ModuleProgressStatus): {
-        label: string;
-        item: ReturnType<typeof findNextIncompleteItem>;
-    } {
-        const items = flattenModuleItems([module]);
-        if (status === 'completed') {
-            return { label: 'Review', item: items[0] ?? null };
-        }
-        return { label: 'Open module', item: findNextIncompleteItem(items) ?? items[0] ?? null };
+    /**
+     * Only completed modules get a header-row action ("Review") — for every other unlocked
+     * module, the "Show N items" dropdown right below already exposes and links to every
+     * resource/assignment/evaluation, so a separate "Open module" button was a redundant second
+     * way to do the same navigation.
+     */
+    function reviewItemForModule(module: Module): ModuleItem | null {
+        return flattenModuleItems([module])[0] ?? null;
     }
 
     return (
@@ -326,7 +324,7 @@ export function CoursePlayerPage() {
                     const isLocked = status === 'locked';
                     const lockedReason = isLocked ? describeLockedModule(module, sortedModules, progressByModuleId) : null;
                     const expanded = isExpanded(module.id);
-                    const action = actionForModule(module, status);
+                    const reviewItem = status === 'completed' ? reviewItemForModule(module) : null;
 
                     // Split items into three groups
                     const sortedItems = module.items.slice().sort((a, b) => a.order_index - b.order_index);
@@ -402,17 +400,21 @@ export function CoursePlayerPage() {
                                     )}
                                 </div>
 
-                                {/* Action button */}
-                                {!isLocked && action.item ? (
-                                    <Link to={itemLinkFor(action.item, courseId)} className="shrink-0">
-                                        <Button variant={status === 'completed' ? 'secondary' : 'primary'} size="sm">
-                                            {action.label}
-                                        </Button>
-                                    </Link>
-                                ) : (
+                                {/* Action button — locked modules get a disabled "Locked" pill;
+                                    completed modules get "Review"; everything else relies on the
+                                    "Show N items" dropdown below instead of a duplicate button. */}
+                                {isLocked ? (
                                     <Button variant="ghost" disabled className="shrink-0" size="sm">
                                         Locked
                                     </Button>
+                                ) : (
+                                    reviewItem && (
+                                        <Link to={itemLinkFor(reviewItem, courseId)} className="shrink-0">
+                                            <Button variant="secondary" size="sm">
+                                                Review
+                                            </Button>
+                                        </Link>
+                                    )
                                 )}
                             </div>
 

@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
 import { cn } from '@/lib/utils';
 import { ApiError } from '@/lib/api/client';
-import type { ResourceType } from '@/lib/api/types';
+import type { ResourceModuleItem, ResourceType } from '@/lib/api/types';
 import type { ResourcePayload } from '@/features/courseStructure/api';
 
 // Lazy-loaded: Tiptap + its extensions are only needed on this instructor-authoring path, never
@@ -25,11 +25,39 @@ import type { ResourcePayload } from '@/features/courseStructure/api';
 const RichTextEditor = lazy(() => import('@/components/editor/RichTextEditor'));
 
 interface ResourceFormProps {
-    onSubmit: (payload: ResourcePayload) => Promise<void>;
+    /** When set, the form edits this existing resource instead of creating a new one. */
+    resource?: ResourceModuleItem;
+    /**
+     * Resolves with a warning when the save succeeded but the recording link looks unreachable
+     * to students. The form stays open and shows it rather than closing on a silent problem.
+     */
+    onSubmit: (payload: ResourcePayload) => Promise<string | null | void>;
     onCancel: () => void;
 }
 
 const MAX_RESOURCE_FILE_BYTES = 20 * 1024 * 1024;
+
+/**
+ * Converts a UTC ISO datetime from the API into the local wall-clock string
+ * <input type="datetime-local"> expects (e.g. "2026-09-11T13:00"). A naive `.slice(0, 16)` on
+ * the ISO string would keep it in UTC instead of the viewer's local time, shifting it by the
+ * browser's UTC offset.
+ */
+function toLocalDatetimeInputValue(iso: string): string {
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** Flattens a resource's `details` into the same string-keyed shape the form's `fields` state uses. */
+function detailsToFields(resource: ResourceModuleItem): Record<string, string> {
+    const fields: Record<string, string> = {};
+    for (const [key, value] of Object.entries(resource.details)) {
+        if (value === null || value === undefined) continue;
+        fields[key] = key === 'scheduled_at' ? toLocalDatetimeInputValue(String(value)) : String(value);
+    }
+    return fields;
+}
 
 // ─── Resource type pill config ─────────────────────────────────────────────────
 
@@ -142,14 +170,16 @@ function FileOrUrlField({
  * One form, fields shown depend on `type` — mirrors StoreResourceRequest's conditional
  * validation on the backend so the client and server never disagree about what's required.
  */
-export function ResourceForm({ onSubmit, onCancel }: ResourceFormProps) {
-    const [type, setType] = useState<ResourceType>('reading');
-    const [title, setTitle] = useState('');
-    const [isRequired, setIsRequired] = useState(true);
-    const [fields, setFields] = useState<Record<string, string>>({});
+export function ResourceForm({ resource, onSubmit, onCancel }: ResourceFormProps) {
+    const isEditing = !!resource;
+    const [type, setType] = useState<ResourceType>(resource?.type ?? 'reading');
+    const [title, setTitle] = useState(resource?.title ?? '');
+    const [isRequired, setIsRequired] = useState(resource?.is_required ?? true);
+    const [fields, setFields] = useState<Record<string, string>>(resource ? detailsToFields(resource) : {});
     const [file, setFile] = useState<File | null>(null);
     const [packageFile, setPackageFile] = useState<File | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [recordingWarning, setRecordingWarning] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const setField = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -158,6 +188,7 @@ export function ResourceForm({ onSubmit, onCancel }: ResourceFormProps) {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
+        setRecordingWarning(null);
 
         if (type === 'reading' && !(fields.content_html ?? '').replace(/<[^>]+>/g, '').trim()) {
             setError('Lesson content is required.');
@@ -167,19 +198,36 @@ export function ResourceForm({ onSubmit, onCancel }: ResourceFormProps) {
         setIsSubmitting(true);
 
         try {
-            await onSubmit({
+            const warning = await onSubmit({
+                // `type` is immutable after creation — UpdateResourceRequest has no rule for it,
+                // so Laravel's validated() silently drops it on edit; harmless to always include.
                 type,
                 title,
                 is_required: isRequired,
                 ...fields,
                 ...(type === 'document' ? { file_type: fields.file_type ?? 'pdf' } : {}),
                 ...(type === 'scorm' ? { standard: fields.standard ?? 'scorm_2004' } : {}),
-                ...(type === 'live_session' ? { provider: fields.provider ?? 'zoom' } : {}),
+                ...(type === 'live_session'
+                    ? {
+                        provider: fields.provider ?? 'zoom',
+                        // <input type="datetime-local"> gives a naive local wall-clock string
+                        // (no offset) — convert it to a real UTC instant before sending, since
+                        // the browser interprets an offset-less string as local time but the
+                        // backend (APP timezone UTC) would otherwise store it as literal UTC.
+                        ...(fields.scheduled_at ? { scheduled_at: new Date(fields.scheduled_at).toISOString() } : {}),
+                    }
+                    : {}),
                 ...(file ? { file } : {}),
                 ...(packageFile ? { package: packageFile } : {}),
             });
+
+            // Saved, but the recording link looks unreachable — keep the form open so the admin
+            // can fix it now, rather than a student discovering it later.
+            if (typeof warning === 'string' && warning !== '') {
+                setRecordingWarning(warning);
+            }
         } catch (err) {
-            setError(err instanceof ApiError ? err.message : 'Could not create the resource.');
+            setError(err instanceof ApiError ? err.message : `Could not ${isEditing ? 'save' : 'create'} the resource.`);
         } finally {
             setIsSubmitting(false);
         }
@@ -195,13 +243,21 @@ export function ResourceForm({ onSubmit, onCancel }: ResourceFormProps) {
                     <FileEdit className="size-4 text-blue-600" aria-hidden="true" />
                 </span>
                 <div>
-                    <p className="text-sm font-semibold text-blue-900">New resource</p>
-                    <p className="text-xs text-blue-500">Choose a type, fill in the details, and save</p>
+                    <p className="text-sm font-semibold text-blue-900">{isEditing ? 'Edit resource' : 'New resource'}</p>
+                    <p className="text-xs text-blue-500">
+                        {isEditing ? 'Update the details and save' : 'Choose a type, fill in the details, and save'}
+                    </p>
                 </div>
             </div>
 
             <div className="flex flex-col gap-5 p-5">
                 {error && <Alert variant="error" message={error} />}
+                {recordingWarning && (
+                    <Alert
+                        variant="warning"
+                        message={`Saved — but students may not be able to open this recording. ${recordingWarning}`}
+                    />
+                )}
 
                 {/* ── Type picker ── */}
                 <div>
@@ -211,13 +267,15 @@ export function ResourceForm({ onSubmit, onCancel }: ResourceFormProps) {
                             <button
                                 key={value}
                                 type="button"
+                                disabled={isEditing}
                                 onClick={() => setType(value)}
-                                title={description}
+                                title={isEditing ? 'Type cannot be changed after creation' : description}
                                 className={cn(
                                     'flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all',
                                     type === value
                                         ? 'border-blue-300 bg-blue-50 text-blue-700 shadow-sm'
                                         : 'border-surface-200 bg-surface-0 text-ink-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700',
+                                    isEditing && 'cursor-not-allowed opacity-60 hover:border-surface-200 hover:bg-surface-0 hover:text-ink-600',
                                 )}
                             >
                                 <Icon className="size-3.5 shrink-0" aria-hidden="true" />
@@ -225,7 +283,9 @@ export function ResourceForm({ onSubmit, onCancel }: ResourceFormProps) {
                             </button>
                         ))}
                     </div>
-                    <p className="mt-1.5 text-xs text-ink-400">{activeType.description}</p>
+                    <p className="mt-1.5 text-xs text-ink-400">
+                        {isEditing ? "Type can't be changed after creation." : activeType.description}
+                    </p>
                 </div>
 
                 {/* ── Title ── */}
@@ -347,6 +407,21 @@ export function ResourceForm({ onSubmit, onCancel }: ResourceFormProps) {
                             onChange={setField('duration_minutes')}
                             required
                         />
+                        <div className="sm:col-span-2">
+                            <Input
+                                label="Recording link (after the session)"
+                                type="url"
+                                value={fields.recording_url ?? ''}
+                                onChange={setField('recording_url')}
+                                placeholder="https://drive.google.com/… or https://zoom.us/rec/…"
+                            />
+                            <p className="mt-1 text-xs text-ink-500">
+                                Students who missed the live session complete it by watching this. Make sure sharing is
+                                set to <span className="font-medium text-ink-700">&ldquo;Anyone with the link can view&rdquo;</span>{' '}
+                                (Google Drive), or that the recording isn&rsquo;t passcode-protected or limited to
+                                signed-in users (Zoom) — otherwise students won&rsquo;t be able to open it.
+                            </p>
+                        </div>
                     </div>
                 )}
 
@@ -367,7 +442,7 @@ export function ResourceForm({ onSubmit, onCancel }: ResourceFormProps) {
                 {/* ── Actions ── */}
                 <div className="flex items-center gap-2 pt-1">
                     <Button type="submit" isLoading={isSubmitting}>
-                        Add resource
+                        {isEditing ? 'Save changes' : 'Add resource'}
                     </Button>
                     <Button type="button" variant="ghost" onClick={onCancel}>
                         Cancel

@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use App\Enums\EnrolmentSource;
-use App\Models\Course;
 use App\Models\CohortCourse;
+use App\Models\Course;
 use App\Models\Module;
 use App\Models\ModuleItem;
 use App\Models\Resource;
@@ -54,4 +54,36 @@ it('summarizes a completed course with its certificate and an in-progress course
     expect($inProgressRow['status'])->toBe('in_progress');
     expect($inProgressRow['percent_complete'])->toBe(50);
     expect($inProgressRow['certificate'])->toBeNull();
+});
+
+/**
+ * Regression test for the reported symptom: a student who has engaged with resources in their
+ * first (unlocked) module, but not finished every required item in it yet, must show as
+ * "in_progress" — not "not_started". Before ModuleProgress ever transitioned to InProgress,
+ * this could only ever show "not_started" or "completed", no matter how much a student had
+ * actually consumed.
+ */
+it('shows a course as in_progress once a student engages with its first module, before that module is complete', function (): void {
+    $student = User::factory()->student()->create();
+
+    $course = Course::factory()->create(['title' => 'Untouched Then Started Course']);
+    $module = Module::factory()->for($course)->create(['order_index' => 1]);
+    $firstResource = Resource::factory()->for($module)->reading()->create();
+    ModuleItem::create(['module_id' => $module->id, 'item_type' => 'resource', 'item_id' => $firstResource->id, 'order_index' => 1, 'is_required' => true]);
+    $secondResource = Resource::factory()->for($module)->document()->create();
+    ModuleItem::create(['module_id' => $module->id, 'item_type' => 'resource', 'item_id' => $secondResource->id, 'order_index' => 2, 'is_required' => true]);
+
+    app(EnrolmentService::class)->enrol($student, $course, EnrolmentSource::Self, CohortCourse::factory()->for($course)->open()->create()->id);
+
+    $beforeTouching = $this->actingAs($student)->getJson('/api/v1/me/progress');
+    expect(collect($beforeTouching->json('data'))->firstWhere('course.title', 'Untouched Then Started Course')['status'])
+        ->toBe('not_started');
+
+    // Only one of the two required resources is read — the module itself is not complete yet.
+    app(ProgressEngine::class)->markRead($student, $firstResource);
+
+    $afterTouching = $this->actingAs($student)->getJson('/api/v1/me/progress');
+    $row = collect($afterTouching->json('data'))->firstWhere('course.title', 'Untouched Then Started Course');
+    expect($row['status'])->toBe('in_progress');
+    expect($row['certificate'])->toBeNull();
 });

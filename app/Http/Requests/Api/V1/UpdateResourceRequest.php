@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api\V1;
 
+use App\Rules\FileHasExtension;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -33,7 +34,7 @@ final class UpdateResourceRequest extends FormRequest
             // document / downloadable_file — either paste a URL or upload a file ('file' takes
             // precedence when both are present; see ResourceController::update()).
             'file_url' => ['sometimes', 'url', 'max:500'],
-            'file' => ['nullable', 'file', 'mimes:pdf,doc,docx,ppt,pptx,xls,xlsx,zip,csv,txt', 'max:20480'],
+            'file' => ['nullable', 'file', new FileHasExtension(['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'zip', 'csv', 'txt']), 'max:20480'],
             'file_type' => ['sometimes', Rule::in(['pdf', 'pptx', 'docx'])],
             'file_size_kb' => ['nullable', 'integer', 'min:0'],
 
@@ -50,6 +51,8 @@ final class UpdateResourceRequest extends FormRequest
             'meeting_url' => ['sometimes', 'url', 'max:500'],
             'scheduled_at' => ['sometimes', 'date'],
             'duration_minutes' => ['sometimes', 'integer', 'min:1'],
+            // Nullable so a bad link can be cleared again, not just replaced.
+            'recording_url' => ['nullable', 'url', 'max:500'],
         ];
     }
 }
