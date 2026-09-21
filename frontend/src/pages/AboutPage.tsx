@@ -208,13 +208,13 @@ export function AboutPage() {
                                 </ul>
                             </div>
 
-                            {/* Right — different photo from hero */}
-                            <div className="overflow-hidden rounded-2xl shadow-sm lg:sticky lg:top-8">
+                            {/* Right — our story photo, fills column edge to edge */}
+                            <div className="overflow-hidden rounded-2xl lg:sticky lg:top-8">
                                 <img
                                     src="/images/our_story.jpg"
                                     alt="ResNet Academy team and students"
-                                    className="h-full w-full object-cover"
-                                    style={{ minHeight: '400px' }}
+                                    className="h-[460px] w-full object-cover object-center"
+                                    style={{ minHeight: '420px' }}
                                 />
                             </div>
                         </div>
@@ -435,6 +435,6 @@ export function AboutPage() {
                 onLoginClick={() => openAuth('login')}
                 onSignupClick={handleSignupClick}
             />
-        </div>
+        </div >
     );
 }
