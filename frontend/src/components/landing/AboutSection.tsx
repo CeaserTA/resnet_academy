@@ -23,7 +23,7 @@ export function AboutSection() {
     }, []);
 
     return (
-        <section id="about" ref={ref} className="bg-white py-14 sm:py-20">
+        <section id="about" ref={ref} className="bg-white py-12">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div
                     className={`grid items-center gap-12 transition-all duration-700 lg:grid-cols-2 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
@@ -77,13 +77,13 @@ export function AboutSection() {
                         <div className="mt-8 flex flex-wrap gap-3">
                             <Link
                                 to="/courses"
-                                className="inline-flex items-center rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                                className="inline-flex items-center rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                             >
                                 Browse courses
                             </Link>
                             <Link
                                 to="/#cohorts"
-                                className="inline-flex items-center rounded-lg border border-border px-5 py-2.5 text-sm font-semibold text-ink-900 transition-colors hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                                className="inline-flex items-center rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-ink-900 transition-colors hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                             >
                                 See upcoming cohorts
                             </Link>

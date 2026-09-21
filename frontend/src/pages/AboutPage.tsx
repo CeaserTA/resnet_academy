@@ -137,7 +137,7 @@ export function AboutPage() {
                                 <div className="mt-8 flex flex-wrap gap-3">
                                     <Link
                                         to="/courses"
-                                        className="inline-flex items-center rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                                        className="inline-flex items-center rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                                     >
                                         Explore courses
                                     </Link>
@@ -218,7 +218,7 @@ export function AboutPage() {
                                 <ul className="mt-8 space-y-4">
                                     {missionPoints.map(({ icon: Icon, title, description }) => (
                                         <li key={title} className="flex items-start gap-3">
-                                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50">
+                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50">
                                                 <Icon className="size-5 text-primary" aria-hidden="true" />
                                             </div>
                                             <div>
@@ -330,7 +330,7 @@ export function AboutPage() {
 
                             {/* Light enrolment prompt */}
                             <div className="flex items-center">
-                                <div className="w-full rounded-xl border border-border bg-white p-8">
+                                <div className="w-full rounded-2xl border border-border bg-white p-8">
                                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
                                         Ready to start?
                                     </p>
@@ -413,8 +413,8 @@ export function AboutPage() {
                                 { icon: MessageSquare, title: 'Weekly check-ins', description: 'Short weekly sessions to answer questions and unblock progress.' },
                                 { icon: Briefcase, title: 'Career guidance', description: 'CV reviews, portfolio advice, and direct employer introductions.' },
                             ].map(({ icon: Icon, title, description }) => (
-                                <div key={title} className="flex items-start gap-4 rounded-xl border border-border bg-white p-5">
-                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50">
+                                <div key={title} className="flex items-start gap-4 rounded-2xl border border-border bg-white p-5">
+                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50">
                                         <Icon className="size-5 text-primary" aria-hidden="true" />
                                     </div>
                                     <div>

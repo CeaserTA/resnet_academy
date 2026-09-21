@@ -86,7 +86,7 @@ function CohortCard({ cohort }: { cohort: Cohort }) {
                 {/* CTA */}
                 <Link
                     to={`/cohorts/${cohort.id}`}
-                    className="mt-auto inline-flex w-full items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                    className="mt-auto inline-flex w-full items-center justify-center rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
                     View cohort &amp; register
                 </Link>
@@ -108,7 +108,7 @@ export function CohortSection() {
         return (
             <section
                 id="cohorts"
-                className="border-t border-[#e8ecf1] bg-[#f8fafc] px-4 py-8 sm:px-6 lg:px-8"
+                className="border-t border-border bg-surface-50 px-4 py-10 sm:px-6 lg:px-8"
             >
                 <div className="mx-auto max-w-7xl flex justify-center py-12">
                     <Spinner />

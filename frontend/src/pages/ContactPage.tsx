@@ -354,7 +354,7 @@ export function ContactPage() {
                         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
                             <Link
                                 to="/courses"
-                                className="inline-flex items-center rounded-full bg-primary px-7 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                                className="inline-flex items-center rounded-full bg-primary px-7 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                             >
                                 Explore courses
                             </Link>
