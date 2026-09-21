@@ -12,7 +12,6 @@ import {
 import { LandingHeader } from '@/components/layout/LandingHeader';
 import { Footer } from '@/components/landing/Footer';
 import { useAuthModal } from '@/lib/auth/AuthModalContext';
-import { StatCard } from '@/components/ui/StatCard';
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -79,6 +78,34 @@ const values = [
     },
 ];
 
+// Bookmark-style stat card data — each with a unique gradient accent
+const statCards = [
+    {
+        value: '200+',
+        label: 'Learners trained',
+        gradient: 'linear-gradient(135deg, #1b4fa0 0%, #4b79c4 100%)',
+        dots: ['#4b79c4', '#4b79c440', '#4b79c420'],
+    },
+    {
+        value: '6',
+        label: 'Cohorts completed',
+        gradient: 'linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%)',
+        dots: ['#a78bfa', '#a78bfa40', '#a78bfa20'],
+    },
+    {
+        value: '4',
+        label: 'Active mentors',
+        gradient: 'linear-gradient(135deg, #e8a33d 0%, #fbbf24 100%)',
+        dots: ['#e8a33d', '#e8a33d40', '#e8a33d20'],
+    },
+    {
+        value: '2023',
+        label: 'Founded',
+        gradient: 'linear-gradient(135deg, #1f8a55 0%, #34d399 100%)',
+        dots: ['#1f8a55', '#1f8a5540', '#1f8a5520'],
+    },
+];
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export function AboutPage() {
@@ -94,12 +121,12 @@ export function AboutPage() {
 
             <main>
 
-                {/* §1 Hero — light split layout with bookmark stat cards */}
+                {/* §1 Hero — light split layout */}
                 <section className="overflow-hidden bg-blue-50">
                     <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-2 lg:items-stretch">
 
-                        {/* Left: text + CTAs */}
-                        <div className="flex flex-col justify-center px-4 py-14 sm:px-6 lg:py-20 lg:pl-8 lg:pr-12">
+                        {/* Left: text + CTAs + stat cards */}
+                        <div className="flex flex-col justify-center px-4 py-10 sm:px-6 lg:py-14 lg:pl-8 lg:pr-12">
                             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
                                 About ResNet Academy
                             </p>
@@ -111,7 +138,7 @@ export function AboutPage() {
                                 modern web technologies — through real projects, expert mentors,
                                 and cohort-based learning.
                             </p>
-                            <div className="mt-8 flex flex-wrap gap-3">
+                            <div className="mt-6 flex flex-wrap gap-3">
                                 <Link
                                     to="/courses"
                                     className="inline-flex items-center rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
@@ -126,41 +153,30 @@ export function AboutPage() {
                                 </Link>
                             </div>
 
-                            {/* Bookmark-style stat cards — dark cards with large stat */}
-                            <div className="relative mt-12 hidden h-36 sm:block">
-                                {[
-                                    { value: '200+', label: 'Learners trained', bg: 'bg-ink-900', accent: '#4b79c4' },
-                                    { value: '6', label: 'Cohorts done', bg: 'bg-[#1a1a2e]', accent: '#e8a33d' },
-                                    { value: '4', label: 'Active mentors', bg: 'bg-navy', accent: '#a78bfa' },
-                                    { value: '2023', label: 'Founded', bg: 'bg-ink-900', accent: '#4b79c4' },
-                                ].map(({ value, label, bg, accent }, i) => (
+                            {/* Stat cards — spread in a row, not stacked */}
+                            <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                {statCards.map(({ value, label, gradient, dots }) => (
                                     <div
                                         key={label}
-                                        className={`absolute top-0 ${bg} flex w-36 flex-col overflow-hidden rounded-2xl border border-white/10 shadow-lg`}
-                                        style={{
-                                            left: `${i * 38}px`,
-                                            zIndex: i + 1,
-                                            transform: `rotate(${[-3, 1, -1, 2][i]}deg)`,
-                                        }}
+                                        className="flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink-900 shadow-md"
                                     >
-                                        {/* Visual bar at top */}
+                                        {/* Gradient visual top */}
                                         <div
-                                            className="h-14 w-full"
-                                            style={{
-                                                background: `linear-gradient(135deg, ${accent}40 0%, ${accent}15 100%)`,
-                                            }}
+                                            className="h-12 w-full"
+                                            style={{ background: gradient }}
+                                            aria-hidden="true"
                                         />
-                                        {/* Stat at bottom */}
-                                        <div className="px-3 pb-3 pt-2">
+                                        {/* Stat */}
+                                        <div className="flex flex-1 flex-col px-3 pb-3 pt-2">
                                             <p className="text-xl font-bold text-white">{value}</p>
-                                            <p className="text-[10px] text-white/50">{label}</p>
-                                            {/* Dot indicator */}
+                                            <p className="mt-0.5 text-[10px] leading-4 text-white/50">{label}</p>
+                                            {/* Dot indicators */}
                                             <div className="mt-2 flex gap-1">
-                                                {[0, 1, 2].map((d) => (
+                                                {dots.map((color, d) => (
                                                     <span
                                                         key={d}
                                                         className="size-1.5 rounded-full"
-                                                        style={{ backgroundColor: d === 0 ? accent : `${accent}40` }}
+                                                        style={{ backgroundColor: color }}
                                                     />
                                                 ))}
                                             </div>
@@ -191,7 +207,7 @@ export function AboutPage() {
                 </section>
 
                 {/* §2 Our Story ───────────────────────────────────────────── */}
-                <section className="border-t border-border bg-white px-4 py-14 sm:px-6 lg:px-8">
+                <section className="border-t border-border bg-white px-4 py-12 sm:px-6 lg:px-8">
                     <div className="mx-auto max-w-7xl">
                         <div className="grid items-start gap-12 lg:grid-cols-2">
                             <div>
@@ -201,14 +217,8 @@ export function AboutPage() {
                                 <h2 className="mt-4 text-3xl text-ink-900 sm:text-4xl">
                                     How ResNet Academy started.
                                 </h2>
-
                                 {/*
                                  * TODO: Replace with the real founding story.
-                                 * Suggested content:
-                                 *   - Founded in [year] by [founder name(s)]
-                                 *   - First cohort ran in [month/year] with [N] students
-                                 *   - First completed project: [brief description]
-                                 *   - Why it started: the gap in practical, mentor-led training in Uganda
                                  */}
                                 <p className="mt-5 text-base leading-8 text-ink-600">
                                     ResNet Academy was founded with one observation: talented people
@@ -249,13 +259,12 @@ export function AboutPage() {
                                 </ul>
                             </div>
 
-                            {/* Right — our story photo, fills column edge to edge */}
+                            {/* Right — story photo */}
                             <div className="overflow-hidden rounded-2xl lg:sticky lg:top-8">
                                 <img
                                     src="/images/our_story.jpg"
                                     alt="ResNet Academy team and students"
                                     className="h-[460px] w-full object-cover object-center"
-                                    style={{ minHeight: '420px' }}
                                 />
                             </div>
                         </div>
@@ -304,7 +313,7 @@ export function AboutPage() {
                                 </div>
                             </div>
 
-                            {/* Light enrolment prompt */}
+                            {/* Enrolment prompt */}
                             <div className="flex items-center">
                                 <div className="w-full rounded-2xl border border-border bg-white p-8">
                                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
@@ -373,16 +382,7 @@ export function AboutPage() {
                             Every learner is supported by an experienced mentor throughout their
                             course — not just during lessons, but between sessions too.
                         </p>
-
-                        {/*
-                         * TODO: Replace with real mentor profiles when ready.
-                         * Each mentor card should show:
-                         *   - Real photograph
-                         *   - Full name
-                         *   - Speciality (e.g. "Frontend Development")
-                         *   - Years of experience or company background
-                         *   - LinkedIn profile link
-                         */}
+                        {/* TODO: Replace with real mentor profiles */}
                         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                             {[
                                 { icon: Code2, title: 'Code reviews', description: 'Mentors review every project submission with line-level feedback.' },
@@ -403,69 +403,60 @@ export function AboutPage() {
                     </div>
                 </section>
 
-                {/* §8 Learner story ───────────────────────────────────────── */}
-                <section className="border-t border-border bg-surface-50 px-4 py-12 sm:px-6 lg:px-8">
+                {/* §8+§9 Graduate story + Final CTA — merged, navy, two columns */}
+                <section className="border-t border-border bg-navy px-4 py-12 sm:px-6 lg:px-8">
                     <div className="mx-auto max-w-7xl">
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                            Graduate outcomes
-                        </p>
-                        <h2 className="mt-3 text-3xl text-ink-900 sm:text-4xl">
-                            From learner to employed.
-                        </h2>
+                        <div className="grid gap-10 lg:grid-cols-2">
 
-                        {/*
-                         * TODO: Replace with a real graduate story.
-                         * Suggested content:
-                         *   - Graduate name, course, cohort year
-                         *   - What they were doing before
-                         *   - What they built during the course
-                         *   - Where they are now (job title, company)
-                         *   - One direct quote
-                         *   - Real photograph
-                         */}
-                        <div className="mt-8 rounded-2xl border border-border bg-surface-50 p-8">
-                            <p className="text-sm font-semibold uppercase tracking-widest text-ink-300">
-                                Coming soon
-                            </p>
-                            <p className="mt-2 text-base text-ink-600">
-                                We are collecting verified graduate stories from our 2024 and 2025
-                                cohorts. Check back soon — or{' '}
-                                <Link to="/contact" className="text-primary underline hover:no-underline">
-                                    contact us
-                                </Link>{' '}
-                                if you are a graduate who would like to share yours.
-                            </p>
-                        </div>
-                    </div>
-                </section>
-
-                {/* §9 Final action ────────────────────────────────────────── */}
-                <section className="border-t border-border bg-surface-50 px-4 py-12 sm:px-6 lg:px-8">
-                    <div className="mx-auto max-w-7xl">
-                        <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
+                            {/* Left: graduate story teaser */}
                             <div>
-                                <h2 className="text-2xl text-ink-900 sm:text-3xl">
+                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">
+                                    Graduate outcomes
+                                </p>
+                                <h2 className="mt-3 text-3xl text-navy-foreground sm:text-4xl">
+                                    From learner to employed.
+                                </h2>
+                                {/* TODO: Replace with real graduate story */}
+                                <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-5">
+                                    <p className="text-xs font-semibold uppercase tracking-widest text-white/30">
+                                        Coming soon
+                                    </p>
+                                    <p className="mt-2 text-sm leading-6 text-navy-foreground/60">
+                                        We are collecting verified graduate stories from our 2024 and 2025
+                                        cohorts. Check back soon — or{' '}
+                                        <Link to="/contact" className="text-blue-300 underline hover:no-underline">
+                                            contact us
+                                        </Link>{' '}
+                                        if you are a graduate who would like to share yours.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Right: final CTA */}
+                            <div className="flex flex-col justify-center">
+                                <h2 className="text-2xl text-navy-foreground sm:text-3xl">
                                     Ready to take the next step?
                                 </h2>
-                                <p className="mt-2 text-sm leading-7 text-ink-600">
+                                <p className="mt-3 text-sm leading-7 text-navy-foreground/60">
                                     Browse our courses, check upcoming cohort dates, or reach out
                                     if you need help choosing the right path.
                                 </p>
+                                <div className="mt-6 flex flex-wrap gap-3">
+                                    <Link
+                                        to="/courses"
+                                        className="inline-flex items-center rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                                    >
+                                        Explore courses
+                                    </Link>
+                                    <Link
+                                        to="/contact"
+                                        className="inline-flex items-center rounded-full border border-white/20 px-6 py-2.5 text-sm font-semibold text-navy-foreground transition-colors hover:border-white/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                                    >
+                                        Contact us
+                                    </Link>
+                                </div>
                             </div>
-                            <div className="flex shrink-0 flex-wrap gap-3">
-                                <Link
-                                    to="/courses"
-                                    className="inline-flex items-center rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                                >
-                                    Explore courses
-                                </Link>
-                                <Link
-                                    to="/contact"
-                                    className="inline-flex items-center rounded-full border border-border px-6 py-2.5 text-sm font-semibold text-ink-900 transition-colors hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                                >
-                                    Contact us
-                                </Link>
-                            </div>
+
                         </div>
                     </div>
                 </section>
@@ -476,6 +467,6 @@ export function AboutPage() {
                 onLoginClick={() => openAuth('login')}
                 onSignupClick={handleSignupClick}
             />
-        </div >
+        </div>
     );
 }
