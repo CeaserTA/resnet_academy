@@ -45,7 +45,7 @@ export function Hero({ onJoinCohortClick: _onJoinCohortClick }: HeroProps) {
                                     className="inline-block"
                                     style={{
                                         animation: 'word-reveal 0.5s cubic-bezier(0.16,1,0.3,1) both',
-                                        animationDelay: `${i * 120}ms`,
+                                        animationDelay: `${i * 200}ms`,
                                     }}
                                 >
                                     {word}{' '}
