@@ -230,7 +230,7 @@ export function AboutPage() {
                             </p>
                         </div>
 
-                        <div className="grid gap-8 lg:grid-cols-3">
+                        <div className="grid gap-8 lg:grid-cols-3 lg:items-start">
 
                             {/* Left: timeline phases (2 cols wide) */}
                             <div className="space-y-4 lg:col-span-2">
@@ -268,14 +268,14 @@ export function AboutPage() {
 
                             {/* Right: masonry gallery — 2 images in different shapes */}
                             <div className="hidden lg:block">
-                                <div className="sticky top-8 flex flex-col gap-4">
+                                <div className="sticky top-8 self-start flex flex-col items-stretch gap-0">
 
-                                    {/* Image 1 — taller, rounded-2xl, slight left offset */}
+                                    {/* Image 1 — taller */}
                                     <div
                                         className="overflow-hidden shadow-md"
                                         style={{
                                             borderRadius: '1rem 2.5rem 1rem 2.5rem',
-                                            height: '240px',
+                                            height: '230px',
                                         }}
                                     >
                                         <img
@@ -285,7 +285,21 @@ export function AboutPage() {
                                         />
                                     </div>
 
-                                    {/* Image 2 — shorter, different clip, offset right */}
+                                    {/* Journey arrow between images */}
+                                    <div className="flex items-center justify-center gap-2 py-3" aria-hidden="true">
+                                        <span className="h-px flex-1 bg-border" />
+                                        <div className="flex items-center gap-1.5 rounded-full border border-border bg-white px-3 py-1 text-xs font-semibold text-ink-600 shadow-sm">
+                                            <span>Start</span>
+                                            <svg width="32" height="10" viewBox="0 0 32 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <line x1="0" y1="5" x2="26" y2="5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="3 2" />
+                                                <path d="M24 2L29 5L24 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                            <span>Now</span>
+                                        </div>
+                                        <span className="h-px flex-1 bg-border" />
+                                    </div>
+
+                                    {/* Image 2 — shorter, offset right */}
                                     <div
                                         className="relative ml-6 overflow-hidden shadow-md"
                                         style={{
