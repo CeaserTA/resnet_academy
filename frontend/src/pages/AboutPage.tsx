@@ -16,13 +16,6 @@ import { StatCard } from '@/components/ui/StatCard';
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
-const stats = [
-    { value: '200+', label: 'Learners trained', note: 'Since 2023' },
-    { value: '15+', label: 'Projects completed per cohort', note: 'Per intake' },
-    { value: '6', label: 'Cohorts completed', note: '2023–2026' },
-    { value: '4', label: 'Active mentors', note: 'Industry practitioners' },
-];
-
 const missionPoints = [
     {
         icon: BookOpen,
@@ -86,14 +79,6 @@ const values = [
     },
 ];
 
-const whoWeServe = [
-    { icon: GraduationCap, label: 'S.6 leavers' },
-    { icon: Code2, label: 'Aspiring developers' },
-    { icon: Briefcase, label: 'Working professionals' },
-    { icon: Globe, label: 'Career changers' },
-    { icon: MessageSquare, label: 'Entrepreneurs' },
-];
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export function AboutPage() {
@@ -113,7 +98,7 @@ export function AboutPage() {
                 <section className="relative overflow-hidden bg-ink-900 px-4 py-16 sm:px-6 lg:px-8">
                     {/* Subtle image overlay */}
                     <img
-                        src="/images/students.jpg"
+                        src="/images/about_us.jpg"
                         alt=""
                         aria-hidden="true"
                         className="absolute inset-0 h-full w-full object-cover opacity-10"
@@ -233,56 +218,13 @@ export function AboutPage() {
                             {/* Right — different photo from hero */}
                             <div className="overflow-hidden rounded-2xl shadow-sm lg:sticky lg:top-8">
                                 <img
-                                    src="/images/banner.jpg"
+                                    src="/images/our_story.jpg"
                                     alt="ResNet Academy team and students"
                                     className="h-full w-full object-cover"
                                     style={{ minHeight: '400px' }}
                                 />
                             </div>
                         </div>
-                    </div>
-                </section>
-
-                {/* §3 Who we serve ────────────────────────────────────────── */}
-                <section className="border-t border-border bg-surface-50 px-4 py-12 sm:px-6 lg:px-8">
-                    <div className="mx-auto max-w-7xl">
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                            Who we serve
-                        </p>
-                        <h2 className="mt-3 text-3xl text-ink-900 sm:text-4xl">
-                            Built for anyone ready to build a career in tech.
-                        </h2>
-                        <div className="mt-8 flex flex-wrap gap-3">
-                            {whoWeServe.map(({ icon: Icon, label }) => (
-                                <div
-                                    key={label}
-                                    className="flex items-center gap-2 rounded-full border border-border bg-white px-4 py-2 text-sm font-medium text-ink-600"
-                                >
-                                    <Icon className="size-4 text-primary" aria-hidden="true" />
-                                    {label}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </section>
-
-                {/* §4 Verified results ────────────────────────────────────── */}
-                <section className="border-t border-border bg-surface-50 px-4 py-12 sm:px-6 lg:px-8">
-                    <div className="mx-auto max-w-7xl">
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                            By the numbers
-                        </p>
-                        <h2 className="mt-3 text-3xl text-ink-900 sm:text-4xl">
-                            Results we can stand behind.
-                        </h2>
-                        <dl className="mt-8 grid grid-cols-2 gap-5 sm:grid-cols-4">
-                            {stats.map(({ value, label, note }) => (
-                                <StatCard key={label} value={value} label={label} note={note} />
-                            ))}
-                        </dl>
-                        <p className="mt-4 text-xs text-ink-300">
-                            Academy records, 2023–2026. Figures updated each cohort cycle.
-                        </p>
                     </div>
                 </section>
 

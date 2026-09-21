@@ -94,7 +94,7 @@ export function ContactPage() {
                 {/* §1 Hero — shorter, wave at bottom */}
                 <section className="relative overflow-hidden bg-navy px-4 pb-16 pt-10 sm:px-6 lg:px-8">
                     <img
-                        src="/images/banner.jpg"
+                        src="/images/contact_us.jpg"
                         alt=""
                         aria-hidden="true"
                         className="absolute inset-0 h-full w-full object-cover opacity-20"
