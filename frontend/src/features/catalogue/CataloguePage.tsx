@@ -170,60 +170,90 @@ export function CataloguePage() {
             />
 
             <main>
-                {/* §1 Hero — split image left, text right */}
-                <section className="overflow-hidden bg-navy">
-                    <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-2 lg:items-stretch">
+                {/* §1 Hero — illustrated banner, no image */}
+                <section className="relative overflow-hidden bg-primary px-4 py-14 sm:px-6 sm:py-16 lg:px-8">
+                    {/* Scattered education icon line art — purely decorative */}
+                    <svg
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 h-full w-full opacity-10"
+                        xmlns="http://www.w3.org/2000/svg"
+                    >
+                        {/* Graduation cap top-left */}
+                        <g transform="translate(60,50)" stroke="white" strokeWidth="1.5" fill="none">
+                            <polygon points="20,0 40,10 20,20 0,10" />
+                            <line x1="40" y1="10" x2="40" y2="25" />
+                            <path d="M10,18 Q10,32 20,32 Q30,32 30,18" />
+                        </g>
+                        {/* Laptop centre-left */}
+                        <g transform="translate(120,160)" stroke="white" strokeWidth="1.5" fill="none">
+                            <rect x="0" y="0" width="60" height="40" rx="3" />
+                            <line x1="-8" y1="40" x2="68" y2="40" />
+                            <rect x="8" y="6" width="44" height="28" />
+                        </g>
+                        {/* Chat bubble top-right area */}
+                        <g transform="translate(80%,40)" stroke="white" strokeWidth="1.5" fill="none" style={{ transform: 'translate(74%,40px)' }}>
+                            <rect x="0" y="0" width="52" height="36" rx="8" />
+                            <polyline points="8,36 8,46 18,36" />
+                            <line x1="10" y1="12" x2="42" y2="12" />
+                            <line x1="10" y1="22" x2="32" y2="22" />
+                        </g>
+                        {/* Certificate bottom-right */}
+                        <g transform="translate(78%,68%)" stroke="white" strokeWidth="1.5" fill="none" style={{ transform: 'translate(78%,68%)' }}>
+                            <rect x="0" y="0" width="50" height="38" rx="3" />
+                            <line x1="8" y1="10" x2="42" y2="10" />
+                            <line x1="8" y1="18" x2="35" y2="18" />
+                            <circle cx="25" cy="30" r="6" />
+                        </g>
+                        {/* Play button bottom-left */}
+                        <g transform="translate(30,75%)" stroke="white" strokeWidth="1.5" fill="none" style={{ transform: 'translate(30px,75%)' }}>
+                            <circle cx="20" cy="20" r="18" />
+                            <polygon points="14,12 32,20 14,28" fill="white" opacity="0.3" />
+                        </g>
+                        {/* Users icon mid-right */}
+                        <g transform="translate(85%,45%)" stroke="white" strokeWidth="1.5" fill="none" style={{ transform: 'translate(85%,45%)' }}>
+                            <circle cx="14" cy="10" r="8" />
+                            <path d="M0,34 Q0,24 14,24 Q28,24 28,34" />
+                            <circle cx="30" cy="10" r="6" opacity="0.6" />
+                            <path d="M22,34 Q24,28 30,28 Q38,28 40,34" opacity="0.6" />
+                        </g>
+                        {/* Book top-right */}
+                        <g transform="translate(88%,12%)" stroke="white" strokeWidth="1.5" fill="none" style={{ transform: 'translate(88%,12%)' }}>
+                            <rect x="0" y="0" width="36" height="46" rx="3" />
+                            <line x1="8" y1="12" x2="28" y2="12" />
+                            <line x1="8" y1="20" x2="28" y2="20" />
+                            <line x1="8" y1="28" x2="20" y2="28" />
+                        </g>
+                        {/* Dotted connecting lines */}
+                        <line x1="15%" y1="20%" x2="35%" y2="40%" stroke="white" strokeWidth="1" strokeDasharray="4 4" opacity="0.4" />
+                        <line x1="65%" y1="25%" x2="45%" y2="50%" stroke="white" strokeWidth="1" strokeDasharray="4 4" opacity="0.4" />
+                        <line x1="20%" y1="70%" x2="40%" y2="55%" stroke="white" strokeWidth="1" strokeDasharray="4 4" opacity="0.4" />
+                    </svg>
 
-                        {/* Left: catalogue banner image */}
-                        <div className="relative hidden lg:block">
-                            <img
-                                src="/images/catlouge_banner.jpg"
-                                alt="ResNet Academy course catalogue"
-                                className="absolute inset-0 h-full w-full object-cover object-center"
-                            />
-                            {/* Gradient fade on right edge to blend into navy */}
-                            <div
-                                aria-hidden="true"
-                                className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-navy to-transparent"
-                            />
-                        </div>
-
-                        {/* Right: text + quick facts */}
-                        <div className="flex flex-col justify-center px-4 py-14 sm:px-6 lg:py-20 lg:pl-12 lg:pr-8">
-                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">
-                                Course Finder
-                            </p>
-                            <h1 className="mt-3 text-4xl text-navy-foreground sm:text-5xl">
-                                Find the right place to begin.
-                            </h1>
-                            <p className="mt-4 max-w-md text-base leading-7 text-navy-foreground/70">
-                                Search by a skill you want to learn, then narrow by subject or level.
-                                Every course includes real projects, mentor feedback, and a certificate.
-                            </p>
-
-                            {/* Quick facts */}
-                            <div className="mt-8 flex flex-wrap gap-4 border-t border-white/10 pt-6">
-                                {[
-                                    { icon: FolderOpen, label: 'Project-based' },
-                                    { icon: Users, label: 'Mentor support' },
-                                    { icon: Trophy, label: 'Certificate' },
-                                    { icon: CalendarDays, label: 'Flexible payment' },
-                                ].map(({ icon: Icon, label }) => (
-                                    <div key={label} className="flex items-center gap-2 text-sm text-navy-foreground/60">
-                                        <Icon className="size-4 text-blue-300" aria-hidden="true" />
-                                        {label}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Mobile: image below text */}
-                        <div className="h-52 w-full overflow-hidden lg:hidden">
-                            <img
-                                src="/images/catlouge_banner.jpg"
-                                alt="ResNet Academy course catalogue"
-                                className="h-full w-full object-cover object-center"
-                            />
+                    {/* Content */}
+                    <div className="relative z-10 mx-auto max-w-3xl text-center">
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-200">
+                            Course Finder
+                        </p>
+                        <h1 className="mt-4 text-4xl text-white sm:text-5xl">
+                            Find the right place to begin.
+                        </h1>
+                        <p className="mt-4 text-base leading-7 text-white/70">
+                            Search by a skill you want to learn, then narrow by subject or level.
+                            Every course includes real projects, mentor feedback, and a certificate.
+                        </p>
+                        {/* Quick facts */}
+                        <div className="mt-8 flex flex-wrap justify-center gap-4 border-t border-white/10 pt-6">
+                            {[
+                                { icon: FolderOpen, label: 'Project-based' },
+                                { icon: Users, label: 'Mentor support' },
+                                { icon: Trophy, label: 'Certificate' },
+                                { icon: CalendarDays, label: 'Flexible payment' },
+                            ].map(({ icon: Icon, label }) => (
+                                <div key={label} className="flex items-center gap-2 text-sm text-white/60">
+                                    <Icon className="size-4 text-blue-200" aria-hidden="true" />
+                                    {label}
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </section>
@@ -370,59 +400,66 @@ export function CataloguePage() {
                     </div>
                 </section>
 
-                {/* ── Section 4: How to choose ─────────────────────────────────── */}
+                {/* ── Sections 4+5: How to choose (left) + What's included (right) ── */}
                 <section className="border-t border-border bg-surface-50 px-4 py-12 sm:px-6 lg:px-8">
                     <div className="mx-auto max-w-7xl">
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Choose with confidence</p>
-                        <h2 className="mt-3 text-3xl text-ink-900 sm:text-4xl">Which course fits you best?</h2>
-                        <p className="mt-3 max-w-lg text-sm leading-7 text-ink-600">
-                            Your best starting point depends on what you already know and what you want to build next.
-                        </p>
-                        <div className="mt-8 grid gap-px rounded-2xl border border-border bg-border sm:grid-cols-3">
-                            {pathways.map(({ icon: Icon, tag, title, description }) => (
-                                <div key={title} className="flex flex-col gap-3 bg-white p-6 first:rounded-tl-2xl first:rounded-bl-2xl last:rounded-tr-2xl last:rounded-br-2xl">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
-                                        <Icon className="size-5 text-primary" aria-hidden="true" />
-                                    </div>
-                                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{tag}</p>
-                                    <h3 className="text-lg text-ink-900">{title}</h3>
-                                    <p className="text-sm leading-6 text-ink-600">{description}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </section>
+                        <div className="grid gap-12 lg:grid-cols-2">
 
-                {/* ── Section 5: What every course includes ────────────────────── */}
-                <section className="border-t border-border bg-white px-4 py-12 sm:px-6 lg:px-8">
-                    <div className="mx-auto max-w-7xl">
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Included in every course</p>
-                        <h2 className="mt-3 text-3xl text-ink-900 sm:text-4xl">Support that continues beyond class.</h2>
-                        <p className="mt-3 max-w-lg text-sm leading-7 text-ink-600">
-                            Each pathway combines technical practice with the feedback and career preparation needed to use your new skills.
-                        </p>
-                        <div className="mt-8 grid gap-x-8 gap-y-6 border-t border-border pt-8 sm:grid-cols-2 lg:grid-cols-3">
-                            {includes.map(({ icon: Icon, title, description }) => (
-                                <div key={title} className="flex items-start gap-4 border-b border-border pb-6">
-                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50">
-                                        <Icon className="size-5 text-primary" aria-hidden="true" />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-semibold text-ink-900">{title}</p>
-                                        <p className="mt-1 text-sm leading-6 text-ink-600">{description}</p>
-                                    </div>
+                            {/* Left: How to choose */}
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Choose with confidence</p>
+                                <h2 className="mt-3 text-3xl text-ink-900 sm:text-4xl">Which course fits you best?</h2>
+                                <p className="mt-3 text-sm leading-7 text-ink-600">
+                                    Your best starting point depends on what you already know and what you want to build next.
+                                </p>
+                                <div className="mt-6 flex flex-col gap-px rounded-2xl border border-border bg-border">
+                                    {pathways.map(({ icon: Icon, tag, title, description }) => (
+                                        <div key={title} className="flex flex-col gap-3 bg-white p-5 first:rounded-t-2xl last:rounded-b-2xl">
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50">
+                                                    <Icon className="size-5 text-primary" aria-hidden="true" />
+                                                </div>
+                                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{tag}</p>
+                                            </div>
+                                            <h3 className="text-base text-ink-900">{title}</h3>
+                                            <p className="text-sm leading-6 text-ink-600">{description}</p>
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
+                            </div>
+
+                            {/* Right: What's included */}
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Included in every course</p>
+                                <h2 className="mt-3 text-3xl text-ink-900 sm:text-4xl">Support beyond class.</h2>
+                                <p className="mt-3 text-sm leading-7 text-ink-600">
+                                    Technical practice combined with the feedback and career preparation you need.
+                                </p>
+                                <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    {includes.map(({ icon: Icon, title, description }) => (
+                                        <div key={title} className="flex items-start gap-3 rounded-xl border border-border bg-white p-4">
+                                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50">
+                                                <Icon className="size-4 text-primary" aria-hidden="true" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-semibold text-ink-900">{title}</p>
+                                                <p className="mt-0.5 text-xs leading-5 text-ink-600">{description}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
                         </div>
                     </div>
                 </section>
 
                 {/* ── Section 6: Learning journey ──────────────────────────────── */}
-                <section className="bg-navy px-4 py-14 sm:px-6 lg:px-8">
+                <section className="bg-navy px-4 py-8 sm:px-6 lg:px-8">
                     <div className="mx-auto max-w-7xl">
                         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">Your learning journey</p>
                         <h2 className="mt-3 text-3xl text-navy-foreground sm:text-4xl">From first lesson to finished portfolio.</h2>
-                        <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+                        <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                             {journey.map(({ number, label }) => (
                                 <div key={number} className="flex flex-col gap-3">
                                     <div className="h-px w-full bg-white/20" aria-hidden="true" />
@@ -438,11 +475,32 @@ export function CataloguePage() {
                 <section className="border-t border-border bg-white px-4 py-12 sm:px-6 lg:px-8">
                     <div className="mx-auto max-w-7xl">
                         <div className="grid gap-10 lg:grid-cols-3">
-                            <div>
-                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Frequently asked questions</p>
-                                <h2 className="mt-3 text-3xl text-ink-900">Know before you enrol.</h2>
-                                <p className="mt-3 text-sm leading-7 text-ink-600">Clear answers to the questions learners ask most often.</p>
+
+                            {/* Left: heading + image */}
+                            <div className="flex flex-col gap-6">
+                                <div>
+                                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Frequently asked questions</p>
+                                    <h2 className="mt-3 text-3xl text-ink-900">Know before you enrol.</h2>
+                                    <p className="mt-3 text-sm leading-7 text-ink-600">Clear answers to the questions learners ask most often.</p>
+                                </div>
+
+                                {/* Shaped image */}
+                                <div
+                                    className="overflow-hidden shadow-md"
+                                    style={{
+                                        clipPath: 'polygon(0% 8%, 100% 0%, 100% 92%, 0% 100%)',
+                                        borderRadius: '1rem',
+                                    }}
+                                >
+                                    <img
+                                        src="/images/know_before_enrol.jpg"
+                                        alt="Students reviewing course materials before enrolling"
+                                        className="h-56 w-full object-cover object-center"
+                                    />
+                                </div>
                             </div>
+
+                            {/* Right: accordion */}
                             <div className="lg:col-span-2">
                                 {faqs.map((faq) => <FaqItem key={faq.q} q={faq.q} a={faq.a} />)}
                                 <div className="border-t border-border" />
@@ -452,7 +510,7 @@ export function CataloguePage() {
                 </section>
 
                 {/* ── Section 7: Final enrolment prompt ───────────────────────── */}
-                <section className="border-t border-border bg-surface-50 px-4 py-12 sm:px-6 lg:px-8">
+                <section className="border-t border-border bg-surface-50 px-4 py-8 sm:px-6 lg:px-8">
                     <div className="mx-auto max-w-7xl flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
                         <div>
                             <h2 className="text-2xl text-ink-900 sm:text-3xl">Ready to take the next step?</h2>
