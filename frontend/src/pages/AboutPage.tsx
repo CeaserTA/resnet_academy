@@ -21,25 +21,29 @@ const statCards = [
         value: '200+',
         label: 'Learners trained',
         gradient: 'linear-gradient(135deg, #1b4fa0 0%, #4b79c4 100%)',
-        dots: ['#4b79c4', '#4b79c440', '#4b79c420'],
+        cardBg: '#0f1e3a',
+        dots: ['#4b79c4', '#4b79c460', '#4b79c430'],
     },
     {
         value: '6',
         label: 'Cohorts completed',
-        gradient: 'linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%)',
-        dots: ['#a78bfa', '#a78bfa40', '#a78bfa20'],
+        gradient: 'linear-gradient(135deg, #5b21b6 0%, #a78bfa 100%)',
+        cardBg: '#1e1030',
+        dots: ['#a78bfa', '#a78bfa60', '#a78bfa30'],
     },
     {
         value: '4',
         label: 'Active mentors',
-        gradient: 'linear-gradient(135deg, #e8a33d 0%, #fbbf24 100%)',
-        dots: ['#e8a33d', '#e8a33d40', '#e8a33d20'],
+        gradient: 'linear-gradient(135deg, #92400e 0%, #e8a33d 100%)',
+        cardBg: '#2a1a05',
+        dots: ['#e8a33d', '#e8a33d60', '#e8a33d30'],
     },
     {
         value: '2023',
         label: 'Founded',
-        gradient: 'linear-gradient(135deg, #1f8a55 0%, #34d399 100%)',
-        dots: ['#1f8a55', '#1f8a5540', '#1f8a5520'],
+        gradient: 'linear-gradient(135deg, #065f46 0%, #34d399 100%)',
+        cardBg: '#021f17',
+        dots: ['#34d399', '#34d39960', '#34d39930'],
     },
 ];
 
@@ -109,7 +113,7 @@ export function AboutPage() {
                     <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-2 lg:items-stretch">
 
                         {/* Left: text + stat cards */}
-                        <div className="flex flex-col justify-center px-4 py-10 sm:px-6 lg:py-14 lg:pl-8 lg:pr-12">
+                        <div className="flex flex-col justify-center px-4 py-8 sm:px-6 lg:py-10 lg:pl-8 lg:pr-12">
                             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
                                 About ResNet Academy
                             </p>
@@ -138,10 +142,14 @@ export function AboutPage() {
                                 </Link>
                             </div>
 
-                            {/* Stat cards — 2×2 grid */}
+                            {/* Stat cards — 2×2 grid, each with distinct colour */}
                             <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                                {statCards.map(({ value, label, gradient, dots }) => (
-                                    <div key={label} className="flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink-900 shadow-md">
+                                {statCards.map(({ value, label, gradient, cardBg, dots }) => (
+                                    <div
+                                        key={label}
+                                        className="flex flex-col overflow-hidden rounded-2xl border border-white/10 shadow-md"
+                                        style={{ backgroundColor: cardBg }}
+                                    >
                                         <div className="h-12 w-full" style={{ background: gradient }} aria-hidden="true" />
                                         <div className="flex flex-1 flex-col px-3 pb-3 pt-2">
                                             <p className="text-xl font-bold text-white">{value}</p>
@@ -266,16 +274,16 @@ export function AboutPage() {
                                 </div>
                             </div>
 
-                            {/* Right: masonry gallery — 2 images in different shapes */}
+                            {/* Right: vertical masonry — image, arrow, image */}
                             <div className="hidden lg:block">
                                 <div className="sticky top-8 self-start flex flex-col items-stretch gap-0">
 
-                                    {/* Image 1 — taller */}
+                                    {/* Image 1 — rounded top corners large, bottom corners small */}
                                     <div
                                         className="overflow-hidden shadow-md"
                                         style={{
-                                            borderRadius: '1rem 2.5rem 1rem 2.5rem',
-                                            height: '230px',
+                                            borderRadius: '2rem 2rem 0.5rem 0.5rem',
+                                            height: '220px',
                                         }}
                                     >
                                         <img
@@ -285,26 +293,21 @@ export function AboutPage() {
                                         />
                                     </div>
 
-                                    {/* Journey arrow between images */}
-                                    <div className="flex items-center justify-center gap-2 py-3" aria-hidden="true">
-                                        <span className="h-px flex-1 bg-border" />
-                                        <div className="flex items-center gap-1.5 rounded-full border border-border bg-white px-3 py-1 text-xs font-semibold text-ink-600 shadow-sm">
-                                            <span>Start</span>
-                                            <svg width="32" height="10" viewBox="0 0 32 10" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <line x1="0" y1="5" x2="26" y2="5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="3 2" />
-                                                <path d="M24 2L29 5L24 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                            </svg>
-                                            <span>Now</span>
-                                        </div>
-                                        <span className="h-px flex-1 bg-border" />
+                                    {/* Downward arrow */}
+                                    <div className="flex flex-col items-center py-3" aria-hidden="true">
+                                        <span className="h-6 w-px bg-border" />
+                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-ink-300">
+                                            <path d="M8 2V14M8 14L3 9M8 14L13 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                        <span className="h-6 w-px bg-border" />
                                     </div>
 
-                                    {/* Image 2 — shorter, offset right */}
+                                    {/* Image 2 — rounded bottom corners large, top corners small, offset right */}
                                     <div
                                         className="relative ml-6 overflow-hidden shadow-md"
                                         style={{
-                                            borderRadius: '2.5rem 1rem 2.5rem 1rem',
-                                            height: '180px',
+                                            borderRadius: '0.5rem 0.5rem 2rem 2rem',
+                                            height: '200px',
                                         }}
                                     >
                                         <img
@@ -312,10 +315,9 @@ export function AboutPage() {
                                             alt="ResNet Academy online learning"
                                             className="h-full w-full object-cover object-center"
                                         />
-                                        {/* Caption overlay */}
                                         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-4 pb-3 pt-8">
-                                            <p className="text-[10px] font-semibold uppercase tracking-widest text-blue-300">ResNet Ecosystem</p>
-                                            <p className="text-xs font-semibold text-white">ResNet Academy, Kampala</p>
+                                            <p className="text-[10px] font-semibold uppercase tracking-widest text-blue-300">ResNet Academy</p>
+                                            <p className="text-xs font-semibold text-white">Kampala, Uganda</p>
                                         </div>
                                     </div>
 
