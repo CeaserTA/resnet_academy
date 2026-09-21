@@ -266,23 +266,45 @@ export function AboutPage() {
                                 </div>
                             </div>
 
-                            {/* Right: sticky image card */}
+                            {/* Right: masonry gallery — 2 images in different shapes */}
                             <div className="hidden lg:block">
-                                <div className="sticky top-8 overflow-hidden rounded-2xl border border-border shadow-md">
-                                    <img
-                                        src="/images/our_story.jpg"
-                                        alt="ResNet Academy campus and students"
-                                        className="h-64 w-full object-cover object-center"
-                                    />
-                                    <div className="bg-ink-900 px-5 py-4">
-                                        <p className="text-[10px] font-semibold uppercase tracking-widest text-primary">
-                                            ResNet Ecosystem
-                                        </p>
-                                        <p className="mt-1 text-sm font-semibold text-white">ResNet Academy, Kampala</p>
-                                        <p className="mt-1 text-xs text-white/50">
-                                            Training job-ready developers under real project conditions.
-                                        </p>
+                                <div className="sticky top-8 flex flex-col gap-4">
+
+                                    {/* Image 1 — taller, rounded-2xl, slight left offset */}
+                                    <div
+                                        className="overflow-hidden shadow-md"
+                                        style={{
+                                            borderRadius: '1rem 2.5rem 1rem 2.5rem',
+                                            height: '240px',
+                                        }}
+                                    >
+                                        <img
+                                            src="/images/our_story.jpg"
+                                            alt="ResNet Academy students at work"
+                                            className="h-full w-full object-cover object-center"
+                                        />
                                     </div>
+
+                                    {/* Image 2 — shorter, different clip, offset right */}
+                                    <div
+                                        className="relative ml-6 overflow-hidden shadow-md"
+                                        style={{
+                                            borderRadius: '2.5rem 1rem 2.5rem 1rem',
+                                            height: '180px',
+                                        }}
+                                    >
+                                        <img
+                                            src="/images/online_study.jpg"
+                                            alt="ResNet Academy online learning"
+                                            className="h-full w-full object-cover object-center"
+                                        />
+                                        {/* Caption overlay */}
+                                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-4 pb-3 pt-8">
+                                            <p className="text-[10px] font-semibold uppercase tracking-widest text-blue-300">ResNet Ecosystem</p>
+                                            <p className="text-xs font-semibold text-white">ResNet Academy, Kampala</p>
+                                        </div>
+                                    </div>
+
                                 </div>
                             </div>
 
