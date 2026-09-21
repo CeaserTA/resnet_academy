@@ -95,14 +95,7 @@ export function AboutPage() {
             <main>
 
                 {/* §1 Hero ─────────────────────────────────────────────────── */}
-                <section className="relative overflow-hidden bg-ink-900 px-4 py-16 sm:px-6 lg:px-8">
-                    {/* Subtle image overlay */}
-                    <img
-                        src="/images/about_us.jpg"
-                        alt=""
-                        aria-hidden="true"
-                        className="absolute inset-0 h-full w-full object-cover opacity-10"
-                    />
+                <section className="relative overflow-hidden bg-navy px-4 py-16 sm:px-6 lg:px-8">
                     <div className="relative z-10 mx-auto max-w-7xl">
                         <div className="grid items-start gap-12 lg:grid-cols-2">
 

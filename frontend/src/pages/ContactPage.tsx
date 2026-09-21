@@ -93,12 +93,6 @@ export function ContactPage() {
 
                 {/* §1 Hero — shorter, wave at bottom */}
                 <section className="relative overflow-hidden bg-navy px-4 pb-16 pt-10 sm:px-6 lg:px-8">
-                    <img
-                        src="/images/contact_us.jpg"
-                        alt=""
-                        aria-hidden="true"
-                        className="absolute inset-0 h-full w-full object-cover opacity-20"
-                    />
                     <div className="relative z-10 mx-auto max-w-3xl text-center">
                         <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white">
                             <MessageCircle className="size-3.5" aria-hidden="true" />
