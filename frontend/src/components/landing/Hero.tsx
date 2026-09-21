@@ -143,7 +143,7 @@ export function Hero({ onJoinCohortClick: _onJoinCohortClick }: HeroProps) {
                             }}
                         >
                             <img
-                                src="/images/banner.jpg"
+                                src="/images/hero.jpg"
                                 alt="ResNet Academy students learning together"
                                 className="absolute inset-0 h-full w-full object-cover object-left transition-transform duration-500 group-hover:scale-105"
                             />
@@ -190,7 +190,7 @@ export function Hero({ onJoinCohortClick: _onJoinCohortClick }: HeroProps) {
                     {/* Mobile image */}
                     <div className="overflow-hidden rounded-2xl lg:hidden">
                         <img
-                            src="/images/banner.jpg"
+                            src="/images/hero.jpg"
                             alt="ResNet Academy students learning together"
                             className="h-64 w-full object-cover object-left"
                         />

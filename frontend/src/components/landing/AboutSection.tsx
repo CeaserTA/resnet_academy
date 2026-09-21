@@ -33,7 +33,7 @@ export function AboutSection() {
                     <div className="relative">
                         <div className="overflow-hidden rounded-2xl">
                             <img
-                                src="/images/students.jpg"
+                                src="/images/online_study.jpg"
                                 alt="ResNet Academy students working on projects"
                                 className="h-[420px] w-full object-cover object-center"
                             />

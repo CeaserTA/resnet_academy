@@ -1,7 +1,6 @@
 ﻿import { Link } from 'react-router';
 import { Spinner } from '@/components/ui/Spinner';
-import { CourseCard } from '@/features/catalogue/CourseCard';
-import { courseImageMap, courseDurationMap } from '@/features/catalogue/courseImages';
+import { CourseCarousel } from '@/components/landing/CourseCarousel';
 import { useCourses } from '@/features/catalogue/useCourses';
 import { usePublicCohortOfferings } from '@/features/cohorts/useCohorts';
 
@@ -10,11 +9,16 @@ export function CoursePreviews() {
   const { data: cohortOfferings, isLoading: offeringsLoading } = usePublicCohortOfferings();
   const isLoading = coursesLoading || offeringsLoading;
 
-  const courseIdsWithCohorts = new Set((cohortOfferings ?? []).map((offering) => offering.course.id));
-  const courses = (data?.data ?? []).filter((c) => courseIdsWithCohorts.has(c.id)).slice(0, 3);
+  const courseIdsWithCohorts = new Set(
+    (cohortOfferings ?? []).map((offering) => offering.course.id),
+  );
+  // Show up to 6 on homepage — carousel handles scrolling when there are more
+  const courses = (data?.data ?? [])
+    .filter((c) => courseIdsWithCohorts.has(c.id))
+    .slice(0, 6);
 
   return (
-    <section id="courses" className="border-t border-border bg-white px-4 py-12 sm:px-6 lg:px-8">
+    <section id="courses" className="border-t border-border bg-surface-50 px-4 py-12 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
 
         {/* ── Heading row ── */}
@@ -32,13 +36,13 @@ export function CoursePreviews() {
           </div>
           <Link
             to="/courses"
-            className="shrink-0 self-start rounded-full border border-border px-4 py-2 text-sm font-semibold text-ink-900 transition-colors hover:border-primary hover:text-primary sm:self-auto"
+            className="shrink-0 self-start rounded-full border border-border px-4 py-2 text-sm font-semibold text-ink-900 transition-colors hover:border-primary hover:text-primary sm:self-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             All courses
           </Link>
         </div>
 
-        {/* ── Cards ── */}
+        {/* ── Carousel ── */}
         <div className="mt-8">
           {isLoading && (
             <div className="flex justify-center py-12">
@@ -50,21 +54,9 @@ export function CoursePreviews() {
             <p className="py-12 text-center text-sm text-ink-300">No courses available yet.</p>
           )}
 
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {courses.map((course, i) => {
-              const meta = courseDurationMap[course.slug];
-              return (
-                <CourseCard
-                  key={course.id}
-                  course={course}
-                  imageSrc={courseImageMap[course.slug]}
-                  duration={meta?.duration}
-                  format={meta?.format}
-                  index={i}
-                />
-              );
-            })}
-          </div>
+          {!isLoading && courses.length > 0 && (
+            <CourseCarousel courses={courses} />
+          )}
         </div>
 
       </div>
