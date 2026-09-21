@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Search, ArrowRight, Monitor, Users } from 'lucide-react';
-import { CircularText } from '@/components/ui/CircularText';
 
 interface HeroProps {
-    onJoinCohortClick: () => void;
+    onJoinCohortClick?: () => void;
 }
 
-export function Hero({ onJoinCohortClick }: HeroProps) {
+export function Hero({ onJoinCohortClick: _onJoinCohortClick }: HeroProps) {
     const navigate = useNavigate();
     const [query, setQuery] = useState('');
 
@@ -22,15 +21,6 @@ export function Hero({ onJoinCohortClick }: HeroProps) {
 
     return (
         <section className="relative overflow-hidden bg-blue-100 py-2">
-            {/* Circular text — top left corner, purely decorative */}
-            <div className="absolute left-4 top-4 z-10 hidden lg:block">
-                <CircularText
-                    text="RESNET ACADEMY • RESNET ACADEMY • "
-                    radius={62}
-                    duration={12}
-                    direction="clockwise"
-                />
-            </div>
             <div className="mx-auto max-w-7xl pl-4 pr-4 sm:pl-8 sm:pr-6 lg:pl-4 lg:pr-8">
 
                 {/* Both columns share the same top baseline — items-start, not items-center */}

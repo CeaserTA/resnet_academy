@@ -11,7 +11,6 @@ import {
     FolderOpen,
     Headphones,
     MessageSquare,
-    Search,
     Trophy,
     Users,
     Zap,

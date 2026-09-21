@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router';
+import { ScrollToTop } from '@/components/layout/ScrollToTop';
 import { AppShell } from '@/components/layout/AppShell';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -53,240 +54,243 @@ function App() {
     const wantsCourseSection = location.hash === '#courses';
 
     return (
-        <Routes>
-            <Route
-                index
-                element={
-                    isLoading ? (
-                        <div />
-                    ) : user && !wantsCourseSection ? (
-                        <Navigate to="/dashboard" replace />
-                    ) : (
-                        <LandingPage />
-                    )
-                }
-            />
-            <Route path="courses" element={<CataloguePage />} />
-            <Route path="courses/:id" element={<CourseDetailPage />} />
-            <Route path="cohorts/:id" element={<CohortPage />} />
-            <Route path="about" element={<AboutPage />} />
-            <Route path="contact" element={<ContactPage />} />
-            {/* Legacy auth URLs — sign-in/signup now happen exclusively in the auth modal */}
-            <Route path="login" element={<Navigate to="/?auth=login" replace />} />
-            <Route path="register" element={<Navigate to="/?auth=signup" replace />} />
-            <Route path="forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="reset-password" element={<ResetPasswordPage />} />
-            <Route path="verify-certificate" element={<CertificateVerifyPage />} />
-
-            <Route
-                element={
-                    <ProtectedRoute>
-                        <AppShell />
-                    </ProtectedRoute>
-                }
-            >
-                <Route path="verify-email" element={<VerifyEmailNoticePage />} />
-                <Route path="dashboard" element={<DashboardPage />} />
-                <Route path="account" element={<AccountPage />} />
-                <Route path="profile/complete" element={<ProfileCompletionPage />} />
-                <Route path="profile/edit" element={<ProfileCompletionPage />} />
+        <>
+            <ScrollToTop />
+            <Routes>
+                <Route
+                    index
+                    element={
+                        isLoading ? (
+                            <div />
+                        ) : user && !wantsCourseSection ? (
+                            <Navigate to="/dashboard" replace />
+                        ) : (
+                            <LandingPage />
+                        )
+                    }
+                />
+                <Route path="courses" element={<CataloguePage />} />
+                <Route path="courses/:id" element={<CourseDetailPage />} />
+                <Route path="cohorts/:id" element={<CohortPage />} />
+                <Route path="about" element={<AboutPage />} />
+                <Route path="contact" element={<ContactPage />} />
+                {/* Legacy auth URLs — sign-in/signup now happen exclusively in the auth modal */}
+                <Route path="login" element={<Navigate to="/?auth=login" replace />} />
+                <Route path="register" element={<Navigate to="/?auth=signup" replace />} />
+                <Route path="forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="reset-password" element={<ResetPasswordPage />} />
+                <Route path="verify-certificate" element={<CertificateVerifyPage />} />
 
                 <Route
-                    path="admin/courses"
                     element={
-                        <ProtectedRoute roles={['admin', 'instructor']}>
-                            <CourseListPage />
+                        <ProtectedRoute>
+                            <AppShell />
                         </ProtectedRoute>
                     }
-                />
-                <Route
-                    path="admin/courses/new"
-                    element={
-                        <ProtectedRoute roles={['admin']}>
-                            <CourseFormPage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="admin/courses/:id/edit"
-                    element={
-                        <ProtectedRoute roles={['admin', 'instructor']}>
-                            <CourseFormPage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="admin/cohorts"
-                    element={
-                        <ProtectedRoute roles={['admin', 'instructor']}>
-                            <CohortsListPage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="admin/cohorts/:id"
-                    element={
-                        <ProtectedRoute roles={['admin', 'instructor']}>
-                            <CohortDetailPage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="admin/applications"
-                    element={
-                        <ProtectedRoute roles={['admin', 'instructor']}>
-                            <ApplicationsPage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="admin/enrolments"
-                    element={
-                        <ProtectedRoute roles={['admin', 'instructor']}>
-                            <AdminEnrolmentsPage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="admin/transfer-requests"
-                    element={
-                        <ProtectedRoute roles={['admin']}>
-                            <AdminTransferRequestsPage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="admin/reviews"
-                    element={
-                        <ProtectedRoute roles={['admin']}>
-                            <ReviewsPage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="admin/payments"
-                    element={
-                        <ProtectedRoute roles={['admin']}>
-                            <PaymentsPage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="admin/users"
-                    element={
-                        <ProtectedRoute roles={['admin']}>
-                            <ProvisionUserPage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="admin/courses/:id/modules"
-                    element={
-                        <ProtectedRoute roles={['admin', 'instructor']}>
-                            <CourseBuilderPage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="admin/courses/:id/gradebook"
-                    element={
-                        <ProtectedRoute roles={['admin', 'instructor']}>
-                            <GradebookPage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="admin/audit-log"
-                    element={
-                        <ProtectedRoute roles={['admin']}>
-                            <AuditLogPage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="admin/assignments/:id"
-                    element={
-                        <ProtectedRoute roles={['admin', 'instructor']}>
-                            <AssignmentGradingPage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="admin/evaluations/:id"
-                    element={
-                        <ProtectedRoute roles={['admin', 'instructor']}>
-                            <EvaluationEditPage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="admin/evaluations/:id/grading"
-                    element={
-                        <ProtectedRoute roles={['admin', 'instructor']}>
-                            <EvaluationGradingPage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="admin/resources/:id/attendance"
-                    element={
-                        <ProtectedRoute roles={['admin', 'instructor']}>
-                            <AttendanceRosterPage />
-                        </ProtectedRoute>
-                    }
-                />
+                >
+                    <Route path="verify-email" element={<VerifyEmailNoticePage />} />
+                    <Route path="dashboard" element={<DashboardPage />} />
+                    <Route path="account" element={<AccountPage />} />
+                    <Route path="profile/complete" element={<ProfileCompletionPage />} />
+                    <Route path="profile/edit" element={<ProfileCompletionPage />} />
 
-                <Route
-                    path="learn/courses/:id"
-                    element={
-                        <ProtectedRoute roles={['student']}>
-                            <CoursePlayerPage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="learn/resources/:id"
-                    element={
-                        <ProtectedRoute roles={['student']}>
-                            <ResourceViewerPage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="learn/assignments/:id"
-                    element={
-                        <ProtectedRoute roles={['student']}>
-                            <AssignmentSubmitPage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="learn/evaluations/:id"
-                    element={
-                        <ProtectedRoute roles={['student']}>
-                            <EvaluationTakePage />
-                        </ProtectedRoute>
-                    }
-                />
+                    <Route
+                        path="admin/courses"
+                        element={
+                            <ProtectedRoute roles={['admin', 'instructor']}>
+                                <CourseListPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="admin/courses/new"
+                        element={
+                            <ProtectedRoute roles={['admin']}>
+                                <CourseFormPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="admin/courses/:id/edit"
+                        element={
+                            <ProtectedRoute roles={['admin', 'instructor']}>
+                                <CourseFormPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="admin/cohorts"
+                        element={
+                            <ProtectedRoute roles={['admin', 'instructor']}>
+                                <CohortsListPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="admin/cohorts/:id"
+                        element={
+                            <ProtectedRoute roles={['admin', 'instructor']}>
+                                <CohortDetailPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="admin/applications"
+                        element={
+                            <ProtectedRoute roles={['admin', 'instructor']}>
+                                <ApplicationsPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="admin/enrolments"
+                        element={
+                            <ProtectedRoute roles={['admin', 'instructor']}>
+                                <AdminEnrolmentsPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="admin/transfer-requests"
+                        element={
+                            <ProtectedRoute roles={['admin']}>
+                                <AdminTransferRequestsPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="admin/reviews"
+                        element={
+                            <ProtectedRoute roles={['admin']}>
+                                <ReviewsPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="admin/payments"
+                        element={
+                            <ProtectedRoute roles={['admin']}>
+                                <PaymentsPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="admin/users"
+                        element={
+                            <ProtectedRoute roles={['admin']}>
+                                <ProvisionUserPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="admin/courses/:id/modules"
+                        element={
+                            <ProtectedRoute roles={['admin', 'instructor']}>
+                                <CourseBuilderPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="admin/courses/:id/gradebook"
+                        element={
+                            <ProtectedRoute roles={['admin', 'instructor']}>
+                                <GradebookPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="admin/audit-log"
+                        element={
+                            <ProtectedRoute roles={['admin']}>
+                                <AuditLogPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="admin/assignments/:id"
+                        element={
+                            <ProtectedRoute roles={['admin', 'instructor']}>
+                                <AssignmentGradingPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="admin/evaluations/:id"
+                        element={
+                            <ProtectedRoute roles={['admin', 'instructor']}>
+                                <EvaluationEditPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="admin/evaluations/:id/grading"
+                        element={
+                            <ProtectedRoute roles={['admin', 'instructor']}>
+                                <EvaluationGradingPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="admin/resources/:id/attendance"
+                        element={
+                            <ProtectedRoute roles={['admin', 'instructor']}>
+                                <AttendanceRosterPage />
+                            </ProtectedRoute>
+                        }
+                    />
 
-                <Route path="messages" element={<MessagesPage />} />
-                <Route path="messages/:id" element={<MessagesPage />} />
-                <Route path="tickets" element={<TicketsPage />} />
-                <Route path="tickets/:id" element={<TicketRedirect />} />
-                <Route path="forums" element={<ForumsIndexPage />} />
-                <Route path="courses/:id/forum" element={<ForumPage />} />
-                <Route
-                    path="courses/:id/forum/moderation"
-                    element={
-                        <ProtectedRoute roles={['admin', 'instructor']}>
-                            <ForumModerationPage />
-                        </ProtectedRoute>
-                    }
-                />
-            </Route>
+                    <Route
+                        path="learn/courses/:id"
+                        element={
+                            <ProtectedRoute roles={['student']}>
+                                <CoursePlayerPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="learn/resources/:id"
+                        element={
+                            <ProtectedRoute roles={['student']}>
+                                <ResourceViewerPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="learn/assignments/:id"
+                        element={
+                            <ProtectedRoute roles={['student']}>
+                                <AssignmentSubmitPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="learn/evaluations/:id"
+                        element={
+                            <ProtectedRoute roles={['student']}>
+                                <EvaluationTakePage />
+                            </ProtectedRoute>
+                        }
+                    />
 
-            <Route path="*" element={<NotFoundPage />} />
-        </Routes>
+                    <Route path="messages" element={<MessagesPage />} />
+                    <Route path="messages/:id" element={<MessagesPage />} />
+                    <Route path="tickets" element={<TicketsPage />} />
+                    <Route path="tickets/:id" element={<TicketRedirect />} />
+                    <Route path="forums" element={<ForumsIndexPage />} />
+                    <Route path="courses/:id/forum" element={<ForumPage />} />
+                    <Route
+                        path="courses/:id/forum/moderation"
+                        element={
+                            <ProtectedRoute roles={['admin', 'instructor']}>
+                                <ForumModerationPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                </Route>
+
+                <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+        </>
     );
 }
 
