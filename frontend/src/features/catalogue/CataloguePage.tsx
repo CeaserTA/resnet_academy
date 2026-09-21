@@ -170,91 +170,129 @@ export function CataloguePage() {
             />
 
             <main>
-                {/* §1 Hero — illustrated banner, no image */}
-                <section className="relative overflow-hidden bg-primary px-4 py-14 sm:px-6 sm:py-16 lg:px-8">
-                    {/* Scattered education icon line art — purely decorative */}
-                    <svg
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 h-full w-full opacity-10"
-                        xmlns="http://www.w3.org/2000/svg"
-                    >
-                        {/* Graduation cap top-left */}
-                        <g transform="translate(60,50)" stroke="white" strokeWidth="1.5" fill="none">
-                            <polygon points="20,0 40,10 20,20 0,10" />
-                            <line x1="40" y1="10" x2="40" y2="25" />
-                            <path d="M10,18 Q10,32 20,32 Q30,32 30,18" />
-                        </g>
-                        {/* Laptop centre-left */}
-                        <g transform="translate(120,160)" stroke="white" strokeWidth="1.5" fill="none">
-                            <rect x="0" y="0" width="60" height="40" rx="3" />
-                            <line x1="-8" y1="40" x2="68" y2="40" />
-                            <rect x="8" y="6" width="44" height="28" />
-                        </g>
-                        {/* Chat bubble top-right area */}
-                        <g transform="translate(80%,40)" stroke="white" strokeWidth="1.5" fill="none" style={{ transform: 'translate(74%,40px)' }}>
-                            <rect x="0" y="0" width="52" height="36" rx="8" />
-                            <polyline points="8,36 8,46 18,36" />
-                            <line x1="10" y1="12" x2="42" y2="12" />
-                            <line x1="10" y1="22" x2="32" y2="22" />
-                        </g>
-                        {/* Certificate bottom-right */}
-                        <g transform="translate(78%,68%)" stroke="white" strokeWidth="1.5" fill="none" style={{ transform: 'translate(78%,68%)' }}>
-                            <rect x="0" y="0" width="50" height="38" rx="3" />
-                            <line x1="8" y1="10" x2="42" y2="10" />
-                            <line x1="8" y1="18" x2="35" y2="18" />
-                            <circle cx="25" cy="30" r="6" />
-                        </g>
-                        {/* Play button bottom-left */}
-                        <g transform="translate(30,75%)" stroke="white" strokeWidth="1.5" fill="none" style={{ transform: 'translate(30px,75%)' }}>
-                            <circle cx="20" cy="20" r="18" />
-                            <polygon points="14,12 32,20 14,28" fill="white" opacity="0.3" />
-                        </g>
-                        {/* Users icon mid-right */}
-                        <g transform="translate(85%,45%)" stroke="white" strokeWidth="1.5" fill="none" style={{ transform: 'translate(85%,45%)' }}>
-                            <circle cx="14" cy="10" r="8" />
-                            <path d="M0,34 Q0,24 14,24 Q28,24 28,34" />
-                            <circle cx="30" cy="10" r="6" opacity="0.6" />
-                            <path d="M22,34 Q24,28 30,28 Q38,28 40,34" opacity="0.6" />
-                        </g>
-                        {/* Book top-right */}
-                        <g transform="translate(88%,12%)" stroke="white" strokeWidth="1.5" fill="none" style={{ transform: 'translate(88%,12%)' }}>
-                            <rect x="0" y="0" width="36" height="46" rx="3" />
-                            <line x1="8" y1="12" x2="28" y2="12" />
-                            <line x1="8" y1="20" x2="28" y2="20" />
-                            <line x1="8" y1="28" x2="20" y2="28" />
-                        </g>
-                        {/* Dotted connecting lines */}
-                        <line x1="15%" y1="20%" x2="35%" y2="40%" stroke="white" strokeWidth="1" strokeDasharray="4 4" opacity="0.4" />
-                        <line x1="65%" y1="25%" x2="45%" y2="50%" stroke="white" strokeWidth="1" strokeDasharray="4 4" opacity="0.4" />
-                        <line x1="20%" y1="70%" x2="40%" y2="55%" stroke="white" strokeWidth="1" strokeDasharray="4 4" opacity="0.4" />
-                    </svg>
+                {/* §1 Hero — isometric illustration left, text+search right */}
+                <section className="overflow-hidden bg-primary">
+                    <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-2 lg:items-center">
 
-                    {/* Content */}
-                    <div className="relative z-10 mx-auto max-w-3xl text-center">
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-200">
-                            Course Finder
-                        </p>
-                        <h1 className="mt-4 text-4xl text-white sm:text-5xl">
-                            Find the right place to begin.
-                        </h1>
-                        <p className="mt-4 text-base leading-7 text-white/70">
-                            Search by a skill you want to learn, then narrow by subject or level.
-                            Every course includes real projects, mentor feedback, and a certificate.
-                        </p>
-                        {/* Quick facts */}
-                        <div className="mt-8 flex flex-wrap justify-center gap-4 border-t border-white/10 pt-6">
-                            {[
-                                { icon: FolderOpen, label: 'Project-based' },
-                                { icon: Users, label: 'Mentor support' },
-                                { icon: Trophy, label: 'Certificate' },
-                                { icon: CalendarDays, label: 'Flexible payment' },
-                            ].map(({ icon: Icon, label }) => (
-                                <div key={label} className="flex items-center gap-2 text-sm text-white/60">
-                                    <Icon className="size-4 text-blue-200" aria-hidden="true" />
-                                    {label}
-                                </div>
-                            ))}
+                        {/* Left: custom isometric SVG illustration */}
+                        <div className="flex items-center justify-center px-6 py-14 lg:py-16">
+                            <svg
+                                viewBox="0 0 420 340"
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="w-full max-w-sm"
+                                aria-hidden="true"
+                            >
+                                {/* Organic blob background */}
+                                <path
+                                    d="M200,30 C280,10 360,60 370,140 C385,220 320,310 230,310 C140,315 60,260 50,175 C35,90 120,50 200,30Z"
+                                    fill="rgba(255,255,255,0.08)"
+                                    stroke="rgba(255,255,255,0.12)"
+                                    strokeWidth="1.5"
+                                />
+
+                                {/* ── Central laptop (isometric) ── */}
+                                <g stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                                    {/* Screen back (isometric top face) */}
+                                    <path d="M160,120 L260,100 L260,190 L160,210 Z" fill="rgba(255,255,255,0.06)" />
+                                    {/* Screen content lines */}
+                                    <line x1="175" y1="130" x2="245" y2="116" />
+                                    <line x1="175" y1="143" x2="230" y2="131" />
+                                    <line x1="175" y1="156" x2="215" y2="146" />
+                                    {/* Play button on screen */}
+                                    <circle cx="210" cy="165" r="12" />
+                                    <polygon points="206,160 206,170 218,165" fill="rgba(232,163,61,0.8)" stroke="none" />
+                                    {/* Base / keyboard (isometric bottom face) */}
+                                    <path d="M145,210 L160,210 L260,190 L275,190 L275,220 L260,230 L145,230 Z" fill="rgba(255,255,255,0.06)" />
+                                    {/* Keyboard lines */}
+                                    <line x1="160" y1="210" x2="260" y2="190" />
+                                    <line x1="175" y1="215" x2="255" y2="197" />
+                                    <line x1="190" y1="220" x2="255" y2="204" />
+                                    {/* Hinge shadow */}
+                                    <line x1="155" y1="208" x2="270" y2="188" stroke="rgba(255,255,255,0.25)" strokeWidth="1" />
+                                </g>
+
+                                {/* Graduation cap — top-right */}
+                                <g transform="translate(290,50)" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M30,8 L60,20 L30,32 L0,20 Z" fill="rgba(255,255,255,0.1)" />
+                                    <line x1="60" y1="20" x2="60" y2="40" />
+                                    <path d="M12,26 Q12,44 30,44 Q48,44 48,26" />
+                                    <circle cx="60" cy="42" r="3" fill="rgba(232,163,61,0.8)" stroke="none" />
+                                </g>
+
+                                {/* Chat bubble — top-left */}
+                                <g transform="translate(50,70)" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="0" y="0" width="64" height="44" rx="10" fill="rgba(255,255,255,0.08)" />
+                                    <polyline points="8,44 8,56 22,44" />
+                                    <line x1="10" y1="14" x2="54" y2="14" />
+                                    <line x1="10" y1="26" x2="42" y2="26" />
+                                </g>
+
+                                {/* Checklist — bottom-left */}
+                                <g transform="translate(55,220)" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="0" y="0" width="58" height="72" rx="6" fill="rgba(255,255,255,0.08)" />
+                                    <polyline points="8,18 14,24 24,12" stroke="rgba(232,163,61,0.9)" />
+                                    <line x1="30" y1="18" x2="50" y2="18" />
+                                    <polyline points="8,36 14,42 24,30" stroke="rgba(232,163,61,0.9)" />
+                                    <line x1="30" y1="36" x2="50" y2="36" />
+                                    <polyline points="8,54 14,60 24,48" />
+                                    <line x1="30" y1="54" x2="50" y2="54" />
+                                </g>
+
+                                {/* Certificate — bottom-right */}
+                                <g transform="translate(298,240)" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="0" y="0" width="66" height="52" rx="6" fill="rgba(255,255,255,0.08)" />
+                                    <line x1="10" y1="14" x2="56" y2="14" />
+                                    <line x1="10" y1="24" x2="46" y2="24" />
+                                    <circle cx="22" cy="40" r="8" />
+                                    <polyline points="18,40 21,43 28,36" stroke="rgba(232,163,61,0.9)" strokeWidth="1.5" />
+                                </g>
+
+                                {/* Dotted connecting lines */}
+                                <g stroke="rgba(255,255,255,0.3)" strokeWidth="1.2" strokeDasharray="4 5" fill="none">
+                                    <line x1="114" y1="92" x2="155" y2="140" />
+                                    <line x1="290" y1="80" x2="262" y2="130" />
+                                    <line x1="84" y1="230" x2="148" y2="210" />
+                                    <line x1="298" y1="250" x2="270" y2="215" />
+                                </g>
+
+                                {/* Amber accent dots at connection points */}
+                                <g fill="rgba(232,163,61,0.7)">
+                                    <circle cx="114" cy="92" r="3.5" />
+                                    <circle cx="290" cy="80" r="3.5" />
+                                    <circle cx="84" cy="230" r="3.5" />
+                                    <circle cx="298" cy="250" r="3.5" />
+                                </g>
+                            </svg>
                         </div>
+
+                        {/* Right: text + quick facts */}
+                        <div className="flex flex-col justify-center px-4 py-12 sm:px-6 lg:py-16 lg:pl-8 lg:pr-12">
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-200">
+                                Course Finder
+                            </p>
+                            <h1 className="mt-3 text-4xl text-white sm:text-5xl">
+                                Find the right place to begin.
+                            </h1>
+                            <p className="mt-4 max-w-md text-base leading-7 text-white/70">
+                                Search by a skill you want to learn, then narrow by subject or level.
+                                Every course includes real projects, mentor feedback, and a certificate.
+                            </p>
+                            {/* Quick facts */}
+                            <div className="mt-8 flex flex-wrap gap-4 border-t border-white/10 pt-6">
+                                {[
+                                    { icon: FolderOpen, label: 'Project-based' },
+                                    { icon: Users, label: 'Mentor support' },
+                                    { icon: Trophy, label: 'Certificate' },
+                                    { icon: CalendarDays, label: 'Flexible payment' },
+                                ].map(({ icon: Icon, label }) => (
+                                    <div key={label} className="flex items-center gap-2 text-sm text-white/60">
+                                        <Icon className="size-4 text-blue-200" aria-hidden="true" />
+                                        {label}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
                     </div>
                 </section>
 
@@ -403,46 +441,68 @@ export function CataloguePage() {
                 {/* ── Sections 4+5: How to choose (left) + What's included (right) ── */}
                 <section className="border-t border-border bg-surface-50 px-4 py-12 sm:px-6 lg:px-8">
                     <div className="mx-auto max-w-7xl">
-                        <div className="grid gap-12 lg:grid-cols-2">
+
+                        {/* Section header — full width above both columns */}
+                        <div className="mb-10 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Everything you need to decide</p>
+                                <h2 className="mt-3 text-3xl text-ink-900 sm:text-4xl">Choose your path. Know what's included.</h2>
+                            </div>
+                            {/* Stat strip — pulls the eye and balances the heading */}
+                            <div className="flex shrink-0 items-center gap-6 sm:gap-8">
+                                {[
+                                    { value: '200+', label: 'Learners trained' },
+                                    { value: '6', label: 'Cohorts done' },
+                                    { value: '4', label: 'Mentors' },
+                                ].map(({ value, label }) => (
+                                    <div key={label} className="text-center">
+                                        <p className="text-2xl font-bold text-primary">{value}</p>
+                                        <p className="text-xs text-ink-300">{label}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="grid gap-8 lg:grid-cols-2">
 
                             {/* Left: How to choose */}
-                            <div>
+                            <div className="rounded-2xl border border-border bg-white p-6">
                                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Choose with confidence</p>
-                                <h2 className="mt-3 text-3xl text-ink-900 sm:text-4xl">Which course fits you best?</h2>
-                                <p className="mt-3 text-sm leading-7 text-ink-600">
-                                    Your best starting point depends on what you already know and what you want to build next.
+                                <h3 className="mt-2 text-xl text-ink-900">Which course fits you best?</h3>
+                                <p className="mt-2 text-sm leading-6 text-ink-600">
+                                    Your best starting point depends on what you already know.
                                 </p>
-                                <div className="mt-6 flex flex-col gap-px rounded-2xl border border-border bg-border">
+                                <div className="mt-5 flex flex-col gap-px rounded-xl border border-border bg-border">
                                     {pathways.map(({ icon: Icon, tag, title, description }) => (
-                                        <div key={title} className="flex flex-col gap-3 bg-white p-5 first:rounded-t-2xl last:rounded-b-2xl">
+                                        <div key={title} className="flex flex-col gap-2 bg-surface-50 p-4 first:rounded-t-xl last:rounded-b-xl">
                                             <div className="flex items-center gap-3">
-                                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50">
-                                                    <Icon className="size-5 text-primary" aria-hidden="true" />
+                                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50">
+                                                    <Icon className="size-4 text-primary" aria-hidden="true" />
                                                 </div>
                                                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{tag}</p>
                                             </div>
-                                            <h3 className="text-base text-ink-900">{title}</h3>
-                                            <p className="text-sm leading-6 text-ink-600">{description}</p>
+                                            <p className="text-sm font-semibold text-ink-900">{title}</p>
+                                            <p className="text-xs leading-5 text-ink-600">{description}</p>
                                         </div>
                                     ))}
                                 </div>
                             </div>
 
                             {/* Right: What's included */}
-                            <div>
+                            <div className="rounded-2xl border border-border bg-white p-6">
                                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Included in every course</p>
-                                <h2 className="mt-3 text-3xl text-ink-900 sm:text-4xl">Support beyond class.</h2>
-                                <p className="mt-3 text-sm leading-7 text-ink-600">
-                                    Technical practice combined with the feedback and career preparation you need.
+                                <h3 className="mt-2 text-xl text-ink-900">Support that continues beyond class.</h3>
+                                <p className="mt-2 text-sm leading-6 text-ink-600">
+                                    Technical practice combined with feedback and career preparation.
                                 </p>
-                                <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
                                     {includes.map(({ icon: Icon, title, description }) => (
-                                        <div key={title} className="flex items-start gap-3 rounded-xl border border-border bg-white p-4">
-                                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50">
+                                        <div key={title} className="flex items-start gap-3 rounded-xl border border-border bg-surface-50 p-3">
+                                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50">
                                                 <Icon className="size-4 text-primary" aria-hidden="true" />
                                             </div>
                                             <div>
-                                                <p className="text-sm font-semibold text-ink-900">{title}</p>
+                                                <p className="text-xs font-semibold text-ink-900">{title}</p>
                                                 <p className="mt-0.5 text-xs leading-5 text-ink-600">{description}</p>
                                             </div>
                                         </div>
