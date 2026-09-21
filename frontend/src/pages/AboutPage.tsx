@@ -94,57 +94,98 @@ export function AboutPage() {
 
             <main>
 
-                {/* §1 Hero ─────────────────────────────────────────────────── */}
-                <section className="relative overflow-hidden bg-navy px-4 py-16 sm:px-6 lg:px-8">
-                    <div className="relative z-10 mx-auto max-w-7xl">
-                        <div className="grid items-start gap-12 lg:grid-cols-2">
+                {/* §1 Hero — light split layout with bookmark stat cards */}
+                <section className="overflow-hidden bg-blue-50">
+                    <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-2 lg:items-stretch">
 
-                            {/* Left */}
-                            <div>
-                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">
-                                    About ResNet Academy
-                                </p>
-                                <h1 className="mt-4 text-4xl text-white sm:text-5xl">
-                                    Building practical developers,<br className="hidden sm:block" /> one project at a time.
-                                </h1>
-                                <p className="mt-5 max-w-md text-base leading-7 text-white/70">
-                                    ResNet Academy trains learners across Uganda and East Africa in
-                                    modern web technologies — through real projects, expert mentors,
-                                    and cohort-based learning.
-                                </p>
-                                <div className="mt-8 flex flex-wrap gap-3">
-                                    <Link
-                                        to="/courses"
-                                        className="inline-flex items-center rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                                    >
-                                        Explore courses
-                                    </Link>
-                                    <a
-                                        href="#cohorts"
-                                        className="inline-flex items-center rounded-full border border-white/20 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:border-white/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-                                    >
-                                        View cohorts
-                                    </a>
-                                </div>
+                        {/* Left: text + CTAs */}
+                        <div className="flex flex-col justify-center px-4 py-14 sm:px-6 lg:py-20 lg:pl-8 lg:pr-12">
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                                About ResNet Academy
+                            </p>
+                            <h1 className="mt-4 text-4xl text-ink-900 sm:text-5xl">
+                                Building practical developers,<br className="hidden sm:block" /> one project at a time.
+                            </h1>
+                            <p className="mt-5 max-w-md text-base leading-7 text-ink-600">
+                                ResNet Academy trains learners across Uganda and East Africa in
+                                modern web technologies — through real projects, expert mentors,
+                                and cohort-based learning.
+                            </p>
+                            <div className="mt-8 flex flex-wrap gap-3">
+                                <Link
+                                    to="/courses"
+                                    className="inline-flex items-center rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                                >
+                                    Explore courses
+                                </Link>
+                                <Link
+                                    to="/contact"
+                                    className="inline-flex items-center rounded-full border border-border px-6 py-2.5 text-sm font-semibold text-ink-900 transition-colors hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                                >
+                                    Talk to us
+                                </Link>
                             </div>
 
-                            <div className="hidden lg:flex lg:items-end lg:justify-end">
-                                <div className="grid grid-cols-2 gap-4">
-                                    {[
-                                        { value: '200+', label: 'Learners trained' },
-                                        { value: '6', label: 'Cohorts completed' },
-                                        { value: '4', label: 'Active mentors' },
-                                        { value: '2023', label: 'Founded' },
-                                    ].map(({ value, label }) => (
-                                        <StatCard
-                                            key={label}
-                                            value={value}
-                                            label={label}
-                                            className="border-white/10 bg-white/5 [&_dd]:text-white [&_dt]:text-white/70"
+                            {/* Bookmark-style stat cards — dark cards with large stat */}
+                            <div className="relative mt-12 hidden h-36 sm:block">
+                                {[
+                                    { value: '200+', label: 'Learners trained', bg: 'bg-ink-900', accent: '#4b79c4' },
+                                    { value: '6', label: 'Cohorts done', bg: 'bg-[#1a1a2e]', accent: '#e8a33d' },
+                                    { value: '4', label: 'Active mentors', bg: 'bg-navy', accent: '#a78bfa' },
+                                    { value: '2023', label: 'Founded', bg: 'bg-ink-900', accent: '#4b79c4' },
+                                ].map(({ value, label, bg, accent }, i) => (
+                                    <div
+                                        key={label}
+                                        className={`absolute top-0 ${bg} flex w-36 flex-col overflow-hidden rounded-2xl border border-white/10 shadow-lg`}
+                                        style={{
+                                            left: `${i * 38}px`,
+                                            zIndex: i + 1,
+                                            transform: `rotate(${[-3, 1, -1, 2][i]}deg)`,
+                                        }}
+                                    >
+                                        {/* Visual bar at top */}
+                                        <div
+                                            className="h-14 w-full"
+                                            style={{
+                                                background: `linear-gradient(135deg, ${accent}40 0%, ${accent}15 100%)`,
+                                            }}
                                         />
-                                    ))}
-                                </div>
+                                        {/* Stat at bottom */}
+                                        <div className="px-3 pb-3 pt-2">
+                                            <p className="text-xl font-bold text-white">{value}</p>
+                                            <p className="text-[10px] text-white/50">{label}</p>
+                                            {/* Dot indicator */}
+                                            <div className="mt-2 flex gap-1">
+                                                {[0, 1, 2].map((d) => (
+                                                    <span
+                                                        key={d}
+                                                        className="size-1.5 rounded-full"
+                                                        style={{ backgroundColor: d === 0 ? accent : `${accent}40` }}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
+                        </div>
+
+                        {/* Right: full-bleed image */}
+                        <div className="relative hidden lg:block">
+                            <img
+                                src="/images/about_us.jpg"
+                                alt="ResNet Academy students"
+                                className="absolute inset-0 h-full w-full object-cover object-center"
+                            />
+                        </div>
+
+                        {/* Mobile image */}
+                        <div className="h-56 w-full overflow-hidden lg:hidden">
+                            <img
+                                src="/images/about_us.jpg"
+                                alt="ResNet Academy students"
+                                className="h-full w-full object-cover object-center"
+                            />
                         </div>
                     </div>
                 </section>
