@@ -61,6 +61,10 @@ export function CourseCarousel({ courses }: CourseCarouselProps) {
                                     imageSrc={courseImageMap[course.slug]}
                                     duration={meta?.duration}
                                     format={meta?.format}
+                                    delivery={meta?.delivery}
+                                    skills={meta?.skills}
+                                    nextCohort={meta?.nextCohort}
+                                    outcome={meta?.outcome}
                                     index={i}
                                 />
                             </div>

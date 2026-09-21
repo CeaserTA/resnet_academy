@@ -1,5 +1,6 @@
 ﻿import { Link } from 'react-router';
 import { ArrowRight, Clock, Layers, MapPin, CalendarDays } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import type { Course } from '@/lib/api/types';
 
 const levelLabel: Record<Course['level'], string> = {
@@ -30,6 +31,8 @@ export interface CourseCardProps {
     skills?: string[];
     nextCohort?: string;
     outcome?: string;
+    /** Enrollment status shown as a badge on the card */
+    enrollmentStatus?: 'open' | 'waitlist' | 'full' | 'coming_soon';
     /** Index in the grid — used for staggered entrance animation */
     index?: number;
 }
@@ -43,6 +46,7 @@ export function CourseCard({
     skills,
     nextCohort,
     outcome,
+    enrollmentStatus,
     index = 0,
 }: CourseCardProps) {
     const image = course.thumbnail_url ?? imageSrc ?? null;
@@ -61,9 +65,33 @@ export function CourseCard({
         >
             {/* ── Thumbnail ── */}
             <div className="relative bg-blue-50">
+                {/* Level badge — top left */}
                 <span className="absolute left-3 top-3 z-10 rounded-full bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-ink-900 shadow-sm">
                     {levelLabel[course.level] ?? course.level}
                 </span>
+
+                {/* Enrollment status badge — top right */}
+                {enrollmentStatus && (
+                    <span className={cn(
+                        'absolute right-3 top-3 z-10 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold',
+                        enrollmentStatus === 'open' && 'bg-emerald-50 text-emerald-700',
+                        enrollmentStatus === 'waitlist' && 'bg-amber-50 text-amber-700',
+                        enrollmentStatus === 'full' && 'bg-surface-100 text-ink-600',
+                        enrollmentStatus === 'coming_soon' && 'bg-blue-50 text-primary',
+                    )}>
+                        <span className={cn(
+                            'size-1.5 rounded-full',
+                            enrollmentStatus === 'open' && 'bg-emerald-500',
+                            enrollmentStatus === 'waitlist' && 'bg-amber-400',
+                            enrollmentStatus === 'full' && 'bg-ink-300',
+                            enrollmentStatus === 'coming_soon' && 'bg-primary',
+                        )} aria-hidden="true" />
+                        {enrollmentStatus === 'open' && 'Open'}
+                        {enrollmentStatus === 'waitlist' && 'Waitlist'}
+                        {enrollmentStatus === 'full' && 'Full'}
+                        {enrollmentStatus === 'coming_soon' && 'Coming soon'}
+                    </span>
+                )}
 
                 {image ? (
                     <img

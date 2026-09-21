@@ -14,6 +14,7 @@ export const courseImageMap: Record<string, string> = {
     'data-analytics-with-google-analytics': '/images/data-analytics.jpg',
     'wordpress-development': '/images/word-press.avif',
     'database-querying-schema-design': '/images/database-querrying.jpg',
+    'search-engine-optimization': '/images/SEO.jpg',
 };
 
 export interface CourseMeta {

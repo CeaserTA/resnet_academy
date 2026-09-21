@@ -1,16 +1,15 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import {
-    BookOpen,
     BookX,
     Briefcase,
     CalendarDays,
     ChevronDown,
-    Clock,
     Code2,
     FolderOpen,
     Headphones,
     MessageSquare,
+    Search,
     Trophy,
     Users,
     Zap,
@@ -19,13 +18,12 @@ import { LandingHeader } from '@/components/layout/LandingHeader';
 import { Footer } from '@/components/landing/Footer';
 import { useAuthModal } from '@/lib/auth/AuthModalContext';
 import { useCategories, useCourses } from '@/features/catalogue/useCourses';
-import { useCohorts, usePublicCohortOfferings } from '@/features/cohorts/useCohorts';
-import { CourseCarousel } from '@/components/landing/CourseCarousel';
-import { courseImageMap } from '@/features/catalogue/courseImages';
+import { usePublicCohortOfferings } from '@/features/cohorts/useCohorts';
+import { CourseCard } from '@/features/catalogue/CourseCard';
+import { courseImageMap, courseDurationMap } from '@/features/catalogue/courseImages';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { cn } from '@/lib/utils';
-import type { Cohort } from '@/lib/api/types';
 import type { CourseFilters } from '@/features/catalogue/api';
 
 // ─── How to choose ────────────────────────────────────────────────────────────
@@ -99,269 +97,12 @@ function FaqItem({ q, a }: { q: string; a: string }) {
     );
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function formatDate(dateStr: string): string {
-    return new Date(dateStr).toLocaleDateString('en-UG', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-    });
-}
-
-// ─── Cohort helpers ────────────────────────────────────────────────────────────
-
-/** A cohort is "ongoing" if any of its courses are already running. */
-function isOngoing(cohort: Cohort): boolean {
-    return cohort.courses.some((c) => c.status === 'in_progress');
-}
-
-/** A cohort is "upcoming" if it isn't ongoing but at least one course is still open. */
-function isUpcoming(cohort: Cohort): boolean {
-    return !isOngoing(cohort) && cohort.courses.some((c) => c.status === 'open');
-}
-
-function cohortImage(cohort: Cohort): string | null {
-    const firstCourse = cohort.courses[0]?.course;
-    if (!firstCourse) return null;
-    return firstCourse.thumbnail_url ?? courseImageMap[firstCourse.slug] ?? null;
-}
-
-// ─── Ongoing cohort — large featured card ────────────────────────────────────
-
-function OngoingCohortCard({ cohort }: { cohort: Cohort }) {
-    const image = cohortImage(cohort);
-    const courseCount = cohort.courses.length;
-
-    return (
-        <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm lg:flex">
-            {/* Image panel */}
-            <div className="relative shrink-0 bg-blue-50 lg:w-80 xl:w-96">
-                <div className="aspect-video h-full w-full lg:aspect-auto">
-                    {image ? (
-                        <img
-                            src={image}
-                            alt={cohort.name}
-                            className="h-full w-full object-cover"
-                        />
-                    ) : (
-                        <div className="flex h-full min-h-[200px] w-full items-center justify-center text-blue-200">
-                            <BookOpen className="size-16" aria-hidden="true" />
-                        </div>
-                    )}
-                </div>
-                {/* Ongoing badge — soft tint, consistent with CohortSection landing */}
-                <span className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                    <span className="size-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
-                    Ongoing
-                </span>
-            </div>
-
-            {/* Content panel */}
-            <div className="flex flex-col gap-5 p-6 lg:p-8">
-                {/* Header */}
-                <div>
-                    <h3 className="text-xl text-ink-900 sm:text-2xl">
-                        {cohort.name}
-                    </h3>
-                    <p className="mt-1 text-sm text-ink-600">
-                        {courseCount} course{courseCount !== 1 ? 's' : ''} in this cohort
-                    </p>
-                </div>
-
-                {/* Meta row */}
-                <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-                    <div className="flex items-start gap-2">
-                        <CalendarDays className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-                        <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-ink-300">Started</dt>
-                            <dd className="text-ink-600">{formatDate(cohort.start_date)}</dd>
-                        </div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                        <Clock className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-                        <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-ink-300">Ends</dt>
-                            <dd className="text-ink-600">{formatDate(cohort.end_date)}</dd>
-                        </div>
-                    </div>
-                </dl>
-
-                {/* Courses in this cohort */}
-                <div>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-300">
-                        Courses
-                    </p>
-                    <ul className="flex flex-wrap gap-2">
-                        {cohort.courses.map((cc) => (
-                            <li
-                                key={cc.id}
-                                className="rounded-full border border-border bg-surface-50 px-3 py-1 text-xs text-ink-600"
-                            >
-                                {cc.course?.title}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-
-                {/* CTA */}
-                <div className="mt-auto pt-2">
-                    <Link
-                        to={`/cohorts/${cohort.id}`}
-                        className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                    >
-                        View cohort &amp; courses
-                    </Link>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// ─── Upcoming cohort — compact card ──────────────────────────────────────────
-
-function UpcomingCohortCard({ cohort }: { cohort: Cohort }) {
-    const image = cohortImage(cohort);
-    const courseCount = cohort.courses.length;
-
-    return (
-        <div className="flex flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
-            {/* Image */}
-            <div className="relative aspect-video w-full overflow-hidden bg-blue-50">
-                {image ? (
-                    <img src={image} alt={cohort.name} className="h-full w-full object-cover" />
-                ) : (
-                    <div className="flex h-full w-full items-center justify-center text-blue-200">
-                        <BookOpen className="size-10" aria-hidden="true" />
-                    </div>
-                )}
-                <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
-                    <span className="size-1.5 rounded-full bg-amber-400" aria-hidden="true" />
-                    Registration Open
-                </span>
-            </div>
-
-            {/* Body */}
-            <div className="flex flex-1 flex-col gap-3 p-4">
-                <h3 className="text-sm font-semibold leading-snug text-ink-900">{cohort.name}</h3>
-                <p className="text-xs text-ink-600">
-                    {courseCount} course{courseCount !== 1 ? 's' : ''} available
-                </p>
-
-                <dl className="space-y-1.5 text-xs text-ink-600">
-                    <div className="flex items-center gap-1.5">
-                        <CalendarDays className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
-                        <span>Starts {formatDate(cohort.start_date)}</span>
-                    </div>
-                    {cohort.application_deadline && (
-                        <div className="flex items-center gap-1.5">
-                            <Clock className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
-                            <span>Apply by {formatDate(cohort.application_deadline)}</span>
-                        </div>
-                    )}
-                </dl>
-
-                <Link
-                    to={`/cohorts/${cohort.id}`}
-                    className="mt-auto inline-flex w-full items-center justify-center rounded-full border border-border px-3 py-2 text-xs font-semibold text-ink-900 transition-colors hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                >
-                    View cohort
-                </Link>
-            </div>
-        </div>
-    );
-}
-
-// ─── Cohort Schedule section ──────────────────────────────────────────────────
-
-function CohortSchedule() {
-    const { data, isLoading } = useCohorts({ status: 'published' });
-    const cohorts = data ?? [];
-
-    if (isLoading) {
-        return (
-            <section id="cohorts" className="border-t border-border bg-surface-50 px-4 py-12 sm:px-6 lg:px-8">
-                <div className="mx-auto max-w-7xl flex justify-center">
-                    <Spinner />
-                </div>
-            </section>
-        );
-    }
-
-    const ongoing = cohorts.filter(isOngoing);
-    const upcoming = cohorts.filter(isUpcoming);
-
-    if (ongoing.length === 0 && upcoming.length === 0) {
-        return (
-            <section id="cohorts" className="border-t border-border bg-surface-50 px-4 py-12 sm:px-6 lg:px-8">
-                <div className="mx-auto max-w-7xl">
-                    <div className="mb-10">
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Cohort Schedule</p>
-                        <h2 className="mt-3 text-3xl text-ink-900 sm:text-4xl">Upcoming &amp; Ongoing Cohorts</h2>
-                    </div>
-                    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-white py-16 text-center">
-                        <CalendarDays className="size-10 text-ink-300" aria-hidden="true" />
-                        <p className="mt-4 text-base font-medium text-ink-600">No cohorts scheduled yet</p>
-                        <p className="mt-1 text-sm text-ink-300">Check back soon — new cohorts are added regularly.</p>
-                    </div>
-                </div>
-            </section>
-        );
-    }
-
-    return (
-        <section id="cohorts" className="border-t border-border bg-surface-50 px-4 py-12 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-7xl space-y-14">
-                {/* Section header */}
-                <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Cohort Schedule</p>
-                    <h2 className="mt-3 text-3xl text-ink-900 sm:text-4xl">Upcoming &amp; Ongoing Cohorts</h2>
-                    <p className="mt-3 text-sm leading-7 text-ink-600">
-                        Join a structured cohort for guided learning and peer accountability.
-                    </p>
-                </div>
-
-                {/* Ongoing */}
-                {ongoing.length > 0 && (
-                    <div className="space-y-6">
-                        <h3 className="flex items-center gap-2 text-lg font-semibold text-ink-900">
-                            <span className="size-2.5 rounded-full bg-emerald-500" aria-hidden="true" />
-                            Ongoing Cohorts
-                        </h3>
-                        <div className="space-y-6">
-                            {ongoing.map((cohort) => (
-                                <OngoingCohortCard key={cohort.id} cohort={cohort} />
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Upcoming */}
-                {upcoming.length > 0 && (
-                    <div className="space-y-6">
-                        <h3 className="flex items-center gap-2 text-lg font-semibold text-ink-900">
-                            <span className="size-2.5 rounded-full bg-amber-400" aria-hidden="true" />
-                            Upcoming Cohorts
-                        </h3>
-                        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                            {upcoming.map((cohort) => (
-                                <UpcomingCohortCard key={cohort.id} cohort={cohort} />
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </div>
-        </section>
-    );
-}
-
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export function CataloguePage() {
     const [searchParams] = useSearchParams();
     const { openAuth } = useAuthModal();
 
-    // Active filters — search is client-side only
     const [search, setSearch] = useState('');
     const [activeCategory, setActiveCategory] = useState<number | undefined>(() => {
         const v = searchParams.get('category_id');
@@ -371,25 +112,36 @@ export function CataloguePage() {
         return searchParams.get('level') ?? undefined;
     });
 
-    const apiFilters: CourseFilters = useMemo(
-        () => ({ status: 'published' }),
-        [],
-    );
+    const apiFilters: CourseFilters = useMemo(() => ({ status: 'published' }), []);
 
-    // Fetch all published courses once; filter client-side
     const { data, isLoading: coursesLoading } = useCourses(apiFilters);
     const { data: categories } = useCategories();
     const { data: cohortOfferings, isLoading: offeringsLoading } = usePublicCohortOfferings();
 
     const isLoading = coursesLoading || offeringsLoading;
 
-    // Only courses with at least one published cohort offering belong in the public
-    // catalogue grid/search — a course with no cohort to enrol into isn't actually
-    // available yet. Direct /courses/:id links stay reachable regardless.
+    // Derive enrollment status per course from cohort offerings
+    const courseStatusMap = useMemo(() => {
+        const map = new Map<number, 'open' | 'waitlist' | 'full'>();
+        for (const offering of cohortOfferings ?? []) {
+            const id = offering.course.id;
+            if (offering.status === 'open') {
+                const available = offering.seats_available;
+                if (available === null || available === undefined || available > 0) {
+                    map.set(id, 'open');
+                } else if (available === 0) {
+                    map.set(id, map.get(id) === 'open' ? 'open' : 'full');
+                }
+            }
+        }
+        return map;
+    }, [cohortOfferings]);
+
     const courseIdsWithCohorts = useMemo(
-        () => new Set((cohortOfferings ?? []).map((offering) => offering.course.id)),
+        () => new Set((cohortOfferings ?? []).map((o) => o.course.id)),
         [cohortOfferings],
     );
+
     const allCourses = useMemo(
         () => (data?.data ?? []).filter((c) => courseIdsWithCohorts.has(c.id)),
         [data, courseIdsWithCohorts],
@@ -411,148 +163,212 @@ export function CataloguePage() {
     ];
 
     return (
-        <div className="min-h-screen bg-[#fafbfc]">
+        <div className="min-h-screen bg-background">
             <LandingHeader
                 onLoginClick={() => openAuth('login')}
                 onSignupClick={() => openAuth('signup')}
             />
 
             <main>
-                {/* §1 Course finder header */}
-                <section className="border-b border-border bg-surface-50 px-4 py-12 sm:px-6 lg:px-8">
-                    <div className="mx-auto max-w-7xl">
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                            Course Finder
-                        </p>
-                        <h1 className="mt-3 text-4xl text-ink-900 sm:text-5xl">
-                            Find the right place to begin.
-                        </h1>
-                        <p className="mt-3 max-w-lg text-base leading-7 text-ink-600">
-                            Search by a skill you want to learn, then narrow the results by subject or
-                            experience level.
-                        </p>
+                {/* §1 Hero — split image left, text right */}
+                <section className="overflow-hidden bg-navy">
+                    <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-2 lg:items-stretch">
 
-                        {/* Quick facts strip */}
-                        <div className="mt-8 flex flex-wrap gap-6 border-t border-border pt-6">
-                            {[
-                                { icon: FolderOpen, label: 'Project-based learning' },
-                                { icon: Users, label: 'Expert mentor support' },
-                                { icon: Trophy, label: 'Verified certificate' },
-                                { icon: CalendarDays, label: 'Flexible payment plans' },
-                            ].map(({ icon: Icon, label }) => (
-                                <div key={label} className="flex items-center gap-2 text-sm text-ink-600">
-                                    <Icon className="size-4 text-primary" aria-hidden="true" />
-                                    {label}
-                                </div>
-                            ))}
+                        {/* Left: catalogue banner image */}
+                        <div className="relative hidden lg:block">
+                            <img
+                                src="/images/catlouge_banner.jpg"
+                                alt="ResNet Academy course catalogue"
+                                className="absolute inset-0 h-full w-full object-cover object-center"
+                            />
+                            {/* Gradient fade on right edge to blend into navy */}
+                            <div
+                                aria-hidden="true"
+                                className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-navy to-transparent"
+                            />
+                        </div>
+
+                        {/* Right: text + quick facts */}
+                        <div className="flex flex-col justify-center px-4 py-14 sm:px-6 lg:py-20 lg:pl-12 lg:pr-8">
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">
+                                Course Finder
+                            </p>
+                            <h1 className="mt-3 text-4xl text-navy-foreground sm:text-5xl">
+                                Find the right place to begin.
+                            </h1>
+                            <p className="mt-4 max-w-md text-base leading-7 text-navy-foreground/70">
+                                Search by a skill you want to learn, then narrow by subject or level.
+                                Every course includes real projects, mentor feedback, and a certificate.
+                            </p>
+
+                            {/* Quick facts */}
+                            <div className="mt-8 flex flex-wrap gap-4 border-t border-white/10 pt-6">
+                                {[
+                                    { icon: FolderOpen, label: 'Project-based' },
+                                    { icon: Users, label: 'Mentor support' },
+                                    { icon: Trophy, label: 'Certificate' },
+                                    { icon: CalendarDays, label: 'Flexible payment' },
+                                ].map(({ icon: Icon, label }) => (
+                                    <div key={label} className="flex items-center gap-2 text-sm text-navy-foreground/60">
+                                        <Icon className="size-4 text-blue-300" aria-hidden="true" />
+                                        {label}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Mobile: image below text */}
+                        <div className="h-52 w-full overflow-hidden lg:hidden">
+                            <img
+                                src="/images/catlouge_banner.jpg"
+                                alt="ResNet Academy course catalogue"
+                                className="h-full w-full object-cover object-center"
+                            />
                         </div>
                     </div>
                 </section>
 
-                <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-                    {/* Filter row */}
-                    <div className="flex flex-wrap items-center gap-3">
-                        {/* Category chips */}
-                        {categories && categories.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                                <button
-                                    onClick={() => setActiveCategory(undefined)}
-                                    aria-pressed={activeCategory === undefined}
-                                    className={cn(
-                                        'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                                        activeCategory === undefined
-                                            ? 'border-primary bg-primary text-white'
-                                            : 'border-border bg-white text-ink-600 hover:border-primary hover:text-primary',
-                                    )}
-                                >
-                                    All
-                                </button>
-                                {categories.map((cat) => (
+                {/* §2 Filters + course grid */}
+                <section className="bg-surface-50 px-4 py-10 sm:px-6 lg:px-8">
+                    <div className="mx-auto max-w-7xl">
+
+                        {/* Search bar */}
+                        <div className="relative max-w-lg">
+                            <Search
+                                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-300"
+                                aria-hidden="true"
+                            />
+                            <input
+                                type="search"
+                                placeholder="Search courses — try JavaScript, PHP or WordPress"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                aria-label="Search courses"
+                                className="w-full rounded-full border border-border bg-white py-2.5 pl-9 pr-4 text-sm text-ink-900 placeholder:text-ink-300 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            />
+                        </div>
+
+                        {/* Filter chips */}
+                        <div className="mt-4 flex flex-wrap items-center gap-3">
+                            {categories && categories.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
                                     <button
-                                        key={cat.id}
-                                        onClick={() => setActiveCategory(activeCategory === cat.id ? undefined : cat.id)}
-                                        aria-pressed={activeCategory === cat.id}
+                                        onClick={() => setActiveCategory(undefined)}
+                                        aria-pressed={activeCategory === undefined}
                                         className={cn(
                                             'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                                            activeCategory === cat.id
+                                            activeCategory === undefined
                                                 ? 'border-primary bg-primary text-white'
                                                 : 'border-border bg-white text-ink-600 hover:border-primary hover:text-primary',
                                         )}
                                     >
-                                        {cat.name}
-                                        {cat.courses_count !== undefined && (
-                                            <span className="ml-1.5 text-xs opacity-70">({cat.courses_count})</span>
+                                        All
+                                    </button>
+                                    {categories.map((cat) => (
+                                        <button
+                                            key={cat.id}
+                                            onClick={() => setActiveCategory(activeCategory === cat.id ? undefined : cat.id)}
+                                            aria-pressed={activeCategory === cat.id}
+                                            className={cn(
+                                                'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                                                activeCategory === cat.id
+                                                    ? 'border-primary bg-primary text-white'
+                                                    : 'border-border bg-white text-ink-600 hover:border-primary hover:text-primary',
+                                            )}
+                                        >
+                                            {cat.name}
+                                            {cat.courses_count !== undefined && (
+                                                <span className="ml-1.5 text-xs opacity-70">({cat.courses_count})</span>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            {categories && categories.length > 0 && (
+                                <span className="hidden h-5 w-px bg-border sm:block" aria-hidden="true" />
+                            )}
+                            <div className="flex flex-wrap gap-2">
+                                {levels.map(({ value, label }) => (
+                                    <button
+                                        key={value}
+                                        onClick={() => setActiveLevel(activeLevel === value ? undefined : value)}
+                                        aria-pressed={activeLevel === value}
+                                        className={cn(
+                                            'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                                            activeLevel === value
+                                                ? 'border-primary bg-primary text-white'
+                                                : 'border-border bg-white text-ink-600 hover:border-primary hover:text-primary',
                                         )}
+                                    >
+                                        {label}
                                     </button>
                                 ))}
                             </div>
-                        )}
+                        </div>
 
-                        {/* Divider */}
-                        {categories && categories.length > 0 && (
-                            <span className="hidden h-5 w-px bg-border sm:block" aria-hidden="true" />
-                        )}
-
-                        {/* Level chips */}
-                        <div className="flex flex-wrap gap-2">
-                            {levels.map(({ value, label }) => (
+                        {/* Result count + clear */}
+                        <div className="mt-4 flex items-center justify-between">
+                            {!isLoading && (
+                                <p className="text-sm text-ink-600">
+                                    <span className="font-semibold text-ink-900">{filtered.length}</span>{' '}
+                                    course{filtered.length !== 1 ? 's' : ''} found
+                                    {search && <> for &ldquo;<span className="italic">{search}</span>&rdquo;</>}
+                                </p>
+                            )}
+                            {(search || activeCategory || activeLevel) && (
                                 <button
-                                    key={value}
-                                    onClick={() => setActiveLevel(activeLevel === value ? undefined : value)}
-                                    aria-pressed={activeLevel === value}
-                                    className={cn(
-                                        'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                                        activeLevel === value
-                                            ? 'border-primary bg-primary text-white'
-                                            : 'border-border bg-white text-ink-600 hover:border-primary hover:text-primary',
-                                    )}
+                                    onClick={() => { setSearch(''); setActiveCategory(undefined); setActiveLevel(undefined); }}
+                                    className="text-xs font-semibold text-primary underline hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                                 >
-                                    {label}
+                                    Reset filters
                                 </button>
-                            ))}
+                            )}
+                        </div>
+
+                        {/* Course grid */}
+                        <div className="mt-6">
+                            {isLoading && (
+                                <div className="flex justify-center py-20">
+                                    <Spinner />
+                                </div>
+                            )}
+                            {!isLoading && filtered.length === 0 && (
+                                <EmptyState
+                                    icon={BookX}
+                                    title="No courses match your search"
+                                    description="Try different keywords or reset the filters."
+                                />
+                            )}
+                            {!isLoading && filtered.length > 0 && (
+                                <div className={cn(
+                                    'grid gap-5',
+                                    filtered.length === 1 && 'sm:max-w-sm',
+                                    filtered.length === 2 && 'sm:grid-cols-2 lg:max-w-2xl',
+                                    filtered.length >= 3 && 'sm:grid-cols-2 lg:grid-cols-3',
+                                )}>
+                                    {filtered.map((course, i) => {
+                                        const meta = courseDurationMap[course.slug];
+                                        return (
+                                            <CourseCard
+                                                key={course.id}
+                                                course={course}
+                                                imageSrc={courseImageMap[course.slug]}
+                                                duration={meta?.duration}
+                                                format={meta?.format}
+                                                delivery={meta?.delivery}
+                                                skills={meta?.skills}
+                                                nextCohort={meta?.nextCohort}
+                                                outcome={meta?.outcome}
+                                                enrollmentStatus={courseStatusMap.get(course.id)}
+                                                index={i}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
                     </div>
-
-                    {/* Active filter summary */}
-                    {(search || activeCategory || activeLevel) && (
-                        <p className="mt-4 text-sm text-ink-600">
-                            Showing <span className="font-semibold text-ink-900">{filtered.length}</span> result
-                            {filtered.length !== 1 ? 's' : ''}
-                            {search && <> for &ldquo;<span className="italic">{search}</span>&rdquo;</>}
-                            &nbsp;
-                            <button
-                                onClick={() => { setSearch(''); setActiveCategory(undefined); setActiveLevel(undefined); }}
-                                className="text-primary underline hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                            >
-                                Clear filters
-                            </button>
-                        </p>
-                    )}
-
-                    {/* ── Section 2: Course Carousel ──────────────────────────── */}
-                    <div className="mt-8">
-                        {isLoading && (
-                            <div className="flex justify-center py-20">
-                                <Spinner />
-                            </div>
-                        )}
-
-                        {!isLoading && filtered.length === 0 && (
-                            <EmptyState
-                                icon={BookX}
-                                title="No courses match your search"
-                                description="Try different keywords or clear a filter."
-                            />
-                        )}
-
-                        {!isLoading && filtered.length > 0 && (
-                            <CourseCarousel courses={filtered} />
-                        )}
-                    </div>
-                </div>
-
-                {/* ── Section 3: Cohort Schedule ───────────────────────────────── */}
-                {!isLoading && <CohortSchedule />}
+                </section>
 
                 {/* ── Section 4: How to choose ─────────────────────────────────── */}
                 <section className="border-t border-border bg-surface-50 px-4 py-12 sm:px-6 lg:px-8">
@@ -635,23 +451,23 @@ export function CataloguePage() {
                     </div>
                 </section>
 
-                {/* ── Section 8: Final enrolment prompt ───────────────────────── */}
+                {/* ── Section 7: Final enrolment prompt ───────────────────────── */}
                 <section className="border-t border-border bg-surface-50 px-4 py-12 sm:px-6 lg:px-8">
                     <div className="mx-auto max-w-7xl flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
                         <div>
-                            <h2 className="text-2xl text-ink-900 sm:text-3xl">Ready to find your cohort?</h2>
+                            <h2 className="text-2xl text-ink-900 sm:text-3xl">Ready to take the next step?</h2>
                             <p className="mt-2 text-sm leading-7 text-ink-600">
-                                Browse available intakes or reach out if you need help choosing the right course.
+                                Apply to a cohort or reach out if you need help choosing the right course.
                             </p>
                         </div>
                         <div className="flex shrink-0 flex-wrap gap-3">
-                            <a
-                                href="#cohorts"
+                            <Link
+                                to="/"
                                 className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                             >
                                 <CalendarDays className="size-4" aria-hidden="true" />
                                 View cohorts
-                            </a>
+                            </Link>
                             <Link
                                 to="/contact"
                                 className="inline-flex items-center rounded-full border border-border px-6 py-2.5 text-sm font-semibold text-ink-900 transition-colors hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
