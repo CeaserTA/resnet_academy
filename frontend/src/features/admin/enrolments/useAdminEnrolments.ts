@@ -21,10 +21,10 @@ export function useUpdateEnrolmentStatus() {
     });
 }
 
-export function useTransferRequests() {
+export function useTransferRequests(page = 1) {
     return useQuery({
-        queryKey: ['admin', 'transfer-requests'],
-        queryFn: () => getTransferRequests(),
+        queryKey: ['admin', 'transfer-requests', page],
+        queryFn: () => getTransferRequests(page),
     });
 }
 

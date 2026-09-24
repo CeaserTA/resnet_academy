@@ -31,9 +31,11 @@ export async function updateEnrolmentStatus(enrolmentId: number, status: Enrolme
     return data.data;
 }
 
-export async function getTransferRequests(): Promise<AdminEnrolment[]> {
-    const { data } = await apiClient.get<{ data: AdminEnrolment[] }>('/admin/enrolments/transfer-requests');
-    return data.data;
+export async function getTransferRequests(page = 1): Promise<PaginatedResponse<AdminEnrolment>> {
+    const { data } = await apiClient.get<PaginatedResponse<AdminEnrolment>>('/admin/enrolments/transfer-requests', {
+        params: { page },
+    });
+    return data;
 }
 
 export async function transferEnrolment(

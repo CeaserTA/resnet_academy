@@ -3,6 +3,8 @@ import { ClipboardList } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Pagination } from '@/components/ui/Pagination';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { describeAuditLogEntry } from '@/lib/auditLog';
 
 import { useAuditLogs } from '@/features/analytics/useAnalytics';
@@ -14,7 +16,16 @@ import { useAuditLogs } from '@/features/analytics/useAnalytics';
 export function AuditLogPage() {
     const [entityType, setEntityType] = useState('');
     const [action, setAction] = useState('');
-    const { data, isLoading } = useAuditLogs({ entity_type: entityType || undefined, action: action || undefined });
+    const [page, setPage] = useState(1);
+
+    // Query once typing pauses rather than on every keystroke.
+    const debouncedEntityType = useDebouncedValue(entityType.trim());
+    const debouncedAction = useDebouncedValue(action.trim());
+    const { data, isLoading } = useAuditLogs({
+        entity_type: debouncedEntityType || undefined,
+        action: debouncedAction || undefined,
+        page,
+    });
 
     const logs = data?.data ?? [];
 
@@ -32,13 +43,19 @@ export function AuditLogPage() {
                     label="Filter by entity type"
                     placeholder="e.g. enrolment, user, assignment_submission"
                     value={entityType}
-                    onChange={(e) => setEntityType(e.target.value)}
+                    onChange={(e) => {
+                        setEntityType(e.target.value);
+                        setPage(1);
+                    }}
                 />
                 <Input
                     label="Filter by action"
                     placeholder="e.g. grade.changed"
                     value={action}
-                    onChange={(e) => setAction(e.target.value)}
+                    onChange={(e) => {
+                        setAction(e.target.value);
+                        setPage(1);
+                    }}
                 />
             </div>
 
@@ -75,6 +92,8 @@ export function AuditLogPage() {
                             </li>
                         ))}
                     </ul>
+
+                    {data && <Pagination meta={data.meta} onPageChange={setPage} itemLabel="entries" />}
                 </div>
             )}
         </div>

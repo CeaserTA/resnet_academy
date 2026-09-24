@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Modal } from '@/components/ui/Modal';
+import { Pagination } from '@/components/ui/Pagination';
 import { VolumeCard } from '@/components/dashboard/VolumeCard';
 import { cn } from '@/lib/utils';
 import {
@@ -321,7 +322,19 @@ function ReceiptCell({ order }: { order: Order }) {
 export function PaymentsPage() {
     usePageHeader('Payments', 'Every order across every student.');
     const [tab, setTab] = useState<Tab>('pending');
-    const { data, isLoading } = useOrders(tab);
+    const [page, setPage] = useState(1);
+    const { data, isLoading } = useOrders(tab, page);
+
+    // Confirming/rejecting the last order on the final page shrinks the result set — step
+    // back to the new last page instead of showing an empty one.
+    if (data && page > data.meta.last_page && data.meta.last_page >= 1) {
+        setPage(data.meta.last_page);
+    }
+
+    const switchTab = (nextTab: Tab) => {
+        setTab(nextTab);
+        setPage(1);
+    };
 
     const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
     const [reviewingOrder, setReviewingOrder] = useState<Order | null>(null);
@@ -339,7 +352,7 @@ export function PaymentsPage() {
                 {TABS.map(([value, label]) => (
                     <button
                         key={value}
-                        onClick={() => setTab(value)}
+                        onClick={() => switchTab(value)}
                         className={cn(
                             'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
                             tab === value ? 'bg-blue-600 text-white shadow-sm' : 'text-ink-600 hover:text-ink-900',
@@ -507,6 +520,8 @@ export function PaymentsPage() {
                             );
                         })}
                     </ul>
+
+                    {data && <Pagination meta={data.meta} onPageChange={setPage} itemLabel="orders" />}
                 </div>
             )}
 

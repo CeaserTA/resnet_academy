@@ -9,6 +9,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Modal } from '@/components/ui/Modal';
 import { Alert } from '@/components/ui/Alert';
+import { Pagination } from '@/components/ui/Pagination';
 import { useCourses } from '@/features/catalogue/useCourses';
 import { useCohortCoursesForCourse } from '@/features/cohorts/useCohorts';
 import { useTransferRequests, useTransferEnrolment, useRefundEnrolment } from '@/features/admin/enrolments/useAdminEnrolments';
@@ -20,7 +21,7 @@ function formatAmount(amount: string | number, currency: string): string {
     return new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 }).format(Number(amount));
 }
 
-function TransferModal({ enrolment, courses, onClose }: { enrolment: AdminEnrolment; courses: { id: number; title: string }[]; onClose: () => void }) {
+function TransferModal({ enrolment, courses, onClose, onSuccess }: { enrolment: AdminEnrolment; courses: { id: number; title: string }[]; onClose: () => void; onSuccess: () => void }) {
     const transferEnrolment = useTransferEnrolment();
     const [selectedCourseId, setSelectedCourseId] = useState<string>('');
     const [selectedCohortCourseId, setSelectedCohortCourseId] = useState<string>('');
@@ -45,7 +46,7 @@ function TransferModal({ enrolment, courses, onClose }: { enrolment: AdminEnrolm
                     note: note || undefined,
                 },
             });
-            onClose();
+            onSuccess();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Could not complete transfer.');
         }
@@ -116,7 +117,7 @@ function TransferModal({ enrolment, courses, onClose }: { enrolment: AdminEnrolm
     );
 }
 
-function RefundModal({ enrolment, onClose }: { enrolment: AdminEnrolment; onClose: () => void }) {
+function RefundModal({ enrolment, onClose, onSuccess }: { enrolment: AdminEnrolment; onClose: () => void; onSuccess: () => void }) {
     const refundEnrolment = useRefundEnrolment();
     const [refundAmount, setRefundAmount] = useState<string>('');
     const [note, setNote] = useState<string>('');
@@ -145,7 +146,7 @@ function RefundModal({ enrolment, onClose }: { enrolment: AdminEnrolment; onClos
                     note: note || undefined,
                 },
             });
-            onClose();
+            onSuccess();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Could not process refund.');
         }
@@ -203,14 +204,21 @@ function RefundModal({ enrolment, onClose }: { enrolment: AdminEnrolment; onClos
 export function AdminTransferRequestsPage() {
     usePageHeader('Transfer Requests', 'Manage student transfer requests after payment.');
     
-    const { data, isLoading } = useTransferRequests();
+    const [page, setPage] = useState(1);
+    const { data, isLoading } = useTransferRequests(page);
     const { data: courses } = useCourses({});
-    
+
     const [transferringEnrolment, setTransferringEnrolment] = useState<AdminEnrolment | null>(null);
     const [refundingEnrolment, setRefundingEnrolment] = useState<AdminEnrolment | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-    const enrolments = data ?? [];
+    // Resolving the last request on the final page shrinks the list — step back to the new
+    // last page instead of showing an empty one.
+    if (data && page > data.meta.last_page && data.meta.last_page >= 1) {
+        setPage(data.meta.last_page);
+    }
+
+    const enrolments = data?.data ?? [];
 
     const handleTransferSuccess = (studentName: string) => {
         setSuccessMessage(`Successfully transferred ${studentName} to another course.`);
@@ -312,6 +320,8 @@ export function AdminTransferRequestsPage() {
                             );
                         })}
                     </ul>
+
+                    {data && <Pagination meta={data.meta} onPageChange={setPage} itemLabel="requests" />}
                 </div>
             )}
 
@@ -319,9 +329,10 @@ export function AdminTransferRequestsPage() {
                 <TransferModal
                     enrolment={transferringEnrolment}
                     courses={courses?.data ?? []}
-                    onClose={() => {
+                    onClose={() => setTransferringEnrolment(null)}
+                    onSuccess={() => {
+                        handleTransferSuccess(transferringEnrolment.student.name);
                         setTransferringEnrolment(null);
-                        if (successMessage) handleTransferSuccess(transferringEnrolment.student.name);
                     }}
                 />
             )}
@@ -329,9 +340,10 @@ export function AdminTransferRequestsPage() {
             {refundingEnrolment && (
                 <RefundModal
                     enrolment={refundingEnrolment}
-                    onClose={() => {
+                    onClose={() => setRefundingEnrolment(null)}
+                    onSuccess={() => {
+                        handleRefundSuccess(refundingEnrolment.student.name);
                         setRefundingEnrolment(null);
-                        if (successMessage) handleRefundSuccess(refundingEnrolment.student.name);
                     }}
                 />
             )}
