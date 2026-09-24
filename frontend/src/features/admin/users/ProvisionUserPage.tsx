@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Mail, Plus, Settings2, Users } from 'lucide-react';
+import { Mail, Plus, Search, Settings2, Users } from 'lucide-react';
 import { useProvisionUser, useUpdateUser, useUsers } from '@/features/admin/users/useAdminUsers';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { ApiError } from '@/lib/api/client';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { usePageSearch } from '@/lib/pageHeader/PageHeaderContext';
+import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import { userRoleDisplay, userStatusDisplay } from '@/lib/statusBadge';
 import { cn } from '@/lib/utils';
 import type { User, UserRole, UserStatus } from '@/lib/api/types';
@@ -152,7 +152,7 @@ export function ProvisionUserPage() {
     const [isAddingUser, setIsAddingUser] = useState(false);
 
     const [search, setSearch] = useState('');
-    usePageSearch(search, setSearch, 'Search team…');
+    usePageHeader('Team', 'Every user in the system, and their role.');
 
     const filteredUsers = useMemo(() => {
         const term = search.trim().toLowerCase();
@@ -166,32 +166,44 @@ export function ProvisionUserPage() {
 
     return (
         <div className="mx-auto max-w-4xl space-y-4">
-            {/* Page header + add button */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-lg font-semibold text-ink-900">Team</h1>
-                    <p className="text-xs text-ink-600">Every user in the system, and their role.</p>
-                </div>
+            {/* Primary action — title/subtitle live in the top bar (usePageHeader) */}
+            <div className="flex items-center justify-end">
                 <Button onClick={() => setIsAddingUser(true)}>
                     <Plus className="size-4" aria-hidden="true" />
                     Add user
                 </Button>
             </div>
 
-            {/* Segmented role tab bar */}
-            <div className="flex items-center gap-0.5 rounded-lg border border-surface-100 bg-surface-50 p-0.5 self-start">
-                {ROLE_TABS.map(([value, label]) => (
-                    <button
-                        key={value}
-                        onClick={() => setRoleTab(value)}
-                        className={cn(
-                            'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                            roleTab === value ? 'bg-blue-600 text-white shadow-sm' : 'text-ink-600 hover:text-ink-900',
-                        )}
-                    >
-                        {label}
-                    </button>
-                ))}
+            {/* Filter controls — role tabs + search, same toolbar layout as Enrolments */}
+            <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-0.5 rounded-lg border border-surface-100 bg-surface-50 p-0.5">
+                    {ROLE_TABS.map(([value, label]) => (
+                        <button
+                            key={value}
+                            onClick={() => setRoleTab(value)}
+                            className={cn(
+                                'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                                roleTab === value ? 'bg-blue-600 text-white shadow-sm' : 'text-ink-600 hover:text-ink-900',
+                            )}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="relative ml-auto w-full max-w-56">
+                    <Search
+                        className="absolute left-3 top-1/2 z-10 size-3.5 -translate-y-1/2 text-ink-600"
+                        aria-hidden="true"
+                    />
+                    <input
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Search name or email"
+                        aria-label="Search team by name or email"
+                        className="w-full rounded-lg border border-surface-100 bg-surface-50 py-1.5 pl-8 pr-3 text-sm text-ink-900 transition focus-visible:bg-surface-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                    />
+                </div>
             </div>
 
             <div>
