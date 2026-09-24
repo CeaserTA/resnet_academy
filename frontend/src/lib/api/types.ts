@@ -177,7 +177,13 @@ export interface Enrolment {
     status: EnrolmentStatus;
     source: EnrolmentSource;
     course: Course;
-    cohort_course: { id: number; cohort_id: number; cohort_name: string | null } | null;
+    cohort_course: {
+        id: number;
+        cohort_id: number;
+        cohort_name: string | null;
+        cohort_start_date: string | null;
+        cohort_end_date: string | null;
+    } | null;
     applied_at: string;
     confirmation_email_due_at: string;
     confirmation_email_sent_at: string | null;
@@ -289,10 +295,21 @@ export interface ResourceDetails {
     package_url?: string | null;
     standard?: 'scorm_1_2' | 'scorm_2004' | 'xapi' | null;
     // live_session
+    /** The cohort the session is run for. Null means everyone taking the course. */
+    cohort_id?: number | null;
+    cohort_name?: string | null;
     provider?: 'zoom' | 'google_meet' | null;
     meeting_url?: string | null;
     scheduled_at?: string | null;
     duration_minutes?: number | null;
+    /** Set once an admin/instructor attaches the session recording. */
+    recording_url?: string | null;
+    /**
+     * Derived server-side from the join window so the client never re-implements it:
+     * 'upcoming' (not yet joinable), 'live' (joinable now), 'recording' (over, recording
+     * attached), 'recording_pending' (over, no recording yet).
+     */
+    access_state?: 'upcoming' | 'live' | 'recording' | 'recording_pending' | null;
 }
 
 export interface ResourceItem {
@@ -542,6 +559,8 @@ export interface AttemptReviewQuestion {
     points: string;
     points_awarded: string | null;
     is_correct: boolean | null;
+    auto_gradable: boolean;
+    graded_at: string | null;
     selected_option_ids: number[];
     answer_text: string | null;
     options: AttemptReviewOption[];
@@ -553,14 +572,21 @@ export interface AttemptReview {
     attempt_number: number;
     status: EvaluationAttemptStatus;
     summary: {
-        total_score: number;
-        max_score: number;
+        // Both null until every manually-graded answer has been reviewed (status 'graded') —
+        // never a provisional figure computed from partially-graded answers.
+        total_score: number | null;
+        max_score: number | null;
         score_percent: string | null;
         passed: boolean | null;
         started_at: string;
         submitted_at: string | null;
         time_taken_seconds: number | null;
     };
+    /**
+     * Empty for a student whose attempt is not fully graded — results are all-or-nothing for
+     * them, so the backend withholds the breakdown (and the answer key with it) rather than
+     * exposing a partial one. Graders always receive it.
+     */
     questions: AttemptReviewQuestion[];
 }
 
@@ -595,10 +621,15 @@ export interface Gradebook {
 
 // --- Progress dashboard, certificates & attendance (Phase 4) ----------------------------
 
-export type CourseProgressStatus = 'not_started' | 'in_progress' | 'completed';
+export type CourseProgressStatus = 'upcoming' | 'not_started' | 'in_progress' | 'completed';
 
 export interface CertificateSummary {
+    id: number;
     certificate_number: string;
+    /**
+     * Null until the PDF has been rendered. Not needed to build a download link — the download
+     * endpoint renders on demand — so treat it as a "already generated?" hint, not a gate.
+     */
     certificate_url: string | null;
 }
 
@@ -606,6 +637,8 @@ export interface ProgressDashboardRow {
     course: { id: number; title: string };
     status: CourseProgressStatus;
     percent_complete: number;
+    /** The day this intake's content opens. Null for a self-paced enrolment. */
+    starts_on: string | null;
     modules: ModuleProgressEntry[];
     certificate: CertificateSummary | null;
 }
@@ -814,4 +847,23 @@ export interface DashboardSummary {
     pending_reviews: number;
     at_risk_students: number;
     recent_audit_logs: AuditLogEntry[];
+}
+
+// --- Admin certificates -------------------------------------------------------------------
+
+/**
+ * 'generating' until the PDF has been rendered, 'ready' after. There is no stored 'failed'
+ * state — a render that exhausts its retries only logs — so a failed certificate also reads
+ * 'generating', which is why the admin screen offers regeneration for it.
+ */
+export type CertificateStatus = 'generating' | 'ready';
+
+export interface AdminCertificate {
+    id: number;
+    certificate_number: string;
+    status: CertificateStatus;
+    issued_at: string;
+    student: { id: number; name: string; email: string };
+    course: { id: number; title: string };
+    cohort: { id: number; name: string } | null;
 }

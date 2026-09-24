@@ -4,6 +4,7 @@ import {
     ArrowRight,
     Award,
     BookOpen,
+    CalendarClock,
     Compass,
     CreditCard,
     LogOut,
@@ -14,6 +15,7 @@ import {
 import { useMyEnrolments, useSubmitPayment, useWithdrawEnrolment, useCancelTransferRequest } from '@/features/enrolment/useEnrolments';
 import { useDismissCourseApplication, useMyCourseApplications } from '@/features/courseApplications/useCourseApplications';
 import { useProgressDashboard } from '@/features/progress/useProgress';
+import { certificateDownloadUrl } from '@/features/progress/api';
 import { ApplicationStatusCard } from '@/features/enrolment/ApplicationStatusCard';
 import { ReviewFormModal } from '@/features/reviews/ReviewFormModal';
 import { useMyReviews } from '@/features/reviews/useReviews';
@@ -226,16 +228,55 @@ function EnrolmentCard({ enrolment, progress, review, onWithdraw, onCancelTransf
                             <span className="font-mono text-xs font-medium text-ink-900">{progress.percent_complete}%</span>
                         </div>
                         <ProgressBar percent={progress.percent_complete} />
-                        <Link to={continueHref}>
-                            <Button variant="primary" size="sm" className="w-full justify-center">
-                                {progress.percent_complete === 0 ? 'Start learning' : 'Continue learning'}
-                                <ArrowRight className="size-3.5" aria-hidden="true" />
-                            </Button>
-                        </Link>
+                        {/* An upcoming intake gets the date instead of a button that would only
+                            lead to locked modules — the seat is reserved, the content is not open
+                            yet, and saying so is clearer than a dead end. */}
+                        {progress.status === 'upcoming' && progress.starts_on ? (
+                            <div className="flex items-start gap-2 rounded-lg border border-surface-100 bg-surface-50 px-3 py-2 text-sm text-ink-600">
+                                <CalendarClock className="mt-0.5 size-4 shrink-0 text-ink-400" aria-hidden="true" />
+                                <span>
+                                    Starts{' '}
+                                    <span className="font-medium text-ink-900">
+                                        {new Date(progress.starts_on).toLocaleDateString(undefined, {
+                                            day: 'numeric',
+                                            month: 'long',
+                                            year: 'numeric',
+                                        })}
+                                    </span>
+                                    . Your place is reserved — course content opens on that date.
+                                </span>
+                            </div>
+                        ) : (
+                            <Link to={continueHref}>
+                                <Button variant="primary" size="sm" className="w-full justify-center">
+                                    {progress.percent_complete === 0 ? 'Start learning' : 'Continue learning'}
+                                    <ArrowRight className="size-3.5" aria-hidden="true" />
+                                </Button>
+                            </Link>
+                        )}
                         {progress.certificate && (
-                            <a href={progress.certificate.certificate_url ?? undefined} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:underline">
+                            /*
+                                Always the download endpoint, never the stored file URL: that URL
+                                is null until the PDF has been rendered, which previously left an
+                                href-less anchor reading "Certificate generating…" that could
+                                never be clicked. The endpoint renders on demand, so the link is
+                                live as soon as the certificate is issued.
+
+                                rel="noopener" only — NOT "noreferrer", for the same reason as the
+                                live-session join link: this target is a Sanctum-authenticated API
+                                route, and the stateful middleware only honours the session cookie
+                                when the Origin/Referer header identifies this SPA. "noreferrer"
+                                strips it, so the logged-in student is treated as a guest and
+                                bounced to /login instead of getting their certificate.
+                            */
+                            <a
+                                href={certificateDownloadUrl(progress.certificate.id)}
+                                target="_blank"
+                                rel="noopener"
+                                className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:underline"
+                            >
                                 <Award className="size-3.5" aria-hidden="true" />
-                                {progress.certificate.certificate_url ? 'Download certificate' : 'Certificate generating…'}
+                                Download certificate
                             </a>
                         )}
                         {progress.certificate && (!review || review.status === 'rejected') && (

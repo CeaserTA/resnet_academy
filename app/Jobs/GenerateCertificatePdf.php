@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Models\Certificate;
-use App\Services\Storage\MediaStorageService;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Services\Certification\CertificateService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -33,27 +32,17 @@ final class GenerateCertificatePdf implements ShouldBeUnique, ShouldQueue
         return (string) $this->certificateId;
     }
 
-    public function handle(MediaStorageService $mediaStorage): void
+    public function handle(CertificateService $certificateService): void
     {
         $certificate = Certificate::query()->with(['student', 'course'])->find($this->certificateId);
 
-        if (! $certificate || $certificate->certificate_url !== null) {
+        if (! $certificate) {
             return;
         }
 
-        $pdf = Pdf::loadView('certificates.pdf', [
-            'studentName' => $certificate->student->name,
-            'courseTitle' => $certificate->course->title,
-            'certificateNumber' => $certificate->certificate_number,
-            'issuedAt' => $certificate->issued_at->toFormattedDateString(),
-        ]);
-
-        $path = "certificates/{$certificate->certificate_number}.pdf";
-        $mediaStorage->putRaw($path, $pdf->output());
-
-        // Stores the R2 *path*, not a full URL — CertificateResource/ProgressController resolve
-        // it to a URL at read time via MediaStorageService::url(), same as every other upload.
-        $certificate->update(['certificate_url' => $path]);
+        // Shared with the download endpoint, which renders on demand when no worker has got to
+        // it yet — ensurePdf() is idempotent, so arriving second here is a no-op.
+        $certificateService->ensurePdf($certificate);
     }
 
     public function failed(\Throwable $e): void

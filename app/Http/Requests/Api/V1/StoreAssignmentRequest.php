@@ -6,6 +6,7 @@ namespace App\Http\Requests\Api\V1;
 
 use App\Enums\AssignmentSubmissionType;
 use App\Models\Assignment;
+use App\Rules\WithinCohortSchedule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
@@ -23,7 +24,7 @@ final class StoreAssignmentRequest extends FormRequest
             'title' => ['required', 'string', 'max:200'],
             'instructions' => ['nullable', 'string'],
             'submission_type' => ['required', new Enum(AssignmentSubmissionType::class)],
-            'due_at' => ['nullable', 'date'],
+            'due_at' => ['nullable', 'date', new WithinCohortSchedule($this->route('module')?->course)],
             'allow_late' => ['nullable', 'boolean'],
             'late_penalty_policy_id' => ['nullable', 'integer', Rule::exists('late_penalty_policies', 'id')],
             'max_score' => ['nullable', 'numeric', 'min:0'],

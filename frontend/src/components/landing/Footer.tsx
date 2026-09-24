@@ -1,6 +1,8 @@
-import { Link } from 'react-router';
+import { useState } from 'react';
+import { Link, useSearchParams } from 'react-router';
 import { GraduationCap } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { CertificateVerifyModal } from '@/features/progress/CertificateVerifyModal';
 
 interface FooterProps {
   onLoginClick: () => void;
@@ -68,6 +70,24 @@ const linkClass =
 const colHeadingClass = 'text-xs font-medium uppercase tracking-widest text-foreground';
 
 export function Footer({ onLoginClick, onSignupClick }: FooterProps) {
+  // Verification opens in place rather than on its own page; the footer owns it so it works on
+  // every public page that renders this footer.
+  const [verifyOpen, setVerifyOpen] = useState(false);
+  // Scanning the QR code on a printed certificate lands here with ?verify=CERT-… — the modal
+  // then opens on the result rather than on an empty field.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const verifyParam = searchParams.get('verify');
+
+  const closeVerify = () => {
+    setVerifyOpen(false);
+
+    if (verifyParam !== null) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('verify');
+      setSearchParams(next, { replace: true });
+    }
+  };
+
   return (
     <footer
       aria-label="Site footer"
@@ -159,6 +179,11 @@ export function Footer({ onLoginClick, onSignupClick }: FooterProps) {
                       )}
                     </li>
                   ))}
+                  <li>
+                    <button type="button" onClick={() => setVerifyOpen(true)} className={linkClass}>
+                      Verify a certificate
+                    </button>
+                  </li>
                 </ul>
               </nav>
             </div>
@@ -206,6 +231,12 @@ export function Footer({ onLoginClick, onSignupClick }: FooterProps) {
 
         </div>
       </div>
+      {/* Radix portals the dialog to <body>, so its place in the tree does not affect layout. */}
+      <CertificateVerifyModal
+        isOpen={verifyOpen || verifyParam !== null}
+        onClose={closeVerify}
+        initialNumber={verifyParam}
+      />
     </footer>
   );
 }

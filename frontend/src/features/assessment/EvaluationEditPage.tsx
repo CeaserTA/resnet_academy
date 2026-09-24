@@ -387,9 +387,15 @@ function ManualGradeForm({
     onDone: () => void;
 }) {
     const grade = useGradeAttempt(evaluationId);
-    const ungradedAnswers = attempt.answers.filter((a) => a.is_correct === null);
+    // Every manually-graded answer, not just the untouched ones: already-scored answers come
+    // back pre-filled so a grader can revise them, and so an attempt whose answers were all
+    // scored but never finalized can be re-submitted to finalize it. Auto-graded answers are
+    // scored at submit time and are never a grader's concern.
+    const manualAnswers = attempt.answers.filter(
+        (a) => questionsById.get(a.question_id)?.auto_gradable === false,
+    );
     const [points, setPoints] = useState<Record<number, string>>(
-        Object.fromEntries(ungradedAnswers.map((a) => [a.id, a.points_awarded ?? ''])),
+        Object.fromEntries(manualAnswers.map((a) => [a.id, a.points_awarded ?? ''])),
     );
     const [error, setError] = useState<string | null>(null);
 
@@ -399,7 +405,7 @@ function ManualGradeForm({
         try {
             await grade.mutateAsync({
                 attemptId: attempt.id,
-                answerGrades: ungradedAnswers.map((a) => ({
+                answerGrades: manualAnswers.map((a) => ({
                     answer_id: a.id,
                     points_awarded: Number(points[a.id] || 0),
                 })),
@@ -416,7 +422,7 @@ function ManualGradeForm({
             className="mt-3 flex flex-col gap-4 rounded-md border border-surface-100 bg-surface-50 p-4"
         >
             {error && <Alert variant="error" message={error} />}
-            {ungradedAnswers.map((answer) => {
+            {manualAnswers.map((answer) => {
                 const question = questionsById.get(answer.question_id);
                 return (
                     <div key={answer.id} className="flex flex-col gap-2">

@@ -59,31 +59,46 @@ function hasFileField(payload: Record<string, unknown>): boolean {
     return Object.values(payload).some((value) => value instanceof File);
 }
 
-export async function createResource(moduleId: number, payload: ResourcePayload): Promise<ResourceItem> {
+/**
+ * The API answers a resource save with the saved resource plus, when a recording link was set
+ * and looks unreachable, a warning. The save still succeeded — the warning is advice about a
+ * link students probably cannot open, not a failure.
+ */
+interface ResourceSaveResponse {
+    data: ResourceItem;
+    recording_link_warning?: string | null;
+}
+
+export interface ResourceSaveResult {
+    resource: ResourceItem;
+    recordingLinkWarning: string | null;
+}
+
+export async function createResource(moduleId: number, payload: ResourcePayload): Promise<ResourceSaveResult> {
     if (hasFileField(payload)) {
-        const response = await postFormData<{ data: ResourceItem }>(
+        const response = await postFormData<ResourceSaveResponse>(
             `/modules/${moduleId}/resources`,
             toFormData(payload as Record<string, FormDataValue>),
         );
-        return response.data;
+        return { resource: response.data, recordingLinkWarning: response.recording_link_warning ?? null };
     }
 
-    const { data } = await apiClient.post<{ data: ResourceItem }>(`/modules/${moduleId}/resources`, payload);
-    return data.data;
+    const { data } = await apiClient.post<ResourceSaveResponse>(`/modules/${moduleId}/resources`, payload);
+    return { resource: data.data, recordingLinkWarning: data.recording_link_warning ?? null };
 }
 
-export async function updateResource(resourceId: number, payload: Partial<ResourcePayload>): Promise<ResourceItem> {
+export async function updateResource(resourceId: number, payload: Partial<ResourcePayload>): Promise<ResourceSaveResult> {
     if (hasFileField(payload)) {
-        const response = await postFormData<{ data: ResourceItem }>(
+        const response = await postFormData<ResourceSaveResponse>(
             `/resources/${resourceId}`,
             toFormData(payload as Record<string, FormDataValue>),
             'PATCH',
         );
-        return response.data;
+        return { resource: response.data, recordingLinkWarning: response.recording_link_warning ?? null };
     }
 
-    const { data } = await apiClient.patch<{ data: ResourceItem }>(`/resources/${resourceId}`, payload);
-    return data.data;
+    const { data } = await apiClient.patch<ResourceSaveResponse>(`/resources/${resourceId}`, payload);
+    return { resource: data.data, recordingLinkWarning: data.recording_link_warning ?? null };
 }
 
 export async function deleteResource(resourceId: number): Promise<void> {

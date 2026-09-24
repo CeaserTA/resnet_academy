@@ -7,6 +7,7 @@ namespace App\Services\Enrolment;
 use App\Enums\EnrolmentStatus;
 use App\Models\CohortCourse;
 use App\Models\Enrolment;
+use App\Models\ResourceLiveSession;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -113,6 +114,19 @@ final class CohortCourseService
             if ($hasAnyApplications) {
                 throw ValidationException::withMessages([
                     'cohort_course' => 'Cannot remove a course with application history from a cohort. Use the "Closed" status instead.',
+                ]);
+            }
+
+            // A live session tied to this cohort would be left pointing at an intake that no
+            // longer runs the course.
+            $hasLiveSessions = ResourceLiveSession::query()
+                ->where('cohort_id', $cohortCourse->cohort_id)
+                ->whereHas('resource.module', fn ($query) => $query->where('course_id', $cohortCourse->course_id))
+                ->exists();
+
+            if ($hasLiveSessions) {
+                throw ValidationException::withMessages([
+                    'cohort_course' => 'Cannot remove this course from the cohort while live sessions are assigned to that cohort. Delete or reassign those sessions first.',
                 ]);
             }
 

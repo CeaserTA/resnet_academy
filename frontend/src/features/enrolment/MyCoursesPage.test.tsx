@@ -82,7 +82,7 @@ const { course, enrolment, modules, progressRows } = vi.hoisted(() => {
     ];
 
     const progressRows: ProgressDashboardRow[] = [
-        { course: { id: 1, title: course.title }, status: 'in_progress', percent_complete: 25, modules: [], certificate: null },
+        { course: { id: 1, title: course.title }, status: 'in_progress', percent_complete: 25, starts_on: null, modules: [], certificate: null },
     ];
 
     return { course, enrolment, modules, progressRows };
@@ -109,6 +109,9 @@ vi.mock('@/features/courseApplications/api', () => ({
 
 vi.mock('@/features/progress/api', () => ({
     fetchProgressDashboard: vi.fn().mockResolvedValue(progressRows),
+    // The certificate link points at the download endpoint rather than the stored file URL,
+    // which is null until the PDF has been rendered.
+    certificateDownloadUrl: (certificateId: number) => `/api/v1/certificates/${certificateId}/download`,
 }));
 
 vi.mock('@/features/courseStructure/api', () => ({
@@ -185,8 +188,9 @@ const completedProgressRows: ProgressDashboardRow[] = [
         course: { id: 1, title: 'Intro to Testing' },
         status: 'completed',
         percent_complete: 100,
+        starts_on: null,
         modules: [],
-        certificate: { certificate_number: 'CERT-1', certificate_url: null },
+        certificate: { id: 1, certificate_number: 'CERT-1', certificate_url: null },
     },
 ];
 

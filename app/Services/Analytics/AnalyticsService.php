@@ -21,6 +21,7 @@ use App\Models\CourseReview;
 use App\Models\EngagementEvent;
 use App\Models\Enrolment;
 use App\Models\ModuleProgress;
+use App\Models\ResourceLiveSession;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Assessment\GradebookService;
@@ -387,6 +388,14 @@ final class AnalyticsService
             'open_tickets' => Ticket::query()->whereIn('status', [TicketStatus::Open, TicketStatus::InProgress])->count(),
             'pending_reviews' => CourseReview::query()->where('status', ReviewStatus::Pending)->count(),
             'at_risk_students' => $atRiskCount,
+            // A past live session with no recording is a hard block: it is a required module
+            // item that can no longer be attended, so every student who has not already joined
+            // is stuck on it. Surfaced here so it cannot sit unnoticed.
+            'live_sessions_missing_recording' => ResourceLiveSession::query()
+                ->whereNull('recording_url')
+                ->get()
+                ->filter(fn (ResourceLiveSession $session): bool => $session->isMissingRecording())
+                ->count(),
             'recent_audit_logs' => AuditLog::query()->with('actor')->latest('id')->limit(8)->get(),
         ];
     }

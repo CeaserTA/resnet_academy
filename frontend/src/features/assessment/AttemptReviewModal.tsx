@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { CheckCircle2, Clock, Hourglass, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/components/ui/Alert';
 import { Badge, type BadgeTone } from '@/components/ui/Badge';
@@ -18,11 +18,23 @@ interface AttemptReviewModalProps {
 type QuestionStatus = 'correct' | 'incorrect' | 'partial' | 'pending';
 
 /**
- * Derives the display status from the graded answer. Partial credit only applies to
- * multi-choice: every selected option is a correct one, but the selection wasn't the
- * exact set the key requires (grading itself stays all-or-nothing server-side).
+ * Derives the display status from the graded answer. A manually graded question is scored on
+ * points rather than a correct/incorrect verdict, so its status comes from how much of the
+ * question's points the grader awarded — full marks reads as correct, none as incorrect, and
+ * anything between as partial credit.
  */
 function questionStatus(question: AttemptReviewQuestion): QuestionStatus {
+    if (!question.auto_gradable) {
+        if (question.graded_at === null) return 'pending';
+
+        const awarded = Number(question.points_awarded ?? 0);
+        const max = Number(question.points);
+
+        if (awarded >= max) return 'correct';
+        if (awarded <= 0) return 'incorrect';
+        return 'partial';
+    }
+
     if (question.is_correct === true) return 'correct';
     if (question.is_correct === null) return 'pending';
 
@@ -129,6 +141,8 @@ export function AttemptReviewModal({ isOpen, onClose, attemptId, attemptNumber }
     // Only fetch while open — the answer key should never sit in the query cache pre-submission.
     const review = useAttemptReview(isOpen ? attemptId : null);
 
+    const isAwaitingGrading = review.data !== undefined && review.data.status !== 'graded';
+
     return (
         <Modal
             isOpen={isOpen}
@@ -155,18 +169,29 @@ export function AttemptReviewModal({ isOpen, onClose, attemptId, attemptNumber }
                 <div className="flex flex-col gap-4">
                     {/* ─── Summary banner ─────────────────────────────────────── */}
                     <div className="flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border border-surface-100 bg-surface-50 px-4 py-3">
-                        <div>
-                            <p className="text-xs text-ink-600">Score</p>
-                            <p className="text-lg font-semibold text-ink-900">
-                                {review.data.summary.total_score} / {review.data.summary.max_score}
-                            </p>
-                        </div>
-                        <div>
-                            <p className="text-xs text-ink-600">Percentage</p>
-                            <p className="text-lg font-semibold text-ink-900">
-                                {review.data.summary.score_percent !== null ? `${review.data.summary.score_percent}%` : '—'}
-                            </p>
-                        </div>
+                        {isAwaitingGrading ? (
+                            <div className="flex items-center gap-2">
+                                <Hourglass className="size-4 shrink-0 text-ink-400" aria-hidden="true" />
+                                <p className="text-sm font-medium text-ink-900">Awaiting grading</p>
+                            </div>
+                        ) : (
+                            <>
+                                <div>
+                                    <p className="text-xs text-ink-600">Score</p>
+                                    <p className="text-lg font-semibold text-ink-900">
+                                        {review.data.summary.total_score} / {review.data.summary.max_score}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-ink-600">Percentage</p>
+                                    <p className="text-lg font-semibold text-ink-900">
+                                        {review.data.summary.score_percent !== null
+                                            ? `${review.data.summary.score_percent}%`
+                                            : '—'}
+                                    </p>
+                                </div>
+                            </>
+                        )}
                         <div>
                             <p className="text-xs text-ink-600">Time Taken</p>
                             <p className="flex items-center gap-1 text-lg font-semibold text-ink-900">
@@ -175,7 +200,7 @@ export function AttemptReviewModal({ isOpen, onClose, attemptId, attemptNumber }
                             </p>
                         </div>
                         <div className="ml-auto">
-                            {review.data.status === 'submitted' ? (
+                            {isAwaitingGrading ? (
                                 <Badge label="Awaiting Grading" tone="neutral" />
                             ) : review.data.summary.passed ? (
                                 <Badge label="Passed" tone="success" icon={CheckCircle2} />
@@ -185,16 +210,26 @@ export function AttemptReviewModal({ isOpen, onClose, attemptId, attemptNumber }
                         </div>
                     </div>
 
-                    {review.data.status === 'submitted' && (
-                        <p className="rounded-md bg-amber-100 px-3 py-2 text-sm text-amber-600">
-                            Some answers are still pending instructor grading — scores below may change.
-                        </p>
+                    {/*
+                        No partial results: while any answer is still ungraded the backend sends
+                        the student an empty question list, so there is nothing to break down yet.
+                    */}
+                    {isAwaitingGrading ? (
+                        <div className="rounded-xl border border-surface-100 bg-surface-0 px-4 py-8 text-center">
+                            <Hourglass className="mx-auto size-6 text-ink-300" aria-hidden="true" />
+                            <p className="mt-3 text-sm font-medium text-ink-900">
+                                Your instructor is still grading this attempt
+                            </p>
+                            <p className="mt-1 text-sm text-ink-600">
+                                This evaluation has questions that are marked by hand. Your full results — your
+                                score and the breakdown for every question — appear here once grading is finished.
+                            </p>
+                        </div>
+                    ) : (
+                        review.data.questions.map((question, index) => (
+                            <ReviewQuestionCard key={question.question_id} question={question} index={index} />
+                        ))
                     )}
-
-                    {/* ─── Question review cards ──────────────────────────────── */}
-                    {review.data.questions.map((question, index) => (
-                        <ReviewQuestionCard key={question.question_id} question={question} index={index} />
-                    ))}
                 </div>
             )}
         </Modal>

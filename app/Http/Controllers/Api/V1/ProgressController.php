@@ -20,6 +20,7 @@ use App\Models\User;
 use App\Services\Progress\ProgressEngine;
 use App\Services\Storage\MediaStorageService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
@@ -71,7 +72,7 @@ final class ProgressController extends Controller
         $enrolments = Enrolment::query()
             ->where('student_id', $student->id)
             ->where('status', EnrolmentStatus::Confirmed)
-            ->with('course')
+            ->with(['course', 'cohortCourse.cohort'])
             ->get();
 
         $rows = $enrolments->map(function (Enrolment $enrolment) use ($student, $request): array {
@@ -94,9 +95,15 @@ final class ProgressController extends Controller
                 fn (ModuleProgress $progress) => in_array($progress->status, [ModuleProgressStatus::InProgress, ModuleProgressStatus::Completed], true),
             );
 
+            // The intake this student sits the course in. Its start date gates content, so the
+            // dashboard reports the course as upcoming rather than showing it as startable.
+            $startsOn = $enrolment->cohortCourse?->cohort?->start_date?->copy()->startOfDay();
+            $hasNotStartedYet = $startsOn !== null && $startsOn->isFuture();
+
             $status = match (true) {
                 $totalCount > 0 && $completedCount === $totalCount => 'completed',
                 $hasAnyProgress => 'in_progress',
+                $hasNotStartedYet => 'upcoming',
                 default => 'not_started',
             };
 
@@ -109,8 +116,13 @@ final class ProgressController extends Controller
                 'course' => ['id' => $course->id, 'title' => $course->title],
                 'status' => $status,
                 'percent_complete' => $percentComplete,
+                // Null for a self-paced enrolment; otherwise the day this intake's content opens.
+                'starts_on' => $startsOn?->toDateString(),
                 'modules' => ModuleProgressResource::collection($moduleProgress)->resolve($request),
                 'certificate' => $certificate ? [
+                    // id is what the client builds the download link from — that endpoint
+                    // renders the PDF on demand, so the link works before the queued job runs.
+                    'id' => $certificate->id,
                     'certificate_number' => $certificate->certificate_number,
                     'certificate_url' => $this->mediaStorage->url($certificate->certificate_url),
                 ] : null,
@@ -141,16 +153,21 @@ final class ProgressController extends Controller
         return response()->noContent();
     }
 
-    public function markAttendance(Request $request, Resource $resource): Response
+    /**
+     * Phase 1 of verified attendance: a student is recorded as attended only by actually
+     * following this link, which is also the only place the real Zoom/Meet URL is ever
+     * revealed — students never see it rendered directly (see ResourceViewerPage.tsx).
+     */
+    public function joinLiveSession(Request $request, Resource $resource): RedirectResponse
     {
-        $this->progressEngine->markAttendance($request->user(), $resource);
+        $meetingUrl = $this->progressEngine->joinLiveSession($request->user(), $resource);
 
-        return response()->noContent();
+        return redirect()->away($meetingUrl);
     }
 
     /**
      * Business rule "Attendance tracking": the roster for a live_session resource, admin/
-     * course-teaching-instructor only.
+     * course-teaching-instructor only. Attended students are listed earliest-joined first.
      */
     public function attendanceRoster(Resource $resource): JsonResponse
     {
@@ -158,8 +175,12 @@ final class ProgressController extends Controller
 
         abort_if($resource->type !== ResourceType::LiveSession, 422, 'Only live_session resources have an attendance roster.');
 
+        // A session run for one cohort has an attendance list of that cohort's students only.
+        $cohortId = $resource->liveSession?->cohort_id;
+
         $studentIds = $resource->module->course->enrolments()
             ->where('status', EnrolmentStatus::Confirmed)
+            ->when($cohortId !== null, fn ($query) => $query->whereHas('cohortCourse', fn ($cohortCourse) => $cohortCourse->where('cohort_id', $cohortId)))
             ->pluck('student_id');
 
         $attendanceByStudent = LiveSessionAttendance::query()
@@ -175,7 +196,7 @@ final class ProgressController extends Controller
                 'attended' => $record ? (bool) $record->attended : false,
                 'marked_at' => $record?->marked_at?->toIso8601String(),
             ];
-        });
+        })->sortBy(fn (array $row): string => $row['attended'] ? $row['marked_at'] : '9999');
 
         return response()->json(['data' => $roster->values()]);
     }

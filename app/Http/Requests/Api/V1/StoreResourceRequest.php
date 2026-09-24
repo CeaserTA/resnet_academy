@@ -6,6 +6,8 @@ namespace App\Http\Requests\Api\V1;
 
 use App\Enums\ResourceType;
 use App\Models\Resource;
+use App\Rules\FileHasExtension;
+use App\Rules\WithinCohortSchedule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
@@ -39,7 +41,7 @@ final class StoreResourceRequest extends FormRequest
             // document / downloadable_file — either paste a URL or upload a file ('file' takes
             // precedence when both are present; see ResourceController::store()).
             'file_url' => [Rule::requiredIf(fn () => in_array($this->input('type'), ['document', 'downloadable_file'], true) && ! $this->hasFile('file')), 'url', 'max:500'],
-            'file' => ['nullable', 'file', 'mimes:pdf,doc,docx,ppt,pptx,xls,xlsx,zip,csv,txt', 'max:20480'],
+            'file' => ['nullable', 'file', new FileHasExtension(['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'zip', 'csv', 'txt']), 'max:20480'],
             'file_type' => ['required_if:type,document', Rule::in(['pdf', 'pptx', 'docx'])],
             'file_size_kb' => ['nullable', 'integer', 'min:0'],
 
@@ -57,8 +59,18 @@ final class StoreResourceRequest extends FormRequest
             // live_session
             'provider' => ['required_if:type,live_session', Rule::in(['zoom', 'google_meet'])],
             'meeting_url' => ['required_if:type,live_session', 'url', 'max:500'],
-            'scheduled_at' => ['required_if:type,live_session', 'date'],
+            // The cohort this session is run for, which must be one the course actually runs in.
+            // Null means for everyone taking the course, which is only allowed to carry a date
+            // when the course runs in at most one cohort (see WithinCohortSchedule).
+            'cohort_id' => ['nullable', 'integer', Rule::exists('cohort_courses', 'cohort_id')->where('course_id', $this->route('module')?->course_id)],
+            'scheduled_at' => ['required_if:type,live_session', 'date', new WithinCohortSchedule(
+                $this->route('module')?->course,
+                cohortId: $this->filled('cohort_id') ? (int) $this->input('cohort_id') : null,
+                cohortSelectable: true,
+            )],
             'duration_minutes' => ['required_if:type,live_session', 'integer', 'min:1'],
+            // Optional at creation — a recording only exists after the session has run.
+            'recording_url' => ['nullable', 'url', 'max:500'],
         ];
     }
 }

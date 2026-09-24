@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Services\Progress;
 
+use App\Enums\EnrolmentStatus;
 use App\Enums\ModuleItemType;
 use App\Enums\ModuleProgressStatus;
 use App\Enums\ResourceProgressStatus;
 use App\Enums\ResourceType;
 use App\Models\AssignmentSubmission;
+use App\Models\CohortCourse;
 use App\Models\Course;
 use App\Models\EvaluationAttempt;
 use App\Models\LiveSessionAttendance;
@@ -21,7 +23,9 @@ use App\Models\User;
 use App\Models\VideoWatchPing;
 use App\Services\Analytics\EngagementTracker;
 use App\Services\Certification\CertificateService;
+use App\Services\Content\LiveSessionAudience;
 use App\Services\Notifications\NotificationDispatcher;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -37,6 +41,7 @@ final class ProgressEngine
         private readonly CertificateService $certificateService,
         private readonly NotificationDispatcher $notificationDispatcher,
         private readonly EngagementTracker $engagementTracker,
+        private readonly LiveSessionAudience $liveSessionAudience,
     ) {}
 
     /**
@@ -44,7 +49,7 @@ final class ProgressEngine
      * the previous applicable module is completed — both conditions, always. Run on-demand
      * (course view) and on a schedule (architecture.md §5.2), so it must be safe to call
      * repeatedly and idempotently.
-     * 
+     *
      * With cohorts: if the student is enrolled in a cohort offering and the module has
      * unlock_offset_days, use cohort.start_date + offset instead of scheduled_start_at.
      */
@@ -60,7 +65,7 @@ final class ProgressEngine
             // Get the student's enrollment for this course to check for its cohort
             $enrolment = $course->enrolments()
                 ->where('student_id', $student->id)
-                ->where('status', \App\Enums\EnrolmentStatus::Confirmed)
+                ->where('status', EnrolmentStatus::Confirmed)
                 ->with('cohortCourse.cohort')
                 ->first();
 
@@ -85,6 +90,13 @@ final class ProgressEngine
                     $this->notificationDispatcher->notifyModuleUnlocked($student, $module);
                 }
 
+                // Re-lock a module that was opened before its schedule applied — rows unlocked by
+                // the older rule that ignored the cohort start date. Only ever NotStarted, so no
+                // work in progress is taken away.
+                if ($progress->status === ModuleProgressStatus::NotStarted && ! $scheduleReached) {
+                    $progress->update(['status' => ModuleProgressStatus::Locked, 'unlocked_at' => null]);
+                }
+
                 $previousCompleted = $progress->status === ModuleProgressStatus::Completed;
             }
         });
@@ -93,20 +105,37 @@ final class ProgressEngine
     /**
      * Determine if a module's schedule requirement has been met.
      *
-     * - If enrolled in a cohort offering AND module has unlock_offset_days: check
-     *   (cohort.start_date + offset) <= now
+     * - The cohort's start date is a floor: nothing in an intake opens before the intake begins,
+     *   whatever the module's own schedule says. Applying immediately on enrolment was how a
+     *   student could open module content months ahead of their cohort.
+     * - Then, if the module has unlock_offset_days: check (cohort.start_date + offset) <= now
      * - Otherwise: check scheduled_start_at is null or has passed
      */
-    private function isModuleScheduleReached(Module $module, ?\App\Models\CohortCourse $cohortCourse): bool
+    private function isModuleScheduleReached(Module $module, ?CohortCourse $cohortCourse): bool
     {
+        // Null for a self-paced enrolment, and for a `cohort_courses` row predating cohorts —
+        // neither carries a schedule, so neither gates anything.
+        $cohortStart = $this->cohortStartFor($cohortCourse);
+
+        if ($cohortStart !== null && $cohortStart->isFuture()) {
+            return false;
+        }
+
         // Cohort-relative scheduling takes precedence if both the cohort and offset exist
-        if ($cohortCourse !== null && $module->unlock_offset_days !== null) {
-            $unlockDate = $cohortCourse->cohort->start_date->addDays($module->unlock_offset_days);
+        if ($cohortStart !== null && $module->unlock_offset_days !== null) {
+            $unlockDate = $cohortStart->copy()->addDays($module->unlock_offset_days);
+
             return $unlockDate->isPast() || $unlockDate->isToday();
         }
 
         // Fall back to absolute scheduled_start_at when no cohort-relative offset is set
         return $module->scheduled_start_at === null || $module->scheduled_start_at->isPast();
+    }
+
+    /** The day the student's intake begins, or null when their enrolment has no cohort schedule. */
+    private function cohortStartFor(?CohortCourse $cohortCourse): ?CarbonInterface
+    {
+        return $cohortCourse?->cohort?->start_date?->copy()->startOfDay();
     }
 
     /**
@@ -130,9 +159,17 @@ final class ProgressEngine
 
     /**
      * FR-13/FR-14: fired whenever a resource_progress/assignment_submissions/
-     * evaluation_attempts row changes to a completing state (architecture.md §5.3). Rolls the
-     * module up to completed once every *required* item is complete, then unlocks the next
-     * module in sequence.
+     * evaluation_attempts row changes to a completing state (architecture.md §5.3). Also the
+     * only place a module's progress ever moves NotStarted -> InProgress: every one of those
+     * same call sites is "the student did something in this module", so this is the natural
+     * single choke point for that transition too, rather than duplicating it at each caller.
+     * Without it, ModuleProgressStatus::InProgress was dead code — never written anywhere — so
+     * a course's computed status (ProgressController::dashboard()) could only ever show
+     * not_started or completed, never in_progress, no matter how much of an unlocked module's
+     * content a student had actually consumed.
+     *
+     * Rolls the module up to completed once every *required* item is complete, then unlocks the
+     * next module in sequence.
      */
     /**
      * Note: same nested-transaction caveat as evaluateCourseUnlocks() above — safe under
@@ -147,7 +184,11 @@ final class ProgressEngine
                 return;
             }
 
-            $requiredItems = $module->items()->where('is_required', true)->get();
+            if ($progress->status === ModuleProgressStatus::NotStarted) {
+                $progress->update(['status' => ModuleProgressStatus::InProgress]);
+            }
+
+            $requiredItems = $this->requiredItemsFor($student, $module);
 
             $allComplete = $requiredItems->isNotEmpty()
                 && $requiredItems->every(fn (ModuleItem $item) => $this->isModuleItemComplete($student, $item));
@@ -166,6 +207,33 @@ final class ProgressEngine
                 $this->certificateService->issueForCourseCompletion($student, $module->course);
             }
         });
+    }
+
+    /**
+     * The items this student has to complete for the module: every required item, minus live
+     * sessions run for another cohort. Those are not theirs to attend, so counting them would
+     * leave a module permanently incomplete for every student outside that cohort.
+     *
+     * @return Collection<int, ModuleItem>
+     */
+    private function requiredItemsFor(User $student, Module $module): Collection
+    {
+        $required = $module->items()->where('is_required', true)->get();
+
+        $hiddenSessionIds = $this->liveSessionAudience->hiddenResourceIds(
+            $student,
+            $module->course_id,
+            $required->where('item_type', ModuleItemType::Resource)->pluck('item_id'),
+        );
+
+        if ($hiddenSessionIds === []) {
+            return $required;
+        }
+
+        return $required
+            ->reject(fn (ModuleItem $item): bool => $item->item_type === ModuleItemType::Resource
+                && in_array((int) $item->item_id, $hiddenSessionIds, true))
+            ->values();
     }
 
     public function isModuleItemComplete(User $student, ModuleItem $item): bool
@@ -201,10 +269,23 @@ final class ProgressEngine
         }
 
         if ($resource->type === ResourceType::LiveSession) {
-            return LiveSessionAttendance::query()
+            $attended = LiveSessionAttendance::query()
                 ->where('resource_id', $resource->id)
                 ->where('student_id', $student->id)
                 ->where('attended', true)
+                ->exists();
+
+            if ($attended) {
+                return true;
+            }
+
+            // Falling through to opened_at is what unblocks a student who enrolled after the
+            // session ran: with the join window closed, watching the recording is the only way
+            // to complete a required live session, so opening it counts exactly as attending.
+            return ResourceProgress::query()
+                ->where('student_id', $student->id)
+                ->where('resource_id', $resource->id)
+                ->whereNotNull('opened_at')
                 ->exists();
         }
 
@@ -229,7 +310,34 @@ final class ProgressEngine
     {
         $progress = ModuleProgress::where('student_id', $student->id)->where('module_id', $module->id)->first();
 
-        abort_if(! $progress || $progress->status === ModuleProgressStatus::Locked, 403, 'This module is locked.');
+        if ($progress && $progress->status !== ModuleProgressStatus::Locked) {
+            return;
+        }
+
+        abort(403, $this->lockedReason($student, $module));
+    }
+
+    /**
+     * Why this module won't open, in the student's terms. A course that hasn't started yet is the
+     * common case for a newly enrolled student, and "This module is locked" on its own reads like
+     * a dead end when the real answer is simply a date.
+     */
+    private function lockedReason(User $student, Module $module): string
+    {
+        $cohortStart = $this->cohortStartFor(
+            $module->course->enrolments()
+                ->where('student_id', $student->id)
+                ->where('status', EnrolmentStatus::Confirmed)
+                ->with('cohortCourse.cohort')
+                ->first()
+                ?->cohortCourse,
+        );
+
+        if ($cohortStart !== null && $cohortStart->isFuture()) {
+            return 'This course starts on '.$cohortStart->format('j M Y').'. Its content opens then.';
+        }
+
+        return 'This module is locked.';
     }
 
     public function recordVideoPing(User $student, Resource $resource, int $positionSeconds): void
@@ -292,6 +400,17 @@ final class ProgressEngine
     {
         $this->assertModuleUnlocked($student, $resource->module);
 
+        // For a live session, "opened" means the recording was opened — so there has to be one.
+        // Without this guard a student could complete a required live session by posting
+        // mark-opened with nothing to open, bypassing both attendance and the recording.
+        if ($resource->type === ResourceType::LiveSession) {
+            abort_if(
+                $resource->liveSession?->recording_url === null || $resource->liveSession?->recording_url === '',
+                422,
+                'This session has no recording attached yet.',
+            );
+        }
+
         DB::transaction(function () use ($student, $resource): void {
             ResourceProgress::updateOrCreate(
                 ['student_id' => $student->id, 'resource_id' => $resource->id],
@@ -304,19 +423,60 @@ final class ProgressEngine
         });
     }
 
-    public function markAttendance(User $student, Resource $resource, ?User $markedBy = null): void
+    /**
+     * Phase 1 of verified attendance (replaces the old self-report `markAttendance`): a student
+     * is only ever recorded as attended by actually following this join link, which is also the
+     * only place the real Zoom/Meet URL is handed back — the caller (ProgressController) 302s
+     * the browser straight to it, so the raw URL never needs to reach the student-facing API
+     * response or the React frontend.
+     *
+     * @return string the live session's real meeting URL, for the controller to redirect to
+     */
+    public function joinLiveSession(User $student, Resource $resource): string
     {
+        abort_if($resource->type !== ResourceType::LiveSession, 422, 'Only live_session resources can be joined.');
+
         $this->assertModuleUnlocked($student, $resource->module);
 
-        DB::transaction(function () use ($student, $resource, $markedBy): void {
-            LiveSessionAttendance::updateOrCreate(
+        $isEnrolled = $resource->module->course->enrolments()
+            ->where('student_id', $student->id)
+            ->where('status', EnrolmentStatus::Confirmed)
+            ->exists();
+
+        abort_unless($isEnrolled, 403, 'You are not enrolled in this course.');
+
+        $liveSession = $resource->liveSession;
+        abort_if(! $liveSession, 404);
+
+        abort_unless(
+            $this->liveSessionAudience->includes($student, $liveSession, $resource->module->course_id),
+            403,
+            'This live session is for a different cohort.',
+        );
+
+        abort_if(now()->lt($liveSession->scheduled_at), 403, 'This session has not started yet.');
+        abort_if(
+            $liveSession->joinWindowHasClosed(),
+            403,
+            $liveSession->recording_url
+                ? 'This session has ended — watch the recording instead.'
+                : 'This session has ended. A recording will be posted here once it is available.',
+        );
+
+        return DB::transaction(function () use ($student, $resource, $liveSession): string {
+            // firstOrCreate, not updateOrCreate: joined_at/attended must record the *first*
+            // click, not the latest one — a student re-opening the link (e.g. after a dropped
+            // connection) should not appear to have joined later than they actually did.
+            LiveSessionAttendance::firstOrCreate(
                 ['resource_id' => $resource->id, 'student_id' => $student->id],
-                ['attended' => true, 'marked_at' => now(), 'marked_by' => $markedBy?->id],
+                ['attended' => true, 'marked_at' => now(), 'joined_at' => now(), 'source' => 'click'],
             );
 
             $this->engagementTracker->track($student, $resource->module->course, 'resource_viewed', ['resource_id' => $resource->id, 'resource_type' => $resource->type->value]);
 
             $this->rollupModuleCompletion($student, $resource->module);
+
+            return $liveSession->meeting_url;
         });
     }
 }

@@ -23,8 +23,14 @@ export default defineConfig({
   
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:5173',
+    /*
+     * Must be an origin the API actually accepts: config/cors.php allows only FRONTEND_URL
+     * (http://127.0.0.1:3000) plus :3001, and Sanctum's stateful-domain list is what makes the
+     * session cookie work. Vite's default http://localhost:5173 is in neither, so every request
+     * from it fails CORS and the app renders empty — override with E2E_BASE_URL if your dev
+     * server runs elsewhere, but keep it in step with those two config values.
+     */
+    baseURL: process.env.E2E_BASE_URL ?? 'http://127.0.0.1:3000',
     
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
@@ -40,8 +46,8 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
+    command: 'npm run dev -- --host 127.0.0.1 --port 3000',
+    url: process.env.E2E_BASE_URL ?? 'http://127.0.0.1:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },

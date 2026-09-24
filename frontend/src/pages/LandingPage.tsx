@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { LandingHeader } from '@/components/layout/LandingHeader';
-import { useAuth } from '@/lib/auth/AuthContext';
 import { useAuthModal } from '@/lib/auth/AuthModalContext';
 import { Hero } from '@/components/landing/Hero';
 import { AboutSection } from '@/components/landing/AboutSection';
@@ -12,7 +11,6 @@ import { CtaBanner } from '@/components/landing/CtaBanner';
 import { Footer } from '@/components/landing/Footer';
 
 export function LandingPage() {
-    const { user } = useAuth();
     const { openAuth } = useAuthModal();
 
     const handleLoginClick = () => openAuth('login');
@@ -26,11 +24,7 @@ export function LandingPage() {
 
     return (
         <div>
-            <LandingHeader
-                isAuthenticated={!!user}
-                onLoginClick={handleLoginClick}
-                onSignupClick={handleSignupClick}
-            />
+            <LandingHeader onLoginClick={handleLoginClick} onSignupClick={handleSignupClick} />
 
             <main>
                 {/* Hero */}

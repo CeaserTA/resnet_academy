@@ -25,7 +25,8 @@ import { Modal } from '@/components/ui/Modal';
 import { ResourceForm } from '@/features/courseStructure/ResourceForm';
 import { AssignmentQuickForm } from '@/features/assessment/AssignmentQuickForm';
 import { EvaluationQuickForm } from '@/features/assessment/EvaluationQuickForm';
-import { useCreateResource, useDeleteResource } from '@/features/courseStructure/useCourseStructure';
+import { useCreateResource, useDeleteResource, useUpdateResource } from '@/features/courseStructure/useCourseStructure';
+import { useCohortCoursesForCourse } from '@/features/cohorts/useCohorts';
 import {
     useCreateAssignment,
     useCreateEvaluation,
@@ -33,7 +34,7 @@ import {
     useDeleteEvaluation,
 } from '@/features/assessment/useAssessment';
 import { cn } from '@/lib/utils';
-import type { Module, ModuleItem } from '@/lib/api/types';
+import type { Module, ModuleItem, ResourceModuleItem } from '@/lib/api/types';
 import type { ResourcePayload } from '@/features/courseStructure/api';
 import type { AssignmentPayload, EvaluationPayload } from '@/features/assessment/api';
 
@@ -124,7 +125,15 @@ function ActionBtn({
 
 // ─── Single item row ──────────────────────────────────────────────────────────
 
-function ItemRow({ item, onDelete }: { item: ModuleItem; onDelete: () => void }) {
+function ItemRow({
+    item,
+    onDelete,
+    onEdit,
+}: {
+    item: ModuleItem;
+    onDelete: () => void;
+    onEdit?: () => void;
+}) {
     const typeLabel =
         item.item_type === 'assignment'
             ? 'Assignment'
@@ -160,6 +169,18 @@ function ItemRow({ item, onDelete }: { item: ModuleItem; onDelete: () => void })
                 {!item.is_required && (
                     <span className="shrink-0 text-xs text-ink-300">optional</span>
                 )}
+                {/*
+                    A past live session with no recording blocks every student who did not join
+                    at the time, and it is a required item — so flag it right where the session
+                    is managed rather than leaving it to be discovered by a stuck student.
+                */}
+                {item.item_type === 'resource' && item.details?.access_state === 'recording_pending' && (
+                    <Badge label="Recording missing" tone="warning" />
+                )}
+                {/* Which intake a live session is run for. Absent means it is for the whole course. */}
+                {item.item_type === 'resource' && item.type === 'live_session' && item.details?.cohort_name && (
+                    <Badge label={item.details.cohort_name} tone="progress" />
+                )}
             </div>
             <div className="flex shrink-0 items-center gap-0.5">
                 {attendanceHref && (
@@ -175,6 +196,11 @@ function ItemRow({ item, onDelete }: { item: ModuleItem; onDelete: () => void })
                             <Pencil className="size-3.5" aria-hidden="true" />
                         </IconBtn>
                     </Link>
+                )}
+                {onEdit && (
+                    <IconBtn label={`Edit ${item.title}`} onClick={onEdit}>
+                        <Pencil className="size-3.5" aria-hidden="true" />
+                    </IconBtn>
                 )}
                 <IconBtn label={`Delete ${item.title}`} onClick={onDelete} danger>
                     <Trash2 className="size-3.5" aria-hidden="true" />
@@ -267,17 +293,34 @@ export function ModuleTableRow({
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const [addingForm, setAddingForm] = useState<AddingForm>(null);
+    const [editingResource, setEditingResource] = useState<ResourceModuleItem | null>(null);
+
+    // A live session is run for one cohort of the course, so the form needs to know which exist.
+    const { data: cohortCourses } = useCohortCoursesForCourse(courseId);
 
     const createResource = useCreateResource(courseId);
+    const updateResource = useUpdateResource(courseId);
     const deleteResource = useDeleteResource(courseId);
     const createAssignment = useCreateAssignment(courseId);
     const deleteAssignment = useDeleteAssignment(courseId);
     const createEvaluation = useCreateEvaluation(courseId);
     const deleteEvaluation = useDeleteEvaluation(courseId);
 
+    // Both return the API's recording-link warning instead of closing, so the form can show it.
+    // Closing on a warning would hide the one moment the admin can still fix a bad link.
     const handleCreateResource = async (payload: ResourcePayload) => {
-        await createResource.mutateAsync({ moduleId: module.id, payload });
-        setAddingForm(null);
+        const { recordingLinkWarning } = await createResource.mutateAsync({ moduleId: module.id, payload });
+        if (!recordingLinkWarning) setAddingForm(null);
+
+        return recordingLinkWarning;
+    };
+    const handleUpdateResource = async (payload: ResourcePayload) => {
+        if (!editingResource) return null;
+
+        const { recordingLinkWarning } = await updateResource.mutateAsync({ resourceId: editingResource.id, payload });
+        if (!recordingLinkWarning) setEditingResource(null);
+
+        return recordingLinkWarning;
     };
     const handleCreateAssignment = async (payload: AssignmentPayload) => {
         await createAssignment.mutateAsync({ moduleId: module.id, payload });
@@ -289,6 +332,12 @@ export function ModuleTableRow({
     };
 
     const deleteItem = (item: ModuleItem) => {
+        // Unlike deleting a module (soft-deleted, recoverable for 30 days), resources,
+        // assignments, and evaluations are all deleted permanently with no recovery.
+        if (!window.confirm(`Delete "${item.title}"? This can't be undone.`)) {
+            return;
+        }
+
         if (item.item_type === 'assignment') deleteAssignment.mutate(item.id);
         else if (item.item_type === 'evaluation') deleteEvaluation.mutate(item.id);
         else deleteResource.mutate(item.id);
@@ -417,6 +466,7 @@ export function ModuleTableRow({
                                         key={`resource-${item.id}`}
                                         item={item}
                                         onDelete={() => deleteItem(item)}
+                                        onEdit={() => setEditingResource(item as ResourceModuleItem)}
                                     />
                                 ))}
                             </ContentGroup>
@@ -464,7 +514,17 @@ export function ModuleTableRow({
 
             {/* ── Add-content modals ────────────────────────────────────── */}
             <Modal isOpen={addingForm === 'resource'} onClose={() => setAddingForm(null)} title={module.title} className="max-w-2xl" bodyClassName="p-0">
-                <ResourceForm onSubmit={handleCreateResource} onCancel={() => setAddingForm(null)} />
+                <ResourceForm onSubmit={handleCreateResource} onCancel={() => setAddingForm(null)} cohorts={cohortCourses} />
+            </Modal>
+            <Modal isOpen={!!editingResource} onClose={() => setEditingResource(null)} title={module.title} className="max-w-2xl" bodyClassName="p-0">
+                {editingResource && (
+                    <ResourceForm
+                        resource={editingResource}
+                        onSubmit={handleUpdateResource}
+                        onCancel={() => setEditingResource(null)}
+                        cohorts={cohortCourses}
+                    />
+                )}
             </Modal>
             <Modal isOpen={addingForm === 'assignment'} onClose={() => setAddingForm(null)} title={module.title} bodyClassName="p-0">
                 <AssignmentQuickForm onSubmit={handleCreateAssignment} onCancel={() => setAddingForm(null)} />

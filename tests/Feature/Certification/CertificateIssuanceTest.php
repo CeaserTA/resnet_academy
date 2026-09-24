@@ -70,6 +70,52 @@ it('issues a certificate exactly once per student per course, even if triggered 
     Bus::assertDispatchedTimes(GenerateCertificatePdf::class, 1);
 });
 
+/**
+ * The queued job only runs when a worker is running. Without this endpoint rendering on demand,
+ * a student on an install with no worker sees "Certificate generating…" forever — the bug this
+ * covers.
+ */
+it('renders the certificate PDF on demand when the queued job has not run yet', function (): void {
+    Storage::fake('r2', ['url' => 'https://cdn.test']);
+
+    $certificate = Certificate::factory()->create(['certificate_url' => null]);
+    $student = $certificate->student;
+
+    $response = $this->actingAs($student)->get("/api/v1/certificates/{$certificate->id}/download");
+
+    $response->assertRedirect();
+    expect($response->headers->get('Location'))->toStartWith('https://cdn.test');
+
+    $certificate->refresh();
+    expect($certificate->certificate_url)->toBe("certificates/{$certificate->certificate_number}.pdf");
+    Storage::disk('r2')->assertExists($certificate->certificate_url);
+});
+
+it('serves an already-generated certificate without re-rendering it', function (): void {
+    Storage::fake('r2', ['url' => 'https://cdn.test']);
+
+    $certificate = Certificate::factory()->create(['certificate_url' => null]);
+
+    $this->actingAs($certificate->student)->get("/api/v1/certificates/{$certificate->id}/download")->assertRedirect();
+    $certificate->refresh();
+    $firstBytes = Storage::disk('r2')->get($certificate->certificate_url);
+
+    $this->actingAs($certificate->student)->get("/api/v1/certificates/{$certificate->id}/download")->assertRedirect();
+
+    expect(Storage::disk('r2')->get($certificate->certificate_url))->toBe($firstBytes);
+});
+
+it('does not let one student download another student\'s certificate', function (): void {
+    Storage::fake('r2', ['url' => 'https://cdn.test']);
+
+    $certificate = Certificate::factory()->create(['certificate_url' => null]);
+    $someoneElse = User::factory()->student()->create();
+
+    $this->actingAs($someoneElse)->get("/api/v1/certificates/{$certificate->id}/download")->assertForbidden();
+
+    expect($certificate->refresh()->certificate_url)->toBeNull();
+});
+
 it('stores the generated certificate PDF on R2 as a path, and the API resolves it to a full URL', function (): void {
     Storage::fake('r2', ['url' => 'https://cdn.test']);
 
