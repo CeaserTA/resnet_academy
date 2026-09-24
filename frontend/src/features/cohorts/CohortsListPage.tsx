@@ -163,8 +163,8 @@ export function CohortsListPage() {
             )}
 
             {!isLoading && sortedCohorts.length > 0 && (
-                <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
-                    <table className="w-full text-sm">
+                <div className="overflow-x-auto rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
+                    <table className="w-full min-w-[640px] text-sm">
                         <thead>
                             <tr className="border-b border-surface-100 bg-surface-50">
                                 <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-ink-600">Cohort</th>

@@ -41,8 +41,8 @@ export function CourseCohortsPanel({ courseId }: CourseCohortsPanelProps) {
             <p className="text-xs text-ink-600">
                 Manage capacity, instructor and status for these offerings from each cohort&apos;s page.
             </p>
-            <div className="overflow-hidden rounded-lg border border-surface-100">
-                <table className="w-full text-sm">
+            <div className="overflow-x-auto rounded-lg border border-surface-100">
+                <table className="w-full min-w-[520px] text-sm">
                     <thead>
                         <tr className="border-b border-surface-100 bg-surface-50">
                             <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-ink-600">Cohort</th>

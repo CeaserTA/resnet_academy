@@ -101,6 +101,15 @@
     --animate-dialog-in: dialog-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
     --animate-dialog-out: dialog-out 150ms ease-in forwards;
     --animate-fade-slide-in: fade-slide-in 200ms ease-out;
+    --animate-sheet-in: sheet-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    --animate-sheet-out: sheet-out 160ms ease-in forwards;
+
+    @keyframes sheet-in {
+        from { translate: 0 100%; }
+    }
+    @keyframes sheet-out {
+        to { translate: 0 100%; }
+    }
 
     @keyframes overlay-in {
         from { opacity: 0; }
@@ -119,6 +128,21 @@
     @keyframes fade-slide-in {
         from { opacity: 0; translate: 0 4px; }
     }
+
+    /* ── Illustration motion (Course Finder hero) ── */
+    --animate-float: float 4s ease-in-out infinite;
+    --animate-dash-flow: dash-flow 1.6s linear infinite;
+    --animate-glow: glow 2.4s ease-in-out infinite;
+
+    @keyframes float {
+        50% { transform: translateY(-6px); }
+    }
+    @keyframes dash-flow {
+        to { stroke-dashoffset: -18; }
+    }
+    @keyframes glow {
+        50% { opacity: 0.45; }
+    }
 }
 
 /* Anything marked data-reduce-motion drops its animations/transitions for users who ask for it. */
@@ -126,6 +150,7 @@
     [data-reduce-motion],
     [data-reduce-motion] * {
         animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
     }
 }

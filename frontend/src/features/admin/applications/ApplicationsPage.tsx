@@ -226,81 +226,86 @@ export function ApplicationsPage() {
 
             {!isLoading && applications.length > 0 && (
                 <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
-                    {/* Column headers */}
-                    <div className="grid grid-cols-[minmax(180px,1fr)_minmax(140px,1fr)_120px_110px_80px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
-                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Student</span>
-                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Course</span>
-                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Status</span>
-                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600 text-right">Applied</span>
-                        <span />
-                    </div>
+                    {/* Scrolls sideways on narrow screens instead of clipping columns */}
+                    <div className="overflow-x-auto">
+                        <div className="min-w-[700px]">
+                            {/* Column headers */}
+                            <div className="grid grid-cols-[minmax(180px,1fr)_minmax(140px,1fr)_120px_110px_80px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
+                                <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Student</span>
+                                <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Course</span>
+                                <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Status</span>
+                                <span className="text-xs font-medium uppercase tracking-wide text-ink-600 text-right">Applied</span>
+                                <span />
+                            </div>
 
-                    {/* Rows */}
-                    <ul className="divide-y divide-surface-100">
-                        {applications.map((application) => {
-                            const status = courseApplicationStatusDisplay(application.status);
+                            {/* Rows */}
+                            <ul className="divide-y divide-surface-100">
+                                {applications.map((application) => {
+                                    const status = courseApplicationStatusDisplay(application.status);
 
-                            return (
-                                <li
-                                    key={application.id}
-                                    className="grid grid-cols-[minmax(180px,1fr)_minmax(140px,1fr)_120px_110px_80px] items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-50"
-                                >
-                                    {/* Student */}
-                                    <div className="flex min-w-0 items-center gap-2">
-                                        <Avatar
-                                            name={application.student.name}
-                                            size="sm"
-                                            className="size-7 shrink-0 text-xs"
-                                        />
-                                        <div className="min-w-0">
-                                            <p className="truncate text-sm font-medium text-ink-900">{application.student.name}</p>
-                                            <p className="truncate text-xs text-ink-600">{application.student.email}</p>
-                                        </div>
-                                    </div>
+                                    return (
+                                        <li
+                                            key={application.id}
+                                            className="grid grid-cols-[minmax(180px,1fr)_minmax(140px,1fr)_120px_110px_80px] items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-50"
+                                        >
+                                            {/* Student */}
+                                            <div className="flex min-w-0 items-center gap-2">
+                                                <Avatar
+                                                    name={application.student.name}
+                                                    size="sm"
+                                                    className="size-7 shrink-0 text-xs"
+                                                />
+                                                <div className="min-w-0">
+                                                    <p className="truncate text-sm font-medium text-ink-900">{application.student.name}</p>
+                                                    <p className="truncate text-xs text-ink-600">{application.student.email}</p>
+                                                </div>
+                                            </div>
 
-                                    {/* Course */}
-                                    <p className="truncate text-sm text-ink-600">{application.course.title}</p>
+                                            {/* Course */}
+                                            <p className="truncate text-sm text-ink-600">{application.course.title}</p>
 
-                                    {/* Status */}
-                                    <Badge label={status.label} tone={status.tone} icon={status.icon} />
+                                            {/* Status */}
+                                            <Badge label={status.label} tone={status.tone} icon={status.icon} />
 
-                                    {/* Applied */}
-                                    <p className="text-right font-mono text-xs text-ink-600">
-                                        {new Date(application.applied_at).toLocaleDateString()}
-                                    </p>
+                                            {/* Applied */}
+                                            <p className="text-right font-mono text-xs text-ink-600">
+                                                {new Date(application.applied_at).toLocaleDateString()}
+                                            </p>
 
-                                    {/* Actions */}
-                                    <div className="flex items-center justify-end gap-1">
-                                        {application.status === 'pending' && (
-                                            <>
+                                            {/* Actions */}
+                                            <div className="flex items-center justify-end gap-1">
+                                                {application.status === 'pending' && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => approveApplication.mutate(application.id)}
+                                                            aria-label={`Approve ${application.student.name}`}
+                                                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-ink-900"
+                                                        >
+                                                            <Check className="size-4 text-success-600" aria-hidden="true" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setRejectingApplication(application)}
+                                                            aria-label={`Reject ${application.student.name}`}
+                                                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-danger-600/10 hover:text-danger-600"
+                                                        >
+                                                            <X className="size-4" aria-hidden="true" />
+                                                        </button>
+                                                    </>
+                                                )}
                                                 <button
-                                                    onClick={() => approveApplication.mutate(application.id)}
-                                                    aria-label={`Approve ${application.student.name}`}
+                                                    onClick={() => setViewingApplication(application)}
+                                                    aria-label={`View ${application.student.name}`}
                                                     className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-ink-900"
                                                 >
-                                                    <Check className="size-4 text-success-600" aria-hidden="true" />
+                                                    <Eye className="size-4" aria-hidden="true" />
                                                 </button>
-                                                <button
-                                                    onClick={() => setRejectingApplication(application)}
-                                                    aria-label={`Reject ${application.student.name}`}
-                                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-danger-600/10 hover:text-danger-600"
-                                                >
-                                                    <X className="size-4" aria-hidden="true" />
-                                                </button>
-                                            </>
-                                        )}
-                                        <button
-                                            onClick={() => setViewingApplication(application)}
-                                            aria-label={`View ${application.student.name}`}
-                                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-ink-900"
-                                        >
-                                            <Eye className="size-4" aria-hidden="true" />
-                                        </button>
-                                    </div>
-                                </li>
-                            );
-                        })}
-                    </ul>
+                                            </div>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             )}
 

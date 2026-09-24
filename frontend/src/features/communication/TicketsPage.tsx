@@ -213,7 +213,7 @@ function StaffTicketsView() {
                     {/* Toolbar */}
                     <div className="mb-3 flex flex-wrap items-center gap-2">
                         {/* Search */}
-                        <div className="relative min-w-0 flex-1 sm:max-w-56">
+                        <div className="relative w-full sm:w-auto sm:min-w-0 sm:max-w-56 sm:flex-1">
                             <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-600" aria-hidden="true" />
                             <input
                                 value={search}
@@ -223,14 +223,14 @@ function StaffTicketsView() {
                             />
                         </div>
 
-                        {/* Status tabs */}
-                        <div className="flex items-center gap-0.5 rounded-lg border border-surface-100 bg-surface-50 p-0.5">
+                        {/* Status tabs — scroll sideways on narrow screens rather than clipping */}
+                        <div className="scrollbar-hide flex max-w-full items-center gap-0.5 overflow-x-auto rounded-lg border border-surface-100 bg-surface-50 p-0.5">
                             {STATUS_TABS.map(({ value, label }) => (
                                 <button
                                     key={value}
                                     onClick={() => setStatusFilter(value)}
                                     className={cn(
-                                        'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                                        'shrink-0 whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
                                         statusFilter === value
                                             ? 'bg-blue-600 text-white shadow-sm'
                                             : 'text-ink-600 hover:text-ink-900',
@@ -262,91 +262,96 @@ function StaffTicketsView() {
 
                     {!isLoading && filtered.length > 0 && (
                         <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
-                            {/* Table header */}
-                            <div className="grid grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_120px_60px_100px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
-                                <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Student</span>
-                                <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Subject</span>
-                                <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Status</span>
-                                <span className="text-xs font-medium uppercase tracking-wide text-ink-600">View</span>
-                                <SortHeader
-                                    label="Time"
-                                    active={true}
-                                    dir={sortDir}
-                                    onClick={() => setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))}
-                                />
-                            </div>
+                            {/* Scrolls sideways on narrow screens instead of clipping columns */}
+                            <div className="overflow-x-auto">
+                                <div className="min-w-[670px]">
+                                    {/* Table header */}
+                                    <div className="grid grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_120px_60px_100px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
+                                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Student</span>
+                                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Subject</span>
+                                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Status</span>
+                                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">View</span>
+                                        <SortHeader
+                                            label="Time"
+                                            active={true}
+                                            dir={sortDir}
+                                            onClick={() => setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))}
+                                        />
+                                    </div>
 
-                            {/* Rows */}
-                            <ul className="divide-y divide-surface-100">
-                                {filtered.map((ticket) => (
-                                    <li
-                                        key={ticket.id}
-                                        onClick={() => setSelectedTicketId(ticket.id)}
-                                        className={cn(
-                                            'grid cursor-pointer grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_120px_60px_100px] items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-50',
-                                            selectedTicketId === ticket.id && 'bg-blue-50',
-                                        )}
-                                    >
-                                        {/* Student */}
-                                        <div className="flex min-w-0 items-center gap-2">
-                                            {ticket.student ? (
-                                                <>
-                                                    <Avatar
-                                                        name={ticket.student.name}
-                                                        src={ticket.student.avatar_url}
-                                                        size="sm"
-                                                        className="size-7 shrink-0 text-xs"
-                                                    />
-                                                    <div className="min-w-0">
-                                                        <p className="truncate text-sm font-medium text-ink-900">
-                                                            {ticket.student.name}
-                                                        </p>
-                                                        <p className="truncate text-xs text-ink-600">
-                                                            {ticket.student.email}
-                                                        </p>
-                                                    </div>
-                                                </>
-                                            ) : (
-                                                <span className="text-sm text-ink-600">—</span>
-                                            )}
-                                        </div>
-
-                                        {/* Subject + course */}
-                                        <div className="min-w-0">
-                                            <p className="truncate text-sm text-ink-900">{ticket.subject}</p>
-                                            {ticket.course && (
-                                                <p className="truncate text-xs text-ink-600">{ticket.course.title}</p>
-                                            )}
-                                        </div>
-
-                                        {/* Status badge — click to change */}
-                                        <div onClick={(e) => e.stopPropagation()}>
-                                            <StatusBadge
-                                                ticket={ticket}
-                                                onStatusChange={(status) =>
-                                                    quickUpdateStatus.mutate({ id: ticket.id, status })
-                                                }
-                                            />
-                                        </div>
-
-                                        {/* View button */}
-                                        <div onClick={(e) => e.stopPropagation()}>
-                                            <button
+                                    {/* Rows */}
+                                    <ul className="divide-y divide-surface-100">
+                                        {filtered.map((ticket) => (
+                                            <li
+                                                key={ticket.id}
                                                 onClick={() => setSelectedTicketId(ticket.id)}
-                                                aria-label={`View ticket: ${ticket.subject}`}
-                                                className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-blue-600"
+                                                className={cn(
+                                                    'grid cursor-pointer grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_120px_60px_100px] items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-50',
+                                                    selectedTicketId === ticket.id && 'bg-blue-50',
+                                                )}
                                             >
-                                                <Eye className="size-4" aria-hidden="true" />
-                                            </button>
-                                        </div>
+                                                {/* Student */}
+                                                <div className="flex min-w-0 items-center gap-2">
+                                                    {ticket.student ? (
+                                                        <>
+                                                            <Avatar
+                                                                name={ticket.student.name}
+                                                                src={ticket.student.avatar_url}
+                                                                size="sm"
+                                                                className="size-7 shrink-0 text-xs"
+                                                            />
+                                                            <div className="min-w-0">
+                                                                <p className="truncate text-sm font-medium text-ink-900">
+                                                                    {ticket.student.name}
+                                                                </p>
+                                                                <p className="truncate text-xs text-ink-600">
+                                                                    {ticket.student.email}
+                                                                </p>
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <span className="text-sm text-ink-600">—</span>
+                                                    )}
+                                                </div>
 
-                                        {/* Time */}
-                                        <span className="shrink-0 text-xs tabular-nums text-ink-600">
-                                            {formatRelativeTime(ticket.created_at)}
-                                        </span>
-                                    </li>
-                                ))}
-                            </ul>
+                                                {/* Subject + course */}
+                                                <div className="min-w-0">
+                                                    <p className="truncate text-sm text-ink-900">{ticket.subject}</p>
+                                                    {ticket.course && (
+                                                        <p className="truncate text-xs text-ink-600">{ticket.course.title}</p>
+                                                    )}
+                                                </div>
+
+                                                {/* Status badge — click to change */}
+                                                <div onClick={(e) => e.stopPropagation()}>
+                                                    <StatusBadge
+                                                        ticket={ticket}
+                                                        onStatusChange={(status) =>
+                                                            quickUpdateStatus.mutate({ id: ticket.id, status })
+                                                        }
+                                                    />
+                                                </div>
+
+                                                {/* View button */}
+                                                <div onClick={(e) => e.stopPropagation()}>
+                                                    <button
+                                                        onClick={() => setSelectedTicketId(ticket.id)}
+                                                        aria-label={`View ticket: ${ticket.subject}`}
+                                                        className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-blue-600"
+                                                    >
+                                                        <Eye className="size-4" aria-hidden="true" />
+                                                    </button>
+                                                </div>
+
+                                                {/* Time */}
+                                                <span className="shrink-0 text-xs tabular-nums text-ink-600">
+                                                    {formatRelativeTime(ticket.created_at)}
+                                                </span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
 
                             {/* Footer count */}
                             <div className="border-t border-surface-100 bg-surface-50 px-4 py-2">

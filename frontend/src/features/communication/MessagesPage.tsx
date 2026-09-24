@@ -1,6 +1,6 @@
 import { useMemo, useRef, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
-import { MessageSquare, Plus, Search, Send } from 'lucide-react';
+import { Link, useNavigate, useParams } from 'react-router';
+import { ArrowLeft, MessageSquare, Plus, Search, Send } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
@@ -105,6 +105,13 @@ function ConversationThread({ conversationId }: { conversationId: number }) {
         <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
             {/* Thread header */}
             <div className="flex shrink-0 items-center gap-3 border-b border-surface-100 bg-surface-50 px-4 py-3">
+                <Link
+                    to="/messages"
+                    aria-label="Back to conversations"
+                    className="-ml-2 rounded-lg p-1.5 text-ink-600 hover:bg-surface-100 hover:text-ink-900 md:hidden"
+                >
+                    <ArrowLeft className="size-4" aria-hidden="true" />
+                </Link>
                 <Avatar name={others[0]?.name ?? name} src={others[0]?.avatar_url} size="sm" className="size-8" />
                 <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-ink-900">{name}</p>
@@ -195,12 +202,19 @@ export function MessagesPage() {
     }, [conversations, search, user?.id]);
 
     const totalUnread = (conversations ?? []).reduce((sum, c) => sum + (c.unread_count ?? 0), 0);
+    // Phones show either the list or the open thread; tablet+ shows both side by side.
+    const hasThread = Number.isFinite(conversationId);
 
     return (
         <div className="flex h-full gap-3">
 
             {/* ── Conversation list ─────────────────────────────────────── */}
-            <div className="flex w-72 shrink-0 flex-col overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
+            <div
+                className={cn(
+                    'w-full shrink-0 flex-col overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm md:flex md:w-72',
+                    hasThread ? 'hidden' : 'flex',
+                )}
+            >
 
                 {/* List header */}
                 <div className="flex shrink-0 items-center justify-between border-b border-surface-100 bg-surface-50 px-4 py-3">
@@ -263,10 +277,10 @@ export function MessagesPage() {
             </div>
 
             {/* ── Thread panel ─────────────────────────────────────────── */}
-            {Number.isFinite(conversationId) ? (
+            {hasThread ? (
                 <ConversationThread conversationId={conversationId} />
             ) : (
-                <div className="flex flex-1 items-center justify-center overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
+                <div className="hidden flex-1 items-center justify-center overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm md:flex">
                     <EmptyState
                         icon={MessageSquare}
                         title="No conversation selected"

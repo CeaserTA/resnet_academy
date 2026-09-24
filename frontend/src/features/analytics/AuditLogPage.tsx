@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Pagination } from '@/components/ui/Pagination';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { describeAuditLogEntry } from '@/lib/auditLog';
+import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 
 import { useAuditLogs } from '@/features/analytics/useAnalytics';
 
@@ -14,6 +15,7 @@ import { useAuditLogs } from '@/features/analytics/useAnalytics';
  * grade." Admin only.
  */
 export function AuditLogPage() {
+    usePageHeader('Audit log', 'Track who changed what, and when.');
     const [entityType, setEntityType] = useState('');
     const [action, setAction] = useState('');
     const [page, setPage] = useState(1);
@@ -31,12 +33,6 @@ export function AuditLogPage() {
 
     return (
         <div className="space-y-4">
-            {/* Page header */}
-            <div>
-                <h1 className="text-lg font-semibold text-ink-900">Audit log</h1>
-                <p className="text-xs text-ink-600">Track who changed what, and when.</p>
-            </div>
-
             {/* Filters */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Input
@@ -68,9 +64,9 @@ export function AuditLogPage() {
             {!isLoading && logs.length > 0 && (
                 <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
                     {/* Column headers */}
-                    <div className="grid grid-cols-[1fr_160px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
+                    <div className="grid grid-cols-1 items-center gap-2 border-b border-surface-100 sm:grid-cols-[1fr_160px] bg-surface-50 px-4 py-2.5">
                         <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Event</span>
-                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600 text-right">When</span>
+                        <span className="hidden text-right text-xs font-medium uppercase tracking-wide text-ink-600 sm:block">When</span>
                     </div>
 
                     {/* Rows */}
@@ -78,7 +74,7 @@ export function AuditLogPage() {
                         {logs.map((log) => (
                             <li
                                 key={log.id}
-                                className="grid grid-cols-[1fr_160px] items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-50"
+                                className="grid grid-cols-1 items-center gap-1 px-4 py-3 transition-colors hover:bg-surface-50 sm:grid-cols-[1fr_160px] sm:gap-2"
                             >
                                 <div>
                                     <p className="text-sm text-ink-900">{describeAuditLogEntry(log)}</p>
@@ -86,7 +82,7 @@ export function AuditLogPage() {
                                         {log.action} · {log.entity_type} #{log.entity_id}
                                     </p>
                                 </div>
-                                <p className="text-right font-mono text-xs text-ink-600">
+                                <p className="font-mono text-xs text-ink-600 sm:text-right">
                                     {new Date(log.created_at).toLocaleString()}
                                 </p>
                             </li>

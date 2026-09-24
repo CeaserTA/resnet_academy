@@ -222,65 +222,70 @@ export function ProvisionUserPage() {
 
                 {!isLoading && filteredUsers.length > 0 && (
                     <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
-                        {/* Column headers */}
-                        <div className="grid grid-cols-[minmax(180px,1fr)_130px_minmax(140px,1fr)_60px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
-                            <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Name</span>
-                            <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Role</span>
-                            <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Status</span>
-                            <span />
-                        </div>
+                        {/* Scrolls sideways on narrow screens instead of clipping columns */}
+                        <div className="overflow-x-auto">
+                            <div className="min-w-[570px]">
+                                {/* Column headers */}
+                                <div className="grid grid-cols-[minmax(180px,1fr)_130px_minmax(140px,1fr)_60px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
+                                    <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Name</span>
+                                    <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Role</span>
+                                    <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Status</span>
+                                    <span />
+                                </div>
 
-                        {/* Rows */}
-                        <ul className="divide-y divide-surface-100">
-                            {filteredUsers.map((member) => {
-                                const role = userRoleDisplay(member.role);
-                                const status = userStatusDisplay(member.status);
-                                const isSelf = member.id === currentUser?.id;
+                                {/* Rows */}
+                                <ul className="divide-y divide-surface-100">
+                                    {filteredUsers.map((member) => {
+                                        const role = userRoleDisplay(member.role);
+                                        const status = userStatusDisplay(member.status);
+                                        const isSelf = member.id === currentUser?.id;
 
-                                return (
-                                    <li
-                                        key={member.id}
-                                        className="grid grid-cols-[minmax(180px,1fr)_130px_minmax(140px,1fr)_60px] items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-50"
-                                    >
-                                        {/* Name */}
-                                        <div className="flex min-w-0 items-center gap-2">
-                                            <Avatar
-                                                name={member.name}
-                                                size="sm"
-                                                className="size-7 shrink-0 text-xs"
-                                            />
-                                            <div className="min-w-0">
-                                                <p className="truncate text-sm text-ink-900">{member.name}</p>
-                                                <p className="truncate text-xs text-ink-600">{member.email}</p>
-                                            </div>
-                                        </div>
-
-                                        {/* Role */}
-                                        <Badge label={role.label} tone={role.tone} icon={role.icon} />
-
-                                        {/* Status */}
-                                        <div className="flex flex-wrap items-center gap-1.5">
-                                            <Badge label={status.label} tone={status.tone} icon={status.icon} />
-                                            {!member.last_login_at && member.role !== 'student' && (
-                                                <Badge label="Invited" tone="neutral" icon={Mail} />
-                                            )}
-                                        </div>
-
-                                        {/* Actions */}
-                                        <div className="flex justify-end">
-                                            <button
-                                                onClick={() => setManagingUser(member)}
-                                                disabled={isSelf}
-                                                aria-label={`Manage ${member.name}`}
-                                                className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-ink-900 disabled:pointer-events-none disabled:opacity-40"
+                                        return (
+                                            <li
+                                                key={member.id}
+                                                className="grid grid-cols-[minmax(180px,1fr)_130px_minmax(140px,1fr)_60px] items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-50"
                                             >
-                                                <Settings2 className="size-4" aria-hidden="true" />
-                                            </button>
-                                        </div>
-                                    </li>
-                                );
-                            })}
-                        </ul>
+                                                {/* Name */}
+                                                <div className="flex min-w-0 items-center gap-2">
+                                                    <Avatar
+                                                        name={member.name}
+                                                        size="sm"
+                                                        className="size-7 shrink-0 text-xs"
+                                                    />
+                                                    <div className="min-w-0">
+                                                        <p className="truncate text-sm text-ink-900">{member.name}</p>
+                                                        <p className="truncate text-xs text-ink-600">{member.email}</p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Role */}
+                                                <Badge label={role.label} tone={role.tone} icon={role.icon} />
+
+                                                {/* Status */}
+                                                <div className="flex flex-wrap items-center gap-1.5">
+                                                    <Badge label={status.label} tone={status.tone} icon={status.icon} />
+                                                    {!member.last_login_at && member.role !== 'student' && (
+                                                        <Badge label="Invited" tone="neutral" icon={Mail} />
+                                                    )}
+                                                </div>
+
+                                                {/* Actions */}
+                                                <div className="flex justify-end">
+                                                    <button
+                                                        onClick={() => setManagingUser(member)}
+                                                        disabled={isSelf}
+                                                        aria-label={`Manage ${member.name}`}
+                                                        className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-ink-900 disabled:pointer-events-none disabled:opacity-40"
+                                                    >
+                                                        <Settings2 className="size-4" aria-hidden="true" />
+                                                    </button>
+                                                </div>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>
