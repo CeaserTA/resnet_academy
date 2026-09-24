@@ -49,8 +49,9 @@ interface AttentionCardProps {
 }
 
 const ATTENTION_STYLES: Record<AttentionCardProps['tone'], { card: string; icon: string; value: string }> = {
-    danger: { card: 'bg-red-50 border-red-100', icon: 'bg-red-100 text-danger-600', value: 'text-danger-600' },
-    warning: { card: 'bg-amber-50 border-amber-100', icon: 'bg-amber-100 text-amber-600', value: 'text-amber-700' },
+    danger: { card: 'bg-danger-600/5 border-danger-600/15', icon: 'bg-danger-600/10 text-danger-600', value: 'text-danger-600' },
+    // accent-amber, not amber-500 — amber-500 is only 2.2:1 on white, too faint for text/icons.
+    warning: { card: 'bg-amber-100/50 border-amber-100', icon: 'bg-amber-100 text-accent-amber', value: 'text-accent-amber' },
     neutral: { card: 'bg-surface-0 border-surface-100', icon: 'bg-surface-100 text-ink-600', value: 'text-ink-900' },
 };
 
@@ -122,8 +123,10 @@ export function AdminDashboardPage() {
         <div className="max-w-7xl space-y-5">
 
             {/* ── Needs action ──────────────────────────────────────────────── */}
-            <section>
-                <p className="mb-2.5 text-xs font-semibold uppercase tracking-widest text-ink-600">Needs action</p>
+            {/* Sits on a tinted band with a stronger label so it reads as "act on this", while the
+                Volume row below stays flat on the page background as purely informational. */}
+            <section className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                <p className="mb-3 text-xs font-bold uppercase tracking-widest text-blue-700">Needs action</p>
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                     <AttentionCard icon={AlertTriangle} label="At-risk students" value={data.at_risk_students} sub="No activity in 14 days" tone="danger" to="/admin/courses" />
                     <AttentionCard icon={LifeBuoy} label="Open tickets" value={data.open_tickets} sub="Awaiting response" tone="warning" to="/tickets" />
