@@ -12,13 +12,16 @@ import {
     Search,
     Trash2,
 } from 'lucide-react';
-import { useCourses } from '@/features/catalogue/useCourses';
+import { useAllCourses } from '@/features/catalogue/useCourses';
 import { useDeleteCourse } from '@/features/admin/courses/useAdminCourses';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import { DropdownMenu } from '@/components/ui/DropdownMenu';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Alert } from '@/components/ui/Alert';
+import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { ApiError } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 import type { Course, CourseStatus } from '@/lib/api/types';
 
@@ -286,15 +289,28 @@ const STATUS_FILTERS: { value: CourseStatus | 'all'; label: string }[] = [
 
 export function CourseListPage() {
     const { user } = useAuth();
-    const { data, isLoading } = useCourses({});
+    const { data, isLoading } = useAllCourses();
     const deleteCourse = useDeleteCourse();
 
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<CourseStatus | 'all'>('all');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [deleteError, setDeleteError] = useState<string | null>(null);
 
     const isAdmin = user?.role === 'admin';
-    const courses = useMemo(() => data?.data ?? [], [data]);
+    usePageHeader(
+        isAdmin ? 'Courses' : 'My courses',
+        isAdmin ? 'Manage and monitor your curriculum' : 'Manage the courses you teach',
+    );
+    const courses = useMemo(() => data ?? [], [data]);
+
+    const handleDelete = (course: Course) => {
+        setDeleteError(null);
+        deleteCourse.mutate(course.id, {
+            onError: (error) =>
+                setDeleteError(error instanceof ApiError ? error.message : `Could not delete "${course.title}". Try again.`),
+        });
+    };
 
     const filteredCourses = useMemo(() => {
         return courses.filter((c) => {
@@ -307,27 +323,19 @@ export function CourseListPage() {
     return (
         <div className="space-y-4">
 
-            {/* ── Page header ───────────────────────────────────────────────── */}
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                    <h1 className="text-lg font-semibold text-ink-900">
-                        {isAdmin ? 'Courses' : 'My courses'}
-                    </h1>
-                    <p className="text-xs text-ink-600">
-                        {isAdmin
-                            ? 'Manage and monitor your curriculum'
-                            : 'Manage the courses you teach'}
-                    </p>
-                </div>
-                {isAdmin && (
-                    <Link to="/admin/courses/new">
-                        <Button size="sm">
+            {/* ── Primary action — title/subtitle live in the top bar (usePageHeader) ── */}
+            {isAdmin && (
+                <div className="flex items-center justify-end">
+                    <Button size="sm" asChild>
+                        <Link to="/admin/courses/new">
                             <Plus className="size-3.5" aria-hidden="true" />
                             New course
-                        </Button>
-                    </Link>
-                )}
-            </div>
+                        </Link>
+                    </Button>
+                </div>
+            )}
+
+            {deleteError && <Alert variant="error" message={deleteError} />}
 
             {/* ── Toolbar ───────────────────────────────────────────────────── */}
             <div className="flex flex-wrap items-center gap-2">
@@ -432,7 +440,7 @@ export function CourseListPage() {
                             key={course.id}
                             course={course}
                             isAdmin={isAdmin}
-                            onDelete={() => deleteCourse.mutate(course.id)}
+                            onDelete={() => handleDelete(course)}
                         />
                     ))}
                 </div>
@@ -453,7 +461,7 @@ export function CourseListPage() {
                             key={course.id}
                             course={course}
                             isAdmin={isAdmin}
-                            onDelete={() => deleteCourse.mutate(course.id)}
+                            onDelete={() => handleDelete(course)}
                         />
                     ))}
                 </div>
