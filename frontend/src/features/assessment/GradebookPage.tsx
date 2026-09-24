@@ -22,14 +22,14 @@ import type { GradebookRow } from '@/lib/api/types';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function gradeColour(pct: number | null): string {
-    if (pct === null) return 'text-ink-400';
+    if (pct === null) return 'text-ink-600';
     if (pct >= 80) return 'text-emerald-600';
     if (pct >= 60) return 'text-amber-600';
     return 'text-red-600';
 }
 
 function gradeBg(pct: number | null): string {
-    if (pct === null) return 'bg-surface-100 text-ink-500';
+    if (pct === null) return 'bg-surface-100 text-ink-600';
     if (pct >= 80) return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
     if (pct >= 60) return 'bg-amber-50 text-amber-700 border border-amber-200';
     return 'bg-red-50 text-red-700 border border-red-200';
@@ -77,13 +77,13 @@ function StudentDetailPanel({ row }: { row: GradebookRow }) {
                 </div>
                 <div className="flex flex-col divide-y divide-violet-100">
                     {row.assignment_scores.length === 0 && (
-                        <p className="px-4 py-3 text-xs text-ink-400">No assignments in this course.</p>
+                        <p className="px-4 py-3 text-xs text-ink-600">No assignments in this course.</p>
                     )}
                     {row.assignment_scores.map((score) => (
                         <div key={score.assignment_id} className="flex items-center justify-between gap-3 px-4 py-2.5">
                             <div className="min-w-0">
                                 <p className="truncate text-xs font-medium text-ink-800">{score.title}</p>
-                                <p className="text-[10px] text-ink-400">max {score.max_score}</p>
+                                <p className="text-[10px] text-ink-600">max {score.max_score}</p>
                             </div>
                             <ScoreBar score={score.final_score} max={score.max_score} />
                         </div>
@@ -104,7 +104,7 @@ function StudentDetailPanel({ row }: { row: GradebookRow }) {
                 </div>
                 <div className="flex flex-col divide-y divide-emerald-100">
                     {row.evaluation_scores.length === 0 && (
-                        <p className="px-4 py-3 text-xs text-ink-400">No evaluations in this course.</p>
+                        <p className="px-4 py-3 text-xs text-ink-600">No evaluations in this course.</p>
                     )}
                     {row.evaluation_scores.map((score) => (
                         <div key={score.evaluation_id} className="flex items-center justify-between gap-3 px-4 py-2.5">
@@ -179,7 +179,7 @@ export function GradebookPage() {
                 <div className="flex items-center gap-3">
                     <Link
                         to={`/admin/courses/${courseId}/modules`}
-                        className="flex items-center gap-1 text-sm text-ink-400 hover:text-blue-600"
+                        className="flex items-center gap-1 text-sm text-ink-600 hover:text-blue-600"
                     >
                         <ArrowLeft className="size-3.5" aria-hidden="true" />
                         Modules
@@ -206,13 +206,13 @@ export function GradebookPage() {
 
             {/* ── Search ── */}
             <div className="relative">
-                <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-ink-400" aria-hidden="true" />
+                <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-ink-600" aria-hidden="true" />
                 <input
                     type="search"
                     placeholder="Search students by name or email…"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full rounded-lg border border-surface-200 bg-surface-0 py-2 pl-9 pr-4 text-sm text-ink-900 placeholder:text-ink-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    className="w-full rounded-lg border border-surface-200 bg-surface-0 py-2 pl-9 pr-4 text-sm text-ink-900 placeholder:text-ink-300 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
                 />
             </div>
 
@@ -220,7 +220,7 @@ export function GradebookPage() {
             <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
 
                 {/* Column header */}
-                <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-0 border-b border-surface-100 bg-surface-50 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-ink-500">
+                <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-0 border-b border-surface-100 bg-surface-50 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-ink-600">
                     <span>Student</span>
                     <span className="w-28 text-center">Assignments</span>
                     <span className="w-28 text-center">Evaluations</span>
@@ -229,7 +229,7 @@ export function GradebookPage() {
                 </div>
 
                 {filtered.length === 0 && (
-                    <p className="py-8 text-center text-sm text-ink-400">No students match your search.</p>
+                    <p className="py-8 text-center text-sm text-ink-600">No students match your search.</p>
                 )}
 
                 {filtered.map((row) => {
@@ -253,7 +253,7 @@ export function GradebookPage() {
                                     <span className="block truncate text-sm font-medium text-ink-900">
                                         {row.student.name}
                                     </span>
-                                    <span className="block truncate text-xs text-ink-400">
+                                    <span className="block truncate text-xs text-ink-600">
                                         {row.student.email}
                                     </span>
                                 </span>
@@ -264,7 +264,7 @@ export function GradebookPage() {
                                         'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium',
                                         gradedCount === totalAssignments && totalAssignments > 0
                                             ? 'bg-violet-50 text-violet-700'
-                                            : 'bg-surface-100 text-ink-500',
+                                            : 'bg-surface-100 text-ink-600',
                                     )}>
                                         <FileCheck2 className="size-3" aria-hidden="true" />
                                         {gradedCount}/{totalAssignments}
@@ -277,7 +277,7 @@ export function GradebookPage() {
                                         'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium',
                                         passedCount === totalEvaluations && totalEvaluations > 0
                                             ? 'bg-emerald-50 text-emerald-700'
-                                            : 'bg-surface-100 text-ink-500',
+                                            : 'bg-surface-100 text-ink-600',
                                     )}>
                                         <ListChecks className="size-3" aria-hidden="true" />
                                         {passedCount}/{totalEvaluations}
@@ -295,7 +295,7 @@ export function GradebookPage() {
                                 </span>
 
                                 {/* Expand chevron */}
-                                <span className="w-8 flex justify-end text-ink-400">
+                                <span className="w-8 flex justify-end text-ink-600">
                                     {isExpanded
                                         ? <ChevronDown className="size-4" aria-hidden="true" />
                                         : <ChevronRight className="size-4" aria-hidden="true" />
@@ -315,7 +315,7 @@ export function GradebookPage() {
             </div>
 
             {/* Grade legend */}
-            <div className="flex flex-wrap items-center gap-3 text-xs text-ink-500">
+            <div className="flex flex-wrap items-center gap-3 text-xs text-ink-600">
                 <span className="font-medium">Grade legend:</span>
                 <span className="flex items-center gap-1.5">
                     <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />

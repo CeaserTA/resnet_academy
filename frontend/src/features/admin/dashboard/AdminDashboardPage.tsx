@@ -51,7 +51,7 @@ interface AttentionCardProps {
 const ATTENTION_STYLES: Record<AttentionCardProps['tone'], { card: string; icon: string; value: string }> = {
     danger: { card: 'bg-red-50 border-red-100', icon: 'bg-red-100 text-danger-600', value: 'text-danger-600' },
     warning: { card: 'bg-amber-50 border-amber-100', icon: 'bg-amber-100 text-amber-600', value: 'text-amber-700' },
-    neutral: { card: 'bg-surface-0 border-surface-100', icon: 'bg-surface-100 text-ink-400', value: 'text-ink-900' },
+    neutral: { card: 'bg-surface-0 border-surface-100', icon: 'bg-surface-100 text-ink-600', value: 'text-ink-900' },
 };
 
 function AttentionCard({ icon: Icon, label, value, sub, tone, to }: AttentionCardProps) {
@@ -59,13 +59,13 @@ function AttentionCard({ icon: Icon, label, value, sub, tone, to }: AttentionCar
     const inner = (
         <div className={cn('group flex flex-col gap-3 rounded-xl border p-4 shadow-sm transition-all hover:shadow-md', s.card)}>
             <div className="flex items-start justify-between">
-                <p className="text-xs font-medium uppercase tracking-widest text-ink-500">{label}</p>
+                <p className="text-xs font-medium uppercase tracking-widest text-ink-600">{label}</p>
                 <span className={cn('flex size-7 items-center justify-center rounded-lg', s.icon)}>
                     <Icon className="size-3.5" aria-hidden="true" />
                 </span>
             </div>
             <p className={cn('text-3xl font-bold tabular-nums', s.value)}>{value}</p>
-            <p className="text-xs text-ink-400">{sub}</p>
+            <p className="text-xs text-ink-600">{sub}</p>
         </div>
     );
     if (to) return <Link to={to} className="block">{inner}</Link>;
@@ -123,7 +123,7 @@ export function AdminDashboardPage() {
 
             {/* ── Needs action ──────────────────────────────────────────────── */}
             <section>
-                <p className="mb-2.5 text-xs font-semibold uppercase tracking-widest text-ink-400">Needs action</p>
+                <p className="mb-2.5 text-xs font-semibold uppercase tracking-widest text-ink-600">Needs action</p>
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                     <AttentionCard icon={AlertTriangle} label="At-risk students" value={data.at_risk_students} sub="No activity in 14 days" tone="danger" to="/admin/courses" />
                     <AttentionCard icon={LifeBuoy} label="Open tickets" value={data.open_tickets} sub="Awaiting response" tone="warning" to="/tickets" />
@@ -134,7 +134,7 @@ export function AdminDashboardPage() {
 
             {/* ── Volume metrics ────────────────────────────────────────────── */}
             <section>
-                <p className="mb-2.5 text-xs font-semibold uppercase tracking-widest text-ink-400">Volume</p>
+                <p className="mb-2.5 text-xs font-semibold uppercase tracking-widest text-ink-600">Volume</p>
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                     <VolumeCard icon={Users} label="Total students" value={data.students.toLocaleString()} />
                     <VolumeCard icon={UserCheck} label="Active enrolments" value={data.confirmed_enrolments.toLocaleString()} />
@@ -156,7 +156,7 @@ export function AdminDashboardPage() {
                     </div>
 
                     {data.recent_audit_logs.length === 0 ? (
-                        <p className="px-4 py-8 text-center text-sm text-ink-400">Nothing logged yet.</p>
+                        <p className="px-4 py-8 text-center text-sm text-ink-600">Nothing logged yet.</p>
                     ) : (
                         <ul className="divide-y divide-surface-100">
                             {data.recent_audit_logs.map((entry) => (
@@ -172,7 +172,7 @@ export function AdminDashboardPage() {
                                             {describeAuditLogEntry(entry)}
                                         </p>
                                     </div>
-                                    <p className="shrink-0 text-xs tabular-nums text-ink-400">
+                                    <p className="shrink-0 text-xs tabular-nums text-ink-600">
                                         {formatRelativeTime(entry.created_at)}
                                     </p>
                                 </li>
@@ -202,7 +202,7 @@ export function AdminDashboardPage() {
                             <h2 className="text-sm font-semibold text-ink-900">Courses</h2>
                         </div>
                         {Object.entries(data.courses_by_status).length === 0 ? (
-                            <p className="px-4 py-5 text-center text-sm text-ink-400">No courses yet.</p>
+                            <p className="px-4 py-5 text-center text-sm text-ink-600">No courses yet.</p>
                         ) : (
                             <ul className="divide-y divide-surface-100">
                                 {Object.entries(data.courses_by_status).map(([status, count]) => (

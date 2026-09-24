@@ -72,7 +72,7 @@ export function AdminEnrolmentsPage() {
             {/* Page header */}
             <div>
                 <h1 className="text-lg font-semibold text-ink-900">Enrolments / Roster</h1>
-                <p className="text-xs text-ink-400">
+                <p className="text-xs text-ink-600">
                     Every participant across instant and application-based courses.
                 </p>
             </div>
@@ -157,14 +157,14 @@ export function AdminEnrolmentsPage() {
                                         <Avatar name={enrolment.student.name} size="sm" className="size-7 shrink-0 text-xs" />
                                         <div className="min-w-0">
                                             <p className="truncate text-sm font-medium text-ink-900">{enrolment.student.name}</p>
-                                            <p className="truncate text-xs text-ink-400">{enrolment.student.email}</p>
+                                            <p className="truncate text-xs text-ink-600">{enrolment.student.email}</p>
                                         </div>
                                     </div>
 
                                     {/* Course & section */}
                                     <div className="min-w-0">
                                         <p className="truncate text-sm text-ink-900">{enrolment.course.title}</p>
-                                        <p className="truncate text-xs text-ink-400">{enrolment.cohort_course?.cohort_name ?? '—'}</p>
+                                        <p className="truncate text-xs text-ink-600">{enrolment.cohort_course?.cohort_name ?? '—'}</p>
                                     </div>
 
                                     {/* Source */}
@@ -179,7 +179,7 @@ export function AdminEnrolmentsPage() {
                                     </p>
 
                                     {/* Enrolled date */}
-                                    <p className="text-right font-mono text-xs text-ink-400">
+                                    <p className="text-right font-mono text-xs text-ink-600">
                                         {new Date(enrolment.applied_at).toLocaleDateString()}
                                     </p>
 
@@ -224,7 +224,7 @@ export function AdminEnrolmentsPage() {
                     {/* Pagination */}
                     {meta && meta.last_page > 1 && (
                         <div className="flex items-center justify-between border-t border-surface-100 px-4 py-2.5">
-                            <p className="text-xs text-ink-400">
+                            <p className="text-xs text-ink-600">
                                 Page {meta.current_page} of {meta.last_page} · {meta.total} enrolments
                             </p>
                             <div className="flex items-center gap-1">

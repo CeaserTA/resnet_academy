@@ -212,7 +212,7 @@ export function CourseFormPage() {
                 <h1 className="text-lg font-semibold text-ink-900">
                     {isEditing ? 'Edit course' : 'New course'}
                 </h1>
-                <p className="text-xs text-ink-400">
+                <p className="text-xs text-ink-600">
                     {isEditing ? 'Update the course details below.' : 'Fill in the details to create a new course.'}
                 </p>
             </div>
@@ -257,7 +257,7 @@ export function CourseFormPage() {
                                             type="button"
                                             onClick={() => setIsAddingCategory((v) => !v)}
                                             aria-label="Add category"
-                                            className="flex items-center justify-center rounded-lg p-2 text-ink-400 transition hover:bg-surface-100 hover:text-ink-900"
+                                            className="flex items-center justify-center rounded-lg p-2 text-ink-600 transition hover:bg-surface-100 hover:text-ink-900"
                                         >
                                             <Plus className="size-4" aria-hidden="true" />
                                         </button>
@@ -311,7 +311,7 @@ export function CourseFormPage() {
                                         <ImagePlus className="size-3.5" aria-hidden="true" />
                                         {thumbnailFile ? 'Change image' : 'Upload image'}
                                     </Button>
-                                    <p className="mt-1 text-xs text-ink-400">JPEG, PNG or WEBP · max 5 MB</p>
+                                    <p className="mt-1 text-xs text-ink-600">JPEG, PNG or WEBP · max 5 MB</p>
                                 </div>
                             </div>
                         </Section>
@@ -328,7 +328,7 @@ export function CourseFormPage() {
                         {/* Enrolment strategy */}
                         <Section title="Enrolment strategy">
                             <div className="flex items-start justify-between gap-4">
-                                <p className="text-xs text-ink-400">
+                                <p className="text-xs text-ink-600">
                                     Defaults from level — Beginner: Open, Intermediate: Advisory, Advanced: Application.
                                 </p>
                                 <label className="flex shrink-0 items-center gap-2 text-xs text-ink-900">
@@ -358,7 +358,7 @@ export function CourseFormPage() {
                                 <div className="space-y-3">
                                     <div>
                                         <p className="mb-1 text-sm font-medium text-ink-900">Eligibility questions</p>
-                                        <p className="mb-2 text-xs text-ink-400">
+                                        <p className="mb-2 text-xs text-ink-600">
                                             Yes/No questions the system grades automatically. An applicant who meets
                                             the pass threshold below is enrolled immediately — no review needed.
                                         </p>
@@ -402,7 +402,7 @@ export function CourseFormPage() {
                                                         type="button"
                                                         onClick={() => removeQuestion(index)}
                                                         aria-label={`Remove question ${index + 1}`}
-                                                        className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition hover:bg-danger-600/10 hover:text-danger-600"
+                                                        className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition hover:bg-danger-600/10 hover:text-danger-600"
                                                     >
                                                         <Trash2 className="size-4" aria-hidden="true" />
                                                     </button>
@@ -457,7 +457,7 @@ export function CourseFormPage() {
                     <div className="lg:self-start overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
                         <div className="border-b border-surface-100 bg-surface-50 px-4 py-3">
                             <h2 className="text-sm font-semibold text-ink-900">Instructors</h2>
-                            <p className="text-xs text-ink-400">Assign one or more instructors to this course.</p>
+                            <p className="text-xs text-ink-600">Assign one or more instructors to this course.</p>
                         </div>
                         <div className="bg-blue-50/20 p-4">
                             <Controller
@@ -484,7 +484,7 @@ export function CourseFormPage() {
                                             </label>
                                         ))}
                                         {!instructors?.length && (
-                                            <p className="text-xs text-ink-400">No instructors yet.</p>
+                                            <p className="text-xs text-ink-600">No instructors yet.</p>
                                         )}
                                     </div>
                                 )}

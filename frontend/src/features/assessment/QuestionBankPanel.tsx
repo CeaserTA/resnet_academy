@@ -215,9 +215,9 @@ function BankCard({
                 onClick={onToggle}
             >
                 {isExpanded ? (
-                    <ChevronDown className="size-4 shrink-0 text-ink-400" />
+                    <ChevronDown className="size-4 shrink-0 text-ink-600" />
                 ) : (
-                    <ChevronRight className="size-4 shrink-0 text-ink-400" />
+                    <ChevronRight className="size-4 shrink-0 text-ink-600" />
                 )}
                 <span className="flex-1 text-sm font-medium text-ink-900">{bank.title}</span>
                 <Badge
@@ -230,7 +230,7 @@ function BankCard({
                         e.stopPropagation();
                         setCreatingInBank(bank.id);
                     }}
-                    className="rounded-lg p-1.5 text-ink-400 transition hover:bg-surface-100 hover:text-blue-600"
+                    className="rounded-lg p-1.5 text-ink-600 transition hover:bg-surface-100 hover:text-blue-600"
                     aria-label="Add question to this bank"
                     title="Add question"
                 >
@@ -242,7 +242,7 @@ function BankCard({
                         e.stopPropagation();
                         setShowImportModal(true);
                     }}
-                    className="rounded-lg p-1.5 text-ink-400 transition hover:bg-surface-100 hover:text-blue-600"
+                    className="rounded-lg p-1.5 text-ink-600 transition hover:bg-surface-100 hover:text-blue-600"
                     aria-label="Import questions from CSV"
                     title="Import CSV"
                 >
@@ -255,7 +255,7 @@ function BankCard({
                         onDelete();
                     }}
                     disabled={isDeleting}
-                    className="rounded-lg p-1.5 text-ink-400 transition hover:bg-surface-100 hover:text-danger-600"
+                    className="rounded-lg p-1.5 text-ink-600 transition hover:bg-surface-100 hover:text-danger-600"
                     aria-label="Delete question bank"
                     title="Delete bank"
                 >
@@ -267,7 +267,7 @@ function BankCard({
             {isExpanded && (
                 <div className="border-t border-surface-100 px-3 py-2">
                     {bank.questions.length === 0 && !showQuestionForm && (
-                        <p className="py-3 text-center text-sm text-ink-500">
+                        <p className="py-3 text-center text-sm text-ink-600">
                             No questions yet. Click the + button above to add one.
                         </p>
                     )}
@@ -324,7 +324,7 @@ function QuestionRow({ question, onDelete, isDeleting }: QuestionRowProps) {
         <li className="flex items-start gap-2 rounded-md px-2 py-1.5 transition hover:bg-surface-50">
             <div className="flex-1 min-w-0">
                 <p className="truncate text-sm text-ink-900">{question.question_text}</p>
-                <p className="mt-0.5 text-xs text-ink-500">
+                <p className="mt-0.5 text-xs text-ink-600">
                     {TYPE_LABELS[question.type] ?? question.type}
                     {' · '}
                     {question.points} pt{Number(question.points) !== 1 ? 's' : ''}
@@ -340,7 +340,7 @@ function QuestionRow({ question, onDelete, isDeleting }: QuestionRowProps) {
                 type="button"
                 onClick={onDelete}
                 disabled={isDeleting}
-                className="shrink-0 rounded-lg p-1 text-ink-400 transition hover:text-danger-600"
+                className="shrink-0 rounded-lg p-1 text-ink-600 transition hover:text-danger-600"
                 aria-label="Delete question"
             >
                 {isDeleting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}

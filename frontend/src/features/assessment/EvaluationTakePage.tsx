@@ -202,9 +202,9 @@ function AttemptResult({ attempt }: { attempt: EvaluationAttempt }) {
 function StatTile({ icon: Icon, label, value }: { icon: typeof Clock; label: string; value: string }) {
     return (
         <div className="flex items-center gap-3 rounded-md border border-surface-100 bg-surface-50 px-3 py-2.5">
-            <Icon className="size-4 shrink-0 text-ink-500" aria-hidden="true" />
+            <Icon className="size-4 shrink-0 text-ink-600" aria-hidden="true" />
             <div>
-                <p className="text-xs text-ink-500">{label}</p>
+                <p className="text-xs text-ink-600">{label}</p>
                 <p className="text-sm font-medium text-ink-900">{value}</p>
             </div>
         </div>
@@ -274,7 +274,7 @@ function InstructionScreen({
                         {overview.instructions}
                     </p>
                 ) : (
-                    <p className="mt-3 text-sm text-ink-500">No additional instructions for this evaluation.</p>
+                    <p className="mt-3 text-sm text-ink-600">No additional instructions for this evaluation.</p>
                 )}
 
                 <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">

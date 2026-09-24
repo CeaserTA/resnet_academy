@@ -150,7 +150,7 @@ function CourseCard({ course, isAdmin, onDelete }: { course: Course; isAdmin: bo
                 </h3>
 
                 {/* Meta row — level + category */}
-                <div className="flex items-center gap-1.5 text-xs text-ink-400">
+                <div className="flex items-center gap-1.5 text-xs text-ink-600">
                     <span className="capitalize">{course.level}</span>
                     {course.category && (
                         <>
@@ -230,13 +230,13 @@ function CourseRow({ course, isAdmin, onDelete }: { course: Course; isAdmin: boo
                 <div className="flex items-center gap-2">
                     <p className="truncate text-sm font-semibold text-ink-900">{course.title}</p>
                     {statusIndicator && (
-                        <span className="flex shrink-0 items-center gap-1 text-xs text-ink-400">
+                        <span className="flex shrink-0 items-center gap-1 text-xs text-ink-600">
                             <span className={cn('size-1.5 rounded-full', statusIndicator.dot)} aria-hidden="true" />
                             {statusIndicator.label}
                         </span>
                     )}
                 </div>
-                <p className="mt-0.5 truncate text-xs text-ink-400">
+                <p className="mt-0.5 truncate text-xs text-ink-600">
                     {primaryInstructor?.name ?? <span className="text-blue-600">No instructor</span>}
                     {course.category && <> · {course.category.name}</>}
                 </p>
@@ -255,7 +255,7 @@ function CourseRow({ course, isAdmin, onDelete }: { course: Course; isAdmin: boo
                         <button
                             onClick={toggle}
                             aria-label={`Actions for ${course.title}`}
-                            className="rounded-lg p-1.5 text-ink-400 hover:bg-surface-100 hover:text-ink-900"
+                            className="rounded-lg p-1.5 text-ink-600 hover:bg-surface-100 hover:text-ink-900"
                         >
                             <MoreVertical className="size-4" aria-hidden="true" />
                         </button>
@@ -333,7 +333,7 @@ export function CourseListPage() {
             <div className="flex flex-wrap items-center gap-2">
                 {/* Search */}
                 <div className="relative min-w-0 flex-1 sm:max-w-48">
-                    <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-400" aria-hidden="true" />
+                    <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-600" aria-hidden="true" />
                     <input
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
@@ -370,7 +370,7 @@ export function CourseListPage() {
                         aria-label="Grid view"
                         className={cn(
                             'rounded-md p-1.5 transition-colors',
-                            viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-ink-400 hover:text-ink-900',
+                            viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-ink-600 hover:text-ink-900',
                         )}
                     >
                         <Grid2x2 className="size-3.5" aria-hidden="true" />
@@ -380,7 +380,7 @@ export function CourseListPage() {
                         aria-label="List view"
                         className={cn(
                             'rounded-md p-1.5 transition-colors',
-                            viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-ink-400 hover:text-ink-900',
+                            viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-ink-600 hover:text-ink-900',
                         )}
                     >
                         <List className="size-3.5" aria-hidden="true" />
@@ -442,7 +442,7 @@ export function CourseListPage() {
             {!isLoading && filteredCourses.length > 0 && viewMode === 'list' && (
                 <div className="flex flex-col gap-2">
                     {/* Header row */}
-                    <div className="flex items-center gap-4 px-4 text-xs font-medium uppercase tracking-wide text-ink-400">
+                    <div className="flex items-center gap-4 px-4 text-xs font-medium uppercase tracking-wide text-ink-600">
                         <div className="hidden w-16 shrink-0 sm:block" aria-hidden="true" />
                         <span className="flex-1">Course</span>
                         <span className="shrink-0">Price</span>
@@ -461,7 +461,7 @@ export function CourseListPage() {
 
             {/* Result count */}
             {!isLoading && filteredCourses.length > 0 && (
-                <p className="text-xs text-ink-400">
+                <p className="text-xs text-ink-600">
                     {filteredCourses.length} course{filteredCourses.length !== 1 ? 's' : ''}
                     {statusFilter !== 'all' && ` · ${statusFilter}`}
                 </p>

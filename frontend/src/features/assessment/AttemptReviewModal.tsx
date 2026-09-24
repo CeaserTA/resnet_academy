@@ -110,7 +110,7 @@ function ReviewQuestionCard({ question, index }: { question: AttemptReviewQuesti
                         {question.answer_text?.trim() ? question.answer_text : 'No answer submitted'}
                     </p>
                     {status === 'pending' && (
-                        <p className="text-xs text-ink-500">
+                        <p className="text-xs text-ink-600">
                             This answer type is graded manually — the final score appears once your instructor reviews it.
                         </p>
                     )}
@@ -170,7 +170,7 @@ export function AttemptReviewModal({ isOpen, onClose, attemptId, attemptNumber }
                         <div>
                             <p className="text-xs text-ink-600">Time Taken</p>
                             <p className="flex items-center gap-1 text-lg font-semibold text-ink-900">
-                                <Clock className="size-4 text-ink-400" aria-hidden="true" />
+                                <Clock className="size-4 text-ink-600" aria-hidden="true" />
                                 {formatDuration(review.data.summary.time_taken_seconds)}
                             </p>
                         </div>

@@ -225,7 +225,7 @@ export function AdminTransferRequestsPage() {
             {/* Page header */}
             <div>
                 <h1 className="text-lg font-semibold text-ink-900">Transfer Requests</h1>
-                <p className="text-xs text-ink-400">
+                <p className="text-xs text-ink-600">
                     Manage student transfer requests after payment.
                 </p>
             </div>
@@ -271,14 +271,14 @@ export function AdminTransferRequestsPage() {
                                         <Avatar name={enrolment.student.name} size="sm" className="size-7 shrink-0 text-xs" />
                                         <div className="min-w-0">
                                             <p className="truncate text-sm font-medium text-ink-900">{enrolment.student.name}</p>
-                                            <p className="truncate text-xs text-ink-400">{enrolment.student.email}</p>
+                                            <p className="truncate text-xs text-ink-600">{enrolment.student.email}</p>
                                         </div>
                                     </div>
 
                                     {/* Course & cohort */}
                                     <div className="min-w-0">
                                         <p className="truncate text-sm text-ink-900">{enrolment.course.title}</p>
-                                        <p className="truncate text-xs text-ink-400">{enrolment.cohort_course?.cohort_name ?? '—'}</p>
+                                        <p className="truncate text-xs text-ink-600">{enrolment.cohort_course?.cohort_name ?? '—'}</p>
                                     </div>
 
                                     {/* Amount paid */}
@@ -290,7 +290,7 @@ export function AdminTransferRequestsPage() {
                                     {orderStatus && <Badge label={orderStatus.label} tone={orderStatus.tone} icon={orderStatus.icon} />}
 
                                     {/* Transfer requested at */}
-                                    <p className="text-sm text-ink-400">{transferRequestedAt}</p>
+                                    <p className="text-sm text-ink-600">{transferRequestedAt}</p>
 
                                     {/* Withdrawal note */}
                                     <p className="truncate text-sm text-ink-600" title={enrolment.withdrawal_note || ''}>
@@ -302,7 +302,7 @@ export function AdminTransferRequestsPage() {
                                         <button
                                             onClick={() => setTransferringEnrolment(enrolment)}
                                             aria-label={`Transfer ${enrolment.student.name} to another course`}
-                                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-blue-600/10 hover:text-blue-600"
+                                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-blue-600/10 hover:text-blue-600"
                                             title="Transfer to another course"
                                         >
                                             <ArrowRight className="size-4" aria-hidden="true" />
@@ -310,7 +310,7 @@ export function AdminTransferRequestsPage() {
                                         <button
                                             onClick={() => setRefundingEnrolment(enrolment)}
                                             aria-label={`Process refund for ${enrolment.student.name}`}
-                                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-danger-600/10 hover:text-danger-600"
+                                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-danger-600/10 hover:text-danger-600"
                                             title="Process refund"
                                         >
                                             <ReceiptText className="size-4" aria-hidden="true" />

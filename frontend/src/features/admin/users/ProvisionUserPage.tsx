@@ -170,7 +170,7 @@ export function ProvisionUserPage() {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-lg font-semibold text-ink-900">Team</h1>
-                    <p className="text-xs text-ink-400">Every user in the system, and their role.</p>
+                    <p className="text-xs text-ink-600">Every user in the system, and their role.</p>
                 </div>
                 <Button onClick={() => setIsAddingUser(true)}>
                     <Plus className="size-4" aria-hidden="true" />
@@ -239,7 +239,7 @@ export function ProvisionUserPage() {
                                             />
                                             <div className="min-w-0">
                                                 <p className="truncate text-sm text-ink-900">{member.name}</p>
-                                                <p className="truncate text-xs text-ink-400">{member.email}</p>
+                                                <p className="truncate text-xs text-ink-600">{member.email}</p>
                                             </div>
                                         </div>
 
@@ -260,7 +260,7 @@ export function ProvisionUserPage() {
                                                 onClick={() => setManagingUser(member)}
                                                 disabled={isSelf}
                                                 aria-label={`Manage ${member.name}`}
-                                                className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-surface-100 hover:text-ink-900 disabled:pointer-events-none disabled:opacity-40"
+                                                className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-ink-900 disabled:pointer-events-none disabled:opacity-40"
                                             >
                                                 <Settings2 className="size-4" aria-hidden="true" />
                                             </button>

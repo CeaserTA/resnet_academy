@@ -198,7 +198,7 @@ export function ApplicationsPage() {
             {/* Page header */}
             <div>
                 <h1 className="text-lg font-semibold text-ink-900">Applications</h1>
-                <p className="text-xs text-ink-400">
+                <p className="text-xs text-ink-600">
                     {user?.role === 'instructor' ? 'Applications for your courses, pending first.' : 'Course applications, pending first.'}
                 </p>
             </div>
@@ -261,7 +261,7 @@ export function ApplicationsPage() {
                                         />
                                         <div className="min-w-0">
                                             <p className="truncate text-sm font-medium text-ink-900">{application.student.name}</p>
-                                            <p className="truncate text-xs text-ink-400">{application.student.email}</p>
+                                            <p className="truncate text-xs text-ink-600">{application.student.email}</p>
                                         </div>
                                     </div>
 
@@ -272,7 +272,7 @@ export function ApplicationsPage() {
                                     <Badge label={status.label} tone={status.tone} icon={status.icon} />
 
                                     {/* Applied */}
-                                    <p className="text-right font-mono text-xs text-ink-400">
+                                    <p className="text-right font-mono text-xs text-ink-600">
                                         {new Date(application.applied_at).toLocaleDateString()}
                                     </p>
 
@@ -283,14 +283,14 @@ export function ApplicationsPage() {
                                                 <button
                                                     onClick={() => approveApplication.mutate(application.id)}
                                                     aria-label={`Approve ${application.student.name}`}
-                                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-surface-100 hover:text-ink-900"
+                                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-ink-900"
                                                 >
                                                     <Check className="size-4 text-success-600" aria-hidden="true" />
                                                 </button>
                                                 <button
                                                     onClick={() => setRejectingApplication(application)}
                                                     aria-label={`Reject ${application.student.name}`}
-                                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-danger-600/10 hover:text-danger-600"
+                                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-danger-600/10 hover:text-danger-600"
                                                 >
                                                     <X className="size-4" aria-hidden="true" />
                                                 </button>
@@ -299,7 +299,7 @@ export function ApplicationsPage() {
                                         <button
                                             onClick={() => setViewingApplication(application)}
                                             aria-label={`View ${application.student.name}`}
-                                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-surface-100 hover:text-ink-900"
+                                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-ink-900"
                                         >
                                             <Eye className="size-4" aria-hidden="true" />
                                         </button>

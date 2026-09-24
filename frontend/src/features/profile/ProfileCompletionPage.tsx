@@ -290,7 +290,7 @@ export function ProfileCompletionPage() {
                                         <Camera className="size-3.5" aria-hidden="true" />
                                         {currentAvatarUrl ? 'Change photo' : 'Upload photo'}
                                     </Button>
-                                    <p className="mt-1 text-xs text-ink-400">JPEG, PNG, GIF or WEBP · max 5 MB</p>
+                                    <p className="mt-1 text-xs text-ink-600">JPEG, PNG, GIF or WEBP · max 5 MB</p>
                                     {avatarError && <p className="mt-1 text-xs text-danger-600">{avatarError}</p>}
                                 </div>
                             </div>

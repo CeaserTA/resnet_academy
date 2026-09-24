@@ -56,7 +56,7 @@ function PaymentQuickStats() {
 
     return (
         <section>
-            <p className="mb-2.5 text-xs font-semibold uppercase tracking-widest text-ink-400">Quick stats</p>
+            <p className="mb-2.5 text-xs font-semibold uppercase tracking-widest text-ink-600">Quick stats</p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <VolumeCard
                     icon={CircleDollarSign}
@@ -335,7 +335,7 @@ export function PaymentsPage() {
             {/* Page header */}
             <div>
                 <h1 className="text-lg font-semibold text-ink-900">Payments</h1>
-                <p className="text-xs text-ink-400">Every order across every student.</p>
+                <p className="text-xs text-ink-600">Every order across every student.</p>
             </div>
 
             <PaymentQuickStats />
@@ -421,11 +421,11 @@ export function PaymentsPage() {
                                                 />
                                                 <div className="min-w-0">
                                                     <p className="truncate text-sm font-medium text-ink-900">{order.student.name}</p>
-                                                    <p className="truncate text-xs text-ink-400">{order.student.email}</p>
+                                                    <p className="truncate text-xs text-ink-600">{order.student.email}</p>
                                                 </div>
                                             </>
                                         ) : (
-                                            <span className="text-sm text-ink-400">—</span>
+                                            <span className="text-sm text-ink-600">—</span>
                                         )}
                                     </div>
 
@@ -476,7 +476,7 @@ export function PaymentsPage() {
                                                     onClick={() => setConfirmingOrder(order)}
                                                     title="Confirm payment"
                                                     aria-label={`Confirm payment for order #${order.id}`}
-                                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-success-600/10 hover:text-success-600"
+                                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-success-600/10 hover:text-success-600"
                                                 >
                                                     <Check className="size-4 text-success-600" aria-hidden="true" />
                                                 </button>
@@ -484,7 +484,7 @@ export function PaymentsPage() {
                                                     onClick={() => setRejectingOrder(order)}
                                                     title="Reject payment"
                                                     aria-label={`Reject payment for order #${order.id}`}
-                                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-danger-600/10 hover:text-danger-600"
+                                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-danger-600/10 hover:text-danger-600"
                                                 >
                                                     <X className="size-4" aria-hidden="true" />
                                                 </button>
@@ -494,7 +494,7 @@ export function PaymentsPage() {
                                             onClick={() => setViewingOrder(order)}
                                             title="View order details"
                                             aria-label={`View order #${order.id}`}
-                                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-surface-100 hover:text-ink-900"
+                                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-ink-900"
                                         >
                                             <Eye className="size-4" aria-hidden="true" />
                                         </button>
@@ -503,7 +503,7 @@ export function PaymentsPage() {
                                                 onClick={() => setReviewingOrder(order)}
                                                 title="Record a manual payment"
                                                 aria-label={`Review payment for order #${order.id}`}
-                                                className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-surface-100 hover:text-ink-900"
+                                                className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-ink-900"
                                             >
                                                 <ReceiptText className="size-4" aria-hidden="true" />
                                             </button>

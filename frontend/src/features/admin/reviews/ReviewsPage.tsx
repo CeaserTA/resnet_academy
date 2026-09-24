@@ -118,7 +118,7 @@ export function ReviewsPage() {
             {/* Page header */}
             <div>
                 <h1 className="text-lg font-semibold text-ink-900">Reviews</h1>
-                <p className="text-xs text-ink-400">Course reviews, pending first.</p>
+                <p className="text-xs text-ink-600">Course reviews, pending first.</p>
             </div>
 
             {/* Segmented tab bar */}
@@ -185,7 +185,7 @@ export function ReviewsPage() {
                                                 <p className="truncate text-sm font-medium text-ink-900">{review.student.name}</p>
                                             </>
                                         ) : (
-                                            <span className="text-sm text-ink-400">—</span>
+                                            <span className="text-sm text-ink-600">—</span>
                                         )}
                                     </div>
 
@@ -202,7 +202,7 @@ export function ReviewsPage() {
                                     <Badge label={status.label} tone={status.tone} icon={status.icon} />
 
                                     {/* Submitted */}
-                                    <p className="text-right font-mono text-xs text-ink-400">
+                                    <p className="text-right font-mono text-xs text-ink-600">
                                         {new Date(review.created_at).toLocaleDateString()}
                                     </p>
 
@@ -213,14 +213,14 @@ export function ReviewsPage() {
                                                 <button
                                                     onClick={() => approveReview.mutate(review.id)}
                                                     aria-label={`Approve ${review.student?.name}'s review`}
-                                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-surface-100 hover:text-ink-900"
+                                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-ink-900"
                                                 >
                                                     <Check className="size-4 text-success-600" aria-hidden="true" />
                                                 </button>
                                                 <button
                                                     onClick={() => setRejectingReview(review)}
                                                     aria-label={`Reject ${review.student?.name}'s review`}
-                                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-danger-600/10 hover:text-danger-600"
+                                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-danger-600/10 hover:text-danger-600"
                                                 >
                                                     <X className="size-4" aria-hidden="true" />
                                                 </button>
@@ -236,7 +236,7 @@ export function ReviewsPage() {
                                                         ? `Unfeature ${review.student?.name}'s review`
                                                         : `Feature ${review.student?.name}'s review`
                                                 }
-                                                className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-surface-100 hover:text-ink-900"
+                                                className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-ink-900"
                                             >
                                                 <Star
                                                     className={cn('size-4', review.is_featured ? 'fill-amber-500 text-amber-500' : '')}
@@ -247,7 +247,7 @@ export function ReviewsPage() {
                                         <button
                                             onClick={() => setViewingReview(review)}
                                             aria-label={`View ${review.student?.name}'s review`}
-                                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-surface-100 hover:text-ink-900"
+                                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-ink-900"
                                         >
                                             <Eye className="size-4" aria-hidden="true" />
                                         </button>

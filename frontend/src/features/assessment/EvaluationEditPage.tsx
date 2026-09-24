@@ -54,7 +54,7 @@ export function EvaluationEditPage() {
             </Link>
 
             <h1 className="mt-2 text-2xl">{evaluation.title}</h1>
-            <p className="mt-1 text-sm text-ink-500">
+            <p className="mt-1 text-sm text-ink-600">
                 {evaluation.question_count ?? evaluation.questions?.length ?? 0} question
                 {(evaluation.question_count ?? evaluation.questions?.length ?? 0) !== 1 ? 's' : ''}
                 {' · '}Pass score: {evaluation.pass_score}%
@@ -73,7 +73,7 @@ export function EvaluationEditPage() {
                             'flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition',
                             activeTab === key
                                 ? 'border-blue-600 text-blue-600'
-                                : 'border-transparent text-ink-500 hover:border-surface-200 hover:text-ink-700',
+                                : 'border-transparent text-ink-600 hover:border-surface-200 hover:text-ink-700',
                         )}
                     >
                         <Icon className="size-4" aria-hidden="true" />

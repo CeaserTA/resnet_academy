@@ -56,12 +56,12 @@ function ChatListItem({
                         {name}
                     </p>
                     {conversation.last_message && (
-                        <span className="shrink-0 text-[10px] text-ink-400">
+                        <span className="shrink-0 text-[10px] text-ink-600">
                             {formatRelativeTime(conversation.last_message.sent_at)}
                         </span>
                     )}
                 </div>
-                <p className={cn('truncate text-xs', unread > 0 ? 'text-ink-600' : 'text-ink-400')}>
+                <p className={cn('truncate text-xs', unread > 0 ? 'text-ink-600' : 'text-ink-600')}>
                     {preview}
                 </p>
             </div>
@@ -109,7 +109,7 @@ function ConversationThread({ conversationId }: { conversationId: number }) {
                 <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-ink-900">{name}</p>
                     {conversation.subject && (
-                        <p className="truncate text-xs text-ink-400">{conversation.subject}</p>
+                        <p className="truncate text-xs text-ink-600">{conversation.subject}</p>
                     )}
                 </div>
             </div>
@@ -117,7 +117,7 @@ function ConversationThread({ conversationId }: { conversationId: number }) {
             {/* Messages */}
             <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-4">
                 {conversation.messages.length === 0 && (
-                    <p className="text-center text-xs text-ink-400">No messages yet. Say something!</p>
+                    <p className="text-center text-xs text-ink-600">No messages yet. Say something!</p>
                 )}
                 {conversation.messages.map((message) => {
                     const isMine = message.sender?.id === user?.id;
@@ -127,7 +127,7 @@ function ConversationThread({ conversationId }: { conversationId: number }) {
                             className={cn('flex max-w-[72%] flex-col gap-1', isMine ? 'self-end items-end' : 'self-start items-start')}
                         >
                             {!isMine && (
-                                <p className="ml-1 text-[10px] font-medium text-ink-400">{message.sender?.name}</p>
+                                <p className="ml-1 text-[10px] font-medium text-ink-600">{message.sender?.name}</p>
                             )}
                             <div
                                 className={cn(
@@ -139,7 +139,7 @@ function ConversationThread({ conversationId }: { conversationId: number }) {
                             >
                                 {message.body}
                             </div>
-                            <p className="mx-1 text-[10px] text-ink-400">
+                            <p className="mx-1 text-[10px] text-ink-600">
                                 {formatRelativeTime(message.sent_at)}
                                 {isMine && (message.read_at ? ' · Read' : ' · Sent')}
                             </p>
@@ -213,7 +213,7 @@ export function MessagesPage() {
                     <button
                         onClick={() => setIsComposing(true)}
                         aria-label="New message"
-                        className="flex size-7 items-center justify-center rounded-lg text-ink-400 transition hover:bg-surface-100 hover:text-ink-900"
+                        className="flex size-7 items-center justify-center rounded-lg text-ink-600 transition hover:bg-surface-100 hover:text-ink-900"
                     >
                         <Plus className="size-4" aria-hidden="true" />
                     </button>
@@ -222,7 +222,7 @@ export function MessagesPage() {
                 {/* Search */}
                 <div className="shrink-0 px-3 py-2">
                     <div className="relative">
-                        <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-400" aria-hidden="true" />
+                        <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-600" aria-hidden="true" />
                         <input
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}

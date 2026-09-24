@@ -82,8 +82,8 @@ function IconBtn({
             className={cn(
                 'flex items-center justify-center rounded-lg p-1.5 transition-colors',
                 danger
-                    ? 'text-ink-400 hover:bg-danger-600/10 hover:text-danger-600'
-                    : 'text-ink-400 hover:bg-surface-100 hover:text-ink-900',
+                    ? 'text-ink-600 hover:bg-danger-600/10 hover:text-danger-600'
+                    : 'text-ink-600 hover:bg-surface-100 hover:text-ink-900',
             )}
         >
             {children}
@@ -242,7 +242,7 @@ function ContentGroup({
             {open && (
                 <div className="flex flex-col gap-1.5 p-2">
                     {count === 0 ? (
-                        <p className="py-3 text-center text-xs text-ink-400">{emptyText}</p>
+                        <p className="py-3 text-center text-xs text-ink-600">{emptyText}</p>
                     ) : (
                         children
                     )}
@@ -319,8 +319,8 @@ export function ModuleTableRow({
                         aria-label={isOpen ? `Collapse ${module.title}` : `Expand ${module.title}`}
                     >
                         {isOpen
-                            ? <ChevronDown className="size-3.5 shrink-0 text-ink-400" aria-hidden="true" />
-                            : <ChevronRight className="size-3.5 shrink-0 text-ink-400" aria-hidden="true" />
+                            ? <ChevronDown className="size-3.5 shrink-0 text-ink-600" aria-hidden="true" />
+                            : <ChevronRight className="size-3.5 shrink-0 text-ink-600" aria-hidden="true" />
                         }
                         <span className="flex size-5 shrink-0 items-center justify-center rounded bg-blue-600/10 text-xs font-semibold text-blue-600">
                             {index + 1}
@@ -344,7 +344,7 @@ export function ModuleTableRow({
                                 </span>
                             )}
                             {module.items.length === 0 && (
-                                <span className="text-xs text-ink-400">empty</span>
+                                <span className="text-xs text-ink-600">empty</span>
                             )}
                         </span>
                     </button>
@@ -389,7 +389,7 @@ export function ModuleTableRow({
                             type="button"
                             onClick={handleDeleteModule}
                             aria-label={`Delete ${module.title}`}
-                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-danger-600/10 hover:text-danger-600"
+                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-danger-600/10 hover:text-danger-600"
                         >
                             <Trash2 className="size-3.5" aria-hidden="true" />
                         </button>

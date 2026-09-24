@@ -214,7 +214,7 @@ function EnrolmentCard({ enrolment, progress, review, onWithdraw, onCancelTransf
                             {enrolment.course.title}
                         </h3>
                     </Link>
-                    <p className="mt-0.5 text-xs text-ink-400">
+                    <p className="mt-0.5 text-xs text-ink-600">
                         Enrolled {new Date(enrolment.applied_at).toLocaleDateString()}
                     </p>
                 </div>
@@ -257,12 +257,12 @@ function EnrolmentCard({ enrolment, progress, review, onWithdraw, onCancelTransf
 
                 <div className="mt-auto border-t border-surface-100 pt-2">
                     {isTransferRequested ? (
-                        <button type="button" onClick={onCancelTransfer} className="flex items-center gap-1.5 text-xs text-ink-400 hover:text-blue-600">
+                        <button type="button" onClick={onCancelTransfer} className="flex items-center gap-1.5 text-xs text-ink-600 hover:text-blue-600">
                             <XCircle className="size-3.5" aria-hidden="true" />
                             Cancel transfer request
                         </button>
                     ) : (
-                        <button type="button" onClick={onWithdraw} className="flex items-center gap-1.5 text-xs text-ink-400 hover:text-danger-600">
+                        <button type="button" onClick={onWithdraw} className="flex items-center gap-1.5 text-xs text-ink-600 hover:text-danger-600">
                             <LogOut className="size-3.5" aria-hidden="true" />
                             Withdraw
                         </button>
@@ -288,12 +288,12 @@ function OverviewStrip({ activeEnrolments, progressRows }: { activeEnrolments: E
         <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
             <div className="flex flex-wrap divide-x divide-surface-100">
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-4 py-3">
-                    <p className="text-xs font-medium uppercase tracking-wide text-ink-400">Enrolled</p>
+                    <p className="text-xs font-medium uppercase tracking-wide text-ink-600">Enrolled</p>
                     <p className="text-2xl font-bold text-ink-900">{activeEnrolments.length}</p>
-                    <p className="text-xs text-ink-400">{inProgress} in progress · {completed} completed</p>
+                    <p className="text-xs text-ink-600">{inProgress} in progress · {completed} completed</p>
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-4 py-3">
-                    <p className="text-xs font-medium uppercase tracking-wide text-ink-400">Avg. completion</p>
+                    <p className="text-xs font-medium uppercase tracking-wide text-ink-600">Avg. completion</p>
                     <div className="flex items-end gap-1.5">
                         <p className="text-2xl font-bold text-blue-600">{avgCompletion}%</p>
                         <TrendingUp className="mb-1 size-3.5 text-blue-400" aria-hidden="true" />
@@ -304,7 +304,7 @@ function OverviewStrip({ activeEnrolments, progressRows }: { activeEnrolments: E
                 </div>
                 {/* Deadlines — placeholder until GET /me/upcoming-deadlines is available */}
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-4 py-3">
-                    <p className="text-xs font-medium uppercase tracking-wide text-ink-400">Upcoming deadlines</p>
+                    <p className="text-xs font-medium uppercase tracking-wide text-ink-600">Upcoming deadlines</p>
                     <p className="mt-1 text-xs italic text-ink-300">No data yet</p>
                 </div>
             </div>
@@ -392,7 +392,7 @@ export function MyCoursesPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h1 className="text-lg font-semibold text-ink-900">My courses</h1>
-                    <p className="text-xs text-ink-400">
+                    <p className="text-xs text-ink-600">
                         {activeEnrolments.length} active enrolment{activeEnrolments.length !== 1 ? 's' : ''}
                     </p>
                 </div>
@@ -432,7 +432,7 @@ export function MyCoursesPage() {
                     <h2 className="text-sm font-semibold text-ink-900">
                         {allApplicationsPending ? 'Applications' : 'Application updates'}
                     </h2>
-                    <p className="text-xs text-ink-400">
+                    <p className="text-xs text-ink-600">
                         {allApplicationsPending
                             ? "Your application is in review — you'll be notified once an admin approves or declines."
                             : 'Track the status of your course applications.'}
@@ -487,7 +487,7 @@ export function MyCoursesPage() {
                             </span>
                             <div>
                                 <p className="text-sm font-semibold text-ink-900">Add a course</p>
-                                <p className="mt-0.5 text-xs text-ink-400">Browse the catalogue and enrol</p>
+                                <p className="mt-0.5 text-xs text-ink-600">Browse the catalogue and enrol</p>
                             </div>
                         </Link>
                     </div>

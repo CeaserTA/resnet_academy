@@ -92,7 +92,7 @@ function ItemRow({ item, courseId }: { item: ModuleItem; courseId: number }) {
 
                     {/* Resource type chip */}
                     {item.item_type === 'resource' && (
-                        <span className="hidden shrink-0 text-xs text-ink-400 sm:inline">
+                        <span className="hidden shrink-0 text-xs text-ink-600 sm:inline">
                             {resourceTypeLabel[(item as ResourceModuleItem).type] ?? (item as ResourceModuleItem).type}
                         </span>
                     )}
@@ -104,7 +104,7 @@ function ItemRow({ item, courseId }: { item: ModuleItem; courseId: number }) {
                         return urgency ? (
                             <Badge label={urgency.label} tone={urgency.tone} icon={urgency.icon} />
                         ) : (
-                            <span className="hidden shrink-0 text-xs text-ink-400 sm:inline">
+                            <span className="hidden shrink-0 text-xs text-ink-600 sm:inline">
                                 Due {new Date(a.due_at!).toLocaleDateString()}
                             </span>
                         );
@@ -122,7 +122,7 @@ function ItemRow({ item, courseId }: { item: ModuleItem; courseId: number }) {
                     {/* Evaluation: pass score + best attempt */}
                     {item.item_type === 'evaluation' && (
                         <>
-                            <span className="hidden shrink-0 text-xs text-ink-400 sm:inline">
+                            <span className="hidden shrink-0 text-xs text-ink-600 sm:inline">
                                 Pass {(item as EvaluationModuleItem).pass_score}%
                             </span>
                             {(item as EvaluationModuleItem).my_best_attempt && (
@@ -433,7 +433,7 @@ export function CoursePlayerPage() {
                                             }
                                             {expanded ? 'Hide content' : `Show ${sortedItems.length} item${sortedItems.length !== 1 ? 's' : ''}`}
                                         </span>
-                                        <span className="text-ink-400">
+                                        <span className="text-ink-600">
                                             {sortedItems.filter((i) => i.is_complete).length}/{sortedItems.length} completed
                                         </span>
                                     </button>

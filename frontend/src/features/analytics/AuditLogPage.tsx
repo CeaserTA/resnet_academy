@@ -23,7 +23,7 @@ export function AuditLogPage() {
             {/* Page header */}
             <div>
                 <h1 className="text-lg font-semibold text-ink-900">Audit log</h1>
-                <p className="text-xs text-ink-400">Track who changed what, and when.</p>
+                <p className="text-xs text-ink-600">Track who changed what, and when.</p>
             </div>
 
             {/* Filters */}
@@ -65,11 +65,11 @@ export function AuditLogPage() {
                             >
                                 <div>
                                     <p className="text-sm text-ink-900">{describeAuditLogEntry(log)}</p>
-                                    <p className="mt-0.5 font-mono text-xs text-ink-400">
+                                    <p className="mt-0.5 font-mono text-xs text-ink-600">
                                         {log.action} · {log.entity_type} #{log.entity_id}
                                     </p>
                                 </div>
-                                <p className="text-right font-mono text-xs text-ink-400">
+                                <p className="text-right font-mono text-xs text-ink-600">
                                     {new Date(log.created_at).toLocaleString()}
                                 </p>
                             </li>
