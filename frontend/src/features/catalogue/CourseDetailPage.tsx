@@ -1,15 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import {
     ArrowLeft,
     ArrowRight,
     BookOpen,
     CheckCircle2,
+    ChevronDown,
     Clock,
     GraduationCap,
     Lock,
     MonitorPlay,
     SignalHigh,
+    Tag,
     Users,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
@@ -18,8 +20,9 @@ import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
 import { Alert } from '@/components/ui/Alert';
 import { Modal } from '@/components/ui/Modal';
-import { useCourse, useCourseModules } from '@/features/catalogue/useCourses';
-import { courseImageMap } from '@/features/catalogue/courseImages';
+import { useCourse, useCourseModules, useCourses } from '@/features/catalogue/useCourses';
+import { courseImageMap, courseDurationMap } from '@/features/catalogue/courseImages';
+import { CourseCard } from '@/features/catalogue/CourseCard';
 import { useStudentSections } from '@/features/catalogue/useStudentSections';
 import { CohortInfo } from '@/features/catalogue/CohortInfo';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -31,6 +34,7 @@ import { ApplicationModal } from '@/features/catalogue/ApplicationModal';
 import { ProfileCompletionModal } from '@/features/profile/ProfileCompletionModal';
 import { profileApi, type ProfileStatus } from '@/lib/api/profileApi';
 import { ApiError } from '@/lib/api/client';
+import { cn } from '@/lib/utils';
 import type { Module } from '@/lib/api/types';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -66,37 +70,47 @@ function estimateDuration(moduleCount: number): string {
 
 function SectionHeading({ id, children }: { id: string; children: React.ReactNode }) {
     return (
-        <h2 id={id} className="border-l-4 border-blue-600 pl-3 text-xl font-bold text-[#0f172a]">
+        <h2 id={id} className="border-l-4 border-primary pl-3 text-xl font-semibold text-ink-900">
             {children}
         </h2>
     );
 }
 
-// ─── "What You Will Learn" card ───────────────────────────────────────────────
-
 function LearnCard({ title, body }: { title: string; body: string }) {
     return (
-        <div className="flex items-start gap-3 rounded-xl border border-[#e8ecf1] bg-white p-4">
+        <div className="flex items-start gap-3 rounded-xl border border-border bg-white p-4">
             <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50">
-                <CheckCircle2 className="size-4 text-blue-600" aria-hidden="true" />
+                <CheckCircle2 className="size-4 text-primary" aria-hidden="true" />
             </span>
             <div>
-                <p className="text-sm font-semibold text-[#0f172a]">{title}</p>
-                <p className="mt-0.5 text-xs leading-5 text-[#64748b]">{body}</p>
+                <p className="text-sm font-semibold text-ink-900">{title}</p>
+                <p className="mt-0.5 text-xs leading-5 text-ink-600">{body}</p>
             </div>
         </div>
     );
 }
 
-// ─── Flat module row ──────────────────────────────────────────────────────────
-
 function ModuleRow({ module, index }: { module: Module; index: number }) {
+    const [open, setOpen] = useState(false);
     return (
-        <div className="flex items-center gap-3 border-b border-[#e8ecf1] px-5 py-3 last:border-0">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-600">
-                {index + 1}
-            </span>
-            <span className="text-sm font-medium text-[#0f172a]">{module.title}</span>
+        <div className="border-b border-border last:border-0">
+            <button
+                onClick={() => setOpen(!open)}
+                aria-expanded={open}
+                className="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-surface-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-primary">
+                    {index + 1}
+                </span>
+                <span className="flex-1 text-sm font-medium text-ink-900">{module.title}</span>
+                <ChevronDown
+                    className={cn('size-4 shrink-0 text-ink-300 transition-transform duration-200', open && 'rotate-180')}
+                    aria-hidden="true"
+                />
+            </button>
+            {open && module.description && (
+                <p className="pb-3 pl-16 pr-5 text-sm leading-6 text-ink-600">{module.description}</p>
+            )}
         </div>
     );
 }
@@ -174,19 +188,17 @@ export function CourseDetailPage() {
     const enrol = useEnrol();
     const { data: myApplications } = useMyCourseApplications(user?.role === 'student');
     const { openSections, isLoading: sectionsLoading } = useStudentSections(courseId);
-    const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
+    const { data: allCoursesData } = useCourses({ status: 'published' });
 
     // The course belongs to a cohort — it isn't something the student picks here. When one or
     // more open offerings exist, target the earliest-starting one automatically; a course
     // offered by more than one open cohort at once is browsed/enrolled via /cohorts instead.
-    useEffect(() => {
-        if (!sectionsLoading && openSections.length > 0 && selectedSectionId === null) {
-            const earliest = [...openSections].sort((a, b) =>
-                (a.start_date ?? '').localeCompare(b.start_date ?? ''),
-            )[0];
-            setSelectedSectionId(earliest.id);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+    const selectedSectionId = useMemo(() => {
+        if (sectionsLoading || openSections.length === 0) return null;
+        const earliest = [...openSections].sort((a, b) =>
+            (a.start_date ?? '').localeCompare(b.start_date ?? ''),
+        )[0];
+        return earliest.id;
     }, [sectionsLoading, openSections]);
     const [enrolError, setEnrolError] = useState<string | null>(null);
     const [enrolResult, setEnrolResult] = useState<{ courseTitle: string; status: 'confirmed' | 'waitlisted' } | null>(null);
@@ -256,6 +268,9 @@ export function CourseDetailPage() {
         if (searchParams.get('action') === 'apply') {
             // Strip the one-shot param, then re-enter the flow (profile gate runs again)
             setSearchParams({}, { replace: true });
+            // Intentional: this effect exists to resume a user action after a navigation, and
+            // the one-shot param is stripped above so it can't loop.
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             void handleEnrol();
             return;
         }
@@ -267,16 +282,12 @@ export function CourseDetailPage() {
             if (intent.courseId !== course.id || (intent.action !== 'apply' && intent.action !== 'enrol')) {
                 return;
             }
-            // A direct enrol needs a cohort offering resolved first. The auto-select effect
-            // above runs in the same initial commit as this one, so its setSelectedSectionId
-            // call isn't visible here yet on that first pass — selectedSectionId still reads
-            // null even though an offering exists. Wait for the re-render it schedules (this
-            // effect re-runs as selectedSectionId/sectionsLoading change) whenever there's an
-            // offering for it to resolve; only give up immediately when there's truly none.
+            // A direct enrol needs a cohort offering resolved first — wait while offerings
+            // load (this effect re-runs when sectionsLoading flips), and give up once they've
+            // loaded with none open.
             if (intent.action === 'enrol') {
                 if (sectionsLoading) return;
                 if (selectedSectionId === null) {
-                    if (openSections.length > 0) return;
                     sessionStorage.removeItem('pending_enrolment_intent');
                     return;
                 }
@@ -328,13 +339,15 @@ export function CourseDetailPage() {
     const resolvedImage = course.thumbnail_url ?? courseImageMap[course.slug] ?? null;
     const outcomeCards = learningOutcomes[course.slug] ?? [];
     const primaryInstructor = course.instructors[0] ?? null;
+    const courseMeta = courseDurationMap[course.slug] ?? null;
+    const displayDuration = courseMeta?.duration ?? estimateDuration(modules?.length ?? 0);
+    const displayFormat = courseMeta?.delivery ?? 'Online';
+    const skillTags = courseMeta?.skills ?? [];
 
-    // Duration: estimate from real module count (~2 modules/week).
-    // PLACEHOLDER — replace with a real `duration_weeks` field once the backend adds it.
-    const displayDuration = estimateDuration(modules?.length ?? 0);
-
-    // PLACEHOLDER — hardcoded "Online" until the backend adds a `delivery_format` field.
-    const displayFormat = 'Online';
+    // Related courses — other published courses, exclude current
+    const relatedCourses = (allCoursesData?.data ?? [])
+        .filter((c) => c.id !== courseId)
+        .slice(0, 3);
 
     return (
         <div className="min-h-screen bg-[#fafbfc]">
@@ -467,7 +480,25 @@ export function CourseDetailPage() {
                             </section>
                         )}
 
-                        {/* ── 2. WHAT YOU WILL LEARN ──────────────────────────────── */}
+                        {/* ── 2. SKILLS YOU'LL GAIN ─────────────────────────────── */}
+                        {skillTags.length > 0 && (
+                            <section aria-labelledby="skills-heading">
+                                <SectionHeading id="skills-heading">Skills You'll Gain</SectionHeading>
+                                <div className="mt-4 flex flex-wrap gap-2 pl-3">
+                                    {skillTags.map((skill) => (
+                                        <span
+                                            key={skill}
+                                            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-blue-50 px-3 py-1 text-sm font-medium text-primary"
+                                        >
+                                            <Tag className="size-3" aria-hidden="true" />
+                                            {skill}
+                                        </span>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
+
+                        {/* ── 3. WHAT YOU WILL LEARN ──────────────────────────────── */}
                         {outcomeCards.length > 0 && (
                             <section aria-labelledby="learn-heading">
                                 <SectionHeading id="learn-heading">What You Will Learn</SectionHeading>
@@ -668,6 +699,32 @@ export function CourseDetailPage() {
                     </div>
 
                 </div>
+
+                {/* ── 5. RELATED COURSES ─────────────────────────────────────────── */}
+                {relatedCourses.length > 0 && (
+                    <section aria-labelledby="related-heading" className="mt-16">
+                        <SectionHeading id="related-heading">You Might Also Like</SectionHeading>
+                        <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                            {relatedCourses.map((related, i) => {
+                                const meta = courseDurationMap[related.slug];
+                                return (
+                                    <CourseCard
+                                        key={related.id}
+                                        course={related}
+                                        imageSrc={courseImageMap[related.slug]}
+                                        duration={meta?.duration}
+                                        format={meta?.format}
+                                        delivery={meta?.delivery}
+                                        skills={meta?.skills}
+                                        nextCohort={meta?.nextCohort}
+                                        outcome={meta?.outcome}
+                                        index={i}
+                                    />
+                                );
+                            })}
+                        </div>
+                    </section>
+                )}
             </div>
 
             {showAdvisoryModal && selectedSectionId !== null && (
