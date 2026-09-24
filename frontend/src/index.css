@@ -94,6 +94,40 @@
 
     /* Amber accent — use sparingly for warnings, highlights, ongoing badges */
     --color-accent-amber: oklch(0.56 0.14 62);
+
+    /* ── Dialog motion — driven by Radix's data-[state=open|closed] ── */
+    --animate-overlay-in: overlay-in 200ms ease-out;
+    --animate-overlay-out: overlay-out 150ms ease-in forwards;
+    --animate-dialog-in: dialog-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+    --animate-dialog-out: dialog-out 150ms ease-in forwards;
+    --animate-fade-slide-in: fade-slide-in 200ms ease-out;
+
+    @keyframes overlay-in {
+        from { opacity: 0; }
+    }
+    @keyframes overlay-out {
+        to { opacity: 0; }
+    }
+    /* Uses the individual `scale` property so it composes with Tailwind v4's `translate`
+       centring rather than overwriting it the way `transform` would. */
+    @keyframes dialog-in {
+        from { opacity: 0; scale: 0.95; }
+    }
+    @keyframes dialog-out {
+        to { opacity: 0; scale: 0.95; }
+    }
+    @keyframes fade-slide-in {
+        from { opacity: 0; translate: 0 4px; }
+    }
+}
+
+/* Anything marked data-reduce-motion drops its animations/transitions for users who ask for it. */
+@media (prefers-reduced-motion: reduce) {
+    [data-reduce-motion],
+    [data-reduce-motion] * {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
 }
 
 
