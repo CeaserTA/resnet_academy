@@ -19,7 +19,7 @@ import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import { useAuth } from '@/lib/auth/AuthContext';
 import type { CourseApplication, CourseApplicationStatus } from '@/lib/api/types';
 
-type Tab = 'all' | 'rejected' | 'approved';
+type Tab = 'all' | 'pending' | 'rejected' | 'approved';
 
 const STATUS_ORDER: Record<CourseApplicationStatus, number> = { pending: 0, approved: 1, rejected: 2 };
 
@@ -200,6 +200,7 @@ export function ApplicationsPage() {
                 {(
                     [
                         ['all', 'All'],
+                        ['pending', 'Pending'],
                         ['rejected', 'Rejected'],
                         ['approved', 'Approved'],
                     ] as const

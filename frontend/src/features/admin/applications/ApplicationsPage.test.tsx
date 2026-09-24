@@ -204,7 +204,7 @@ function renderPage(role: UserRole = 'admin') {
     );
 }
 
-it('shows all applications pending-first on the All tab, and filters correctly on the other two', async () => {
+it('shows all applications pending-first on the All tab, and filters correctly on the other tabs', async () => {
     const user = userEvent.setup();
     renderPage();
 
@@ -224,6 +224,12 @@ it('shows all applications pending-first on the All tab, and filters correctly o
     expect(await screen.findByText('Priya Shah')).toBeInTheDocument();
     expect(screen.queryByText('Amara Kintu')).not.toBeInTheDocument();
     expect(screen.queryByText('Kevin Ssemwogerere')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Pending' }));
+    expect(await screen.findByText('Amara Kintu')).toBeInTheDocument();
+    expect(screen.queryByText('Priya Shah')).not.toBeInTheDocument();
+    expect(screen.queryByText('Kevin Ssemwogerere')).not.toBeInTheDocument();
+    expect(fetchCourseApplications).toHaveBeenCalledWith({ status: 'pending', page: 1 });
 });
 
 it('shows approve/reject actions only for the pending application', async () => {
