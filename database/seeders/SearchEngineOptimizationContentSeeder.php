@@ -159,9 +159,15 @@ final class SearchEngineOptimizationContentSeeder extends Seeder
             // Uploaded on every run (not only when the row is new) so a re-run also restores files
             // whose earlier upload failed — e.g. R2 rejecting requests from a machine with a skewed clock.
             $storagePath = "resources/{$course->id}/seed/{$doc['filename']}";
-            $mediaStorage->putRaw($storagePath, $bytes);
 
-            if (! $this->isStored($storagePath)) {
+            try {
+                $mediaStorage->putRaw($storagePath, $bytes);
+                $stored = $this->isStored($storagePath);
+            } catch (\RuntimeException) {
+                $stored = false;
+            }
+
+            if (! $stored) {
                 $this->command?->warn("Upload failed for {$storagePath} — check R2 credentials and that the system clock is in sync, then re-run this seeder.");
             }
 
@@ -181,8 +187,8 @@ final class SearchEngineOptimizationContentSeeder extends Seeder
     }
 
     /**
-     * putRaw() can fail silently (the r2 disk is configured with 'throw' => false), and when R2 is
-     * unreachable the existence check itself throws — treat both as "not stored".
+     * Double-checks an upload: older MediaStorageService::putRaw() failed silently (the r2 disk
+     * uses 'throw' => false), and when R2 is unreachable the existence check itself throws.
      */
     private function isStored(string $path): bool
     {
