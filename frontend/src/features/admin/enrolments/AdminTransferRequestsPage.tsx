@@ -222,14 +222,6 @@ export function AdminTransferRequestsPage() {
 
     return (
         <div className="space-y-4">
-            {/* Page header */}
-            <div>
-                <h1 className="text-lg font-semibold text-ink-900">Transfer Requests</h1>
-                <p className="text-xs text-ink-600">
-                    Manage student transfer requests after payment.
-                </p>
-            </div>
-
             {successMessage && (
                 <Alert variant="success" message={successMessage} onDismiss={() => setSuccessMessage(null)} />
             )}

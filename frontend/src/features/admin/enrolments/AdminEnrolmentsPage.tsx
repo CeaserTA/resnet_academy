@@ -69,14 +69,6 @@ export function AdminEnrolmentsPage() {
 
     return (
         <div className="space-y-4">
-            {/* Page header */}
-            <div>
-                <h1 className="text-lg font-semibold text-ink-900">Enrolments / Roster</h1>
-                <p className="text-xs text-ink-600">
-                    Every participant across instant and application-based courses.
-                </p>
-            </div>
-
             {/* Filter controls */}
             <div className="flex flex-wrap items-center gap-2">
                 <select

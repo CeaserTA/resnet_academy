@@ -115,12 +115,6 @@ export function ReviewsPage() {
 
     return (
         <div className="space-y-4">
-            {/* Page header */}
-            <div>
-                <h1 className="text-lg font-semibold text-ink-900">Reviews</h1>
-                <p className="text-xs text-ink-600">Course reviews, pending first.</p>
-            </div>
-
             {/* Segmented tab bar */}
             <div className="flex items-center gap-0.5 rounded-lg border border-surface-100 bg-surface-50 p-0.5 self-start">
                 {(

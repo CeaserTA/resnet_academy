@@ -332,12 +332,6 @@ export function PaymentsPage() {
 
     return (
         <div className="space-y-4">
-            {/* Page header */}
-            <div>
-                <h1 className="text-lg font-semibold text-ink-900">Payments</h1>
-                <p className="text-xs text-ink-600">Every order across every student.</p>
-            </div>
-
             <PaymentQuickStats />
 
             {/* Segmented tab bar */}
