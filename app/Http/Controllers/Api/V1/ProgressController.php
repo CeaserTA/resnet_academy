@@ -175,8 +175,12 @@ final class ProgressController extends Controller
 
         abort_if($resource->type !== ResourceType::LiveSession, 422, 'Only live_session resources have an attendance roster.');
 
+        // A session run for one cohort has an attendance list of that cohort's students only.
+        $cohortId = $resource->liveSession?->cohort_id;
+
         $studentIds = $resource->module->course->enrolments()
             ->where('status', EnrolmentStatus::Confirmed)
+            ->when($cohortId !== null, fn ($query) => $query->whereHas('cohortCourse', fn ($cohortCourse) => $cohortCourse->where('cohort_id', $cohortId)))
             ->pluck('student_id');
 
         $attendanceByStudent = LiveSessionAttendance::query()

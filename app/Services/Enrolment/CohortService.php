@@ -6,6 +6,7 @@ namespace App\Services\Enrolment;
 
 use App\Models\Cohort;
 use App\Models\CohortCourse;
+use App\Models\ResourceLiveSession;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -73,6 +74,12 @@ final class CohortService
                         'cohort' => 'Cannot delete a cohort with enrollment or application history. Archive it instead.',
                     ]);
                 }
+            }
+
+            if (ResourceLiveSession::query()->where('cohort_id', $cohort->id)->exists()) {
+                throw ValidationException::withMessages([
+                    'cohort' => 'Cannot delete a cohort that has live sessions assigned to it. Delete or reassign those sessions first.',
+                ]);
             }
 
             $this->auditLogger->log(

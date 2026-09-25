@@ -23,7 +23,7 @@ final class UpdateModuleRequest extends FormRequest
             'title' => ['sometimes', 'required', 'string', 'max:200'],
             'description' => ['nullable', 'string'],
             'order_index' => ['sometimes', 'required', 'integer', 'min:0'],
-            'scheduled_start_at' => ['nullable', 'date', new WithinCohortSchedule($this->route('module')?->course)],
+            'scheduled_start_at' => ['nullable', 'date', new WithinCohortSchedule($this->route('module')?->course, $this->route('module')?->scheduled_start_at)],
             'group_ids' => ['nullable', 'array'],
             'group_ids.*' => [Rule::exists('groups', 'id')->where('course_id', $module->course_id)],
         ];

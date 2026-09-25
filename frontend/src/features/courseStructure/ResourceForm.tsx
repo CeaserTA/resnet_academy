@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
 import { cn } from '@/lib/utils';
 import { ApiError } from '@/lib/api/client';
-import type { ResourceModuleItem, ResourceType } from '@/lib/api/types';
+import type { CohortCourse, ResourceModuleItem, ResourceType } from '@/lib/api/types';
 import type { ResourcePayload } from '@/features/courseStructure/api';
 
 // Lazy-loaded: Tiptap + its extensions are only needed on this instructor-authoring path, never
@@ -33,6 +33,19 @@ interface ResourceFormProps {
      */
     onSubmit: (payload: ResourcePayload) => Promise<string | null | void>;
     onCancel: () => void;
+    /**
+     * The cohorts the course runs in. A live session is run for one intake, with its own date,
+     * link and attendance list, so the form asks which. Left out (or empty), the session is not
+     * tied to a cohort.
+     */
+    cohorts?: CohortCourse[];
+}
+
+/** Sentinel for "not tied to a cohort" — the Select cannot hold an empty-string option value. */
+const ALL_COHORTS = 'all';
+
+function formatDay(iso: string): string {
+    return new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 const MAX_RESOURCE_FILE_BYTES = 20 * 1024 * 1024;
@@ -170,7 +183,7 @@ function FileOrUrlField({
  * One form, fields shown depend on `type` — mirrors StoreResourceRequest's conditional
  * validation on the backend so the client and server never disagree about what's required.
  */
-export function ResourceForm({ resource, onSubmit, onCancel }: ResourceFormProps) {
+export function ResourceForm({ resource, onSubmit, onCancel, cohorts = [] }: ResourceFormProps) {
     const isEditing = !!resource;
     const [type, setType] = useState<ResourceType>(resource?.type ?? 'reading');
     const [title, setTitle] = useState(resource?.title ?? '');
@@ -185,6 +198,15 @@ export function ResourceForm({ resource, onSubmit, onCancel }: ResourceFormProps
     const setField = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
         setFields((prev) => ({ ...prev, [key]: e.target.value }));
 
+    // Which cohort a live session is for. A brand-new session on a course that runs in several
+    // cohorts starts with nothing chosen, because there is no sensible default. A single-cohort
+    // course, and an existing session that was never tied to a cohort, start on "everyone".
+    const cohortChoice = fields.cohort_id ?? (isEditing || cohorts.length <= 1 ? ALL_COHORTS : '');
+    const chosenCohort = cohorts.find((c) => String(c.cohort_id) === cohortChoice);
+    // "Everyone" is offered where it can be saved: a course with at most one cohort, or a session
+    // that already has no cohort (so it can still be edited without being forced to pick one).
+    const canChooseEveryone = cohorts.length <= 1 || (isEditing && !resource?.details?.cohort_id);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
@@ -192,6 +214,11 @@ export function ResourceForm({ resource, onSubmit, onCancel }: ResourceFormProps
 
         if (type === 'reading' && !(fields.content_html ?? '').replace(/<[^>]+>/g, '').trim()) {
             setError('Lesson content is required.');
+            return;
+        }
+
+        if (type === 'live_session' && cohorts.length > 0 && cohortChoice === '') {
+            setError('Choose which cohort this live session is for.');
             return;
         }
 
@@ -210,6 +237,9 @@ export function ResourceForm({ resource, onSubmit, onCancel }: ResourceFormProps
                 ...(type === 'live_session'
                     ? {
                         provider: fields.provider ?? 'zoom',
+                        ...(cohorts.length > 0
+                            ? { cohort_id: cohortChoice === ALL_COHORTS || cohortChoice === '' ? null : Number(cohortChoice) }
+                            : {}),
                         // <input type="datetime-local"> gives a naive local wall-clock string
                         // (no offset) — convert it to a real UTC instant before sending, since
                         // the browser interprets an offset-less string as local time but the
@@ -382,6 +412,28 @@ export function ResourceForm({ resource, onSubmit, onCancel }: ResourceFormProps
 
                 {type === 'live_session' && (
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        {cohorts.length > 0 && (
+                            <div className="sm:col-span-2">
+                                <Select
+                                    label="Cohort"
+                                    value={cohortChoice}
+                                    placeholder="Choose a cohort"
+                                    onChange={(e) => setFields((prev) => ({ ...prev, cohort_id: e.target.value }))}
+                                >
+                                    {canChooseEveryone && <option value={ALL_COHORTS}>Everyone taking this course</option>}
+                                    {cohorts.map((c) => (
+                                        <option key={c.cohort_id} value={String(c.cohort_id)}>
+                                            {c.cohort_name ?? `Cohort ${c.cohort_id}`}
+                                        </option>
+                                    ))}
+                                </Select>
+                                <p className="mt-1 text-xs text-ink-500">
+                                    {cohorts.length > 1
+                                        ? 'This course runs in more than one cohort. A live session is run for one of them, with its own date and link. Add one session per cohort. Only that cohort’s students see it.'
+                                        : 'Only students in the chosen cohort see the session. Leave it on everyone to show it to the whole course.'}
+                                </p>
+                            </div>
+                        )}
                         <Select label="Provider" value={fields.provider ?? 'zoom'} onChange={setField('provider') as never}>
                             <option value="zoom">Zoom</option>
                             <option value="google_meet">Google Meet</option>
@@ -393,13 +445,21 @@ export function ResourceForm({ resource, onSubmit, onCancel }: ResourceFormProps
                             onChange={setField('meeting_url')}
                             required
                         />
-                        <Input
-                            label="Scheduled at"
-                            type="datetime-local"
-                            value={fields.scheduled_at ?? ''}
-                            onChange={setField('scheduled_at')}
-                            required
-                        />
+                        <div>
+                            <Input
+                                label="Scheduled at"
+                                type="datetime-local"
+                                value={fields.scheduled_at ?? ''}
+                                onChange={setField('scheduled_at')}
+                                required
+                            />
+                            {chosenCohort?.start_date && chosenCohort?.end_date && (
+                                <p className="mt-1 text-xs text-ink-500">
+                                    {chosenCohort.cohort_name ?? 'This cohort'} runs {formatDay(chosenCohort.start_date)} to{' '}
+                                    {formatDay(chosenCohort.end_date)}. The date must fall within it.
+                                </p>
+                            )}
+                        </div>
                         <Input
                             label="Duration (minutes)"
                             type="number"

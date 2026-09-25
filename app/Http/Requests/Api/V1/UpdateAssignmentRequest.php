@@ -23,7 +23,7 @@ final class UpdateAssignmentRequest extends FormRequest
             'title' => ['sometimes', 'required', 'string', 'max:200'],
             'instructions' => ['nullable', 'string'],
             'submission_type' => ['sometimes', 'required', new Enum(AssignmentSubmissionType::class)],
-            'due_at' => ['nullable', 'date', new WithinCohortSchedule($this->route('assignment')?->module?->course)],
+            'due_at' => ['nullable', 'date', new WithinCohortSchedule($this->route('assignment')?->module?->course, $this->route('assignment')?->due_at)],
             'allow_late' => ['sometimes', 'boolean'],
             'late_penalty_policy_id' => ['nullable', 'integer', Rule::exists('late_penalty_policies', 'id')],
             'max_score' => ['sometimes', 'numeric', 'min:0'],
