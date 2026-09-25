@@ -228,12 +228,12 @@ export function QuestionForm({ isOpen, onClose, onSubmit, isSubmitting }: Questi
                         <legend className="text-sm font-medium text-ink-900">
                             Options
                             {type === 'mcq_single' && (
-                                <span className="ml-1 text-xs font-normal text-ink-500">
+                                <span className="ml-1 text-xs font-normal text-ink-600">
                                     (select one correct answer)
                                 </span>
                             )}
                             {type === 'mcq_multi' && (
-                                <span className="ml-1 text-xs font-normal text-ink-500">
+                                <span className="ml-1 text-xs font-normal text-ink-600">
                                     (select all correct answers)
                                 </span>
                             )}
@@ -266,7 +266,7 @@ export function QuestionForm({ isOpen, onClose, onSubmit, isSubmitting }: Questi
                                     <button
                                         type="button"
                                         onClick={() => removeOption(index)}
-                                        className="shrink-0 rounded-lg p-2 text-ink-400 transition hover:bg-surface-100 hover:text-danger-600"
+                                        className="shrink-0 rounded-lg p-2 text-ink-600 transition hover:bg-surface-100 hover:text-danger-600"
                                         aria-label={`Remove option ${index + 1}`}
                                     >
                                         <Trash2 className="size-4" />
@@ -297,7 +297,7 @@ export function QuestionForm({ isOpen, onClose, onSubmit, isSubmitting }: Questi
                 )}
 
                 {!isValid && (
-                    <p className="text-xs text-ink-500">{invalidReason}</p>
+                    <p className="text-xs text-ink-600">{invalidReason}</p>
                 )}
             </form>
         </Modal>

@@ -16,16 +16,17 @@ const TONE_CLASSES: Record<BadgeTone, { icon: string; value: string }> = {
         value: 'text-ink-900',
     },
     warning: {
-        icon: 'bg-amber-100 text-amber-600',
-        value: 'text-amber-700',
+        icon: 'bg-amber-100 text-accent-amber',
+        value: 'text-accent-amber',
     },
     danger: {
         icon: 'bg-danger-600/10 text-danger-600',
         value: 'text-danger-600',
     },
+    // No dedicated info token in the theme — stays within the one blue family (ui-context §2).
     info: {
-        icon: 'bg-cyan-600/10 text-cyan-600',
-        value: 'text-cyan-600',
+        icon: 'bg-blue-600/10 text-blue-600',
+        value: 'text-blue-600',
     },
 };
 

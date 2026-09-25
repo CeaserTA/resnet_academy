@@ -38,7 +38,7 @@ export function CourseCohortsPanel({ courseId }: CourseCohortsPanelProps) {
 
     return (
         <div className="flex flex-col gap-3">
-            <p className="text-xs text-ink-400">
+            <p className="text-xs text-ink-600">
                 Manage capacity, instructor and status for these offerings from each cohort&apos;s page.
             </p>
             <div className="overflow-hidden rounded-lg border border-surface-100">

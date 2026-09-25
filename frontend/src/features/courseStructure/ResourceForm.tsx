@@ -149,16 +149,16 @@ function FileOrUrlField({
             {mode === 'upload' ? (
                 <div className="mt-1">
                     <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-surface-200 bg-surface-50 px-3 py-2.5 transition hover:bg-surface-100">
-                        <Upload className="size-4 shrink-0 text-ink-400" aria-hidden="true" />
+                        <Upload className="size-4 shrink-0 text-ink-600" aria-hidden="true" />
                         <span className="flex min-w-0 flex-1 items-center gap-2">
                             {file ? (
                                 <span className="truncate text-sm font-medium text-ink-900">{file.name}</span>
                             ) : (
-                                <span className="text-sm text-ink-400">Click to choose a file…</span>
+                                <span className="text-sm text-ink-600">Click to choose a file…</span>
                             )}
                         </span>
                         {file && (
-                            <span className="shrink-0 text-xs text-ink-400">
+                            <span className="shrink-0 text-xs text-ink-600">
                                 {(file.size / 1024 / 1024).toFixed(1)} MB
                             </span>
                         )}
@@ -291,7 +291,7 @@ export function ResourceForm({ resource, onSubmit, onCancel, cohorts = [] }: Res
 
                 {/* ── Type picker ── */}
                 <div>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-400">Resource type</p>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-600">Resource type</p>
                     <div className="flex flex-wrap gap-2">
                         {resourceTypes.map(({ value, label, icon: Icon, description }) => (
                             <button
@@ -313,7 +313,7 @@ export function ResourceForm({ resource, onSubmit, onCancel, cohorts = [] }: Res
                             </button>
                         ))}
                     </div>
-                    <p className="mt-1.5 text-xs text-ink-400">
+                    <p className="mt-1.5 text-xs text-ink-600">
                         {isEditing ? "Type can't be changed after creation." : activeType.description}
                     </p>
                 </div>
@@ -369,7 +369,7 @@ export function ResourceForm({ resource, onSubmit, onCancel, cohorts = [] }: Res
                         <p className="mb-1.5 text-sm font-medium text-ink-900">Lesson content</p>
                         <Suspense
                             fallback={
-                                <div className="flex h-48 items-center justify-center rounded-lg border border-surface-200 text-sm text-ink-400">
+                                <div className="flex h-48 items-center justify-center rounded-lg border border-surface-200 text-sm text-ink-600">
                                     Loading editor…
                                 </div>
                             }
@@ -495,7 +495,7 @@ export function ResourceForm({ resource, onSubmit, onCancel, cohorts = [] }: Res
                     />
                     <div>
                         <p className="text-sm font-medium text-ink-900">Required for module completion</p>
-                        <p className="text-xs text-ink-400">Students must complete this to unlock the next module</p>
+                        <p className="text-xs text-ink-600">Students must complete this to unlock the next module</p>
                     </div>
                 </label>
 

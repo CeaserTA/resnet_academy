@@ -62,7 +62,7 @@ export function CourseBuilderPage() {
                 <div className="flex items-center gap-3">
                     <Link
                         to="/admin/courses"
-                        className="flex items-center gap-1 text-sm text-ink-400 hover:text-blue-600"
+                        className="flex items-center gap-1 text-sm text-ink-600 hover:text-blue-600"
                     >
                         <ArrowLeft className="size-3.5" aria-hidden="true" />
                         Courses
@@ -157,7 +157,7 @@ export function CourseBuilderPage() {
                         <div className="flex items-center justify-between border-b border-surface-100 bg-surface-50 px-4 py-3">
                             <div>
                                 <h2 className="text-sm font-semibold text-ink-900">Module management</h2>
-                                <p className="text-xs text-ink-400">
+                                <p className="text-xs text-ink-600">
                                     {sortedModules.length} module{sortedModules.length !== 1 ? 's' : ''}
                                 </p>
                             </div>

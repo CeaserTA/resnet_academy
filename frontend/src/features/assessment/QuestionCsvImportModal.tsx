@@ -120,7 +120,7 @@ export function QuestionCsvImportModal({
                 </label>
 
                 {file && (
-                    <p className="flex items-center gap-1.5 text-xs text-ink-500">
+                    <p className="flex items-center gap-1.5 text-xs text-ink-600">
                         <FileSpreadsheet className="size-3.5" />
                         {file.name}
                     </p>

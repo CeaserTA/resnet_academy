@@ -8,6 +8,24 @@ export function useCourses(filters: CourseFilters) {
     });
 }
 
+/**
+ * Every course matching `filters`, across all pages. `/courses` pages at 15 and has no text
+ * search, so screens that list/search the whole set client-side need the full list — `useCourses`
+ * alone silently stops at the first 15.
+ */
+export function useAllCourses(filters: Omit<CourseFilters, 'page'> = {}) {
+    return useQuery({
+        queryKey: ['courses', 'all', filters],
+        queryFn: async () => {
+            const first = await fetchCourses({ ...filters, page: 1 });
+            const rest = await Promise.all(
+                Array.from({ length: first.meta.last_page - 1 }, (_, i) => fetchCourses({ ...filters, page: i + 2 })),
+            );
+            return [first, ...rest].flatMap((page) => page.data);
+        },
+    });
+}
+
 export function useCourse(id: number) {
     return useQuery({
         queryKey: ['courses', id],

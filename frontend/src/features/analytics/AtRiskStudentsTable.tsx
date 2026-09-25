@@ -26,14 +26,14 @@ export function AtRiskStudentsTable({ courseId, students }: { courseId: number; 
                     <AlertTriangle className="size-4 text-danger-600" aria-hidden="true" />
                     <div>
                         <h2 className="text-sm font-semibold text-ink-900">At-risk students</h2>
-                        <p className="text-xs text-ink-400">
+                        <p className="text-xs text-ink-600">
                             {students.length} student{students.length !== 1 ? 's' : ''} flagged
                         </p>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
                     {sentCount !== null && (
-                        <span className="text-xs text-ink-400">
+                        <span className="text-xs text-ink-600">
                             Sent to {sentCount} student{sentCount === 1 ? '' : 's'}
                         </span>
                     )}
@@ -77,7 +77,7 @@ export function AtRiskStudentsTable({ courseId, students }: { courseId: number; 
                                     <Avatar name={entry.student.name} size="sm" className="size-7 shrink-0 text-xs" />
                                     <div className="min-w-0">
                                         <p className="truncate text-sm font-medium text-ink-900">{entry.student.name}</p>
-                                        <p className="truncate text-xs text-ink-400">{entry.student.email}</p>
+                                        <p className="truncate text-xs text-ink-600">{entry.student.email}</p>
                                     </div>
                                 </div>
                                 {/* Grade */}
