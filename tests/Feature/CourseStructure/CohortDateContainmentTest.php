@@ -8,6 +8,7 @@ use App\Models\CohortCourse;
 use App\Models\Course;
 use App\Models\Evaluation;
 use App\Models\Module;
+use App\Models\Resource;
 use App\Models\User;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Testing\TestResponse;
@@ -205,5 +206,107 @@ it('ignores a cohort_courses row that predates cohorts and carries no schedule',
 
     $this->actingAs($admin)->patchJson("/api/v1/evaluations/{$evaluation->id}", [
         'available_from' => '2031-01-01T00:00:00Z',
+    ])->assertSuccessful();
+});
+
+// ── Editing something whose saved date is no longer valid ───────────────────────────────────
+//
+// The edit forms re-send every field on save, so a date the user never touched is submitted
+// again. It must not block an unrelated edit just because the cohort structure changed after the
+// date was saved (a second cohort added, or a date that predates the cohort it now sits in).
+
+/**
+ * A live session whose saved date, 15 Sep 2026 08:14:01, sits before the March 2027 intake. The
+ * stray seconds matter: the form's minute-precision input sends it back as 08:14:00.
+ *
+ * @return array{0: User, 1: Resource}
+ */
+function liveSessionDatedOutsideItsCohort(): array
+{
+    [$admin, , $module] = courseInOneCohort();
+
+    $session = Resource::factory()->for($module)->liveSession()->create();
+    $session->liveSession()->update(['scheduled_at' => '2026-09-15 08:14:01']);
+
+    return [$admin, $session];
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function liveSessionEditPayload(string $scheduledAt): array
+{
+    return [
+        'title' => 'Renamed live session',
+        'provider' => 'zoom',
+        'meeting_url' => 'https://zoom.us/j/987654321',
+        'duration_minutes' => 60,
+        'scheduled_at' => $scheduledAt,
+    ];
+}
+
+it('lets a live session be edited when its saved date now falls outside the cohort, if the date is unchanged', function (): void {
+    [$admin, $session] = liveSessionDatedOutsideItsCohort();
+
+    $this->actingAs($admin)
+        ->patchJson("/api/v1/resources/{$session->id}", liveSessionEditPayload('2026-09-15T08:14:00.000Z'))
+        ->assertSuccessful();
+
+    expect($session->fresh()->title)->toBe('Renamed live session');
+});
+
+it('still rejects changing that live session to a different date outside the cohort', function (): void {
+    [$admin, $session] = liveSessionDatedOutsideItsCohort();
+
+    $response = $this->actingAs($admin)
+        ->patchJson("/api/v1/resources/{$session->id}", liveSessionEditPayload('2026-11-02T08:14:00.000Z'));
+
+    expect(assertRejectedFor($response, 'scheduled_at'))->toContain('March 2027 Intake');
+});
+
+it('lets a live session be edited after its course gains a second cohort, if the date is unchanged', function (): void {
+    [$admin, $course, $module] = courseInOneCohort();
+
+    $session = Resource::factory()->for($module)->liveSession()->create();
+    $session->liveSession()->update(['scheduled_at' => '2027-03-15 14:00:00']);
+
+    $second = Cohort::factory()->create(['name' => 'September 2027 Intake', 'start_date' => '2027-09-06', 'end_date' => '2027-12-15']);
+    CohortCourse::factory()->for($course)->for($second)->open()->create();
+
+    $this->actingAs($admin)
+        ->patchJson("/api/v1/resources/{$session->id}", liveSessionEditPayload('2027-03-15T14:00:00.000Z'))
+        ->assertSuccessful();
+
+    // Moving it is still refused: one fixed date cannot apply to both intakes.
+    $response = $this->actingAs($admin)
+        ->patchJson("/api/v1/resources/{$session->id}", liveSessionEditPayload('2027-03-16T14:00:00.000Z'));
+
+    expect(assertRejectedFor($response, 'scheduled_at'))->toContain('runs in 2 cohorts');
+});
+
+it('lets an assignment, evaluation and module be edited with their saved dates unchanged after the range moves', function (): void {
+    [$admin, , $module] = courseInOneCohort();
+
+    $assignment = Assignment::factory()->for($module)->create(['due_at' => '2026-09-20 10:00:00']);
+    $evaluation = Evaluation::factory()->for($module)->create([
+        'available_from' => '2026-09-20 00:00:00',
+        'available_until' => '2026-09-25 00:00:00',
+    ]);
+    $module->update(['scheduled_start_at' => '2026-09-01 09:00:00']);
+
+    $this->actingAs($admin)->patchJson("/api/v1/assignments/{$assignment->id}", [
+        'title' => 'Renamed assignment',
+        'due_at' => '2026-09-20T10:00:00Z',
+    ])->assertSuccessful();
+
+    $this->actingAs($admin)->patchJson("/api/v1/evaluations/{$evaluation->id}", [
+        'title' => 'Renamed evaluation',
+        'available_from' => '2026-09-20T00:00:00Z',
+        'available_until' => '2026-09-25T00:00:00Z',
+    ])->assertSuccessful();
+
+    $this->actingAs($admin)->patchJson("/api/v1/modules/{$module->id}", [
+        'title' => 'Renamed module',
+        'scheduled_start_at' => '2026-09-01T09:00:00Z',
     ])->assertSuccessful();
 });

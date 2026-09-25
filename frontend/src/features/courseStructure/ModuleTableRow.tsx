@@ -26,6 +26,7 @@ import { ResourceForm } from '@/features/courseStructure/ResourceForm';
 import { AssignmentQuickForm } from '@/features/assessment/AssignmentQuickForm';
 import { EvaluationQuickForm } from '@/features/assessment/EvaluationQuickForm';
 import { useCreateResource, useDeleteResource, useUpdateResource } from '@/features/courseStructure/useCourseStructure';
+import { useCohortCoursesForCourse } from '@/features/cohorts/useCohorts';
 import {
     useCreateAssignment,
     useCreateEvaluation,
@@ -176,6 +177,10 @@ function ItemRow({
                 {item.item_type === 'resource' && item.details?.access_state === 'recording_pending' && (
                     <Badge label="Recording missing" tone="warning" />
                 )}
+                {/* Which intake a live session is run for. Absent means it is for the whole course. */}
+                {item.item_type === 'resource' && item.type === 'live_session' && item.details?.cohort_name && (
+                    <Badge label={item.details.cohort_name} tone="progress" />
+                )}
             </div>
             <div className="flex shrink-0 items-center gap-0.5">
                 {attendanceHref && (
@@ -289,6 +294,9 @@ export function ModuleTableRow({
     const [isOpen, setIsOpen] = useState(false);
     const [addingForm, setAddingForm] = useState<AddingForm>(null);
     const [editingResource, setEditingResource] = useState<ResourceModuleItem | null>(null);
+
+    // A live session is run for one cohort of the course, so the form needs to know which exist.
+    const { data: cohortCourses } = useCohortCoursesForCourse(courseId);
 
     const createResource = useCreateResource(courseId);
     const updateResource = useUpdateResource(courseId);
@@ -506,7 +514,7 @@ export function ModuleTableRow({
 
             {/* ── Add-content modals ────────────────────────────────────── */}
             <Modal isOpen={addingForm === 'resource'} onClose={() => setAddingForm(null)} title={module.title} className="max-w-2xl" bodyClassName="p-0">
-                <ResourceForm onSubmit={handleCreateResource} onCancel={() => setAddingForm(null)} />
+                <ResourceForm onSubmit={handleCreateResource} onCancel={() => setAddingForm(null)} cohorts={cohortCourses} />
             </Modal>
             <Modal isOpen={!!editingResource} onClose={() => setEditingResource(null)} title={module.title} className="max-w-2xl" bodyClassName="p-0">
                 {editingResource && (
@@ -514,6 +522,7 @@ export function ModuleTableRow({
                         resource={editingResource}
                         onSubmit={handleUpdateResource}
                         onCancel={() => setEditingResource(null)}
+                        cohorts={cohortCourses}
                     />
                 )}
             </Modal>

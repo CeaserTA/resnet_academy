@@ -7,6 +7,7 @@ namespace App\Http\Resources;
 use App\Enums\ModuleProgressStatus;
 use App\Models\Module;
 use App\Models\ModuleProgress;
+use App\Services\Content\LiveSessionAudience;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -54,7 +55,18 @@ final class ModuleResource extends JsonResource
     {
         $items = collect();
 
+        // A student only sees the live sessions run for their own cohort (plus any that are for
+        // everyone). Admins and instructors see every one, which is how they manage them.
+        $user = $request->user();
+        $hiddenSessionIds = $user && $user->role->value === 'student'
+            ? app(LiveSessionAudience::class)->hiddenResourceIds($user, $this->course_id, $this->resources->pluck('id'))
+            : [];
+
         foreach ($this->resources as $resource) {
+            if (in_array($resource->id, $hiddenSessionIds, true)) {
+                continue;
+            }
+
             $items->push((new ResourceItemResource($resource))->toArray($request));
         }
 

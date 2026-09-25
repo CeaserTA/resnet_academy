@@ -85,6 +85,9 @@ final class ResourceItemResource extends JsonResource
                 'standard' => $this->scormPackage?->standard?->value,
             ],
             ResourceType::LiveSession => [
+                // Which cohort the session is run for. Null means everyone taking the course.
+                'cohort_id' => $this->liveSession?->cohort_id,
+                'cohort_name' => $this->liveSession?->cohort?->name,
                 'provider' => $this->liveSession?->provider?->value,
                 'meeting_url' => $this->liveSession?->meeting_url,
                 'scheduled_at' => $this->liveSession?->scheduled_at?->toIso8601String(),

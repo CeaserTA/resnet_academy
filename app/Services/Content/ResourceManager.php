@@ -128,6 +128,7 @@ final class ResourceManager
             ]),
             ResourceType::LiveSession => ResourceLiveSession::create([
                 'resource_id' => $resource->id,
+                'cohort_id' => $data['cohort_id'] ?? null,
                 'provider' => $data['provider'],
                 'meeting_url' => $data['meeting_url'],
                 'scheduled_at' => $data['scheduled_at'],
@@ -167,7 +168,7 @@ final class ResourceManager
             ResourceType::Reading => ['content_html'],
             ResourceType::ExternalLink => ['url'],
             ResourceType::Scorm => ['package_url', 'standard'],
-            ResourceType::LiveSession => ['provider', 'meeting_url', 'scheduled_at', 'duration_minutes', 'recording_url'],
+            ResourceType::LiveSession => ['cohort_id', 'provider', 'meeting_url', 'scheduled_at', 'duration_minutes', 'recording_url'],
             ResourceType::DownloadableFile => ['file_url', 'file_size_kb'],
         };
 
