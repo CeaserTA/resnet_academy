@@ -181,14 +181,14 @@ export function QuestionPicker({
                                     className="flex flex-1 items-center gap-2 text-left"
                                 >
                                     {isExpanded ? (
-                                        <ChevronDown className="size-4 shrink-0 text-ink-400" />
+                                        <ChevronDown className="size-4 shrink-0 text-ink-600" />
                                     ) : (
-                                        <ChevronRight className="size-4 shrink-0 text-ink-400" />
+                                        <ChevronRight className="size-4 shrink-0 text-ink-600" />
                                     )}
                                     <span className="text-sm font-medium text-ink-900">
                                         {bank.title}
                                     </span>
-                                    <span className="text-xs text-ink-500">
+                                    <span className="text-xs text-ink-600">
                                         ({selectedInBank}/{bank.questions.length})
                                     </span>
                                 </button>
@@ -201,7 +201,7 @@ export function QuestionPicker({
                                             'shrink-0 rounded px-2 py-0.5 text-xs font-medium transition',
                                             allSelected
                                                 ? 'text-blue-600 hover:bg-blue-50'
-                                                : 'text-ink-500 hover:bg-surface-100',
+                                                : 'text-ink-600 hover:bg-surface-100',
                                         )}
                                     >
                                         {allSelected ? 'Deselect all' : 'Select all'}
@@ -254,7 +254,7 @@ export function QuestionPicker({
                                                     >
                                                         {question.question_text}
                                                     </p>
-                                                    <p className="mt-0.5 text-xs text-ink-500">
+                                                    <p className="mt-0.5 text-xs text-ink-600">
                                                         {TYPE_LABELS[question.type] ?? question.type}
                                                         {' · '}
                                                         {question.points} pt
@@ -294,7 +294,7 @@ export function QuestionPicker({
             {/* ─── Save button ───────────────────────────────────────────────── */}
             <div className="flex items-center justify-end gap-3 border-t border-surface-100 pt-4">
                 {isDirty && (
-                    <p className="text-xs text-ink-500">Unsaved changes</p>
+                    <p className="text-xs text-ink-600">Unsaved changes</p>
                 )}
                 <Button
                     onClick={handleSave}

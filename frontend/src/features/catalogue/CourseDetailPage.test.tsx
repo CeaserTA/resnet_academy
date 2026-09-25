@@ -24,6 +24,10 @@ vi.mock('@/features/catalogue/useCourses', () => ({
         data: [],
         isLoading: false,
     })),
+    useCourses: vi.fn(() => ({
+        data: { data: [] },
+        isLoading: false,
+    })),
 }));
 
 vi.mock('@/features/catalogue/useStudentSections', () => ({

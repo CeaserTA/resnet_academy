@@ -99,14 +99,14 @@ export function ForumsIndexPage() {
                                                 <span className="font-medium">Latest:</span>{' '}
                                                 {forum.latest_thread.title}
                                             </span>
-                                            <span className="shrink-0 text-ink-500">
+                                            <span className="shrink-0 text-ink-600">
                                                 {formatTimestamp(forum.latest_thread.last_activity_at)}
                                             </span>
                                         </div>
                                     )}
 
                                     {forum.thread_count === 0 && (
-                                        <div className="mt-3 flex items-center gap-2 text-sm text-ink-500">
+                                        <div className="mt-3 flex items-center gap-2 text-sm text-ink-600">
                                             <AlertCircle className="size-4" aria-hidden="true" />
                                             No discussions yet - be the first to post!
                                         </div>

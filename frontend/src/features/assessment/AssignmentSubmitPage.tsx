@@ -49,7 +49,7 @@ function ExistingSubmission({ submission, onResubmit }: { submission: Assignment
                     />
                 </div>
                 <div className="px-4 py-3">
-                    <p className="text-xs text-ink-400">
+                    <p className="text-xs text-ink-600">
                         Submitted {formatDate(submission.submitted_at)}
                         {submission.is_late && <span className="ml-2 text-amber-600">(late)</span>}
                     </p>
@@ -172,7 +172,7 @@ function SubmissionForm({ assignmentId, submissionType, onSuccess }: {
                                     ? 'Attach a file (optional if you answer below)'
                                     : 'Upload your file'}
                             </p>
-                            <p className="mt-0.5 text-xs text-ink-400">Max 20 MB · Any file type</p>
+                            <p className="mt-0.5 text-xs text-ink-600">Max 20 MB · Any file type</p>
                             <div className="mt-2 flex items-center gap-3">
                                 <input
                                     ref={fileInputRef}
@@ -184,7 +184,7 @@ function SubmissionForm({ assignmentId, submissionType, onSuccess }: {
                                     <FolderOpen className="size-3.5" aria-hidden="true" />
                                     Choose file
                                 </Button>
-                                <span className="text-xs text-ink-400">
+                                <span className="text-xs text-ink-600">
                                     {file ? file.name : 'No file chosen'}
                                 </span>
                             </div>
@@ -280,7 +280,7 @@ export function AssignmentSubmitPage() {
         <div className="mx-auto max-w-5xl space-y-4">
 
             {/* Breadcrumb */}
-            <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-ink-400">
+            <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-ink-600">
                 <Link to="/dashboard" className="hover:text-blue-600">My courses</Link>
                 {course && (
                     <>
@@ -316,7 +316,7 @@ export function AssignmentSubmitPage() {
                             {/* Due date */}
                             {assignment.due_at && (
                                 <div className="flex items-start justify-between gap-2 text-xs">
-                                    <span className="text-ink-400">Due</span>
+                                    <span className="text-ink-600">Due</span>
                                     <span className={isOverdue ? 'font-medium text-danger-600' : 'text-ink-900'}>
                                         {formatDate(assignment.due_at)}
                                     </span>
@@ -325,20 +325,20 @@ export function AssignmentSubmitPage() {
 
                             {/* Max score */}
                             <div className="flex items-center justify-between text-xs">
-                                <span className="text-ink-400">Max score</span>
+                                <span className="text-ink-600">Max score</span>
                                 <span className="font-semibold text-ink-900">{assignment.max_score} pts</span>
                             </div>
 
                             {/* Submission type */}
                             <div className="flex items-center justify-between text-xs">
-                                <span className="text-ink-400">Type</span>
+                                <span className="text-ink-600">Type</span>
                                 <span className="capitalize text-ink-900">{assignment.submission_type.replace('_', ' ')}</span>
                             </div>
 
                             {/* Attempts */}
                             {attemptCount > 0 && (
                                 <div className="flex items-center justify-between text-xs">
-                                    <span className="text-ink-400">Attempts</span>
+                                    <span className="text-ink-600">Attempts</span>
                                     <span className="text-ink-900">{attemptCount}</span>
                                 </div>
                             )}

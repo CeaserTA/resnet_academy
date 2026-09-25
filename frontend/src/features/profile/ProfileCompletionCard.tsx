@@ -68,7 +68,7 @@ export function ProfileCompletionCard({ percentage, missingFields, completedFiel
                             {field.completed ? (
                                 <CheckCircle2 className="size-4 shrink-0 text-success-600" aria-hidden="true" />
                             ) : (
-                                <XCircle className="size-4 shrink-0 text-ink-400" aria-hidden="true" />
+                                <XCircle className="size-4 shrink-0 text-ink-600" aria-hidden="true" />
                             )}
                             <span className={field.completed ? 'text-ink-900' : 'text-ink-600'}>
                                 {formatFieldName(field.name)}

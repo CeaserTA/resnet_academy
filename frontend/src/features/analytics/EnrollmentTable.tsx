@@ -42,11 +42,11 @@ export function EnrollmentTable({ roster }: { roster: RosterEntry[] }) {
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-surface-100 bg-surface-50 px-4 py-3">
                 <div>
                     <h2 className="text-sm font-semibold text-ink-900">Student enrollment</h2>
-                    <p className="text-xs text-ink-400">{roster.length} student{roster.length !== 1 ? 's' : ''}</p>
+                    <p className="text-xs text-ink-600">{roster.length} student{roster.length !== 1 ? 's' : ''}</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <div className="relative">
-                        <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-400" aria-hidden="true" />
+                        <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-600" aria-hidden="true" />
                         <input
                             value={filter}
                             onChange={(e) => setFilter(e.target.value)}
@@ -80,7 +80,7 @@ export function EnrollmentTable({ roster }: { roster: RosterEntry[] }) {
                                     <Avatar name={row.student.name} size="sm" className="size-7 shrink-0 text-xs" />
                                     <div className="min-w-0">
                                         <p className="truncate text-sm font-medium text-ink-900">{row.student.name}</p>
-                                        <p className="truncate text-xs text-ink-400">{row.student.email}</p>
+                                        <p className="truncate text-xs text-ink-600">{row.student.email}</p>
                                     </div>
                                 </div>
                                 {/* Enrolled date */}

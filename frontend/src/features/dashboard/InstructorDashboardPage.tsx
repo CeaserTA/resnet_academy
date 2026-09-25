@@ -35,7 +35,7 @@ export function InstructorDashboardPage() {
     const statusColor: Record<string, string> = {
         published: 'text-success-600',
         draft: 'text-amber-600',
-        archived: 'text-ink-400',
+        archived: 'text-ink-600',
     };
 
     if (isLoading) {
@@ -133,11 +133,11 @@ export function InstructorDashboardPage() {
                                             {course.title}
                                         </h3>
                                         <div className="flex items-center justify-between gap-1">
-                                            <span className={`text-xs font-medium capitalize ${statusColor[course.status] ?? 'text-ink-400'}`}>
+                                            <span className={`text-xs font-medium capitalize ${statusColor[course.status] ?? 'text-ink-600'}`}>
                                                 {course.status}
                                             </span>
                                             {course.category && (
-                                                <span className="truncate text-xs text-ink-400">{course.category.name}</span>
+                                                <span className="truncate text-xs text-ink-600">{course.category.name}</span>
                                             )}
                                         </div>
                                         <p className="mt-auto text-sm font-bold text-ink-900">
@@ -188,7 +188,7 @@ export function InstructorDashboardPage() {
                                 </span>
                                 <div className="min-w-0">
                                     <p className="text-sm font-medium text-ink-900">{label}</p>
-                                    <p className="truncate text-xs text-ink-400">{desc}</p>
+                                    <p className="truncate text-xs text-ink-600">{desc}</p>
                                 </div>
                                 <ArrowRight className="ml-auto size-3.5 shrink-0 text-ink-300" aria-hidden="true" />
                             </Link>

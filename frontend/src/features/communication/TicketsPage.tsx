@@ -69,7 +69,7 @@ function StatusBadge({
                     aria-label={`Change status — currently ${current.label}`}
                 >
                     <Badge label={current.label} tone={current.tone} icon={current.icon} />
-                    <ChevronDown className="size-3 text-ink-400" aria-hidden="true" />
+                    <ChevronDown className="size-3 text-ink-600" aria-hidden="true" />
                 </button>
             )}
             items={STATUS_OPTIONS.filter((s) => s !== ticket.status).map((s) => {
@@ -214,7 +214,7 @@ function StaffTicketsView() {
                     <div className="mb-3 flex flex-wrap items-center gap-2">
                         {/* Search */}
                         <div className="relative min-w-0 flex-1 sm:max-w-56">
-                            <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-400" aria-hidden="true" />
+                            <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-600" aria-hidden="true" />
                             <input
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
@@ -301,13 +301,13 @@ function StaffTicketsView() {
                                                         <p className="truncate text-sm font-medium text-ink-900">
                                                             {ticket.student.name}
                                                         </p>
-                                                        <p className="truncate text-xs text-ink-400">
+                                                        <p className="truncate text-xs text-ink-600">
                                                             {ticket.student.email}
                                                         </p>
                                                     </div>
                                                 </>
                                             ) : (
-                                                <span className="text-sm text-ink-400">—</span>
+                                                <span className="text-sm text-ink-600">—</span>
                                             )}
                                         </div>
 
@@ -315,7 +315,7 @@ function StaffTicketsView() {
                                         <div className="min-w-0">
                                             <p className="truncate text-sm text-ink-900">{ticket.subject}</p>
                                             {ticket.course && (
-                                                <p className="truncate text-xs text-ink-400">{ticket.course.title}</p>
+                                                <p className="truncate text-xs text-ink-600">{ticket.course.title}</p>
                                             )}
                                         </div>
 
@@ -334,14 +334,14 @@ function StaffTicketsView() {
                                             <button
                                                 onClick={() => setSelectedTicketId(ticket.id)}
                                                 aria-label={`View ticket: ${ticket.subject}`}
-                                                className="flex items-center justify-center rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-surface-100 hover:text-blue-600"
+                                                className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-blue-600"
                                             >
                                                 <Eye className="size-4" aria-hidden="true" />
                                             </button>
                                         </div>
 
                                         {/* Time */}
-                                        <span className="shrink-0 text-xs tabular-nums text-ink-400">
+                                        <span className="shrink-0 text-xs tabular-nums text-ink-600">
                                             {formatRelativeTime(ticket.created_at)}
                                         </span>
                                     </li>
@@ -350,7 +350,7 @@ function StaffTicketsView() {
 
                             {/* Footer count */}
                             <div className="border-t border-surface-100 bg-surface-50 px-4 py-2">
-                                <p className="text-xs text-ink-400">
+                                <p className="text-xs text-ink-600">
                                     {filtered.length} ticket{filtered.length !== 1 ? 's' : ''}
                                 </p>
                             </div>
@@ -369,7 +369,7 @@ function StaffTicketsView() {
                                         <p className="truncate text-sm font-semibold text-ink-900">
                                             {selectedTicket.subject}
                                         </p>
-                                        <p className="text-xs text-ink-400">
+                                        <p className="text-xs text-ink-600">
                                             {selectedTicket.student?.name}
                                             {selectedTicket.course && ` · ${selectedTicket.course.title}`}
                                         </p>
@@ -380,7 +380,7 @@ function StaffTicketsView() {
                                 <button
                                     onClick={closePanel}
                                     aria-label="Close conversation"
-                                    className="rounded-md p-1 text-ink-400 hover:bg-surface-100 hover:text-ink-900"
+                                    className="rounded-md p-1 text-ink-600 hover:bg-surface-100 hover:text-ink-900"
                                 >
                                     <X className="size-4" aria-hidden="true" />
                                 </button>
@@ -462,7 +462,7 @@ function StudentTicketsView() {
                             <Card className="flex items-center justify-between gap-3 hover:border-blue-200 hover:shadow-md transition-all">
                                 <div className="min-w-0">
                                     <p className="truncate text-sm font-medium text-ink-900">{ticket.subject}</p>
-                                    <p className="truncate text-xs text-ink-400">
+                                    <p className="truncate text-xs text-ink-600">
                                         {ticket.course ? ticket.course.title : 'General'}
                                         {' · '}
                                         {formatRelativeTime(ticket.created_at)}

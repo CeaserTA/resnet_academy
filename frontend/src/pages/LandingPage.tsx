@@ -2,10 +2,12 @@ import { useEffect } from 'react';
 import { LandingHeader } from '@/components/layout/LandingHeader';
 import { useAuthModal } from '@/lib/auth/AuthModalContext';
 import { Hero } from '@/components/landing/Hero';
+import { AboutSection } from '@/components/landing/AboutSection';
+import { WhyResNet } from '@/components/landing/WhyResNet';
 import { CoursePreviews } from '@/components/landing/CoursePreviews';
 import { CohortSection } from '@/components/landing/CohortSection';
-import { Features } from '@/components/landing/Features';
 import { Testimonials } from '@/components/landing/Testimonials';
+import { CtaBanner } from '@/components/landing/CtaBanner';
 import { Footer } from '@/components/landing/Footer';
 
 export function LandingPage() {
@@ -25,24 +27,28 @@ export function LandingPage() {
             <LandingHeader onLoginClick={handleLoginClick} onSignupClick={handleSignupClick} />
 
             <main>
-                {/* Hero Section */}
-                <Hero
-                    onJoinCohortClick={handleSignupClick}
-                />
+                {/* Hero */}
+                <Hero onJoinCohortClick={handleSignupClick} />
 
-                {/* Course Previews Section */}
+                {/* About */}
+                <AboutSection />
+
+                {/* Why ResNet + What you get — merged */}
+                <WhyResNet />
+
+                {/* Course Previews */}
                 <CoursePreviews />
 
-                {/* Cohort Schedule Section */}
+                {/* Cohort Schedule */}
                 <CohortSection />
 
-                {/* Features Section */}
-                <Features />
-
-                {/* Testimonials Section */}
+                {/* Testimonials */}
                 <Testimonials />
 
-                {/* Footer Section */}
+                {/* CTA Banner */}
+                <CtaBanner onSignupClick={handleSignupClick} />
+
+                {/* Footer */}
                 <Footer onLoginClick={handleLoginClick} onSignupClick={handleSignupClick} />
             </main>
         </div>

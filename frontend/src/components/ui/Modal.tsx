@@ -34,7 +34,7 @@ export function Modal({ isOpen, onClose, title, children, footer, className, bod
                         <Dialog.Close asChild>
                             <button
                                 aria-label="Close"
-                                className="rounded-lg p-1.5 text-ink-400 transition hover:bg-surface-100 hover:text-ink-900"
+                                className="rounded-lg p-1.5 text-ink-600 transition hover:bg-surface-100 hover:text-ink-900"
                             >
                                 <X className="size-4" aria-hidden="true" />
                             </button>

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&display=swap');
 @import 'tailwindcss';
 
 @theme {
@@ -48,8 +48,8 @@
     --color-input: #e8ecf1;
     --color-ring: #3b82f6;
 
-    --font-display: 'Sora', system-ui, sans-serif;
-    --font-body: 'Inter', system-ui, sans-serif;
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'Manrope', system-ui, sans-serif;
     --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
     /* shadcn/ui compatibility layer — aliases onto the tokens above, not new colors. Lets
@@ -75,6 +75,59 @@
     --color-popover: var(--color-surface-0);
     --color-popover-foreground: var(--color-ink-900);
     --radius: 0.5rem;
+
+    /* ── Guide-aligned semantic aliases ── */
+    --color-surface: var(--color-card);
+    --color-text: var(--color-foreground);
+    --color-danger: var(--color-destructive);
+    --color-focus: var(--color-ring);
+
+    /* ── Extended palette tokens ── */
+
+    /* Dark navy — for dark section backgrounds (e.g. CTA banner, hero overlays) */
+    --color-navy: oklch(0.38 0.15 264);
+    /* Text color to use on navy backgrounds */
+    --color-navy-foreground: oklch(0.99 0.003 250);
+
+    /* Off-white — subtle section background, slightly cooler than pure white */
+    --color-surface-muted: oklch(0.976 0.008 250);
+
+    /* Amber accent — use sparingly for warnings, highlights, ongoing badges */
+    --color-accent-amber: oklch(0.56 0.14 62);
+
+    /* ── Dialog motion — driven by Radix's data-[state=open|closed] ── */
+    --animate-overlay-in: overlay-in 200ms ease-out;
+    --animate-overlay-out: overlay-out 150ms ease-in forwards;
+    --animate-dialog-in: dialog-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+    --animate-dialog-out: dialog-out 150ms ease-in forwards;
+    --animate-fade-slide-in: fade-slide-in 200ms ease-out;
+
+    @keyframes overlay-in {
+        from { opacity: 0; }
+    }
+    @keyframes overlay-out {
+        to { opacity: 0; }
+    }
+    /* Uses the individual `scale` property so it composes with Tailwind v4's `translate`
+       centring rather than overwriting it the way `transform` would. */
+    @keyframes dialog-in {
+        from { opacity: 0; scale: 0.95; }
+    }
+    @keyframes dialog-out {
+        to { opacity: 0; scale: 0.95; }
+    }
+    @keyframes fade-slide-in {
+        from { opacity: 0; translate: 0 4px; }
+    }
+}
+
+/* Anything marked data-reduce-motion drops its animations/transitions for users who ask for it. */
+@media (prefers-reduced-motion: reduce) {
+    [data-reduce-motion],
+    [data-reduce-motion] * {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
 }
 
 
@@ -84,18 +137,15 @@
         @apply bg-background text-foreground font-body antialiased;
     }
 
-    /* Hide scrollbar while keeping scroll functional */
-    .scrollbar-hide {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-    }
-    .scrollbar-hide::-webkit-scrollbar {
-        display: none;
-    }
-
+    /* h1–h3 use the display font with tight tracking — editorial feel */
     h1,
     h2,
-    h3,
+    h3 {
+        @apply font-display font-semibold text-ink-900;
+        letter-spacing: -0.015em;
+    }
+
+    /* h4–h6 stay on body font */
     h4,
     h5,
     h6 {
@@ -104,5 +154,49 @@
 
     :focus-visible {
         @apply outline-2 outline-offset-2 outline-primary;
+    }
+}
+
+@utility scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+@keyframes circular-spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes word-reveal {
+    from {
+        clip-path: inset(0 0 100% 0);
+        transform: translateY(12px);
+        opacity: 0;
+    }
+
+    to {
+        clip-path: inset(0 0 0% 0);
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes card-enter {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }

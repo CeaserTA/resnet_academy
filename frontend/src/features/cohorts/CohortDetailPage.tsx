@@ -49,7 +49,7 @@ export function CohortDetailPage() {
         <div className="mx-auto max-w-5xl space-y-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                    <Link to="/admin/cohorts" className="flex items-center gap-1 text-sm text-ink-400 hover:text-blue-600">
+                    <Link to="/admin/cohorts" className="flex items-center gap-1 text-sm text-ink-600 hover:text-blue-600">
                         <ArrowLeft className="size-3.5" aria-hidden="true" />
                         Cohorts
                     </Link>
@@ -89,7 +89,7 @@ export function CohortDetailPage() {
                 <div className="flex items-center justify-between border-b border-surface-100 bg-surface-50 px-4 py-3">
                     <div>
                         <h2 className="text-sm font-semibold text-ink-900">Courses in this cohort</h2>
-                        <p className="text-xs text-ink-400">
+                        <p className="text-xs text-ink-600">
                             {cohort.courses.length} course{cohort.courses.length !== 1 ? 's' : ''}
                         </p>
                     </div>
@@ -130,7 +130,7 @@ export function CohortDetailPage() {
                                             <td className="px-4 py-3">
                                                 <span className="font-medium text-ink-900">{cohortCourse.course?.title}</span>
                                                 {cohortCourse.primary_instructor && (
-                                                    <p className="text-xs text-ink-400">{cohortCourse.primary_instructor.name}</p>
+                                                    <p className="text-xs text-ink-600">{cohortCourse.primary_instructor.name}</p>
                                                 )}
                                             </td>
                                             <td className="px-4 py-3">
@@ -152,14 +152,14 @@ export function CohortDetailPage() {
                                                 <div className="flex justify-end gap-2">
                                                     <button
                                                         onClick={() => setEditingCohortCourse(cohortCourse)}
-                                                        className="rounded p-1.5 text-ink-400 hover:bg-surface-100 hover:text-blue-600"
+                                                        className="rounded p-1.5 text-ink-600 hover:bg-surface-100 hover:text-blue-600"
                                                         aria-label={`Edit ${cohortCourse.course?.title}`}
                                                     >
                                                         <Pencil className="size-3.5" aria-hidden="true" />
                                                     </button>
                                                     <button
                                                         onClick={() => setDetachingCohortCourse(cohortCourse)}
-                                                        className="rounded p-1.5 text-ink-400 hover:bg-red-50 hover:text-red-600"
+                                                        className="rounded p-1.5 text-ink-600 hover:bg-red-50 hover:text-red-600"
                                                         aria-label={`Remove ${cohortCourse.course?.title}`}
                                                     >
                                                         <Trash2 className="size-3.5" aria-hidden="true" />

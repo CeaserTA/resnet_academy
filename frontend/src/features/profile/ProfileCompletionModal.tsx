@@ -96,7 +96,7 @@ export function ProfileCompletionModal({
                                 ) : (
                                     <XCircle className="size-3.5 shrink-0 text-ink-300" aria-hidden="true" />
                                 )}
-                                <span className={cn('truncate', done ? 'text-ink-900' : 'text-ink-500')}>
+                                <span className={cn('truncate', done ? 'text-ink-900' : 'text-ink-600')}>
                                     {formatFieldName(name)}
                                 </span>
                             </div>
@@ -108,7 +108,7 @@ export function ProfileCompletionModal({
                 <div className="flex items-center justify-between border-t border-surface-100 px-6 py-4">
                     <button
                         onClick={onClose}
-                        className="text-sm text-ink-400 hover:text-ink-600"
+                        className="text-sm text-ink-600 hover:text-ink-600"
                     >
                         Remind me later
                     </button>

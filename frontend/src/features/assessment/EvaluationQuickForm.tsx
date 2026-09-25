@@ -74,7 +74,7 @@ export function EvaluationQuickForm({ onSubmit, onCancel }: EvaluationQuickFormP
 
                 {/* Limits row */}
                 <div>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-400">Limits</p>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-600">Limits</p>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                         <Input
                             label="Pass score (%)"

@@ -78,7 +78,7 @@ export function AssignmentQuickForm({ onSubmit, onCancel }: AssignmentQuickFormP
 
                 {/* Settings row */}
                 <div>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-400">Settings</p>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-600">Settings</p>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                         <Select
                             label="Submission type"
@@ -114,7 +114,7 @@ export function AssignmentQuickForm({ onSubmit, onCancel }: AssignmentQuickFormP
                     />
                     <div>
                         <p className="text-sm font-medium text-ink-900">Accept late submissions</p>
-                        <p className="text-xs text-ink-400">A penalty can be configured on the assignment page</p>
+                        <p className="text-xs text-ink-600">A penalty can be configured on the assignment page</p>
                     </div>
                 </label>
 

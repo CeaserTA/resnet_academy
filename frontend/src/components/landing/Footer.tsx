@@ -21,7 +21,6 @@ const companyLinks = [
   { label: 'Careers', to: '#' },
 ];
 
-// Brand icons as inline SVG — lucide-react doesn't ship Facebook/X/Instagram/LinkedIn
 const socialLinks = [
   {
     label: 'Facebook',
@@ -65,11 +64,10 @@ const socialLinks = [
   },
 ];
 
-// Shared link class — muted #475569, shifts to primary #3b82f6 with x-nudge on hover
 const linkClass =
-  'inline-flex items-center text-sm font-normal text-[#475569] transition-all duration-200 hover:translate-x-0.5 hover:text-[#3b82f6] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3b82f6]';
+  'inline-flex items-center text-sm font-normal text-muted-foreground transition-colors duration-200 hover:translate-x-0.5 hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
-const colHeadingClass = 'text-xs font-medium uppercase tracking-widest text-[#0f172a]';
+const colHeadingClass = 'text-xs font-medium uppercase tracking-widest text-foreground';
 
 export function Footer({ onLoginClick, onSignupClick }: FooterProps) {
   // Verification opens in place rather than on its own page; the footer owns it so it works on
@@ -93,49 +91,26 @@ export function Footer({ onLoginClick, onSignupClick }: FooterProps) {
   return (
     <footer
       aria-label="Site footer"
-      className="relative overflow-hidden"
       style={{
         background: 'linear-gradient(to bottom, #bfdbfe 0%, #eff6ff 45%, #f8fafc 100%)',
       }}
     >
-      {/* ── Dot-grid overlay ── */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0"
-        style={{
-          backgroundImage:
-            'radial-gradient(circle, rgba(59,130,246,0.08) 1.5px, transparent 1.5px)',
-          backgroundSize: '24px 24px',
-        }}
-      />
-
-      {/* ── Top-right radial glow ── */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full"
-        style={{
-          background:
-            'radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)',
-        }}
-      />
-
-      {/* ── Content ── */}
-      <div className="relative px-6 py-6 sm:px-8 sm:py-8 lg:px-12">
+      <div className="px-6 py-6 sm:px-8 sm:py-8 lg:px-12">
         <div className="mx-auto max-w-7xl">
 
           {/* ── CTA banner ── */}
-          <div className="mb-8 flex flex-col items-start justify-between gap-4 rounded-2xl border border-blue-100 bg-white/80 px-5 py-4 shadow-sm backdrop-blur-sm sm:flex-row sm:items-center">
+          <div className="mb-8 flex flex-col items-start justify-between gap-4 border border-border bg-white px-5 py-4 rounded-xl sm:flex-row sm:items-center">
             <div>
-              <p className="text-base font-semibold text-[#0f172a]">
+              <p className="text-base font-semibold text-foreground">
                 Ready to start learning?
               </p>
-              <p className="mt-0.5 text-sm text-[#475569]">
+              <p className="mt-0.5 text-sm text-muted-foreground">
                 Join thousands of developers building real, job-ready skills.
               </p>
             </div>
             <Button
               variant="primary"
-              className="shrink-0 rounded-lg bg-[#3b82f6] px-5 text-sm font-medium text-white hover:bg-blue-500"
+              className="shrink-0"
               onClick={onSignupClick}
             >
               Get started free
@@ -150,13 +125,13 @@ export function Footer({ onLoginClick, onSignupClick }: FooterProps) {
               <Link
                 to="/"
                 aria-label="Resnet Academy home"
-                className="inline-flex items-center gap-2 text-lg font-semibold text-[#0f172a] transition-colors duration-200 hover:text-[#3b82f6] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3b82f6]"
+                className="inline-flex items-center gap-2 text-lg font-semibold text-foreground transition-colors duration-200 hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
-                <GraduationCap className="size-6 text-[#3b82f6]" aria-hidden="true" />
+                <GraduationCap className="size-6 text-primary" aria-hidden="true" />
                 Resnet Academy
               </Link>
 
-              <p className="mt-3 max-w-xs text-sm leading-6 text-[#475569]">
+              <p className="mt-3 max-w-xs text-sm leading-6 text-muted-foreground">
                 Hands-on mentorship in web technologies. Learn by building real
                 projects with guided support to launch your tech career.
               </p>
@@ -168,7 +143,7 @@ export function Footer({ onLoginClick, onSignupClick }: FooterProps) {
                     href={href}
                     aria-label={label}
                     role="listitem"
-                    className="flex h-8 w-8 items-center justify-center rounded-full border border-[#3b82f6] bg-blue-50 text-[#3b82f6] transition-all duration-200 hover:scale-110 hover:bg-[#3b82f6] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3b82f6]"
+                    className="flex h-8 w-8 items-center justify-center rounded-full border border-primary bg-blue-50 text-primary transition-colors duration-200 hover:bg-primary hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   >
                     {svg}
                   </a>
@@ -216,14 +191,14 @@ export function Footer({ onLoginClick, onSignupClick }: FooterProps) {
             {/* Col 4 — Get Started */}
             <div>
               <h3 className={colHeadingClass}>Get Started</h3>
-              <p className="mt-4 text-sm text-[#475569]">
+              <p className="mt-4 text-sm text-muted-foreground">
                 Already have an account?
               </p>
               <div className="mt-4 flex flex-col gap-3">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full rounded-lg border-[#e2e8f0] bg-white text-[#475569] transition-all duration-200 hover:border-[#3b82f6] hover:text-[#3b82f6]"
+                  className="w-full"
                   onClick={onLoginClick}
                 >
                   Log in
@@ -231,7 +206,7 @@ export function Footer({ onLoginClick, onSignupClick }: FooterProps) {
                 <Button
                   variant="primary"
                   size="sm"
-                  className="w-full rounded-lg bg-[#3b82f6] transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-500 hover:shadow-md hover:shadow-blue-200"
+                  className="w-full"
                   onClick={onSignupClick}
                 >
                   Sign up free
@@ -242,8 +217,8 @@ export function Footer({ onLoginClick, onSignupClick }: FooterProps) {
           </div>
 
           {/* ── Bottom bar ── */}
-          <div className="mt-8 flex flex-col items-center gap-3 border-t border-blue-100 pt-5 sm:flex-row sm:justify-between">
-            <p className="text-center text-sm text-[#94a3b8] sm:text-left">
+          <div className="mt-8 flex flex-col items-center gap-3 border-t border-border pt-5 sm:flex-row sm:justify-between">
+            <p className="text-center text-sm text-muted-foreground sm:text-left">
               © {new Date().getFullYear()} Resnet Academy. All rights reserved.
             </p>
             <nav aria-label="Legal links">
