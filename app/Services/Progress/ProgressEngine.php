@@ -23,6 +23,7 @@ use App\Models\User;
 use App\Models\VideoWatchPing;
 use App\Services\Analytics\EngagementTracker;
 use App\Services\Certification\CertificateService;
+use App\Services\Content\LiveSessionAudience;
 use App\Services\Notifications\NotificationDispatcher;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection;
@@ -40,6 +41,7 @@ final class ProgressEngine
         private readonly CertificateService $certificateService,
         private readonly NotificationDispatcher $notificationDispatcher,
         private readonly EngagementTracker $engagementTracker,
+        private readonly LiveSessionAudience $liveSessionAudience,
     ) {}
 
     /**
@@ -186,7 +188,7 @@ final class ProgressEngine
                 $progress->update(['status' => ModuleProgressStatus::InProgress]);
             }
 
-            $requiredItems = $module->items()->where('is_required', true)->get();
+            $requiredItems = $this->requiredItemsFor($student, $module);
 
             $allComplete = $requiredItems->isNotEmpty()
                 && $requiredItems->every(fn (ModuleItem $item) => $this->isModuleItemComplete($student, $item));
@@ -205,6 +207,33 @@ final class ProgressEngine
                 $this->certificateService->issueForCourseCompletion($student, $module->course);
             }
         });
+    }
+
+    /**
+     * The items this student has to complete for the module: every required item, minus live
+     * sessions run for another cohort. Those are not theirs to attend, so counting them would
+     * leave a module permanently incomplete for every student outside that cohort.
+     *
+     * @return Collection<int, ModuleItem>
+     */
+    private function requiredItemsFor(User $student, Module $module): Collection
+    {
+        $required = $module->items()->where('is_required', true)->get();
+
+        $hiddenSessionIds = $this->liveSessionAudience->hiddenResourceIds(
+            $student,
+            $module->course_id,
+            $required->where('item_type', ModuleItemType::Resource)->pluck('item_id'),
+        );
+
+        if ($hiddenSessionIds === []) {
+            return $required;
+        }
+
+        return $required
+            ->reject(fn (ModuleItem $item): bool => $item->item_type === ModuleItemType::Resource
+                && in_array((int) $item->item_id, $hiddenSessionIds, true))
+            ->values();
     }
 
     public function isModuleItemComplete(User $student, ModuleItem $item): bool
@@ -418,6 +447,12 @@ final class ProgressEngine
 
         $liveSession = $resource->liveSession;
         abort_if(! $liveSession, 404);
+
+        abort_unless(
+            $this->liveSessionAudience->includes($student, $liveSession, $resource->module->course_id),
+            403,
+            'This live session is for a different cohort.',
+        );
 
         abort_if(now()->lt($liveSession->scheduled_at), 403, 'This session has not started yet.');
         abort_if(

@@ -59,7 +59,15 @@ final class StoreResourceRequest extends FormRequest
             // live_session
             'provider' => ['required_if:type,live_session', Rule::in(['zoom', 'google_meet'])],
             'meeting_url' => ['required_if:type,live_session', 'url', 'max:500'],
-            'scheduled_at' => ['required_if:type,live_session', 'date', new WithinCohortSchedule($this->route('module')?->course)],
+            // The cohort this session is run for, which must be one the course actually runs in.
+            // Null means for everyone taking the course, which is only allowed to carry a date
+            // when the course runs in at most one cohort (see WithinCohortSchedule).
+            'cohort_id' => ['nullable', 'integer', Rule::exists('cohort_courses', 'cohort_id')->where('course_id', $this->route('module')?->course_id)],
+            'scheduled_at' => ['required_if:type,live_session', 'date', new WithinCohortSchedule(
+                $this->route('module')?->course,
+                cohortId: $this->filled('cohort_id') ? (int) $this->input('cohort_id') : null,
+                cohortSelectable: true,
+            )],
             'duration_minutes' => ['required_if:type,live_session', 'integer', 'min:1'],
             // Optional at creation — a recording only exists after the session has run.
             'recording_url' => ['nullable', 'url', 'max:500'],

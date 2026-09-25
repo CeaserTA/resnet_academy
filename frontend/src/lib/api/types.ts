@@ -295,6 +295,9 @@ export interface ResourceDetails {
     package_url?: string | null;
     standard?: 'scorm_1_2' | 'scorm_2004' | 'xapi' | null;
     // live_session
+    /** The cohort the session is run for. Null means everyone taking the course. */
+    cohort_id?: number | null;
+    cohort_name?: string | null;
     provider?: 'zoom' | 'google_meet' | null;
     meeting_url?: string | null;
     scheduled_at?: string | null;

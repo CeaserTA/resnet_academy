@@ -11,9 +11,11 @@ use App\Http\Requests\Api\V1\UpdateResourceRequest;
 use App\Http\Resources\ResourceItemResource;
 use App\Models\Module;
 use App\Models\Resource;
+use App\Services\Content\LiveSessionAudience;
 use App\Services\Content\RecordingLinkChecker;
 use App\Services\Content\ResourceManager;
 use App\Services\Storage\MediaStorageService;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
 final class ResourceController extends Controller
@@ -22,10 +24,22 @@ final class ResourceController extends Controller
         private readonly ResourceManager $resourceManager,
         private readonly MediaStorageService $mediaStorage,
         private readonly RecordingLinkChecker $recordingLinkChecker,
+        private readonly LiveSessionAudience $liveSessionAudience,
     ) {}
 
-    public function show(Resource $resource): ResourceItemResource
+    public function show(Request $request, Resource $resource): ResourceItemResource
     {
+        $user = $request->user();
+
+        // A live session run for another cohort is not this student's to open, meeting link
+        // included. 404 rather than 403 so it does not confirm the session exists.
+        if ($user && $user->role->value === 'student' && $resource->type === ResourceType::LiveSession) {
+            abort_if(
+                $this->liveSessionAudience->hiddenResourceIds($user, $resource->module->course_id, [$resource->id]) !== [],
+                404,
+            );
+        }
+
         return new ResourceItemResource($resource->load(['video', 'document', 'reading', 'externalLink', 'scormPackage', 'liveSession', 'downloadableFile']));
     }
 
