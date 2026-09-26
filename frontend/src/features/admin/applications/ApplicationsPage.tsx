@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { useCourses } from '@/features/catalogue/useCourses';
 import {
     useApproveCourseApplication,
+    useAllCourseApplications,
     useCourseApplications,
     useRejectCourseApplication,
 } from '@/features/courseApplications/useCourseApplications';
@@ -18,6 +19,9 @@ import { courseApplicationStatusDisplay } from '@/lib/statusBadge';
 import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import { useAuth } from '@/lib/auth/AuthContext';
 import type { CourseApplication, CourseApplicationStatus } from '@/lib/api/types';
+import { SearchInput } from '@/components/ui/SearchInput';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { matchesSearch } from '@/lib/search';
 
 type Tab = 'all' | 'pending' | 'rejected' | 'approved';
 
@@ -177,16 +181,24 @@ export function ApplicationsPage() {
     );
     const [tab, setTab] = useState<Tab>('all');
     const [page, setPage] = useState(1);
-    const { data, isLoading } = useCourseApplications({ status: tab === 'all' ? undefined : tab, page });
+    const [search, setSearch] = useState('');
+    const term = useDebouncedValue(search.trim());
+    const isSearching = term !== '';
+    const status = tab === 'all' ? undefined : tab;
+    const { data, isLoading: isLoadingPage } = useCourseApplications({ status, page });
+    // While searching, filter the whole list for this tab, not just the current page.
+    const { data: allForTab, isLoading: isLoadingAll } = useAllCourseApplications(status, isSearching);
+    const isLoading = isSearching ? isLoadingAll : isLoadingPage;
     const approveApplication = useApproveCourseApplication();
 
     const [viewingApplication, setViewingApplication] = useState<CourseApplication | null>(null);
     const [rejectingApplication, setRejectingApplication] = useState<CourseApplication | null>(null);
 
-    const applications = [...(data?.data ?? [])].sort(
-        (a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status],
-    );
-    const meta = data?.meta;
+    const applications = [...((isSearching ? allForTab : data?.data) ?? [])]
+        .filter((application) => matchesSearch(term, application.student.name, application.student.email))
+        .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
+    // Search results are one filtered list, so page controls only apply when not searching.
+    const meta = isSearching ? undefined : data?.meta;
 
     const switchTab = (nextTab: Tab) => {
         setTab(nextTab);
@@ -195,33 +207,41 @@ export function ApplicationsPage() {
 
     return (
         <div className="space-y-4">
-            {/* Segmented tab bar */}
-            <div className="flex items-center gap-0.5 rounded-lg border border-surface-100 bg-surface-50 p-0.5 self-start">
-                {(
-                    [
-                        ['all', 'All'],
-                        ['pending', 'Pending'],
-                        ['rejected', 'Rejected'],
-                        ['approved', 'Approved'],
-                    ] as const
-                ).map(([value, label]) => (
-                    <button
-                        key={value}
-                        onClick={() => switchTab(value)}
-                        className={cn(
-                            'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                            tab === value ? 'bg-blue-600 text-white shadow-sm' : 'text-ink-600 hover:text-ink-900',
-                        )}
-                    >
-                        {label}
-                    </button>
-                ))}
+            {/* Filter row: status tabs + search (same layout as Enrolments) */}
+            <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-0.5 rounded-lg border border-surface-100 bg-surface-50 p-0.5">
+                    {(
+                        [
+                            ['all', 'All'],
+                            ['pending', 'Pending'],
+                            ['rejected', 'Rejected'],
+                            ['approved', 'Approved'],
+                        ] as const
+                    ).map(([value, label]) => (
+                        <button
+                            key={value}
+                            onClick={() => switchTab(value)}
+                            className={cn(
+                                'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                                tab === value ? 'bg-blue-600 text-white shadow-sm' : 'text-ink-600 hover:text-ink-900',
+                            )}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
+                <SearchInput value={search} onChange={setSearch} placeholder="Search name or email" label="Search applications by student name or email" />
             </div>
 
             {isLoading && <Spinner className="mt-6" />}
 
             {!isLoading && applications.length === 0 && (
-                <EmptyState icon={Info} title="No applications" description="Nothing matches this tab." className="mt-6" />
+                <EmptyState
+                    icon={Info}
+                    title="No applications"
+                    description={isSearching ? `No applications match "${term}".` : 'Nothing matches this tab.'}
+                    className="mt-6"
+                />
             )}
 
             {!isLoading && applications.length > 0 && (

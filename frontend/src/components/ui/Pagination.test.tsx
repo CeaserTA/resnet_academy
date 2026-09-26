@@ -5,9 +5,10 @@ import { Pagination } from './Pagination';
 
 const meta = (current_page: number, last_page: number, total: number) => ({ current_page, last_page, per_page: 50, total });
 
-it('renders nothing when everything fits on one page', () => {
-    const { container } = render(<Pagination meta={meta(1, 1, 12)} onPageChange={vi.fn()} itemLabel="orders" />);
-    expect(container).toBeEmptyDOMElement();
+it('shows just the total, without page controls, when everything fits on one page', () => {
+    render(<Pagination meta={meta(1, 1, 12)} onPageChange={vi.fn()} itemLabel="orders" />);
+    expect(screen.getByText('12 orders')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Next page' })).not.toBeInTheDocument();
 });
 
 it('shows the position and moves between pages', async () => {

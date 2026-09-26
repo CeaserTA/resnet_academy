@@ -341,7 +341,14 @@ export function PaymentsPage() {
     const [confirmingOrder, setConfirmingOrder] = useState<Order | null>(null);
     const [rejectingOrder, setRejectingOrder] = useState<Order | null>(null);
 
-    const orders = data?.data ?? [];
+    const [showFreeOrders, setShowFreeOrders] = useState(false);
+
+    // Free-course enrolments create UGX 0 orders that never need collecting; they'd otherwise
+    // fill Receivables. Hidden by default (with a count and a way to show them).
+    const isFreeOrder = (order: Order) => Number(order.amount) === 0 && !order.pending_submission;
+    const allOrders = data?.data ?? [];
+    const freeOrderCount = tab === 'pending' ? allOrders.filter(isFreeOrder).length : 0;
+    const orders = freeOrderCount > 0 && !showFreeOrders ? allOrders.filter((order) => !isFreeOrder(order)) : allOrders;
 
     return (
         <div className="space-y-4">
@@ -365,6 +372,21 @@ export function PaymentsPage() {
 
             {isLoading && <Spinner className="mt-6" />}
 
+            {!isLoading && freeOrderCount > 0 && (
+                <p className="text-xs text-ink-600">
+                    {showFreeOrders
+                        ? `Showing ${freeOrderCount} free-course enrolment${freeOrderCount === 1 ? '' : 's'} (UGX 0).`
+                        : `${freeOrderCount} free-course enrolment${freeOrderCount === 1 ? '' : 's'} (UGX 0) hidden — nothing to collect.`}{' '}
+                    <button
+                        type="button"
+                        onClick={() => setShowFreeOrders((v) => !v)}
+                        className="font-medium text-blue-600 hover:underline"
+                    >
+                        {showFreeOrders ? 'Hide them' : 'Show them'}
+                    </button>
+                </p>
+            )}
+
             {!isLoading && orders.length === 0 && (
                 <EmptyState icon={CreditCard} title="No payments" description="Nothing in this tab yet." className="mt-6" />
             )}
@@ -373,10 +395,10 @@ export function PaymentsPage() {
                 <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
                     {/* Scrolls sideways on narrow screens instead of clipping columns */}
                     <div className="overflow-x-auto">
-                        <div className="min-w-[760px]">
+                        <div className="min-w-[840px]">
                             {/* Column headers — vary by tab */}
                             {tab === 'pending' && (
-                                <div className="grid grid-cols-[minmax(180px,1fr)_120px_140px_60px_110px_80px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
+                                <div className="grid grid-cols-[minmax(180px,1fr)_120px_140px_60px_170px_96px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
                                     <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Student</span>
                                     <span className="text-xs font-medium uppercase tracking-wide text-ink-600 text-right">Amount owed</span>
                                     <span className="text-xs font-medium uppercase tracking-wide text-ink-600 text-right">Amount submitted</span>
@@ -415,7 +437,7 @@ export function PaymentsPage() {
                                             key={order.id}
                                             className={cn(
                                                 'items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-50',
-                                                tab === 'pending' && 'grid grid-cols-[minmax(180px,1fr)_120px_140px_60px_110px_80px]',
+                                                tab === 'pending' && 'grid grid-cols-[minmax(180px,1fr)_120px_140px_60px_170px_96px]',
                                                 tab === 'partial' && 'grid grid-cols-[minmax(180px,1fr)_120px_120px_130px_80px]',
                                                 tab === 'paid' && 'grid grid-cols-[minmax(180px,1fr)_120px_minmax(120px,1fr)_80px]',
                                             )}

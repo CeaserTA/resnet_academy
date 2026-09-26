@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, Search, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { Spinner } from '@/components/ui/Spinner';
@@ -10,6 +10,8 @@ import { useAdminEnrolments, useUpdateEnrolmentStatus } from '@/features/admin/e
 import { enrolmentStatusDisplay } from '@/lib/statusBadge';
 import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import type { AdminEnrolment, EnrolmentStatus } from '@/lib/api/types';
+import { SearchInput } from '@/components/ui/SearchInput';
+import { Pagination } from '@/components/ui/Pagination';
 
 type StatusTab = 'all' | EnrolmentStatus;
 
@@ -100,19 +102,7 @@ export function AdminEnrolmentsPage() {
                     ))}
                 </div>
 
-                <div className="relative ml-auto w-full max-w-56">
-                    <Search
-                        className="absolute left-3 top-1/2 z-10 size-3.5 -translate-y-1/2 text-ink-600"
-                        aria-hidden="true"
-                    />
-                    <input
-                        value={searchInput}
-                        onChange={(e) => setSearchInput(e.target.value)}
-                        placeholder="Search name or email"
-                        aria-label="Search students by name or email"
-                        className="w-full rounded-lg border border-surface-100 bg-surface-50 py-1.5 pl-8 pr-3 text-sm text-ink-900 transition focus-visible:bg-surface-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-                    />
-                </div>
+                <SearchInput value={searchInput} onChange={setSearchInput} placeholder="Search name or email" label="Search students by name or email" />
             </div>
 
             {isLoading && <Spinner className="mt-6" />}
@@ -218,32 +208,7 @@ export function AdminEnrolmentsPage() {
                         </div>
                     </div>
 
-                    {/* Pagination */}
-                    {meta && meta.last_page > 1 && (
-                        <div className="flex items-center justify-between border-t border-surface-100 px-4 py-2.5">
-                            <p className="text-xs text-ink-600">
-                                Page {meta.current_page} of {meta.last_page} · {meta.total} enrolments
-                            </p>
-                            <div className="flex items-center gap-1">
-                                <button
-                                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                    disabled={meta.current_page <= 1}
-                                    aria-label="Previous page"
-                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 disabled:opacity-40"
-                                >
-                                    <ChevronLeft className="size-4" aria-hidden="true" />
-                                </button>
-                                <button
-                                    onClick={() => setPage((p) => Math.min(meta.last_page, p + 1))}
-                                    disabled={meta.current_page >= meta.last_page}
-                                    aria-label="Next page"
-                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 disabled:opacity-40"
-                                >
-                                    <ChevronRight className="size-4" aria-hidden="true" />
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                    {meta && <Pagination meta={meta} onPageChange={setPage} itemLabel="enrolments" />}
                 </div>
             )}
         </div>

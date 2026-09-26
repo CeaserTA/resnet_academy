@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Mail, Plus, Search, Settings2, Users } from 'lucide-react';
+import { Mail, Plus, Settings2, Users } from 'lucide-react';
 import { useProvisionUser, useUpdateUser, useUsers } from '@/features/admin/users/useAdminUsers';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -19,6 +19,8 @@ import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import { userRoleDisplay, userStatusDisplay } from '@/lib/statusBadge';
 import { cn } from '@/lib/utils';
 import type { User, UserRole, UserStatus } from '@/lib/api/types';
+import { SearchInput } from '@/components/ui/SearchInput';
+import { matchesSearch } from '@/lib/search';
 
 type RoleTab = 'all' | UserRole;
 
@@ -154,15 +156,10 @@ export function ProvisionUserPage() {
     const [search, setSearch] = useState('');
     usePageHeader('Team', 'Every user in the system, and their role.');
 
-    const filteredUsers = useMemo(() => {
-        const term = search.trim().toLowerCase();
-        if (!term) {
-            return users ?? [];
-        }
-        return (users ?? []).filter(
-            (member) => member.name.toLowerCase().includes(term) || member.email.toLowerCase().includes(term),
-        );
-    }, [users, search]);
+    const filteredUsers = useMemo(
+        () => (users ?? []).filter((member) => matchesSearch(search, member.name, member.email)),
+        [users, search],
+    );
 
     return (
         <div className="mx-auto max-w-4xl space-y-4">
@@ -191,19 +188,7 @@ export function ProvisionUserPage() {
                     ))}
                 </div>
 
-                <div className="relative ml-auto w-full max-w-56">
-                    <Search
-                        className="absolute left-3 top-1/2 z-10 size-3.5 -translate-y-1/2 text-ink-600"
-                        aria-hidden="true"
-                    />
-                    <input
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Search name or email"
-                        aria-label="Search team by name or email"
-                        className="w-full rounded-lg border border-surface-100 bg-surface-50 py-1.5 pl-8 pr-3 text-sm text-ink-900 transition focus-visible:bg-surface-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-                    />
-                </div>
+                <SearchInput value={search} onChange={setSearch} placeholder="Search name or email" label="Search team by name or email" />
             </div>
 
             <div>

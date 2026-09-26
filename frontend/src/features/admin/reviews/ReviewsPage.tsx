@@ -18,6 +18,8 @@ import {
 import { reviewStatusDisplay } from '@/lib/statusBadge';
 import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import type { CourseReview, ReviewStatus } from '@/lib/api/types';
+import { SearchInput } from '@/components/ui/SearchInput';
+import { matchesSearch } from '@/lib/search';
 
 type Tab = 'all' | 'pending' | 'approved' | 'rejected';
 
@@ -106,42 +108,53 @@ export function ReviewsPage() {
     const setFeatured = useSetCourseReviewFeatured();
 
     const [tab, setTab] = useState<Tab>('all');
+    const [search, setSearch] = useState('');
     const [viewingReview, setViewingReview] = useState<CourseReview | null>(null);
     const [rejectingReview, setRejectingReview] = useState<CourseReview | null>(null);
 
     const reviews = [...(data ?? [])]
         .filter((review) => tab === 'all' || review.status === tab)
+        // Reviews carry the student's name but not their email, so search name + course.
+        .filter((review) => matchesSearch(search, review.student?.name, review.course?.title))
         .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
 
     return (
         <div className="space-y-4">
-            {/* Segmented tab bar */}
-            <div className="flex items-center gap-0.5 rounded-lg border border-surface-100 bg-surface-50 p-0.5 self-start">
-                {(
-                    [
-                        ['all', 'All'],
-                        ['pending', 'Pending'],
-                        ['approved', 'Approved'],
-                        ['rejected', 'Rejected'],
-                    ] as const
-                ).map(([value, label]) => (
-                    <button
-                        key={value}
-                        onClick={() => setTab(value)}
-                        className={cn(
-                            'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                            tab === value ? 'bg-blue-600 text-white shadow-sm' : 'text-ink-600 hover:text-ink-900',
-                        )}
-                    >
-                        {label}
-                    </button>
-                ))}
+            {/* Filter row: status tabs + search (same layout as Enrolments) */}
+            <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-0.5 rounded-lg border border-surface-100 bg-surface-50 p-0.5">
+                    {(
+                        [
+                            ['all', 'All'],
+                            ['pending', 'Pending'],
+                            ['approved', 'Approved'],
+                            ['rejected', 'Rejected'],
+                        ] as const
+                    ).map(([value, label]) => (
+                        <button
+                            key={value}
+                            onClick={() => setTab(value)}
+                            className={cn(
+                                'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                                tab === value ? 'bg-blue-600 text-white shadow-sm' : 'text-ink-600 hover:text-ink-900',
+                            )}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
+                <SearchInput value={search} onChange={setSearch} placeholder="Search student or course" label="Search reviews by student name or course" />
             </div>
 
             {isLoading && <Spinner className="mt-6" />}
 
             {!isLoading && reviews.length === 0 && (
-                <EmptyState icon={Info} title="No reviews" description="Nothing matches this tab." className="mt-6" />
+                <EmptyState
+                    icon={Info}
+                    title="No reviews"
+                    description={search.trim() ? `No reviews match "${search.trim()}".` : 'Nothing matches this tab.'}
+                    className="mt-6"
+                />
             )}
 
             {!isLoading && reviews.length > 0 && (
