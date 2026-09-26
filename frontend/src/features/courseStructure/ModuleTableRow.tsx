@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type HTMLAttributes } from 'react';
 import { Link } from 'react-router';
 import {
     BookOpen,
@@ -14,6 +14,7 @@ import {
     Globe,
     ListChecks,
     Package,
+    GripVertical,
     Pencil,
     Plus,
     Radio,
@@ -289,16 +290,34 @@ function countLabel(count: number, noun: string): string {
 
 // ─── Module table row ─────────────────────────────────────────────────────────
 
+/** Drag-and-drop wiring for a module row — state lives in CourseBuilderPage. */
+export interface ModuleReorderProps {
+    /** Spread onto the summary <tr> (draggable, drag/drop handlers). */
+    rowProps: HTMLAttributes<HTMLTableRowElement> & { draggable?: boolean };
+    /** Pressing the handle arms the row for dragging, so text and buttons stay usable. */
+    onHandlePointerDown: () => void;
+    /** Keyboard alternative to dragging: move by one position. */
+    onMove: (direction: -1 | 1) => void;
+    isDragging: boolean;
+    isDropTarget: boolean;
+    canMoveUp: boolean;
+    canMoveDown: boolean;
+}
+
 export function ModuleTableRow({
     index,
     module,
     courseId,
     onDelete,
+    onEdit,
+    reorder,
 }: {
     index: number;
     module: Module;
     courseId: number;
     onDelete: () => void;
+    onEdit: () => void;
+    reorder: ModuleReorderProps;
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const [addingForm, setAddingForm] = useState<AddingForm>(null);
@@ -368,46 +387,69 @@ export function ModuleTableRow({
     return (
         <>
             {/* ── Summary row ────────────────────────────────────────────── */}
-            <tr className="hover:bg-surface-50">
+            <tr
+                {...reorder.rowProps}
+                className={cn(
+                    'hover:bg-surface-50',
+                    reorder.isDragging && 'opacity-50',
+                    // Drop indicator: a blue line along the top edge of the row being dropped onto.
+                    reorder.isDropTarget && 'bg-blue-50 shadow-[inset_0_2px_0_var(--color-blue-600)]',
+                )}
+            >
                 <td className="px-4 py-3">
-                    <button
-                        onClick={() => setIsOpen((v) => !v)}
-                        className="flex w-full items-center gap-3 text-left"
-                        aria-expanded={isOpen}
-                        aria-label={isOpen ? `Collapse ${module.title}` : `Expand ${module.title}`}
-                    >
-                        {isOpen
-                            ? <ChevronDown className="size-3.5 shrink-0 text-ink-600" aria-hidden="true" />
-                            : <ChevronRight className="size-3.5 shrink-0 text-ink-600" aria-hidden="true" />
-                        }
-                        <span className="flex size-5 shrink-0 items-center justify-center rounded bg-blue-600/10 text-xs font-semibold text-blue-600">
-                            {index + 1}
-                        </span>
-                        <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                            <span className="text-sm font-medium text-ink-900">{module.title}</span>
-                            {/* Content summary chips — same colour coding as the Add modals */}
-                            <span className="flex flex-wrap items-center gap-1">
-                                {resources.length > 0 && (
-                                    <span className={CHIP_CLASS + ' bg-blue-50 text-blue-600'}>
-                                        {countLabel(resources.length, 'resource')}
-                                    </span>
-                                )}
-                                {assignments.length > 0 && (
-                                    <span className={CHIP_CLASS + ' bg-violet-50 text-violet-600'}>
-                                        {countLabel(assignments.length, 'assignment')}
-                                    </span>
-                                )}
-                                {evaluations.length > 0 && (
-                                    <span className={CHIP_CLASS + ' bg-emerald-50 text-emerald-600'}>
-                                        {countLabel(evaluations.length, 'evaluation')}
-                                    </span>
-                                )}
-                                {module.items.length === 0 && (
-                                    <span className={CHIP_CLASS + ' bg-surface-100 text-ink-600'}>No content yet</span>
-                                )}
+                    <div className="flex items-center gap-1">
+                        <button
+                            type="button"
+                            onPointerDown={reorder.onHandlePointerDown}
+                            onKeyDown={(e) => {
+                                if (e.key === 'ArrowUp' && reorder.canMoveUp) { e.preventDefault(); reorder.onMove(-1); }
+                                if (e.key === 'ArrowDown' && reorder.canMoveDown) { e.preventDefault(); reorder.onMove(1); }
+                            }}
+                            aria-label={`Reorder ${module.title}. Drag, or use the up and down arrow keys.`}
+                            title="Drag to reorder (or focus and use ↑/↓)"
+                            className="-ml-1.5 flex shrink-0 cursor-grab items-center justify-center rounded p-1 text-ink-300 transition-colors hover:bg-surface-100 hover:text-ink-600 active:cursor-grabbing"
+                        >
+                            <GripVertical className="size-4" aria-hidden="true" />
+                        </button>
+                        <button
+                            onClick={() => setIsOpen((v) => !v)}
+                            className="flex w-full items-center gap-3 text-left"
+                            aria-expanded={isOpen}
+                            aria-label={isOpen ? `Collapse ${module.title}` : `Expand ${module.title}`}
+                        >
+                            {isOpen
+                                ? <ChevronDown className="size-3.5 shrink-0 text-ink-600" aria-hidden="true" />
+                                : <ChevronRight className="size-3.5 shrink-0 text-ink-600" aria-hidden="true" />
+                            }
+                            <span className="flex size-5 shrink-0 items-center justify-center rounded bg-blue-600/10 text-xs font-semibold text-blue-600">
+                                {index + 1}
                             </span>
-                        </span>
-                    </button>
+                            <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                                <span className="text-sm font-medium text-ink-900">{module.title}</span>
+                                {/* Content summary chips — same colour coding as the Add modals */}
+                                <span className="flex flex-wrap items-center gap-1">
+                                    {resources.length > 0 && (
+                                        <span className={CHIP_CLASS + ' bg-blue-50 text-blue-600'}>
+                                            {countLabel(resources.length, 'resource')}
+                                        </span>
+                                    )}
+                                    {assignments.length > 0 && (
+                                        <span className={CHIP_CLASS + ' bg-violet-50 text-violet-600'}>
+                                            {countLabel(assignments.length, 'assignment')}
+                                        </span>
+                                    )}
+                                    {evaluations.length > 0 && (
+                                        <span className={CHIP_CLASS + ' bg-emerald-50 text-emerald-600'}>
+                                            {countLabel(evaluations.length, 'evaluation')}
+                                        </span>
+                                    )}
+                                    {module.items.length === 0 && (
+                                        <span className={CHIP_CLASS + ' bg-surface-100 text-ink-600'}>No content yet</span>
+                                    )}
+                                </span>
+                            </span>
+                        </button>
+                    </div>
                 </td>
 
                 <td className="px-4 py-3">
@@ -445,6 +487,15 @@ export function ModuleTableRow({
                             icon={ListChecks}
                             colorClass="border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300"
                         />
+                        <button
+                            type="button"
+                            onClick={onEdit}
+                            aria-label={`Edit ${module.title}`}
+                            title="Edit module"
+                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-ink-900"
+                        >
+                            <Pencil className="size-3.5" aria-hidden="true" />
+                        </button>
                         <button
                             type="button"
                             onClick={handleDeleteModule}
