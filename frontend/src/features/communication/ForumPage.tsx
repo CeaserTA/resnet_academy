@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
-import { CheckCircle2, MessageSquare, Pin, Plus, Search, ShieldAlert, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, MessageSquare, Pin, Plus, Search, ShieldAlert, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Avatar } from '@/components/ui/Avatar';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { ForumComposer } from '@/features/communication/ForumComposer';
 import { DiscussionThread } from '@/features/communication/DiscussionThread';
 import { useCreateForumThread, useForumTags, useForumThread, useForumThreads } from '@/features/communication/useCommunication';
+import { useCourse } from '@/features/catalogue/useCourses';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { ApiError } from '@/lib/api/client';
 import { cn, formatRelativeTime } from '@/lib/utils';
@@ -150,6 +152,7 @@ export function ForumPage() {
     const { data: selectedThread } = useForumThread(selectedThreadId ?? NaN);
 
     const isStaff = user?.role === 'admin' || user?.role === 'instructor';
+    const { data: course } = useCourse(courseId);
     const threads = useMemo(() => threadPages?.pages.flatMap((page) => page.data) ?? [], [threadPages]);
     const pinnedThreads = threads.filter((thread) => thread.is_pinned);
     const groupedThreads = useMemo(() => {
@@ -203,8 +206,27 @@ export function ForumPage() {
 
     return (
         <div>
-            <div className="flex items-center justify-between">
-                <h1 className="text-2xl">Course Forum</h1>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                {/* Same trail style as the course page / Gradebook. Staff go back to the admin
+                    course page; students to their course player (they can't open the admin one). */}
+                <nav aria-label="Breadcrumb" className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                    <Link
+                        to={isStaff ? '/admin/courses' : '/dashboard'}
+                        className="flex items-center gap-1 text-sm text-ink-600 hover:text-blue-600"
+                    >
+                        <ArrowLeft className="size-3.5" aria-hidden="true" />
+                        {isStaff ? 'Courses' : 'My courses'}
+                    </Link>
+                    <span className="text-ink-300" aria-hidden="true">/</span>
+                    <Link
+                        to={isStaff ? `/admin/courses/${courseId}/modules` : `/learn/courses/${courseId}`}
+                        className="truncate text-sm text-ink-600 hover:text-blue-600"
+                    >
+                        {course?.title ?? 'Course'}
+                    </Link>
+                    <span className="text-ink-300" aria-hidden="true">/</span>
+                    <h1 className="text-base font-semibold text-ink-900" aria-current="page">Forum</h1>
+                </nav>
                 {isStaff && (
                     <Link to={`/courses/${courseId}/forum/moderation`}>
                         <Button variant="secondary">
@@ -247,25 +269,15 @@ export function ForumPage() {
                     )}
 
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex gap-1 border-b border-surface-100">
-                            {(
-                                [
-                                    ['all', 'All discussions'],
-                                    ['mine', 'My discussions'],
-                                ] as const
-                            ).map(([value, label]) => (
-                                <button
-                                    key={value}
-                                    onClick={() => setTab(value)}
-                                    className={cn(
-                                        'border-b-2 px-3 py-2 text-sm font-medium',
-                                        tab === value ? 'border-blue-600 text-blue-600' : 'border-transparent text-ink-600',
-                                    )}
-                                >
-                                    {label}
-                                </button>
-                            ))}
-                        </div>
+                        <SegmentedTabs
+                            label="Discussion filter"
+                            value={tab}
+                            onChange={setTab}
+                            tabs={[
+                                { value: 'all', label: 'All discussions' },
+                                { value: 'mine', label: 'My discussions' },
+                            ]}
+                        />
 
                         <select
                             value={sort}

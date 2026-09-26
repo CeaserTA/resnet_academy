@@ -278,6 +278,15 @@ function ContentGroup({
     );
 }
 
+// ─── Module summary chips ─────────────────────────────────────────────────────
+
+const CHIP_CLASS = 'whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold';
+
+/** "1 resource", "5 resources" — spelled out so a new admin doesn't have to decode "5R". */
+function countLabel(count: number, noun: string): string {
+    return `${count} ${noun}${count === 1 ? '' : 's'}`;
+}
+
 // ─── Module table row ─────────────────────────────────────────────────────────
 
 export function ModuleTableRow({
@@ -374,27 +383,29 @@ export function ModuleTableRow({
                         <span className="flex size-5 shrink-0 items-center justify-center rounded bg-blue-600/10 text-xs font-semibold text-blue-600">
                             {index + 1}
                         </span>
-                        <span className="text-sm font-medium text-ink-900">{module.title}</span>
-                        {/* Mini summary chips */}
-                        <span className="flex items-center gap-1">
-                            {resources.length > 0 && (
-                                <span className="rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600">
-                                    {resources.length}R
-                                </span>
-                            )}
-                            {assignments.length > 0 && (
-                                <span className="rounded-full bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-600">
-                                    {assignments.length}A
-                                </span>
-                            )}
-                            {evaluations.length > 0 && (
-                                <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600">
-                                    {evaluations.length}E
-                                </span>
-                            )}
-                            {module.items.length === 0 && (
-                                <span className="text-xs text-ink-600">empty</span>
-                            )}
+                        <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                            <span className="text-sm font-medium text-ink-900">{module.title}</span>
+                            {/* Content summary chips — same colour coding as the Add modals */}
+                            <span className="flex flex-wrap items-center gap-1">
+                                {resources.length > 0 && (
+                                    <span className={CHIP_CLASS + ' bg-blue-50 text-blue-600'}>
+                                        {countLabel(resources.length, 'resource')}
+                                    </span>
+                                )}
+                                {assignments.length > 0 && (
+                                    <span className={CHIP_CLASS + ' bg-violet-50 text-violet-600'}>
+                                        {countLabel(assignments.length, 'assignment')}
+                                    </span>
+                                )}
+                                {evaluations.length > 0 && (
+                                    <span className={CHIP_CLASS + ' bg-emerald-50 text-emerald-600'}>
+                                        {countLabel(evaluations.length, 'evaluation')}
+                                    </span>
+                                )}
+                                {module.items.length === 0 && (
+                                    <span className={CHIP_CLASS + ' bg-surface-100 text-ink-600'}>No content yet</span>
+                                )}
+                            </span>
                         </span>
                     </button>
                 </td>
@@ -412,7 +423,7 @@ export function ModuleTableRow({
                 </td>
 
                 <td className="px-4 py-3">
-                    <div className="flex flex-wrap items-center justify-end gap-1.5">
+                    <div className="flex flex-wrap items-center justify-end gap-1.5 lg:flex-nowrap">
                         <ActionBtn
                             label="Resource"
                             description="Add a learning resource (video, document, link…)"

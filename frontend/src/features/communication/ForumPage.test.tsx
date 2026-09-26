@@ -116,7 +116,7 @@ it('shows all discussions by default, switches to My discussions, and creates on
     expect(await screen.findByText('When is the next cohort')).toBeInTheDocument();
     expect(screen.getByText('My own discussion')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'My discussions' }));
+    await user.click(screen.getByRole('tab', { name: 'My discussions' }));
 
     await waitFor(() =>
         expect(fetchForumThreads).toHaveBeenLastCalledWith(1, {

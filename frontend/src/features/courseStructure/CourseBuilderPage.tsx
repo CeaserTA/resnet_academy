@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Modal } from '@/components/ui/Modal';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { StatWidget } from '@/components/dashboard/StatWidget';
 import { useCourse } from '@/features/catalogue/useCourses';
 import { useCreateModule, useDeleteModule, useModules } from '@/features/courseStructure/useCourseStructure';
@@ -117,38 +118,17 @@ export function CourseBuilderPage() {
             )}
 
             {/* Tabs */}
-            <div className="mt-6 flex gap-4 border-b border-surface-100">
-                <button
-                    onClick={() => setActiveTab('modules')}
-                    className={`px-4 py-2 text-sm font-medium transition-colors ${
-                        activeTab === 'modules'
-                            ? 'border-b-2 border-blue-600 text-blue-600'
-                            : 'text-ink-600 hover:text-ink-900'
-                    }`}
-                >
-                    Modules
-                </button>
-                <button
-                    onClick={() => setActiveTab('cohorts')}
-                    className={`px-4 py-2 text-sm font-medium transition-colors ${
-                        activeTab === 'cohorts'
-                            ? 'border-b-2 border-blue-600 text-blue-600'
-                            : 'text-ink-600 hover:text-ink-900'
-                    }`}
-                >
-                    Cohorts
-                </button>
-                <button
-                    onClick={() => setActiveTab('analytics')}
-                    className={`px-4 py-2 text-sm font-medium transition-colors ${
-                        activeTab === 'analytics'
-                            ? 'border-b-2 border-blue-600 text-blue-600'
-                            : 'text-ink-600 hover:text-ink-900'
-                    }`}
-                >
-                    Analytics
-                </button>
-            </div>
+            <SegmentedTabs
+                label="Course sections"
+                className="mb-4 mt-6"
+                value={activeTab}
+                onChange={setActiveTab}
+                tabs={[
+                    { value: 'modules', label: 'Modules' },
+                    { value: 'cohorts', label: 'Cohorts' },
+                    { value: 'analytics', label: 'Analytics' },
+                ]}
+            />
 
             {/* Modules Tab */}
             {activeTab === 'modules' && (

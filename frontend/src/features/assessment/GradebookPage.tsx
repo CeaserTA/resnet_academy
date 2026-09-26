@@ -176,19 +176,25 @@ export function GradebookPage() {
 
             {/* ── Header ── */}
             <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
+                {/* Same trail style as the course page header: Courses / {course} / Gradebook */}
+                <nav aria-label="Breadcrumb" className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
                     <Link
-                        to={`/admin/courses/${courseId}/modules`}
+                        to="/admin/courses"
                         className="flex items-center gap-1 text-sm text-ink-600 hover:text-blue-600"
                     >
                         <ArrowLeft className="size-3.5" aria-hidden="true" />
-                        Modules
+                        Courses
                     </Link>
                     <span className="text-ink-300" aria-hidden="true">/</span>
-                    <h1 className="text-base font-semibold text-ink-900">
-                        {course?.title ?? '…'} — Gradebook
-                    </h1>
-                </div>
+                    <Link
+                        to={`/admin/courses/${courseId}/modules`}
+                        className="truncate text-sm text-ink-600 hover:text-blue-600"
+                    >
+                        {course?.title ?? 'Course'}
+                    </Link>
+                    <span className="text-ink-300" aria-hidden="true">/</span>
+                    <h1 className="text-base font-semibold text-ink-900" aria-current="page">Gradebook</h1>
+                </nav>
 
                 {/* Summary pills */}
                 <div className="flex items-center gap-2 text-xs">
@@ -198,7 +204,7 @@ export function GradebookPage() {
                     <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 font-medium text-emerald-700">
                         {totalEvaluations} evaluation{totalEvaluations !== 1 ? 's' : ''}
                     </span>
-                    <span className="rounded-full border border-surface-200 bg-surface-50 px-2.5 py-1 font-medium text-ink-600">
+                    <span className="rounded-full border border-surface-100 bg-surface-50 px-2.5 py-1 font-medium text-ink-600">
                         {gradebook.students.length} student{gradebook.students.length !== 1 ? 's' : ''}
                     </span>
                 </div>
@@ -212,7 +218,7 @@ export function GradebookPage() {
                     placeholder="Search students by name or email…"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full rounded-lg border border-surface-200 bg-surface-0 py-2 pl-9 pr-4 text-sm text-ink-900 placeholder:text-ink-300 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    className="w-full rounded-lg border border-surface-100 bg-surface-0 py-2 pl-9 pr-4 text-sm text-ink-900 placeholder:text-ink-300 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
                 />
             </div>
 

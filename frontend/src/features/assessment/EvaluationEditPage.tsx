@@ -9,8 +9,8 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
 import { Textarea } from '@/components/ui/Textarea';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { ApiError } from '@/lib/api/client';
-import { cn } from '@/lib/utils';
 import { QuestionBankModal } from '@/features/assessment/QuestionBankPanel';
 import { QuestionPicker } from '@/features/assessment/QuestionPicker';
 import {
@@ -60,27 +60,14 @@ export function EvaluationEditPage() {
                 {' · '}Pass score: {evaluation.pass_score}%
             </p>
 
-            {/* ─── Tab bar ───────────────────────────────────────────────────── */}
-            <nav className="mt-6 flex gap-1 border-b border-surface-100" role="tablist">
-                {TABS.map(({ key, label, icon: Icon }) => (
-                    <button
-                        key={key}
-                        type="button"
-                        role="tab"
-                        aria-selected={activeTab === key}
-                        onClick={() => setActiveTab(key)}
-                        className={cn(
-                            'flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition',
-                            activeTab === key
-                                ? 'border-blue-600 text-blue-600'
-                                : 'border-transparent text-ink-600 hover:border-surface-200 hover:text-ink-700',
-                        )}
-                    >
-                        <Icon className="size-4" aria-hidden="true" />
-                        {label}
-                    </button>
-                ))}
-            </nav>
+            {/* ─── Tab bar ─── */}
+            <SegmentedTabs
+                label="Evaluation sections"
+                className="mt-6"
+                value={activeTab}
+                onChange={setActiveTab}
+                tabs={TABS.map(({ key, label, icon }) => ({ value: key, label, icon }))}
+            />
 
             {/* ─── Tab content ───────────────────────────────────────────────── */}
             <div className="mt-6">
