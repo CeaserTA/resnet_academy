@@ -4,6 +4,8 @@ import {
     AlertTriangle,
     ArrowRight,
     BookOpen,
+    CalendarRange,
+    CreditCard,
     ClipboardList,
     FileCheck,
     GraduationCap,
@@ -23,6 +25,11 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Modal } from '@/components/ui/Modal';
 import { VolumeCard } from '@/components/dashboard/VolumeCard';
 import { useDashboardSummary } from '@/features/admin/dashboard/useDashboard';
+import { useOrders, usePaymentSummary } from '@/features/admin/payments/useAdminPayments';
+import { useCourseApplications } from '@/features/courseApplications/useCourseApplications';
+import { useCohorts } from '@/features/cohorts/useCohorts';
+import { cohortPhase, daysUntil, displayCohortName } from '@/lib/cohort';
+import type { Cohort } from '@/lib/api/types';
 import { BulkImportForm } from '@/features/admin/enrolments/BulkImportForm';
 import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import { formatRelativeTime } from '@/lib/utils';
@@ -92,25 +99,73 @@ function QuickActionBtn({ action }: { action: QuickAction }) {
     return <button type="button" onClick={action.onClick} className={cls}>{inner}</button>;
 }
 
+// ─── Cohort row ───────────────────────────────────────────────────────────────
+
+function CohortRow({ cohort }: { cohort: Cohort }) {
+    const running = cohortPhase(cohort) === 'in_progress';
+    const deadlineDays = cohort.application_deadline ? daysUntil(cohort.application_deadline) : null;
+    const short = (d: string) => new Date(d).toLocaleDateString('en-UG', { day: 'numeric', month: 'short' });
+    const courseCount = cohort.course_count ?? cohort.courses.length;
+
+    return (
+        <li>
+            <Link to={`/admin/cohorts/${cohort.id}`} className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-surface-50">
+                <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                    <CalendarRange className="size-3.5" aria-hidden="true" />
+                </span>
+                <span className="min-w-0 flex-1">
+                    <span className="flex items-center justify-between gap-2">
+                        <span className="truncate text-sm font-medium text-ink-900">{displayCohortName(cohort.name)}</span>
+                        <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold', running ? 'bg-blue-600/10 text-blue-600' : 'bg-success-600/10 text-success-600')}>
+                            {running ? 'Running' : 'Open'}
+                        </span>
+                    </span>
+                    <span className="mt-0.5 block text-xs text-ink-600">
+                        {short(cohort.start_date)} – {short(cohort.end_date)} · {courseCount} course{courseCount === 1 ? '' : 's'}
+                        {!running && deadlineDays !== null && deadlineDays >= 0 && ` · apply within ${deadlineDays} day${deadlineDays === 1 ? '' : 's'}`}
+                    </span>
+                </span>
+            </Link>
+        </li>
+    );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export function AdminDashboardPage() {
     usePageHeader('Dashboard', 'Overview of your academy');
     const { data, isLoading } = useDashboardSummary();
+    // The summary endpoint doesn't carry these, so read them from the same endpoints the
+    // Applications / Payments / Cohorts pages use.
+    const { data: pendingApplications } = useCourseApplications({ status: 'pending' });
+    const { data: receivables } = useOrders('pending');
+    const { data: paymentSummary } = usePaymentSummary();
+    const { data: cohorts } = useCohorts();
     const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
 
     if (isLoading || !data) {
         return <div className="flex h-64 items-center justify-center"><Spinner /></div>;
     }
 
-    const totalRevenue =
-        data.revenue_by_currency.length > 0
-            ? formatCurrency(data.revenue_by_currency[0].total, data.revenue_by_currency[0].currency)
-            : '—';
+    const revenue = data.revenue_by_currency[0];
+    const totalRevenue = revenue ? formatCurrency(revenue.total, revenue.currency) : formatCurrency(0, 'UGX');
+    const outstanding = paymentSummary?.by_currency[0];
 
-    const avgCompletion = data.confirmed_enrolments > 0
+    // Certificates ÷ confirmed enrolments — labelled as what it is, not "completion".
+    const certificateRate = data.confirmed_enrolments > 0
         ? `${Math.min(Math.round((data.certificates_issued / data.confirmed_enrolments) * 100), 100)}%`
         : '0%';
+
+    const paymentsToReview = receivables?.data.filter((order) => order.pending_submission).length;
+
+    // Cohorts people can still join or are studying in now, soonest first.
+    const activeCohorts = (cohorts ?? [])
+        .filter((cohort) => cohort.status === 'published' && ['open', 'in_progress'].includes(cohortPhase(cohort)))
+        .sort((a, b) => a.start_date.localeCompare(b.start_date))
+        .slice(0, 3);
+
+    // Newest first by when it happened (the API orders by id).
+    const recentActivity = [...data.recent_audit_logs].sort((a, b) => b.created_at.localeCompare(a.created_at));
 
     const quickActions: QuickAction[] = [
         { to: '/admin/courses/new', label: 'New course', icon: Plus },
@@ -127,11 +182,12 @@ export function AdminDashboardPage() {
                 Volume row below stays flat on the page background as purely informational. */}
             <section className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
                 <p className="mb-3 text-xs font-bold uppercase tracking-widest text-blue-700">Needs action</p>
-                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
                     <AttentionCard icon={AlertTriangle} label="At-risk students" value={data.at_risk_students} sub="No activity in 14 days" tone="danger" to="/admin/courses" />
-                    <AttentionCard icon={LifeBuoy} label="Open tickets" value={data.open_tickets} sub="Awaiting response" tone="warning" to="/tickets" />
+                    <AttentionCard icon={CreditCard} label="Payments" value={paymentsToReview ?? '—'} sub="Receipts to confirm" tone="warning" to="/admin/payments" />
+                    <AttentionCard icon={FileCheck} label="Applications" value={pendingApplications?.meta.total ?? '—'} sub="Waiting for a decision" tone="neutral" to="/admin/applications" />
+                    <AttentionCard icon={LifeBuoy} label="Open tickets" value={data.open_tickets} sub="Awaiting response" tone="neutral" to="/tickets" />
                     <AttentionCard icon={Star} label="Pending reviews" value={data.pending_reviews} sub="Awaiting approval" tone="neutral" to="/admin/reviews" />
-                    <AttentionCard icon={FileCheck} label="Applications" value="—" sub="Review pending applications" tone="neutral" to="/admin/applications" />
                 </div>
             </section>
 
@@ -141,8 +197,18 @@ export function AdminDashboardPage() {
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                     <VolumeCard icon={Users} label="Total students" value={data.students.toLocaleString()} />
                     <VolumeCard icon={UserCheck} label="Active enrolments" value={data.confirmed_enrolments.toLocaleString()} />
-                    <VolumeCard icon={Wallet} label="Revenue (MTD)" value={totalRevenue} />
-                    <VolumeCard icon={TrendingUp} label="Avg. completion" value={avgCompletion} />
+                    <VolumeCard
+                        icon={Wallet}
+                        label="Received (MTD)"
+                        value={totalRevenue}
+                        sub={outstanding ? `${formatCurrency(outstanding.outstanding, outstanding.currency)} still outstanding` : undefined}
+                    />
+                    <VolumeCard
+                        icon={TrendingUp}
+                        label="Certificate rate"
+                        value={certificateRate}
+                        sub={`${data.certificates_issued} of ${data.confirmed_enrolments.toLocaleString()} enrolments`}
+                    />
                 </div>
             </section>
 
@@ -158,11 +224,11 @@ export function AdminDashboardPage() {
                         </Link>
                     </div>
 
-                    {data.recent_audit_logs.length === 0 ? (
+                    {recentActivity.length === 0 ? (
                         <p className="px-4 py-8 text-center text-sm text-ink-600">Nothing logged yet.</p>
                     ) : (
                         <ul className="divide-y divide-surface-100">
-                            {data.recent_audit_logs.map((entry) => (
+                            {recentActivity.map((entry) => (
                                 <li key={entry.id} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-surface-50">
                                     <div className="flex min-w-0 items-center gap-3">
                                         <Avatar
@@ -171,7 +237,7 @@ export function AdminDashboardPage() {
                                             size="sm"
                                             className="size-7 shrink-0 text-xs"
                                         />
-                                        <p className="truncate text-sm text-ink-900">
+                                        <p className="line-clamp-2 text-sm text-ink-900 sm:line-clamp-1">
                                             {describeAuditLogEntry(entry)}
                                         </p>
                                     </div>
@@ -199,33 +265,30 @@ export function AdminDashboardPage() {
                         </div>
                     </div>
 
-                    {/* Course breakdown */}
+                    {/* Cohorts */}
                     <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
-                        <div className="border-b border-surface-100 bg-surface-50 px-4 py-3">
-                            <h2 className="text-sm font-semibold text-ink-900">Courses</h2>
+                        <div className="flex items-center justify-between border-b border-surface-100 bg-surface-50 px-4 py-3">
+                            <h2 className="text-sm font-semibold text-ink-900">Cohorts</h2>
+                            <Link to="/admin/cohorts" className="flex items-center gap-1 text-xs text-blue-600 hover:underline">
+                                All cohorts <ArrowRight className="size-3" aria-hidden="true" />
+                            </Link>
                         </div>
-                        {Object.entries(data.courses_by_status).length === 0 ? (
-                            <p className="px-4 py-5 text-center text-sm text-ink-600">No courses yet.</p>
+                        {activeCohorts.length === 0 ? (
+                            <p className="px-4 py-5 text-center text-sm text-ink-600">No open or running cohorts.</p>
                         ) : (
                             <ul className="divide-y divide-surface-100">
-                                {Object.entries(data.courses_by_status).map(([status, count]) => (
-                                    <li key={status} className="flex items-center justify-between px-4 py-2.5">
-                                        <div className="flex items-center gap-2">
-                                            <BookOpen className="size-3.5 text-ink-300" aria-hidden="true" />
-                                            <span className="text-sm capitalize text-ink-900">{status}</span>
-                                        </div>
-                                        <span className="text-sm font-semibold text-ink-900">{count}</span>
-                                    </li>
+                                {activeCohorts.map((cohort) => (
+                                    <CohortRow key={cohort.id} cohort={cohort} />
                                 ))}
-                                <li className="flex items-center justify-between bg-surface-50 px-4 py-2.5">
-                                    <div className="flex items-center gap-2">
-                                        <GraduationCap className="size-3.5 text-ink-300" aria-hidden="true" />
-                                        <span className="text-sm text-ink-600">Certificates issued</span>
-                                    </div>
-                                    <span className="text-sm font-semibold text-ink-900">{data.certificates_issued}</span>
-                                </li>
                             </ul>
                         )}
+                        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-surface-100 bg-surface-50 px-4 py-2.5 text-xs text-ink-600">
+                            <BookOpen className="size-3.5 text-ink-300" aria-hidden="true" />
+                            {data.courses_by_status.published ?? 0} published courses
+                            <span aria-hidden="true">·</span>
+                            <GraduationCap className="size-3.5 text-ink-300" aria-hidden="true" />
+                            {data.certificates_issued} certificates issued
+                        </p>
                     </div>
                 </div>
             </div>
