@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
 import { ApiError } from '@/lib/api/client';
 import { useVerifyCertificate } from '@/features/progress/useProgress';
+import { formatDate } from '@/lib/formatDate';
 
 interface CertificateVerifyModalProps {
     isOpen: boolean;
@@ -78,7 +79,7 @@ export function CertificateVerifyModal({ isOpen, onClose, initialNumber }: Certi
                         {verify.data.student_name} — {verify.data.course_title}
                     </p>
                     <p className="font-mono text-xs text-ink-600">{verify.data.certificate_number}</p>
-                    <p className="text-sm text-ink-600">Issued {new Date(verify.data.issued_at).toLocaleDateString()}</p>
+                    <p className="text-sm text-ink-600">Issued {formatDate(verify.data.issued_at)}</p>
                 </div>
             )}
 

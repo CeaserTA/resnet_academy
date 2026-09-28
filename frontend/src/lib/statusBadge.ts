@@ -36,6 +36,7 @@ import type {
     UserRole,
     UserStatus,
 } from '@/lib/api/types';
+import { formatDate } from '@/lib/formatDate';
 
 interface StatusDisplay {
     label: string;
@@ -120,7 +121,7 @@ export function assignmentDueBadge(dueAt: string | null, isComplete: boolean | n
     const daysUntilDue = (due.getTime() - now.getTime()) / (24 * 60 * 60 * 1000);
 
     if (daysUntilDue <= 3) {
-        return { label: `Due ${due.toLocaleDateString()}`, tone: 'warning', icon: Clock };
+        return { label: `Due ${formatDate(due)}`, tone: 'warning', icon: Clock };
     }
 
     return null;

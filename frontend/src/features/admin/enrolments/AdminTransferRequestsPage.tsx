@@ -16,6 +16,8 @@ import { useTransferRequests, useTransferEnrolment, useRefundEnrolment } from '@
 import { orderStatusDisplay } from '@/lib/statusBadge';
 import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import type { AdminEnrolment } from '@/lib/api/types';
+import { formatDate } from '@/lib/formatDate';
+import { displayCohortName } from '@/lib/cohort';
 
 function formatAmount(amount: string | number, currency: string): string {
     return new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 }).format(Number(amount));
@@ -73,7 +75,7 @@ function TransferModal({ enrolment, courses, onClose, onSuccess }: { enrolment: 
 
                 <div className="text-sm text-ink-600">
                     <p><strong>Current course:</strong> {enrolment.course.title}</p>
-                    {enrolment.cohort_course && <p><strong>Current cohort:</strong> {enrolment.cohort_course.cohort_name}</p>}
+                    {enrolment.cohort_course && <p><strong>Current cohort:</strong> {displayCohortName(enrolment.cohort_course.cohort_name)}</p>}
                 </div>
 
                 <Select
@@ -97,7 +99,7 @@ function TransferModal({ enrolment, courses, onClose, onSuccess }: { enrolment: 
                         <option value="">Select a cohort offering</option>
                         {cohortCourses?.map((cc) => (
                             <option key={cc.id} value={cc.id}>
-                                {cc.cohort_name}
+                                {displayCohortName(cc.cohort_name)}
                             </option>
                         ))}
                     </Select>
@@ -261,7 +263,7 @@ export function AdminTransferRequestsPage() {
                                 {enrolments.map((enrolment) => {
                                     const orderStatus = enrolment.order ? orderStatusDisplay(enrolment.order.status) : null;
                                     const transferRequestedAt = enrolment.transfer_requested_at 
-                                        ? new Date(enrolment.transfer_requested_at).toLocaleDateString()
+                                        ? formatDate(enrolment.transfer_requested_at)
                                         : '—';
 
                                     return (
@@ -281,7 +283,7 @@ export function AdminTransferRequestsPage() {
                                             {/* Course & cohort */}
                                             <div className="min-w-0">
                                                 <p className="truncate text-sm text-ink-900">{enrolment.course.title}</p>
-                                                <p className="truncate text-xs text-ink-600">{enrolment.cohort_course?.cohort_name ?? '—'}</p>
+                                                <p className="truncate text-xs text-ink-600">{displayCohortName(enrolment.cohort_course?.cohort_name) || '—'}</p>
                                             </div>
 
                                             {/* Amount paid */}

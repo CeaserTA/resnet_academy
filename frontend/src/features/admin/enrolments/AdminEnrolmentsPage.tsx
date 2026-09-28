@@ -12,6 +12,8 @@ import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import type { AdminEnrolment, EnrolmentStatus } from '@/lib/api/types';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { Pagination } from '@/components/ui/Pagination';
+import { formatDate } from '@/lib/formatDate';
+import { displayCohortName } from '@/lib/cohort';
 
 type StatusTab = 'all' | EnrolmentStatus;
 
@@ -149,7 +151,7 @@ export function AdminEnrolmentsPage() {
                                             {/* Course & section */}
                                             <div className="min-w-0">
                                                 <p className="truncate text-sm text-ink-900">{enrolment.course.title}</p>
-                                                <p className="truncate text-xs text-ink-600">{enrolment.cohort_course?.cohort_name ?? '—'}</p>
+                                                <p className="truncate text-xs text-ink-600">{displayCohortName(enrolment.cohort_course?.cohort_name) || '—'}</p>
                                             </div>
 
                                             {/* Source */}
@@ -165,7 +167,7 @@ export function AdminEnrolmentsPage() {
 
                                             {/* Enrolled date */}
                                             <p className="text-right font-mono text-xs text-ink-600">
-                                                {new Date(enrolment.applied_at).toLocaleDateString()}
+                                                {formatDate(enrolment.applied_at)}
                                             </p>
 
                                             {/* Actions */}

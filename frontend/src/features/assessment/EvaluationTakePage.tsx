@@ -18,12 +18,14 @@ import {
 } from '@/features/assessment/useAssessment';
 import { AttemptReviewModal } from '@/features/assessment/AttemptReviewModal';
 import type { AttemptAnswerInput } from '@/features/assessment/api';
+import { PageFrame } from '@/components/layout/PageFrame';
 import type {
     AttemptQuestion,
     EvaluationAttempt,
     EvaluationOverview,
     StartAttemptResponse,
 } from '@/lib/api/types';
+import { formatDateTime } from '@/lib/formatDate';
 
 type AnswerState = Record<number, { selectedOptionIds: number[]; answerText: string }>;
 
@@ -319,7 +321,7 @@ function InstructionScreen({
                                     <p className="font-medium">Attempt #{attempt.attempt_number}</p>
                                     <p className="text-sm text-ink-600">
                                         {attempt.score_percent !== null ? `Score: ${attempt.score_percent}%` : 'Awaiting grading'}
-                                        {attempt.submitted_at && ` · Submitted on ${new Date(attempt.submitted_at).toLocaleString()}`}
+                                        {attempt.submitted_at && ` · Submitted on ${formatDateTime(attempt.submitted_at)}`}
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -435,25 +437,23 @@ export function EvaluationTakePage() {
         }
 
         return (
-            <div className="mx-auto max-w-2xl">
-                <Breadcrumbs
-                    items={[
-                        { label: 'My Courses', to: '/dashboard' },
-                        { label: course?.title ?? '', to: `/learn/courses/${courseId}` },
-                        { label: overview.title },
-                    ]}
+            <PageFrame
+                width="narrow"
+                breadcrumbs={[
+                    { label: 'My courses', to: '/dashboard' },
+                    { label: course?.title ?? '', to: `/learn/courses/${courseId}` },
+                    { label: overview.title },
+                ]}
+                title={overview.title}
+            >
+                <InstructionScreen
+                    overview={overview}
+                    attempts={myAttempts ?? []}
+                    onStart={handleStart}
+                    isStarting={startAttempt.isPending}
+                    error={error}
                 />
-                <h1 className="mt-2 text-2xl">{overview.title}</h1>
-                <div className="mt-6">
-                    <InstructionScreen
-                        overview={overview}
-                        attempts={myAttempts ?? []}
-                        onStart={handleStart}
-                        isStarting={startAttempt.isPending}
-                        error={error}
-                    />
-                </div>
-            </div>
+            </PageFrame>
         );
     }
 
@@ -482,13 +482,13 @@ export function EvaluationTakePage() {
             <div className="sticky top-0 z-20 flex flex-col gap-1 border-b border-surface-100 bg-surface-50 pb-3 pt-1 before:absolute before:inset-x-0 before:-top-8 before:h-8 before:bg-surface-50 before:content-['']">
                 <Breadcrumbs
                     items={[
-                        { label: 'My Courses', to: '/dashboard' },
+                        { label: 'My courses', to: '/dashboard' },
                         { label: course?.title ?? '', to: `/learn/courses/${courseId}` },
                         { label: `Attempt #${session.attempt.attempt_number}` },
                     ]}
                 />
                 <div className="flex items-center justify-between gap-3">
-                    <h1 className="text-2xl">Attempt #{session.attempt.attempt_number}</h1>
+                    <h1 className="text-lg font-semibold text-ink-900">Attempt #{session.attempt.attempt_number}</h1>
                     {deadline && !result && <CountdownBadge deadline={deadline} onExpire={handleSubmit} />}
                 </div>
             </div>

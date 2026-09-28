@@ -9,6 +9,7 @@ import { describeAuditLogEntry } from '@/lib/auditLog';
 import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 
 import { useAuditLogs } from '@/features/analytics/useAnalytics';
+import { formatDateTime } from '@/lib/formatDate';
 
 /**
  * Business rule "Audit logging" — answers "who verified/enrolled a student, who changed a
@@ -83,7 +84,7 @@ export function AuditLogPage() {
                                     </p>
                                 </div>
                                 <p className="font-mono text-xs text-ink-600 sm:text-right">
-                                    {new Date(log.created_at).toLocaleString()}
+                                    {formatDateTime(log.created_at)}
                                 </p>
                             </li>
                         ))}

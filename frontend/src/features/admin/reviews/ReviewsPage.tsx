@@ -20,6 +20,7 @@ import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import type { CourseReview, ReviewStatus } from '@/lib/api/types';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { matchesSearch } from '@/lib/search';
+import { formatDate, formatDateTime } from '@/lib/formatDate';
 
 type Tab = 'all' | 'pending' | 'approved' | 'rejected';
 
@@ -45,7 +46,7 @@ function ViewReviewModal({ review, onClose }: { review: CourseReview; onClose: (
                 </div>
                 <div className="flex items-center justify-between gap-4">
                     <span className="text-ink-600">Submitted</span>
-                    <span className="text-ink-900">{new Date(review.created_at).toLocaleString()}</span>
+                    <span className="text-ink-900">{formatDateTime(review.created_at)}</span>
                 </div>
 
                 {review.review_text && (
@@ -213,7 +214,7 @@ export function ReviewsPage() {
 
                                             {/* Submitted */}
                                             <p className="text-right font-mono text-xs text-ink-600">
-                                                {new Date(review.created_at).toLocaleDateString()}
+                                                {formatDate(review.created_at)}
                                             </p>
 
                                             {/* Actions */}

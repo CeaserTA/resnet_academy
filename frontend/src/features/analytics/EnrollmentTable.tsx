@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import type { RosterEntry } from '@/lib/api/types';
+import { formatDate } from '@/lib/formatDate';
 
 function downloadCsv(rows: RosterEntry[]): void {
     const header = ['Name', 'Email', 'Enrollment Date', 'Progress %', 'Status'];
@@ -85,7 +86,7 @@ export function EnrollmentTable({ roster }: { roster: RosterEntry[] }) {
                                 </div>
                                 {/* Enrolled date */}
                                 <span className="shrink-0 text-xs text-ink-600">
-                                    {new Date(row.enrolled_at).toLocaleDateString()}
+                                    {formatDate(row.enrolled_at)}
                                 </span>
                                 {/* Progress */}
                                 <div className="flex items-center gap-2">

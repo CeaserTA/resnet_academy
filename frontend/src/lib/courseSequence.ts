@@ -1,4 +1,5 @@
 import type { Module, ModuleItem, ModuleProgressEntry } from '@/lib/api/types';
+import { formatDate } from '@/lib/formatDate';
 
 /**
  * Sorts modules by `order_index` and flattens each module's items (also sorted by
@@ -128,11 +129,11 @@ export function describeLockedModule(
     // The cohort start gates every module in the intake, so it outranks the module's own
     // schedule and the sequential rule — both of which only matter once the course has begun.
     if (cohortStartsOn && new Date(cohortStartsOn) > new Date()) {
-        return `Starts ${new Date(cohortStartsOn).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}`;
+        return `Starts ${formatDate(cohortStartsOn)}`;
     }
 
     if (module.scheduled_start_at && new Date(module.scheduled_start_at) > new Date()) {
-        return `Opens ${new Date(module.scheduled_start_at).toLocaleDateString()}`;
+        return `Opens ${formatDate(module.scheduled_start_at)}`;
     }
 
     const previousModule = allModules

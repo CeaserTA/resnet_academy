@@ -13,19 +13,13 @@ import { cohortPhase, daysUntil, displayCohortName } from '@/lib/cohort';
 import { useCohorts } from '@/features/cohorts/useCohorts';
 import { Spinner } from '@/components/ui/Spinner';
 import type { Cohort } from '@/lib/api/types';
+import { formatDate, formatDateRange } from '@/lib/formatDate';
 
 const INITIAL_VISIBLE = 3;
 const MAX_COURSE_TAGS = 2;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatDate(dateStr: string, withYear = true): string {
-    return new Date(dateStr).toLocaleDateString('en-UG', {
-        day: 'numeric',
-        month: 'short',
-        ...(withYear ? { year: 'numeric' } : {}),
-    });
-}
 
 // ─── Single cohort card ───────────────────────────────────────────────────────
 
@@ -53,14 +47,14 @@ function CohortCard({ cohort }: { cohort: Cohort }) {
                 <div className="flex items-center gap-2">
                     <CalendarDays className="size-4 shrink-0" aria-hidden="true" />
                     <dt className="sr-only">Dates</dt>
-                    <dd>{formatDate(cohort.start_date, false)} – {formatDate(cohort.end_date)}</dd>
+                    <dd>{formatDateRange(cohort.start_date, cohort.end_date)}</dd>
                 </div>
                 {!ongoing && cohort.application_deadline && deadlineDays !== null && deadlineDays >= 0 && (
                     <div className="flex items-center gap-2">
                         <Clock className="size-4 shrink-0" aria-hidden="true" />
                         <dt className="sr-only">Application deadline</dt>
                         <dd>
-                            Apply by {formatDate(cohort.application_deadline, false)}
+                            Apply by {formatDate(cohort.application_deadline)}
                             <span className="text-amber-500"> · {deadlineDays === 0 ? 'closes today' : `${deadlineDays} day${deadlineDays === 1 ? '' : 's'} left`}</span>
                         </dd>
                     </div>

@@ -11,6 +11,8 @@ import { useCohorts } from '@/features/cohorts/useCohorts';
 import { certificateDownloadUrl } from '@/features/progress/api';
 import { useAdminCertificates, useRegenerateCertificate } from '@/features/admin/certificates/useAdminCertificates';
 import type { AdminCertificate, CertificateStatus } from '@/lib/api/types';
+import { formatDate } from '@/lib/formatDate';
+import { displayCohortName } from '@/lib/cohort';
 
 const STATUS_TABS: [CertificateStatus | 'all', string][] = [
     ['all', 'All'],
@@ -98,7 +100,7 @@ export function AdminCertificatesPage() {
                 >
                     <option value="">All cohorts</option>
                     {(cohorts ?? []).map((cohort) => (
-                        <option key={cohort.id} value={cohort.id}>{cohort.name}</option>
+                        <option key={cohort.id} value={cohort.id}>{displayCohortName(cohort.name)}</option>
                     ))}
                 </select>
 
@@ -172,7 +174,7 @@ export function AdminCertificatesPage() {
                                         <Badge label="Generating" tone="warning" />
                                     )}
 
-                                    <p className="font-mono text-xs text-ink-400">{new Date(certificate.issued_at).toLocaleDateString()}</p>
+                                    <p className="font-mono text-xs text-ink-400">{formatDate(certificate.issued_at)}</p>
 
                                     <div className="flex items-center justify-end gap-1">
                                         {/*

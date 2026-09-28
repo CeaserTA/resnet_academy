@@ -13,6 +13,8 @@ import { CreateCohortModal } from './CreateCohortModal';
 import { EditCohortModal } from './EditCohortModal';
 import { cohortStatusDisplay } from '@/lib/statusBadge';
 import type { Cohort, CohortStatus } from '@/lib/api/types';
+import { formatDateRange } from '@/lib/formatDate';
+import { displayCohortName } from '@/lib/cohort';
 
 // ─── Sorting ──────────────────────────────────────────────────────────────────
 
@@ -54,12 +56,12 @@ function CohortRow({ cohort, onEdit, onError }: { cohort: Cohort; onEdit: () => 
     const status = cohortStatusDisplay(cohort.status);
 
     const handleArchive = () => {
-        if (!window.confirm(`Archive "${cohort.name}"? It will no longer be offered to students. You can restore it later from Edit.`)) {
+        if (!window.confirm(`Archive "${displayCohortName(cohort.name)}"? It will no longer be offered to students. You can restore it later from Edit.`)) {
             return;
         }
         updateCohort.mutate(
             { status: 'archived' },
-            { onError: () => onError(`Could not archive "${cohort.name}". Try again.`) },
+            { onError: () => onError(`Could not archive "${displayCohortName(cohort.name)}". Try again.`) },
         );
     };
 
@@ -70,13 +72,13 @@ function CohortRow({ cohort, onEdit, onError }: { cohort: Cohort; onEdit: () => 
                     to={`/admin/cohorts/${cohort.id}`}
                     className="font-medium text-ink-900 hover:text-blue-600"
                 >
-                    {cohort.name}
+                    {displayCohortName(cohort.name)}
                 </Link>
             </td>
             <td className="px-4 py-3 text-ink-600">
                 <span className="inline-flex items-center gap-1.5">
                     <Calendar className="size-3.5 text-ink-300" aria-hidden="true" />
-                    {new Date(cohort.start_date).toLocaleDateString()} – {new Date(cohort.end_date).toLocaleDateString()}
+                    {formatDateRange(cohort.start_date, cohort.end_date)}
                 </span>
             </td>
             <td className="px-4 py-3 text-ink-600">
@@ -91,7 +93,7 @@ function CohortRow({ cohort, onEdit, onError }: { cohort: Cohort; onEdit: () => 
                     trigger={(toggle) => (
                         <button
                             onClick={toggle}
-                            aria-label={`Actions for ${cohort.name}`}
+                            aria-label={`Actions for ${displayCohortName(cohort.name)}`}
                             disabled={updateCohort.isPending}
                             className="rounded-lg p-1.5 text-ink-600 hover:bg-surface-100 hover:text-ink-900 disabled:opacity-50"
                         >

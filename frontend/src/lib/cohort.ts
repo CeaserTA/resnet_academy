@@ -4,7 +4,8 @@ import type { Cohort } from '@/lib/api/types';
  * Cohort names are often entered as slugs ("september-2026"). Show those as words
  * ("September 2026"); names that already contain spaces are left exactly as typed.
  */
-export function displayCohortName(name: string): string {
+export function displayCohortName(name: string | null | undefined): string {
+    if (!name) return '';
     if (/\s/.test(name)) return name;
     return name.replace(/[-_]+/g, ' ').replace(/\b\p{L}/gu, (c) => c.toUpperCase());
 }

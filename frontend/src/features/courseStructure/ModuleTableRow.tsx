@@ -38,6 +38,8 @@ import { cn } from '@/lib/utils';
 import type { Module, ModuleItem, ResourceModuleItem } from '@/lib/api/types';
 import type { ResourcePayload } from '@/features/courseStructure/api';
 import type { AssignmentPayload, EvaluationPayload } from '@/features/assessment/api';
+import { formatDate } from '@/lib/formatDate';
+import { displayCohortName } from '@/lib/cohort';
 
 // ─── Resource type labels + icons ─────────────────────────────────────────────
 
@@ -180,7 +182,7 @@ function ItemRow({
                 )}
                 {/* Which intake a live session is run for. Absent means it is for the whole course. */}
                 {item.item_type === 'resource' && item.type === 'live_session' && item.details?.cohort_name && (
-                    <Badge label={item.details.cohort_name} tone="progress" />
+                    <Badge label={displayCohortName(item.details.cohort_name)} tone="progress" />
                 )}
             </div>
             <div className="flex shrink-0 items-center gap-0.5">
@@ -455,7 +457,7 @@ export function ModuleTableRow({
                 <td className="px-4 py-3">
                     {opensInFuture ? (
                         <Badge
-                            label={`Opens ${new Date(module.scheduled_start_at as string).toLocaleDateString()}`}
+                            label={`Opens ${formatDate(module.scheduled_start_at as string)}`}
                             tone="warning"
                             icon={Clock}
                         />

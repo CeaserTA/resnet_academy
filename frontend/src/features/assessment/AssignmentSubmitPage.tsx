@@ -18,13 +18,13 @@ import { useCourse } from '@/features/catalogue/useCourses';
 import { ApiError } from '@/lib/api/client';
 import { useAssignment, useAssignmentSubmissions, useSubmitAssignment } from '@/features/assessment/useAssessment';
 import { useMyEnrolments } from '@/features/enrolment/useEnrolments';
-import type { AssignmentSubmission } from '@/lib/api/types';
+import type { Assignment, AssignmentSubmission } from '@/lib/api/types';
+import { cn } from '@/lib/utils';
+import { PageFrame } from '@/components/layout/PageFrame';
+import { formatDateTime } from '@/lib/formatDate';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatDate(iso: string) {
-    return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-}
 
 // ─── Existing submission panel ────────────────────────────────────────────────
 
@@ -50,7 +50,7 @@ function ExistingSubmission({ submission, onResubmit }: { submission: Assignment
                 </div>
                 <div className="px-4 py-3">
                     <p className="text-xs text-ink-600">
-                        Submitted {formatDate(submission.submitted_at)}
+                        Submitted {formatDateTime(submission.submitted_at)}
                         {submission.is_late && <span className="ml-2 text-amber-600">(late)</span>}
                     </p>
                 </div>
@@ -113,6 +113,13 @@ function ExistingSubmission({ submission, onResubmit }: { submission: Assignment
 }
 
 // ─── Submission form ──────────────────────────────────────────────────────────
+
+/** Plain-language names for the assignment's accepted submission format. */
+const SUBMISSION_TYPE_LABELS: Record<Assignment['submission_type'], string> = {
+    file: 'File upload',
+    text: 'Written answer',
+    both: 'File or written answer',
+};
 
 function SubmissionForm({ assignmentId, submissionType, onSuccess }: {
     assignmentId: number;
@@ -277,20 +284,14 @@ export function AssignmentSubmitPage() {
     const attemptCount = submissions?.length ?? 0;
 
     return (
-        <div className="mx-auto max-w-5xl space-y-4">
-
-            {/* Breadcrumb */}
-            <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-ink-600">
-                <Link to="/dashboard" className="hover:text-blue-600">My courses</Link>
-                {course && (
-                    <>
-                        <span aria-hidden="true">/</span>
-                        <Link to={`/learn/courses/${courseId}`} className="hover:text-blue-600">{course.title}</Link>
-                    </>
-                )}
-                <span aria-hidden="true">/</span>
-                <span className="text-ink-600">{assignment.title}</span>
-            </nav>
+        <PageFrame
+            breadcrumbs={[
+                { label: 'My courses', to: '/dashboard' },
+                { label: course?.title ?? '', to: `/learn/courses/${courseId}` },
+                { label: assignment.title },
+            ]}
+            title={assignment.title}
+        >
 
             {/* Two-column layout */}
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start">
@@ -304,10 +305,10 @@ export function AssignmentSubmitPage() {
                             <div className="flex items-start justify-between gap-2">
                                 <div className="flex items-center gap-2">
                                     <FileText className="size-4 text-blue-600 shrink-0" aria-hidden="true" />
-                                    <h1 className="text-sm font-semibold text-ink-900 leading-tight">{assignment.title}</h1>
+                                    <p className="text-sm font-semibold leading-tight text-ink-900">Assignment details</p>
                                 </div>
                                 {isOverdue && !justSubmitted && (
-                                    <Badge label="Past due" tone="warning" icon={Clock} />
+                                    <Badge label="Past due" tone="danger" icon={Clock} />
                                 )}
                             </div>
                         </div>
@@ -318,7 +319,7 @@ export function AssignmentSubmitPage() {
                                 <div className="flex items-start justify-between gap-2 text-xs">
                                     <span className="text-ink-600">Due</span>
                                     <span className={isOverdue ? 'font-medium text-danger-600' : 'text-ink-900'}>
-                                        {formatDate(assignment.due_at)}
+                                        {formatDateTime(assignment.due_at)}
                                     </span>
                                 </div>
                             )}
@@ -331,8 +332,20 @@ export function AssignmentSubmitPage() {
 
                             {/* Submission type */}
                             <div className="flex items-center justify-between text-xs">
-                                <span className="text-ink-600">Type</span>
-                                <span className="capitalize text-ink-900">{assignment.submission_type.replace('_', ' ')}</span>
+                                <span className="text-ink-600">Submit as</span>
+                                <span className="text-ink-900">{SUBMISSION_TYPE_LABELS[assignment.submission_type]}</span>
+                            </div>
+
+                            {/* Late policy — straight from allow_late / late_penalty_policy_id */}
+                            <div className="flex items-start justify-between gap-2 text-xs">
+                                <span className="text-ink-600">Late submissions</span>
+                                <span className={cn('text-right', assignment.allow_late ? 'text-ink-900' : 'font-medium text-danger-600')}>
+                                    {!assignment.allow_late
+                                        ? 'Not accepted'
+                                        : assignment.late_penalty_policy_id !== null
+                                            ? 'Accepted — a late penalty may apply'
+                                            : 'Accepted'}
+                                </span>
                             </div>
 
                             {/* Attempts */}
@@ -343,12 +356,6 @@ export function AssignmentSubmitPage() {
                                 </div>
                             )}
 
-                            {/* Late policy note */}
-                            {!assignment.allow_late && (
-                                <p className="rounded-lg bg-danger-600/5 px-3 py-2 text-xs text-danger-600">
-                                    Late submissions are not accepted.
-                                </p>
-                            )}
                         </div>
                     </div>
 
@@ -405,6 +412,6 @@ export function AssignmentSubmitPage() {
                     )}
                 </div>
             </div>
-        </div>
+        </PageFrame>
     );
 }

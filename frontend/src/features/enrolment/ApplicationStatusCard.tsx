@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { courseApplicationStatusDisplay } from '@/lib/statusBadge';
 import type { CourseApplication } from '@/lib/api/types';
+import { formatDate } from '@/lib/formatDate';
+import { displayCohortName } from '@/lib/cohort';
 
 export function ApplicationStatusCard({
     application,
@@ -39,10 +41,10 @@ export function ApplicationStatusCard({
             </div>
             <h3 className="mt-3 text-lg">{application.course.title}</h3>
             <p className="mt-1 text-sm text-ink-600">
-                Applied {new Date(application.applied_at).toLocaleDateString()}
+                Applied {formatDate(application.applied_at)}
                 {application.cohort_course && (
                     <span className="ml-2 text-ink-600">
-                        · Cohort: {application.cohort_course.cohort_name}
+                        · Cohort: {displayCohortName(application.cohort_course.cohort_name)}
                     </span>
                 )}
             </p>

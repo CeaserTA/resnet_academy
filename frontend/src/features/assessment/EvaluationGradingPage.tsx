@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ApiError } from '@/lib/api/client';
 import { useEvaluation, useEvaluationAttempts, useGradeAttempt } from '@/features/assessment/useAssessment';
 import type { EvaluationAttempt, Question } from '@/lib/api/types';
+import { formatDateTime } from '@/lib/formatDate';
 
 function ManualGradeForm({
     attempt,
@@ -132,7 +133,7 @@ export function EvaluationGradingPage() {
                                 <p className="font-medium">{attempt.student?.name}</p>
                                 <p className="text-sm text-ink-600">
                                     Attempt #{attempt.attempt_number} — submitted{' '}
-                                    {attempt.submitted_at && new Date(attempt.submitted_at).toLocaleString()}
+                                    {attempt.submitted_at && formatDateTime(attempt.submitted_at)}
                                 </p>
                             </div>
                             {gradingId !== attempt.id && (

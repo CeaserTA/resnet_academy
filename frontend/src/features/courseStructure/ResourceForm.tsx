@@ -19,6 +19,8 @@ import { cn } from '@/lib/utils';
 import { ApiError } from '@/lib/api/client';
 import type { CohortCourse, ResourceModuleItem, ResourceType } from '@/lib/api/types';
 import type { ResourcePayload } from '@/features/courseStructure/api';
+import { formatDateRange } from '@/lib/formatDate';
+import { displayCohortName } from '@/lib/cohort';
 
 // Lazy-loaded: Tiptap + its extensions are only needed on this instructor-authoring path, never
 // on the far more frequently hit student reading path, so they shouldn't bloat the main bundle.
@@ -43,10 +45,6 @@ interface ResourceFormProps {
 
 /** Sentinel for "not tied to a cohort" — the Select cannot hold an empty-string option value. */
 const ALL_COHORTS = 'all';
-
-function formatDay(iso: string): string {
-    return new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-}
 
 const MAX_RESOURCE_FILE_BYTES = 20 * 1024 * 1024;
 
@@ -423,7 +421,7 @@ export function ResourceForm({ resource, onSubmit, onCancel, cohorts = [] }: Res
                                     {canChooseEveryone && <option value={ALL_COHORTS}>Everyone taking this course</option>}
                                     {cohorts.map((c) => (
                                         <option key={c.cohort_id} value={String(c.cohort_id)}>
-                                            {c.cohort_name ?? `Cohort ${c.cohort_id}`}
+                                            {displayCohortName(c.cohort_name) || `Cohort ${c.cohort_id}`}
                                         </option>
                                     ))}
                                 </Select>
@@ -455,8 +453,7 @@ export function ResourceForm({ resource, onSubmit, onCancel, cohorts = [] }: Res
                             />
                             {chosenCohort?.start_date && chosenCohort?.end_date && (
                                 <p className="mt-1 text-xs text-ink-500">
-                                    {chosenCohort.cohort_name ?? 'This cohort'} runs {formatDay(chosenCohort.start_date)} to{' '}
-                                    {formatDay(chosenCohort.end_date)}. The date must fall within it.
+                                    {displayCohortName(chosenCohort.cohort_name) || 'This cohort'} runs {formatDateRange(chosenCohort.start_date, chosenCohort.end_date)}. The date must fall within it.
                                 </p>
                             )}
                         </div>

@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ApiError } from '@/lib/api/client';
 import { useAssignment, useAssignmentSubmissions, useGradeSubmission } from '@/features/assessment/useAssessment';
 import type { AssignmentRubric, AssignmentSubmission } from '@/lib/api/types';
+import { formatDateTime } from '@/lib/formatDate';
 
 function GradeForm({
     submission,
@@ -135,7 +136,7 @@ export function AssignmentGradingPage() {
                                     {submission.is_late && <Badge label="Late" tone="warning" icon={Clock} />}
                                 </div>
                                 <p className="mt-1 text-sm text-ink-600">
-                                    Submitted {new Date(submission.submitted_at).toLocaleString()}
+                                    Submitted {formatDateTime(submission.submitted_at)}
                                     {submission.final_score !== null && ` — Score: ${submission.final_score}`}
                                 </p>
                                 {submission.file_url && (

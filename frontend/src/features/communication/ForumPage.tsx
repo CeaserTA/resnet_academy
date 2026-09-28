@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
-import { ArrowLeft, CheckCircle2, MessageSquare, Pin, Plus, Search, ShieldAlert, X } from 'lucide-react';
+import { CheckCircle2, MessageSquare, Pin, Plus, Search, ShieldAlert, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/Select';
+import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { Alert } from '@/components/ui/Alert';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -17,6 +19,7 @@ import { ApiError } from '@/lib/api/client';
 import { cn, formatRelativeTime } from '@/lib/utils';
 import type { ForumPostAttachmentInput } from '@/features/communication/api';
 import type { ForumSort, ForumThread } from '@/lib/api/types';
+import { formatDate } from '@/lib/formatDate';
 
 const SORT_OPTIONS: [ForumSort, string][] = [
     ['latest_activity', 'Latest activity'],
@@ -58,7 +61,7 @@ function relativeDateGroup(iso: string): string {
     if (date.toDateString() === yesterday.toDateString()) {
         return 'Yesterday';
     }
-    return date.toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+    return formatDate(date);
 }
 
 function DiscussionListItem({
@@ -100,16 +103,17 @@ function DiscussionListItem({
                 </p>
             </div>
 
-            <div className="flex shrink-0 -space-x-2">
+            {/* Small, lightly overlapped avatars so neither set of initials is covered */}
+            <div className="flex shrink-0 -space-x-1.5">
                 {thread.creator && (
-                    <Avatar name={thread.creator.name} src={thread.creator.avatar_url} size="sm" className="ring-2 ring-surface-0" />
+                    <Avatar name={thread.creator.name} src={thread.creator.avatar_url} size="sm" className="size-7 text-xs ring-2 ring-surface-0" />
                 )}
                 {thread.latest_participant && thread.latest_participant.id !== thread.creator?.id && (
                     <Avatar
                         name={thread.latest_participant.name}
                         src={thread.latest_participant.avatar_url}
                         size="sm"
-                        className="ring-2 ring-surface-0"
+                        className="size-7 text-xs ring-2 ring-surface-0"
                     />
                 )}
             </div>
@@ -207,26 +211,16 @@ export function ForumPage() {
     return (
         <div>
             <div className="flex flex-wrap items-center justify-between gap-3">
-                {/* Same trail style as the course page / Gradebook. Staff go back to the admin
-                    course page; students to their course player (they can't open the admin one). */}
-                <nav aria-label="Breadcrumb" className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-                    <Link
-                        to={isStaff ? '/admin/courses' : '/dashboard'}
-                        className="flex items-center gap-1 text-sm text-ink-600 hover:text-blue-600"
-                    >
-                        <ArrowLeft className="size-3.5" aria-hidden="true" />
-                        {isStaff ? 'Courses' : 'My courses'}
-                    </Link>
-                    <span className="text-ink-300" aria-hidden="true">/</span>
-                    <Link
-                        to={isStaff ? `/admin/courses/${courseId}/modules` : `/learn/courses/${courseId}`}
-                        className="truncate text-sm text-ink-600 hover:text-blue-600"
-                    >
-                        {course?.title ?? 'Course'}
-                    </Link>
-                    <span className="text-ink-300" aria-hidden="true">/</span>
-                    <h1 className="text-base font-semibold text-ink-900" aria-current="page">Forum</h1>
-                </nav>
+                <div className="min-w-0">
+                    <Breadcrumbs
+                        items={[
+                            isStaff ? { label: 'Courses', to: '/admin/courses' } : { label: 'My courses', to: '/dashboard' },
+                            { label: course?.title ?? 'Course', to: isStaff ? `/admin/courses/${courseId}/modules` : `/learn/courses/${courseId}` },
+                            { label: 'Forum' },
+                        ]}
+                    />
+                    <h1 className="mt-2 text-lg font-semibold text-ink-900">{course ? `${course.title} forum` : 'Forum'}</h1>
+                </div>
                 {isStaff && (
                     <Link to={`/courses/${courseId}/forum/moderation`}>
                         <Button variant="secondary">
@@ -279,18 +273,16 @@ export function ForumPage() {
                             ]}
                         />
 
-                        <select
-                            value={sort}
-                            onChange={(e) => setSort(e.target.value as ForumSort)}
-                            aria-label="Sort discussions"
-                            className="rounded-md border border-surface-100 bg-surface-0 px-2 py-1 text-xs text-ink-900"
-                        >
-                            {SORT_OPTIONS.map(([value, label]) => (
-                                <option key={value} value={value}>
-                                    {label}
-                                </option>
-                            ))}
-                        </select>
+                        <div className="w-44">
+                            <Select
+                                label="Sort discussions"
+                                labelClassName="sr-only"
+                                value={sort}
+                                onChange={(e) => setSort(e.target.value as ForumSort)}
+                                options={SORT_OPTIONS.map(([value, label]) => ({ value, label }))}
+                                className="h-8 py-1 text-xs"
+                            />
+                        </div>
                     </div>
 
                     {tags && tags.length > 0 && (

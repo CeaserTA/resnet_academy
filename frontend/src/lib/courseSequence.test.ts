@@ -7,6 +7,7 @@ import {
     itemLinkFor,
 } from '@/lib/courseSequence';
 import type { Module, ModuleItem, ModuleProgressEntry } from '@/lib/api/types';
+import { formatDate } from '@/lib/formatDate';
 
 function makeResourceItem(overrides: Partial<Extract<ModuleItem, { item_type: 'resource' }>>): ModuleItem {
     return {
@@ -131,7 +132,7 @@ describe('describeLockedModule', () => {
         const module = makeModule({ id: 1, order_index: 1, scheduled_start_at: futureDate });
 
         expect(describeLockedModule(module, [module], new Map())).toBe(
-            `Opens ${new Date(futureDate).toLocaleDateString()}`,
+            `Opens ${formatDate(futureDate)}`,
         );
     });
 

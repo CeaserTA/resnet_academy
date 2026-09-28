@@ -20,7 +20,6 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
 import { Spinner } from '@/components/ui/Spinner';
-import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { CircularProgress } from '@/components/ui/CircularProgress';
 import { useCourse } from '@/features/catalogue/useCourses';
 import { useCoursePlayer } from '@/features/learning/useLearning';
@@ -36,6 +35,7 @@ import {
 } from '@/lib/courseSequence';
 import { assignmentDueBadge } from '@/lib/statusBadge';
 import { cn } from '@/lib/utils';
+import { PageFrame } from '@/components/layout/PageFrame';
 import type {
     AssignmentModuleItem,
     EvaluationModuleItem,
@@ -44,6 +44,7 @@ import type {
     ModuleProgressStatus,
     ResourceModuleItem,
 } from '@/lib/api/types';
+import { formatDate } from '@/lib/formatDate';
 
 // ─── Status display map ───────────────────────────────────────────────────────
 
@@ -105,7 +106,7 @@ function ItemRow({ item, courseId }: { item: ModuleItem; courseId: number }) {
                             <Badge label={urgency.label} tone={urgency.tone} icon={urgency.icon} />
                         ) : (
                             <span className="hidden shrink-0 text-xs text-ink-600 sm:inline">
-                                Due {new Date(a.due_at!).toLocaleDateString()}
+                                Due {formatDate(a.due_at!)}
                             </span>
                         );
                     })()}
@@ -268,13 +269,11 @@ export function CoursePlayerPage() {
     }
 
     return (
-        <div className="mx-auto max-w-5xl">
-            <Breadcrumbs items={[{ label: 'My courses', to: '/dashboard' }, { label: course?.title ?? '' }]} />
-
-            {/* Header */}
-            <div className="mt-2 flex items-center justify-between gap-3">
-                <h1 className="text-xl font-bold">{course?.title}</h1>
-                <div className="flex items-center gap-2">
+        <PageFrame
+            breadcrumbs={[{ label: 'My courses', to: '/dashboard' }, { label: course?.title ?? '' }]}
+            title={course?.title}
+            actions={
+                <>
                     <Link to={`/courses/${courseId}/forum`}>
                         <Button variant="secondary" className="text-sm">
                             <MessageCircle className="size-4" aria-hidden="true" />
@@ -290,23 +289,20 @@ export function CoursePlayerPage() {
                             <CircularProgress percent={overallPercent} size={36} showLabel={false} />
                         </div>
                     )}
-                </div>
-            </div>
+                </>
+            }
+        >
 
             {/* Continue / completed banner */}
             {cohortStartsOn ? (
                 /* Every module is locked until the intake begins, so the date leads rather than
                    leaving a page of locked rows with no explanation. */
-                <div className="mt-3 flex items-start gap-3 rounded-lg border border-blue-600/30 bg-blue-50 p-3">
+                <div className="flex items-start gap-3 rounded-lg border border-blue-600/30 bg-blue-50 p-3">
                     <CalendarClock className="mt-0.5 size-5 shrink-0 text-blue-600" aria-hidden="true" />
                     <div className="min-w-0">
                         <p className="text-sm font-medium text-ink-900">
                             This course starts on{' '}
-                            {new Date(cohortStartsOn).toLocaleDateString(undefined, {
-                                day: 'numeric',
-                                month: 'long',
-                                year: 'numeric',
-                            })}
+                            {formatDate(cohortStartsOn)}
                         </p>
                         <p className="mt-0.5 text-sm text-ink-600">
                             Your place is reserved. The modules below open on that date — you can see what the course
@@ -315,7 +311,7 @@ export function CoursePlayerPage() {
                     </div>
                 </div>
             ) : nextIncompleteItem ? (
-                <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-blue-600/30 bg-blue-50 p-3">
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-blue-600/30 bg-blue-50 p-3">
                     <div className="min-w-0">
                         <p className="text-xs font-medium text-blue-600">Continue where you left off</p>
                         <p className="truncate text-sm font-medium text-ink-900">{nextIncompleteItem.title}</p>
@@ -328,7 +324,7 @@ export function CoursePlayerPage() {
                     </Link>
                 </div>
             ) : courseCompleted ? (
-                <div className="mt-3 flex items-center justify-between gap-2">
+                <div className="flex items-center justify-between gap-2">
                     <Alert variant="success" message="You've completed this course!" className="flex-1" />
                     {hasCompletedCourse && !myReview && (
                         <Button variant="secondary" onClick={() => setIsReviewModalOpen(true)} className="shrink-0 text-sm">
@@ -340,7 +336,7 @@ export function CoursePlayerPage() {
             ) : null}
 
             {/* Module list */}
-            <div className="mt-4 flex flex-col gap-3">
+            <div className="flex flex-col gap-3">
                 {sortedModules.map((module, index) => {
                     const status = statusFor(module.id);
                     const display = statusDisplay[status];
@@ -510,6 +506,6 @@ export function CoursePlayerPage() {
             {isReviewModalOpen && course && (
                 <ReviewFormModal course={course} onClose={() => setIsReviewModalOpen(false)} />
             )}
-        </div>
+        </PageFrame>
     );
 }

@@ -8,7 +8,6 @@ import {
     Eye,
     LifeBuoy,
     Plus,
-    Search,
     X,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
@@ -21,16 +20,19 @@ import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Modal } from '@/components/ui/Modal';
 import { Avatar } from '@/components/ui/Avatar';
+import { SearchInput } from '@/components/ui/SearchInput';
 import { DropdownMenu } from '@/components/ui/DropdownMenu';
 import { TicketConversation } from '@/features/communication/TicketConversation';
 import { updateTicket } from '@/features/communication/api';
 import { useCreateTicket, useTicket, useTickets } from '@/features/communication/useCommunication';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import { ApiError } from '@/lib/api/client';
 import { ticketStatusDisplay } from '@/lib/statusBadge';
 import { formatRelativeTime } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import type { Ticket, TicketStatus } from '@/lib/api/types';
+import { PageFrame } from '@/components/layout/PageFrame';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -134,15 +136,171 @@ function NewTicketForm({ onCreated, onCancel }: { onCreated: (ticketId: number) 
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-xl border border-surface-100 bg-surface-50 p-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-lg border border-surface-100 bg-surface-0 p-4">
             {error && <Alert variant="error" message={error} />}
             <Input label="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} required />
-            <Textarea label="Describe the issue" rows={4} value={body} onChange={(e) => setBody(e.target.value)} required />
-            <div className="flex gap-2">
-                <Button type="submit" size="sm" isLoading={createTicket.isPending}>Submit</Button>
-                <Button type="button" size="sm" variant="ghost" onClick={onCancel}>Cancel</Button>
+            <Textarea
+                label="Describe the issue"
+                rows={4}
+                className="text-sm"
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                required
+            />
+            <div className="flex justify-end gap-2">
+                <Button type="button" variant="ghost" onClick={onCancel}>
+                    Cancel
+                </Button>
+                <Button type="submit" isLoading={createTicket.isPending} disabled={!subject.trim() || !body.trim()}>
+                    Submit ticket
+                </Button>
             </div>
         </form>
+    );
+}
+
+// ─── Full table (no ticket open) ──────────────────────────────────────────────
+
+const TABLE_COLUMNS = 'grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_120px_60px_100px]';
+
+function TicketTable({
+    tickets,
+    sortDir,
+    onToggleSort,
+    onSelect,
+    onStatusChange,
+}: {
+    tickets: Ticket[];
+    sortDir: SortDir;
+    onToggleSort: () => void;
+    onSelect: (id: number) => void;
+    onStatusChange: (id: number, status: string) => void;
+}) {
+    return (
+        /* Scrolls sideways on narrow screens instead of clipping columns */
+        <div className="overflow-x-auto">
+            <div className="min-w-[670px]">
+                <div className={cn('grid items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5', TABLE_COLUMNS)}>
+                    <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Student</span>
+                    <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Subject</span>
+                    <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Status</span>
+                    <span className="text-xs font-medium uppercase tracking-wide text-ink-600">View</span>
+                    <SortHeader label="Time" active={true} dir={sortDir} onClick={onToggleSort} />
+                </div>
+
+                <ul className="divide-y divide-surface-100">
+                    {tickets.map((ticket) => (
+                        <li
+                            key={ticket.id}
+                            onClick={() => onSelect(ticket.id)}
+                            className={cn('grid cursor-pointer items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-50', TABLE_COLUMNS)}
+                        >
+                            {/* Student */}
+                            <div className="flex min-w-0 items-center gap-2">
+                                {ticket.student ? (
+                                    <>
+                                        <Avatar
+                                            name={ticket.student.name}
+                                            src={ticket.student.avatar_url}
+                                            size="sm"
+                                            className="size-7 shrink-0 text-xs"
+                                        />
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-medium text-ink-900">{ticket.student.name}</p>
+                                            <p className="truncate text-xs text-ink-600">{ticket.student.email}</p>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <span className="text-sm text-ink-600">—</span>
+                                )}
+                            </div>
+
+                            {/* Subject + course */}
+                            <div className="min-w-0">
+                                <p className="truncate text-sm text-ink-900">{ticket.subject}</p>
+                                {ticket.course && <p className="truncate text-xs text-ink-600">{ticket.course.title}</p>}
+                            </div>
+
+                            {/* Status badge — click to change */}
+                            <div onClick={(e) => e.stopPropagation()}>
+                                <StatusBadge ticket={ticket} onStatusChange={(status) => onStatusChange(ticket.id, status)} />
+                            </div>
+
+                            {/* View button */}
+                            <div onClick={(e) => e.stopPropagation()}>
+                                <button
+                                    onClick={() => onSelect(ticket.id)}
+                                    aria-label={`View ticket: ${ticket.subject}`}
+                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-blue-600"
+                                >
+                                    <Eye className="size-4" aria-hidden="true" />
+                                </button>
+                            </div>
+
+                            {/* Time */}
+                            <span className="shrink-0 text-xs tabular-nums text-ink-600">
+                                {formatRelativeTime(ticket.created_at)}
+                            </span>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        </div>
+    );
+}
+
+// ─── Compact list (a ticket is open beside it) ────────────────────────────────
+
+function CompactTicketList({
+    tickets,
+    selectedId,
+    onSelect,
+    onStatusChange,
+}: {
+    tickets: Ticket[];
+    selectedId: number | null;
+    onSelect: (id: number) => void;
+    onStatusChange: (id: number, status: string) => void;
+}) {
+    return (
+        <ul className="divide-y divide-surface-100">
+            {tickets.map((ticket) => {
+                const isSelected = ticket.id === selectedId;
+                return (
+                    <li
+                        key={ticket.id}
+                        className={cn(
+                            'flex items-center gap-2 border-l-2 pr-3 transition-colors',
+                            isSelected ? 'border-blue-600 bg-blue-50' : 'border-transparent hover:bg-surface-50',
+                        )}
+                    >
+                        <button
+                            onClick={() => onSelect(ticket.id)}
+                            aria-current={isSelected ? 'true' : undefined}
+                            className="flex min-w-0 flex-1 items-center gap-2.5 py-2.5 pl-3 text-left"
+                        >
+                            {ticket.student && (
+                                <Avatar
+                                    name={ticket.student.name}
+                                    src={ticket.student.avatar_url}
+                                    size="sm"
+                                    className="size-7 shrink-0 text-xs"
+                                />
+                            )}
+                            <span className="min-w-0 flex-1">
+                                <span className="block truncate text-sm font-medium text-ink-900">
+                                    {ticket.student?.name ?? 'Unknown student'}
+                                </span>
+                                <span className="block truncate text-xs text-ink-600">{ticket.subject}</span>
+                            </span>
+                        </button>
+                        <div className="shrink-0">
+                            <StatusBadge ticket={ticket} onStatusChange={(status) => onStatusChange(ticket.id, status)} />
+                        </div>
+                    </li>
+                );
+            })}
+        </ul>
     );
 }
 
@@ -161,6 +319,8 @@ function StaffTicketsView() {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>('all');
     const [sortDir, setSortDir] = useState<SortDir>('desc');
+
+    usePageHeader('Support tickets', 'Review and respond to student support requests');
 
     const quickUpdateStatus = useMutation({
         mutationFn: ({ id, status }: { id: number; status: string }) => updateTicket(id, { status }),
@@ -197,40 +357,34 @@ function StaffTicketsView() {
         });
     }, [tickets, statusFilter, search, sortDir]);
 
+    const isPanelOpen = selectedTicketId !== null;
+    const changeStatus = (id: number, status: string) => quickUpdateStatus.mutate({ id, status });
+
     return (
-        <div className="space-y-4">
-            {/* Page header */}
-            <div>
-                <h1 className="text-lg font-semibold text-ink-900">Support tickets</h1>
-                <p className="text-xs text-ink-600">Review and respond to student support requests</p>
-            </div>
+        <div>
+            <div className={cn('flex gap-4', isPanelOpen ? 'items-start' : '')}>
 
-            <div className={cn('flex gap-4', selectedTicketId ? 'items-start' : '')}>
+                {/* ── Left: table (nothing open) or compact list (a ticket is open) ── */}
+                <div className={cn('min-w-0 flex-1', isPanelOpen ? 'hidden lg:block lg:w-2/5 lg:flex-none' : 'w-full')}>
 
-                {/* ── Left: table panel ──────────────────────────────────── */}
-                <div className={cn('min-w-0 flex-1', selectedTicketId ? 'hidden lg:block lg:w-2/5 lg:flex-none' : 'w-full')}>
-
-                    {/* Toolbar */}
+                    {/* Toolbar — in the narrow state the search takes its own full-width row and the
+                        tabs wrap beneath it, so neither gets clipped. */}
                     <div className="mb-3 flex flex-wrap items-center gap-2">
-                        {/* Search */}
-                        <div className="relative w-full sm:w-auto sm:min-w-0 sm:max-w-56 sm:flex-1">
-                            <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-600" aria-hidden="true" />
-                            <input
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Search subject or student…"
-                                className="w-full rounded-lg border border-surface-100 bg-surface-0 py-1.5 pl-8 pr-3 text-sm text-ink-900 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600"
-                            />
-                        </div>
+                        <SearchInput
+                            value={search}
+                            onChange={setSearch}
+                            placeholder="Search subject or student…"
+                            className={cn('ml-0', isPanelOpen ? 'max-w-none' : 'sm:w-72 sm:max-w-none')}
+                        />
 
-                        {/* Status tabs — scroll sideways on narrow screens rather than clipping */}
-                        <div className="scrollbar-hide flex max-w-full items-center gap-0.5 overflow-x-auto rounded-lg border border-surface-100 bg-surface-50 p-0.5">
+                        <div className="flex flex-wrap items-center gap-0.5 rounded-lg border border-surface-100 bg-surface-50 p-0.5">
                             {STATUS_TABS.map(({ value, label }) => (
                                 <button
                                     key={value}
                                     onClick={() => setStatusFilter(value)}
+                                    aria-pressed={statusFilter === value}
                                     className={cn(
-                                        'shrink-0 whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                                        'whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
                                         statusFilter === value
                                             ? 'bg-blue-600 text-white shadow-sm'
                                             : 'text-ink-600 hover:text-ink-900',
@@ -262,96 +416,22 @@ function StaffTicketsView() {
 
                     {!isLoading && filtered.length > 0 && (
                         <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
-                            {/* Scrolls sideways on narrow screens instead of clipping columns */}
-                            <div className="overflow-x-auto">
-                                <div className="min-w-[670px]">
-                                    {/* Table header */}
-                                    <div className="grid grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_120px_60px_100px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
-                                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Student</span>
-                                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Subject</span>
-                                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Status</span>
-                                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">View</span>
-                                        <SortHeader
-                                            label="Time"
-                                            active={true}
-                                            dir={sortDir}
-                                            onClick={() => setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))}
-                                        />
-                                    </div>
-
-                                    {/* Rows */}
-                                    <ul className="divide-y divide-surface-100">
-                                        {filtered.map((ticket) => (
-                                            <li
-                                                key={ticket.id}
-                                                onClick={() => setSelectedTicketId(ticket.id)}
-                                                className={cn(
-                                                    'grid cursor-pointer grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_120px_60px_100px] items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-50',
-                                                    selectedTicketId === ticket.id && 'bg-blue-50',
-                                                )}
-                                            >
-                                                {/* Student */}
-                                                <div className="flex min-w-0 items-center gap-2">
-                                                    {ticket.student ? (
-                                                        <>
-                                                            <Avatar
-                                                                name={ticket.student.name}
-                                                                src={ticket.student.avatar_url}
-                                                                size="sm"
-                                                                className="size-7 shrink-0 text-xs"
-                                                            />
-                                                            <div className="min-w-0">
-                                                                <p className="truncate text-sm font-medium text-ink-900">
-                                                                    {ticket.student.name}
-                                                                </p>
-                                                                <p className="truncate text-xs text-ink-600">
-                                                                    {ticket.student.email}
-                                                                </p>
-                                                            </div>
-                                                        </>
-                                                    ) : (
-                                                        <span className="text-sm text-ink-600">—</span>
-                                                    )}
-                                                </div>
-
-                                                {/* Subject + course */}
-                                                <div className="min-w-0">
-                                                    <p className="truncate text-sm text-ink-900">{ticket.subject}</p>
-                                                    {ticket.course && (
-                                                        <p className="truncate text-xs text-ink-600">{ticket.course.title}</p>
-                                                    )}
-                                                </div>
-
-                                                {/* Status badge — click to change */}
-                                                <div onClick={(e) => e.stopPropagation()}>
-                                                    <StatusBadge
-                                                        ticket={ticket}
-                                                        onStatusChange={(status) =>
-                                                            quickUpdateStatus.mutate({ id: ticket.id, status })
-                                                        }
-                                                    />
-                                                </div>
-
-                                                {/* View button */}
-                                                <div onClick={(e) => e.stopPropagation()}>
-                                                    <button
-                                                        onClick={() => setSelectedTicketId(ticket.id)}
-                                                        aria-label={`View ticket: ${ticket.subject}`}
-                                                        className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-blue-600"
-                                                    >
-                                                        <Eye className="size-4" aria-hidden="true" />
-                                                    </button>
-                                                </div>
-
-                                                {/* Time */}
-                                                <span className="shrink-0 text-xs tabular-nums text-ink-600">
-                                                    {formatRelativeTime(ticket.created_at)}
-                                                </span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            </div>
+                            {isPanelOpen ? (
+                                <CompactTicketList
+                                    tickets={filtered}
+                                    selectedId={selectedTicketId}
+                                    onSelect={setSelectedTicketId}
+                                    onStatusChange={changeStatus}
+                                />
+                            ) : (
+                                <TicketTable
+                                    tickets={filtered}
+                                    sortDir={sortDir}
+                                    onToggleSort={() => setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))}
+                                    onSelect={setSelectedTicketId}
+                                    onStatusChange={changeStatus}
+                                />
+                            )}
 
                             {/* Footer count */}
                             <div className="border-t border-surface-100 bg-surface-50 px-4 py-2">
@@ -428,19 +508,19 @@ function StudentTicketsView() {
     };
 
     return (
-        <div className="mx-auto max-w-2xl space-y-4">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-lg font-semibold text-ink-900">Support</h1>
-                    <p className="text-xs text-ink-600">Raise and track support requests</p>
-                </div>
-                {!isCreating && (
+        <PageFrame
+            width="narrow"
+            title="Support"
+            subtitle="Raise and track support requests"
+            actions={
+                !isCreating && (
                     <Button size="sm" onClick={() => setIsCreating(true)}>
                         <Plus className="size-3.5" aria-hidden="true" />
                         New ticket
                     </Button>
-                )}
-            </div>
+                )
+            }
+        >
 
             {isCreating && (
                 <NewTicketForm
@@ -481,11 +561,19 @@ function StudentTicketsView() {
             </div>
 
             {selectedTicketId && selectedTicket && (
-                <Modal isOpen onClose={closeModal} title={selectedTicket.subject}>
+                <Modal
+                    isOpen
+                    onClose={closeModal}
+                    title={selectedTicket.subject}
+                    titleAdornment={(() => {
+                        const status = ticketStatusDisplay(selectedTicket.status);
+                        return <Badge label={status.label} tone={status.tone} icon={status.icon} />;
+                    })()}
+                >
                     <TicketConversation ticket={selectedTicket} />
                 </Modal>
             )}
-        </div>
+        </PageFrame>
     );
 }
 

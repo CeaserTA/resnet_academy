@@ -1,15 +1,10 @@
 import { CalendarDays, User, Clock } from 'lucide-react';
 import type { CohortCourse } from '@/lib/api/types';
+import { formatDate, formatDateRange } from '@/lib/formatDate';
+import { displayCohortName } from '@/lib/cohort';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function formatDate(dateStr: string): string {
-    return new Date(dateStr).toLocaleDateString('en-UG', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-    });
-}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -32,7 +27,7 @@ export function CohortInfo({ section }: { section: CohortCourse }) {
             <div className="rounded-xl border border-[#e8ecf1] bg-[#f8fafc] px-4 py-3 text-sm">
                 <div className="flex items-start justify-between gap-2">
                     <span className="font-semibold text-ink-900 leading-snug">
-                        {section.cohort_name}
+                        {displayCohortName(section.cohort_name)}
                     </span>
                     {section.is_full ? (
                         <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
@@ -49,7 +44,7 @@ export function CohortInfo({ section }: { section: CohortCourse }) {
                     <div className="mt-2 flex items-center gap-1.5 text-xs text-[#64748b]">
                         <CalendarDays className="size-3.5 shrink-0 text-blue-400" aria-hidden="true" />
                         <span>
-                            {formatDate(section.start_date)} – {formatDate(section.end_date)}
+                            {formatDateRange(section.start_date, section.end_date)}
                         </span>
                     </div>
                 )}

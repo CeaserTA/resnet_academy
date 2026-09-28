@@ -29,12 +29,10 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { cohortPhase, daysUntil, displayCohortName, type CohortPhase } from '@/lib/cohort';
 import { cn } from '@/lib/utils';
 import type { Cohort, CohortCourse } from '@/lib/api/types';
+import { formatDate, formatDateRange } from '@/lib/formatDate';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function formatDate(dateStr: string, opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', year: 'numeric' }): string {
-    return new Date(dateStr).toLocaleDateString('en-UG', opts);
-}
 
 function formatPrice(price: string, currency: string): string {
     const amount = Number(price);
@@ -254,7 +252,6 @@ export function CohortPage() {
     const weeks = durationWeeks(cohort.start_date, cohort.end_date);
     const deadlineDays = cohort.application_deadline ? daysUntil(cohort.application_deadline) : null;
     const courses = cohort.courses.filter((cc) => cc.course);
-    const shortDate: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
 
     return (
         <div className="min-h-screen bg-surface-50">
@@ -283,17 +280,16 @@ export function CohortPage() {
                             </span>
                         </div>
                         <p className="mt-3 max-w-2xl text-base leading-7 text-ink-600">
-                            A {weeks}-week intake running {formatDate(cohort.start_date, { day: 'numeric', month: 'long' })} to{' '}
-                            {formatDate(cohort.end_date)}. Learn alongside a small group with mentor support throughout.
+                            A {weeks}-week intake running {formatDateRange(cohort.start_date, cohort.end_date)}. Learn alongside a small group with mentor support throughout.
                         </p>
 
                         <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-                            <Fact icon={CalendarDays} label="Starts" value={formatDate(cohort.start_date, shortDate)} />
-                            <Fact icon={CalendarRange} label="Duration" value={`${weeks} week${weeks === 1 ? '' : 's'}`} note={`Ends ${formatDate(cohort.end_date, shortDate)}`} />
+                            <Fact icon={CalendarDays} label="Starts" value={formatDate(cohort.start_date)} />
+                            <Fact icon={CalendarRange} label="Duration" value={`${weeks} week${weeks === 1 ? '' : 's'}`} note={`Ends ${formatDate(cohort.end_date)}`} />
                             <Fact
                                 icon={Clock}
                                 label="Apply by"
-                                value={cohort.application_deadline ? formatDate(cohort.application_deadline, shortDate) : 'Rolling'}
+                                value={cohort.application_deadline ? formatDate(cohort.application_deadline) : 'Rolling'}
                                 note={
                                     deadlineDays === null ? 'While seats last'
                                         : deadlineDays < 0 ? 'Deadline passed'

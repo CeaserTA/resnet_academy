@@ -14,6 +14,8 @@ import { EditCohortCourseModal } from './EditCohortCourseModal';
 import { DetachCohortCourseDialog } from './DetachCohortCourseDialog';
 import { cohortStatusDisplay, cohortCourseStatusDisplay } from '@/lib/statusBadge';
 import type { CohortCourse } from '@/lib/api/types';
+import { formatDate, formatDateRange } from '@/lib/formatDate';
+import { displayCohortName } from '@/lib/cohort';
 
 export function CohortDetailPage() {
     const { id } = useParams();
@@ -21,7 +23,7 @@ export function CohortDetailPage() {
     const { data: cohort, isLoading } = useCohort(cohortId);
     const { data: report } = useCohortAnalytics(cohortId);
 
-    usePageHeader(cohort?.name ?? 'Cohort', 'Courses offered in this cohort, and who has completed them.');
+    usePageHeader(displayCohortName(cohort?.name) || 'Cohort', 'Courses offered in this cohort, and who has completed them.');
 
     const [isEditingCohort, setIsEditingCohort] = useState(false);
     const [isAttaching, setIsAttaching] = useState(false);
@@ -54,7 +56,7 @@ export function CohortDetailPage() {
                         Cohorts
                     </Link>
                     <span className="text-ink-300" aria-hidden="true">/</span>
-                    <h1 className="text-base font-semibold text-ink-900">{cohort.name}</h1>
+                    <h1 className="text-base font-semibold text-ink-900">{displayCohortName(cohort.name)}</h1>
                     <Badge label={status.label} tone={status.tone} icon={status.icon} />
                 </div>
 
@@ -65,9 +67,9 @@ export function CohortDetailPage() {
             </div>
 
             <p className="text-sm text-ink-600">
-                {new Date(cohort.start_date).toLocaleDateString()} – {new Date(cohort.end_date).toLocaleDateString()}
+                {formatDateRange(cohort.start_date, cohort.end_date)}
                 {cohort.application_deadline && (
-                    <> · Applications close {new Date(cohort.application_deadline).toLocaleDateString()}</>
+                    <> · Applications close {formatDate(cohort.application_deadline)}</>
                 )}
             </p>
 

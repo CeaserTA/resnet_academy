@@ -10,6 +10,7 @@ import { ApiError } from '@/lib/api/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useCourses } from '@/features/catalogue/useCourses';
 import { useAnnouncements, useCreateAnnouncement, useDeleteAnnouncement } from '@/features/communication/useCommunication';
+import { formatDate } from '@/lib/formatDate';
 
 /**
  * Course builder redesign: announcements are created (and reviewed/deleted) from the
@@ -88,7 +89,7 @@ export function AnnouncementComposer() {
                                 <div key={announcement.id} className="flex items-start justify-between gap-2 rounded-md bg-surface-50 p-2">
                                     <div>
                                         <p className="text-sm font-medium text-ink-900">{announcement.title}</p>
-                                        <p className="text-xs text-ink-600">{new Date(announcement.created_at).toLocaleDateString()}</p>
+                                        <p className="text-xs text-ink-600">{formatDate(announcement.created_at)}</p>
                                     </div>
                                     <button
                                         onClick={() => deleteAnnouncement.mutate(announcement.id)}

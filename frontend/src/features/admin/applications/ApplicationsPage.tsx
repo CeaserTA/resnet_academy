@@ -22,6 +22,7 @@ import type { CourseApplication, CourseApplicationStatus } from '@/lib/api/types
 import { SearchInput } from '@/components/ui/SearchInput';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { matchesSearch } from '@/lib/search';
+import { formatDate, formatDateTime } from '@/lib/formatDate';
 
 type Tab = 'all' | 'pending' | 'rejected' | 'approved';
 
@@ -47,7 +48,7 @@ function ViewApplicationModal({ application, onClose }: { application: CourseApp
                 </div>
                 <div className="flex items-center justify-between gap-4">
                     <span className="text-ink-600">Applied</span>
-                    <span className="text-ink-900">{new Date(application.applied_at).toLocaleString()}</span>
+                    <span className="text-ink-900">{formatDateTime(application.applied_at)}</span>
                 </div>
                 {application.approved_automatically ? (
                     <div className="flex items-center justify-between gap-4">
@@ -289,7 +290,7 @@ export function ApplicationsPage() {
 
                                             {/* Applied */}
                                             <p className="text-right font-mono text-xs text-ink-600">
-                                                {new Date(application.applied_at).toLocaleDateString()}
+                                                {formatDate(application.applied_at)}
                                             </p>
 
                                             {/* Actions */}

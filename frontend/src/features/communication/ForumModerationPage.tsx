@@ -7,6 +7,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useForumReports, useUpdateForumReport } from '@/features/communication/useCommunication';
 import { forumPostReportStatusDisplay } from '@/lib/statusBadge';
+import { formatDateTime } from '@/lib/formatDate';
 
 export function ForumModerationPage() {
     const { id } = useParams();
@@ -35,7 +36,7 @@ export function ForumModerationPage() {
                         <Card key={report.id}>
                             <div className="flex items-center justify-between">
                                 <Badge label={status.label} tone={status.tone} icon={status.icon} />
-                                <p className="text-xs text-ink-600">{new Date(report.created_at).toLocaleString()}</p>
+                                <p className="text-xs text-ink-600">{formatDateTime(report.created_at)}</p>
                             </div>
                             <p className="mt-2 text-sm font-medium text-ink-900">Reason: {report.reason}</p>
                             <p className="mt-1 text-xs text-ink-600">Reported by {report.reporter?.name}</p>

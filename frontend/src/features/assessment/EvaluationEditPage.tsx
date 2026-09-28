@@ -20,6 +20,7 @@ import {
     useUpdateEvaluation,
 } from '@/features/assessment/useAssessment';
 import type { EvaluationAttempt, Question } from '@/lib/api/types';
+import { formatDateTime } from '@/lib/formatDate';
 
 // ─── Tab types ─────────────────────────────────────────────────────────────────────────────
 
@@ -306,7 +307,7 @@ function AttemptsTab({ evaluation, evaluationId }: { evaluation: import('@/lib/a
                                     <p className="font-medium">{attempt.student?.name}</p>
                                     <p className="text-sm text-ink-600">
                                         Attempt #{attempt.attempt_number} — submitted{' '}
-                                        {attempt.submitted_at && new Date(attempt.submitted_at).toLocaleString()}
+                                        {attempt.submitted_at && formatDateTime(attempt.submitted_at)}
                                     </p>
                                 </div>
                                 {gradingId !== attempt.id && (

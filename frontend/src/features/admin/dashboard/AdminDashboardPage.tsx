@@ -35,6 +35,7 @@ import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import { formatRelativeTime } from '@/lib/utils';
 import { describeAuditLogEntry } from '@/lib/auditLog';
 import { cn } from '@/lib/utils';
+import { formatDateRange } from '@/lib/formatDate';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -104,7 +105,6 @@ function QuickActionBtn({ action }: { action: QuickAction }) {
 function CohortRow({ cohort }: { cohort: Cohort }) {
     const running = cohortPhase(cohort) === 'in_progress';
     const deadlineDays = cohort.application_deadline ? daysUntil(cohort.application_deadline) : null;
-    const short = (d: string) => new Date(d).toLocaleDateString('en-UG', { day: 'numeric', month: 'short' });
     const courseCount = cohort.course_count ?? cohort.courses.length;
 
     return (
@@ -121,7 +121,7 @@ function CohortRow({ cohort }: { cohort: Cohort }) {
                         </span>
                     </span>
                     <span className="mt-0.5 block text-xs text-ink-600">
-                        {short(cohort.start_date)} – {short(cohort.end_date)} · {courseCount} course{courseCount === 1 ? '' : 's'}
+                        {formatDateRange(cohort.start_date, cohort.end_date)} · {courseCount} course{courseCount === 1 ? '' : 's'}
                         {!running && deadlineDays !== null && deadlineDays >= 0 && ` · apply within ${deadlineDays} day${deadlineDays === 1 ? '' : 's'}`}
                     </span>
                 </span>

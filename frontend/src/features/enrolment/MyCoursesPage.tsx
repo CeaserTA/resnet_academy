@@ -33,6 +33,7 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 import { courseProgressStatusDisplay, enrolmentStatusDisplay } from '@/lib/statusBadge';
 import { ApiError } from '@/lib/api/client';
 import type { CourseReview, Enrolment, ProgressDashboardRow } from '@/lib/api/types';
+import { formatDate } from '@/lib/formatDate';
 
 const MAX_RECEIPT_BYTES = 5 * 1024 * 1024;
 const PROFILE_MODAL_DISMISSED_KEY = 'profile_completion_modal_dismissed';
@@ -217,7 +218,7 @@ function EnrolmentCard({ enrolment, progress, review, onWithdraw, onCancelTransf
                         </h3>
                     </Link>
                     <p className="mt-0.5 text-xs text-ink-600">
-                        Enrolled {new Date(enrolment.applied_at).toLocaleDateString()}
+                        Enrolled {formatDate(enrolment.applied_at)}
                     </p>
                 </div>
 
@@ -237,11 +238,7 @@ function EnrolmentCard({ enrolment, progress, review, onWithdraw, onCancelTransf
                                 <span>
                                     Starts{' '}
                                     <span className="font-medium text-ink-900">
-                                        {new Date(progress.starts_on).toLocaleDateString(undefined, {
-                                            day: 'numeric',
-                                            month: 'long',
-                                            year: 'numeric',
-                                        })}
+                                        {formatDate(progress.starts_on)}
                                     </span>
                                     . Your place is reserved — course content opens on that date.
                                 </span>

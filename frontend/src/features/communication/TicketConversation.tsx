@@ -9,6 +9,7 @@ import { useReplyToTicket, useUpdateTicket } from '@/features/communication/useC
 import { ticketStatusDisplay } from '@/lib/statusBadge';
 import { cn } from '@/lib/utils';
 import type { Ticket, TicketStatus } from '@/lib/api/types';
+import { formatDateTime } from '@/lib/formatDate';
 
 const statusOptions: TicketStatus[] = ['open', 'in_progress', 'resolved', 'closed'];
 
@@ -24,9 +25,11 @@ export function TicketConversation({ ticket }: { ticket: Ticket }) {
     const [body, setBody] = useState('');
 
     const isStaff = user?.role === 'admin' || user?.role === 'instructor';
+    // No replies on a finished ticket; staff reopen it via the status control first.
+    const isLocked = ticket.status === 'resolved' || ticket.status === 'closed';
 
     const submitReply = async () => {
-        if (!body.trim()) {
+        if (isLocked || !body.trim()) {
             return;
         }
         await reply.mutateAsync(body);
@@ -78,19 +81,24 @@ export function TicketConversation({ ticket }: { ticket: Ticket }) {
                     // own student — otherwise a staff reply from a colleague other than whoever is
                     // currently viewing would incorrectly render as an incoming student message.
                     const isFromStudent = message.sender?.id === ticket.student?.id;
+                    // "Mine" is the viewer's side of the conversation: the student's own messages
+                    // for a student, every staff reply for staff. Mine → right + blue, theirs → left + grey.
+                    const isMine = isStaff ? !isFromStudent : isFromStudent;
 
                     return (
-                        <div key={message.id} className={cn('flex', isFromStudent ? 'justify-start' : 'justify-end')}>
+                        <div key={message.id} className={cn('flex', isMine ? 'justify-end' : 'justify-start')}>
                             <div
                                 className={cn(
                                     'max-w-[75%] rounded-lg px-3 py-2',
-                                    isFromStudent ? 'bg-surface-100 text-ink-900' : 'bg-blue-600 text-white',
+                                    isMine ? 'bg-blue-600 text-white' : 'bg-surface-100 text-ink-900',
                                 )}
                             >
-                                {isFromStudent && <p className="text-sm font-medium text-ink-900">{message.sender?.name}</p>}
-                                <p className={cn('text-sm', isFromStudent && 'mt-1')}>{message.body}</p>
-                                <p className={cn('mt-1 text-xs', isFromStudent ? 'text-ink-600' : 'text-white/70')}>
-                                    {new Date(message.created_at).toLocaleString()}
+                                <p className={cn('text-xs font-semibold', isMine ? 'text-white/90' : 'text-ink-900')}>
+                                    {message.sender?.name ?? (isFromStudent ? 'Student' : 'Support team')}
+                                </p>
+                                <p className="mt-1 whitespace-pre-line text-sm">{message.body}</p>
+                                <p className={cn('mt-1 text-xs', isMine ? 'text-white/70' : 'text-ink-600')}>
+                                    {formatDateTime(message.created_at)}
                                 </p>
                             </div>
                         </div>
@@ -98,20 +106,30 @@ export function TicketConversation({ ticket }: { ticket: Ticket }) {
                 })}
             </div>
 
-            <form onSubmit={handleSubmit} className="flex items-end gap-2">
-                <div className="flex-1">
-                    <Textarea
-                        label="Reply"
-                        rows={2}
-                        value={body}
-                        onChange={(e) => setBody(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        required
-                    />
+            <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+                <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                        <Textarea
+                            label="Reply"
+                            rows={2}
+                            value={body}
+                            onChange={(e) => setBody(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            disabled={isLocked}
+                            required
+                        />
+                    </div>
+                    <Button type="submit" isLoading={reply.isPending} disabled={isLocked}>
+                        <Send className="size-4" aria-hidden="true" />
+                        Send
+                    </Button>
                 </div>
-                <Button type="submit" variant="ghost" isLoading={reply.isPending} className="px-2 py-2" aria-label="Send reply">
-                    <Send className="size-5" aria-hidden="true" />
-                </Button>
+                {isLocked && (
+                    <p className="text-xs text-ink-600">
+                        This ticket is {ticketStatusDisplay(ticket.status).label.toLowerCase()}, so replies are turned off.{' '}
+                        {isStaff ? 'Change its status above to reopen it.' : 'Open a new ticket if you still need help.'}
+                    </p>
+                )}
             </form>
         </div>
     );

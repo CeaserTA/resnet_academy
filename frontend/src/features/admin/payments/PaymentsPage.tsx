@@ -21,6 +21,7 @@ import {
 import { orderStatusDisplay, paymentSubmissionStatusDisplay } from '@/lib/statusBadge';
 import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import type { Order, OrderStatus, PaymentSubmission, PaymentSummaryCurrency } from '@/lib/api/types';
+import { formatDate, formatDateTime } from '@/lib/formatDate';
 
 type Tab = OrderStatus;
 
@@ -94,8 +95,8 @@ function ViewOrderModal({ order, onClose }: { order: Order; onClose: () => void 
         ['Remaining balance', formatAmount(order.remaining_balance, order.currency)],
         ['Payment method', order.payment_method ?? '—'],
         ['Provider reference', order.provider_ref ?? '—'],
-        ['Paid at', order.paid_at ? new Date(order.paid_at).toLocaleString() : '—'],
-        ['Created at', new Date(order.created_at).toLocaleString()],
+        ['Paid at', order.paid_at ? formatDateTime(order.paid_at) : '—'],
+        ['Created at', formatDateTime(order.created_at)],
     ];
 
     return (
@@ -139,7 +140,7 @@ function ViewOrderModal({ order, onClose }: { order: Order; onClose: () => void 
 
                             return (
                                 <li key={submission.id} className="flex items-center justify-between gap-2 text-sm">
-                                    <span className="text-ink-600">{new Date(submission.created_at).toLocaleDateString()}</span>
+                                    <span className="text-ink-600">{formatDate(submission.created_at)}</span>
                                     <span className="font-mono text-ink-900">{formatAmount(submission.amount, order.currency)}</span>
                                     <Badge label={submissionStatus.label} tone={submissionStatus.tone} icon={submissionStatus.icon} />
                                 </li>

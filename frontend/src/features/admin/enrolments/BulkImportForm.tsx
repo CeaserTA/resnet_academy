@@ -8,6 +8,7 @@ import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
 import { ApiError } from '@/lib/api/client';
+import { displayCohortName } from '@/lib/cohort';
 
 /**
  * Deliberately not a standalone page/route — bulk import is powerful enough (queues real
@@ -85,7 +86,7 @@ export function BulkImportForm({ onClose }: { onClose: () => void }) {
                     <option value="">Select a cohort offering</option>
                     {cohortCourses?.map((cc) => (
                         <option key={cc.id} value={cc.id}>
-                            {cc.cohort_name}
+                            {displayCohortName(cc.cohort_name)}
                         </option>
                     ))}
                 </Select>

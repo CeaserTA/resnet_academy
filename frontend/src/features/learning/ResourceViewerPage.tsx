@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
-import { ChevronLeft, ChevronRight, CheckCircle2, ExternalLink, Pause, Play, Video } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCircle2, ExternalLink, FileText, Pause, Play, Video } from 'lucide-react';
 import { Alert } from '@/components/ui/Alert';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
-import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { YouTubeEmbed } from '@/components/media/YouTubeEmbed';
 import { DocumentViewer } from '@/components/media/DocumentViewer';
 import { extractYouTubeVideoId } from '@/lib/youtube';
@@ -16,6 +15,8 @@ import { useCourseSequence } from '@/features/learning/useCourseSequence';
 import { ReadingLessonView } from '@/features/learning/ReadingLessonView';
 import { useCourse } from '@/features/catalogue/useCourses';
 import { findAdjacentItems, itemLinkFor } from '@/lib/courseSequence';
+import { PageFrame } from '@/components/layout/PageFrame';
+import { formatDateTime } from '@/lib/formatDate';
 
 /**
  * External links normally just navigate away in a new tab — a YouTube link is the one exception,
@@ -134,6 +135,35 @@ function VideoPlayer({
     );
 }
 
+const FILE_TYPE_LABELS: Record<string, string> = {
+    pdf: 'PDF',
+    docx: 'Word document',
+    pptx: 'PowerPoint slides',
+};
+
+function formatFileSize(kb: number): string {
+    return kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`;
+}
+
+/** File name, type and size for document / downloadable-file resources — only what the data has. */
+function FileInfo({ fileUrl, fileType, sizeKb }: { fileUrl?: string | null; fileType?: string | null; sizeKb?: number | null }) {
+    // No original filename is stored; the stored path ends in it (e.g. ".../module-1-notes.docx").
+    const fileName = fileUrl ? decodeURIComponent(fileUrl.split('?')[0].split('/').pop() ?? '') : '';
+    const details = [fileType ? FILE_TYPE_LABELS[fileType] ?? fileType.toUpperCase() : null, sizeKb ? formatFileSize(sizeKb) : null].filter(Boolean);
+
+    if (!fileName && details.length === 0) return null;
+
+    return (
+        <div className="flex min-w-0 items-center gap-3 rounded-lg border border-surface-100 bg-surface-50 px-3 py-2.5">
+            <FileText className="size-5 shrink-0 text-blue-600" aria-hidden="true" />
+            <div className="min-w-0">
+                {fileName && <p className="truncate text-sm font-medium text-ink-900">{fileName}</p>}
+                {details.length > 0 && <p className="text-xs text-ink-600">{details.join(' · ')}</p>}
+            </div>
+        </div>
+    );
+}
+
 export function ResourceViewerPage() {
     const { id } = useParams();
     const resourceId = Number(id);
@@ -175,22 +205,27 @@ export function ResourceViewerPage() {
     const { prevItem, nextItem } = findAdjacentItems(flatItems, 'resource', resource.id);
 
     return (
-        <div className={isReading ? 'mx-auto max-w-3xl' : 'mx-auto max-w-2xl'}>
-            <Breadcrumbs
-                items={[
-                    { label: 'My Courses', to: '/dashboard' },
-                    { label: course?.title ?? '', to: `/learn/courses/${courseId}` },
-                    { label: resource.title },
-                ]}
-            />
-
-            <div className="mt-2 flex items-center gap-2">
-                <h1 className={isReading ? 'text-3xl' : 'text-2xl'}>{resource.title}</h1>
-                {isComplete && <Badge label="Completed" tone="success" icon={CheckCircle2} />}
-            </div>
-            {resource.description && <p className="mt-1 text-ink-600">{resource.description}</p>}
-
-            <Card className="mt-6">
+        <PageFrame
+            width={isReading ? 'narrow' : 'default'}
+            breadcrumbs={[
+                { label: 'My courses', to: '/dashboard' },
+                { label: course?.title ?? '', to: `/learn/courses/${courseId}` },
+                { label: resource.title },
+            ]}
+            title={resource.title}
+            titleAdornment={isComplete ? <Badge label="Completed" tone="success" icon={CheckCircle2} /> : undefined}
+            subtitle={resource.description || undefined}
+            // Long lessons: the same action as the button at the end, reachable without scrolling.
+            actions={
+                isReading && !isComplete ? (
+                    <Button size="sm" onClick={() => markRead.mutate(resource.id)} isLoading={markRead.isPending}>
+                        <CheckCircle2 className="size-3.5" aria-hidden="true" />
+                        Mark as read
+                    </Button>
+                ) : undefined
+            }
+        >
+            <Card>
                 {resource.type === 'video' && (
                     <VideoPlayer
                         resourceId={resource.id}
@@ -239,6 +274,7 @@ export function ResourceViewerPage() {
                             external links and downloadable files use, which a different backend
                             field tracks and which never satisfies the document completion check.
                         */}
+                        <FileInfo fileUrl={resource.details.file_url} fileType={resource.details.file_type} sizeKb={resource.details.file_size_kb} />
                         <DocumentViewer fileUrl={resource.details.file_url} fileType={resource.details.file_type} title={resource.title} />
                         {!isComplete && (
                             <Button
@@ -254,16 +290,29 @@ export function ResourceViewerPage() {
 
                 {resource.type === 'downloadable_file' && (
                     <div className="flex flex-col gap-4">
+                        <FileInfo fileUrl={resource.details.file_url} fileType={resource.details.file_type} sizeKb={resource.details.file_size_kb} />
                         <a
                             href={resource.details.file_url ?? '#'}
                             target="_blank"
                             rel="noreferrer"
                             onClick={() => !isComplete && markOpened.mutate(resource.id)}
-                            className="inline-flex items-center gap-2 text-blue-600 hover:underline"
+                            className="inline-flex items-center gap-2 self-start text-sm text-blue-600 hover:underline"
                         >
                             <ExternalLink className="size-4" aria-hidden="true" />
                             Open file
                         </a>
+                        {/* Downloadable files complete on "opened" (ProgressEngine), so this uses the
+                            same signal as opening the file — for students who downloaded it earlier
+                            or opened it outside the app. */}
+                        {!isComplete && (
+                            <Button
+                                onClick={() => markOpened.mutate(resource.id)}
+                                isLoading={markOpened.isPending}
+                                className="self-start"
+                            >
+                                Mark as complete
+                            </Button>
+                        )}
                     </div>
                 )}
 
@@ -279,7 +328,7 @@ export function ResourceViewerPage() {
                     <div className="flex flex-col gap-3">
                         <p className="text-sm text-ink-600">
                             {resource.details.provider === 'zoom' ? 'Zoom' : 'Google Meet'} —{' '}
-                            {resource.details.scheduled_at && new Date(resource.details.scheduled_at).toLocaleString()}{' '}
+                            {resource.details.scheduled_at && formatDateTime(resource.details.scheduled_at)}{' '}
                             ({resource.details.duration_minutes} min)
                         </p>
                         {/*
@@ -351,7 +400,7 @@ export function ResourceViewerPage() {
             </Card>
 
             {(prevItem || nextItem) && (
-                <div className="mt-4 flex items-center justify-between gap-3">
+                <div className="flex items-center justify-between gap-3">
                     {prevItem ? (
                         <Link
                             to={itemLinkFor(prevItem, courseId)}
@@ -381,6 +430,6 @@ export function ResourceViewerPage() {
                     )}
                 </div>
             )}
-        </div>
+        </PageFrame>
     );
 }
