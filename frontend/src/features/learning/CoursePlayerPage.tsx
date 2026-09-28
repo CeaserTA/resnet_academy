@@ -269,7 +269,7 @@ export function CoursePlayerPage() {
 
     return (
         <div className="mx-auto max-w-5xl">
-            <Breadcrumbs items={[{ label: 'My Courses', to: '/dashboard' }, { label: course?.title ?? '' }]} />
+            <Breadcrumbs items={[{ label: 'My courses', to: '/dashboard' }, { label: course?.title ?? '' }]} />
 
             {/* Header */}
             <div className="mt-2 flex items-center justify-between gap-3">
@@ -389,8 +389,8 @@ export function CoursePlayerPage() {
                             <div className="flex items-center gap-3 pl-1">
                                 <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2">
-                                        <Badge label={display.label.toUpperCase()} tone={display.tone} icon={display.icon} />
-                                        <span className="text-xs text-ink-600">
+                                        <span className="shrink-0"><Badge label={display.label.toUpperCase()} tone={display.tone} icon={display.icon} /></span>
+                                        <span className="shrink-0 text-xs text-ink-600">
                                             Module {String(index + 1).padStart(2, '0')}
                                         </span>
                                         {/* Mini count chips when collapsed */}
