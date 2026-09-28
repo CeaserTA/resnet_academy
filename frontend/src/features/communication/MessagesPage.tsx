@@ -11,6 +11,7 @@ import { useConversation, useConversations, useSendMessage } from '@/features/co
 import { useAuth } from '@/lib/auth/AuthContext';
 import { cn, formatRelativeTime } from '@/lib/utils';
 import type { Conversation } from '@/lib/api/types';
+import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 
 function otherParticipants(conversation: Conversation, currentUserId: number | undefined) {
     return conversation.participants.filter((p) => p.id !== currentUserId);
@@ -189,6 +190,7 @@ export function MessagesPage() {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { data: conversations, isLoading } = useConversations();
+    usePageHeader('Messages', 'Conversations with students, instructors and admins');
     const [isComposing, setIsComposing] = useState(false);
     const [search, setSearch] = useState('');
 

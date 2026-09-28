@@ -6,6 +6,7 @@ import { it, expect, vi } from 'vitest';
 import { AccountPage } from '@/features/account/AccountPage';
 import { AuthProvider } from '@/lib/auth/AuthContext';
 import type { User } from '@/lib/api/types';
+import { PageHeaderProvider } from '@/lib/pageHeader/PageHeaderContext';
 
 const { student } = vi.hoisted(() => {
     const student: User = {
@@ -57,13 +58,13 @@ function renderPage() {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
     return render(
-        <QueryClientProvider client={queryClient}>
+        <QueryClientProvider client={queryClient}><PageHeaderProvider>
             <MemoryRouter initialEntries={['/account']}>
                 <AuthProvider>
                     <AccountPage />
                 </AuthProvider>
             </MemoryRouter>
-        </QueryClientProvider>,
+        </PageHeaderProvider></QueryClientProvider>,
     );
 }
 

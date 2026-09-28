@@ -32,6 +32,10 @@ export function EditCohortModal({ isOpen, onClose, cohort }: EditCohortModalProp
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setErrors({});
+        if (startDate && endDate && endDate < startDate) {
+            setErrors({ end_date: 'The end date must be on or after the start date.' });
+            return;
+        }
 
         try {
             await updateCohort.mutateAsync({
@@ -55,8 +59,22 @@ export function EditCohortModal({ isOpen, onClose, cohort }: EditCohortModalProp
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Edit cohort">
-            <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Edit cohort"
+            footer={
+                <>
+                    <Button type="button" variant="ghost" onClick={onClose}>
+                        Cancel
+                    </Button>
+                    <Button type="submit" form="edit-cohort-form" isLoading={updateCohort.isPending}>
+                        Save changes
+                    </Button>
+                </>
+            }
+        >
+            <form id="edit-cohort-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
                 <Input
                     label="Cohort name"
                     value={name}
@@ -65,31 +83,39 @@ export function EditCohortModal({ isOpen, onClose, cohort }: EditCohortModalProp
                     error={errors.name}
                 />
 
-                <Input
-                    label="Start date"
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    required
-                    error={errors.start_date}
-                />
+                <div className="grid gap-3 sm:grid-cols-2">
+                    <Input
+                        label="Start date"
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        required
+                        error={errors.start_date}
+                    />
+                    <Input
+                        label="End date"
+                        type="date"
+                        value={endDate}
+                        min={startDate || undefined}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        required
+                        error={errors.end_date}
+                    />
+                </div>
 
-                <Input
-                    label="End date"
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    required
-                    error={errors.end_date}
-                />
-
-                <Input
-                    label="Application deadline (optional)"
-                    type="date"
-                    value={applicationDeadline}
-                    onChange={(e) => setApplicationDeadline(e.target.value)}
-                    error={errors.application_deadline}
-                />
+                <div>
+                    <Input
+                        label="Application deadline (optional)"
+                        type="date"
+                        value={applicationDeadline}
+                        max={startDate || undefined}
+                        onChange={(e) => setApplicationDeadline(e.target.value)}
+                        error={errors.application_deadline}
+                    />
+                    {!errors.application_deadline && (
+                        <p className="mt-1 text-xs text-ink-600">The last day students can apply. Usually on or before the start date.</p>
+                    )}
+                </div>
 
                 <Select
                     label="Status"
@@ -98,15 +124,6 @@ export function EditCohortModal({ isOpen, onClose, cohort }: EditCohortModalProp
                     options={STATUS_OPTIONS}
                     required
                 />
-
-                <div className="flex gap-2">
-                    <Button type="submit" isLoading={updateCohort.isPending}>
-                        Save changes
-                    </Button>
-                    <Button type="button" variant="ghost" onClick={onClose}>
-                        Cancel
-                    </Button>
-                </div>
             </form>
         </Modal>
     );

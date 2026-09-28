@@ -19,11 +19,12 @@ import {
     Users,
     Wallet,
 } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Spinner } from '@/components/ui/Spinner';
 import { Modal } from '@/components/ui/Modal';
 import { VolumeCard } from '@/components/dashboard/VolumeCard';
+import { AttentionCard } from '@/components/dashboard/AttentionCard';
+import { QuickActionButton, type QuickAction } from '@/components/dashboard/QuickActionButton';
 import { useDashboardSummary } from '@/features/admin/dashboard/useDashboard';
 import { useOrders, usePaymentSummary } from '@/features/admin/payments/useAdminPayments';
 import { useCourseApplications } from '@/features/courseApplications/useCourseApplications';
@@ -43,61 +44,6 @@ function formatCurrency(amount: number, currency: string): string {
     if (amount >= 1_000_000) return `${currency} ${(amount / 1_000_000).toFixed(1)}M`;
     if (amount >= 1_000) return `${currency} ${(amount / 1_000).toFixed(1)}K`;
     return new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 0 }).format(amount);
-}
-
-// ─── Attention card ───────────────────────────────────────────────────────────
-
-interface AttentionCardProps {
-    icon: LucideIcon;
-    label: string;
-    value: number | string;
-    sub: string;
-    tone: 'danger' | 'warning' | 'neutral';
-    to?: string;
-}
-
-const ATTENTION_STYLES: Record<AttentionCardProps['tone'], { card: string; icon: string; value: string }> = {
-    danger: { card: 'bg-danger-600/5 border-danger-600/15', icon: 'bg-danger-600/10 text-danger-600', value: 'text-danger-600' },
-    // accent-amber, not amber-500 — amber-500 is only 2.2:1 on white, too faint for text/icons.
-    warning: { card: 'bg-amber-100/50 border-amber-100', icon: 'bg-amber-100 text-accent-amber', value: 'text-accent-amber' },
-    neutral: { card: 'bg-surface-0 border-surface-100', icon: 'bg-surface-100 text-ink-600', value: 'text-ink-900' },
-};
-
-function AttentionCard({ icon: Icon, label, value, sub, tone, to }: AttentionCardProps) {
-    const s = ATTENTION_STYLES[tone];
-    const inner = (
-        <div className={cn('group flex flex-col gap-3 rounded-xl border p-4 shadow-sm transition-all hover:shadow-md', s.card)}>
-            <div className="flex items-start justify-between">
-                <p className="text-xs font-medium uppercase tracking-widest text-ink-600">{label}</p>
-                <span className={cn('flex size-7 items-center justify-center rounded-lg', s.icon)}>
-                    <Icon className="size-3.5" aria-hidden="true" />
-                </span>
-            </div>
-            <p className={cn('text-3xl font-bold tabular-nums', s.value)}>{value}</p>
-            <p className="text-xs text-ink-600">{sub}</p>
-        </div>
-    );
-    if (to) return <Link to={to} className="block">{inner}</Link>;
-    return inner;
-}
-
-// ─── Quick action ─────────────────────────────────────────────────────────────
-
-interface QuickAction { label: string; icon: LucideIcon; to?: string; onClick?: () => void; }
-
-function QuickActionBtn({ action }: { action: QuickAction }) {
-    const cls = 'flex items-center gap-2.5 rounded-lg border border-surface-100 bg-surface-0 px-3 py-2.5 text-sm font-medium text-ink-900 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 w-full';
-    const inner = (
-        <>
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-blue-600/8 text-blue-600">
-                <action.icon className="size-3.5" aria-hidden="true" />
-            </span>
-            {action.label}
-            <ArrowRight className="ml-auto size-3.5 text-ink-300" aria-hidden="true" />
-        </>
-    );
-    if (action.to) return <Link to={action.to} className={cls}>{inner}</Link>;
-    return <button type="button" onClick={action.onClick} className={cls}>{inner}</button>;
 }
 
 // ─── Cohort row ───────────────────────────────────────────────────────────────
@@ -260,7 +206,7 @@ export function AdminDashboardPage() {
                         </div>
                         <div className="flex flex-col gap-1.5 p-3">
                             {quickActions.map((action) => (
-                                <QuickActionBtn key={action.label} action={action} />
+                                <QuickActionButton key={action.label} action={action} />
                             ))}
                         </div>
                     </div>

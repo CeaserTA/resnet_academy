@@ -20,7 +20,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
 import { Spinner } from '@/components/ui/Spinner';
-import { CircularProgress } from '@/components/ui/CircularProgress';
+import { ProgressBar } from '@/components/ui/ProgressBar';
 import { useCourse } from '@/features/catalogue/useCourses';
 import { useCoursePlayer } from '@/features/learning/useLearning';
 import { useProgressDashboard } from '@/features/progress/useProgress';
@@ -57,6 +57,17 @@ const statusDisplay: Record<
     in_progress: { label: 'In progress', tone: 'progress', icon: Circle },
     completed: { label: 'Completed', tone: 'success', icon: CheckCircle2 },
 };
+
+// ─── Number formatting ────────────────────────────────────────────────────────
+
+/** "70.00" → "70", "72.50" → "72.5" — scores and pass marks without trailing zeros. */
+function formatNumber(value: number | string): string {
+    return String(Number(Number(value).toFixed(1)));
+}
+
+function plural(count: number, word: string): string {
+    return `${count} ${word}${count === 1 ? '' : 's'}`;
+}
 
 // ─── Resource type labels ──────────────────────────────────────────────────────
 
@@ -116,7 +127,7 @@ function ItemRow({ item, courseId }: { item: ModuleItem; courseId: number }) {
                         (item as AssignmentModuleItem).my_submission?.final_score !== null &&
                         (item as AssignmentModuleItem).my_submission !== null && (
                             <span className="shrink-0 text-xs font-semibold text-success-600">
-                                {(item as AssignmentModuleItem).my_submission!.final_score} / {(item as AssignmentModuleItem).max_score}
+                                {formatNumber((item as AssignmentModuleItem).my_submission!.final_score!)} / {formatNumber((item as AssignmentModuleItem).max_score)}
                             </span>
                         )}
 
@@ -124,7 +135,7 @@ function ItemRow({ item, courseId }: { item: ModuleItem; courseId: number }) {
                     {item.item_type === 'evaluation' && (
                         <>
                             <span className="hidden shrink-0 text-xs text-ink-600 sm:inline">
-                                Pass {(item as EvaluationModuleItem).pass_score}%
+                                Pass mark {formatNumber((item as EvaluationModuleItem).pass_score)}%
                             </span>
                             {(item as EvaluationModuleItem).my_best_attempt && (
                                 <span className={cn(
@@ -133,7 +144,7 @@ function ItemRow({ item, courseId }: { item: ModuleItem; courseId: number }) {
                                         ? 'text-success-600'
                                         : 'text-danger-600',
                                 )}>
-                                    {(item as EvaluationModuleItem).my_best_attempt!.score_percent}%
+                                    Best score {formatNumber((item as EvaluationModuleItem).my_best_attempt!.score_percent)}%
                                 </span>
                             )}
                         </>
@@ -157,14 +168,12 @@ function ItemGroup({
     icon: Icon,
     items,
     courseId,
-    accentClass,
     defaultOpen = true,
 }: {
     label: string;
     icon: React.ElementType;
     items: ModuleItem[];
     courseId: number;
-    accentClass: string;
     defaultOpen?: boolean;
 }) {
     const [open, setOpen] = useState(defaultOpen);
@@ -176,7 +185,7 @@ function ItemGroup({
             <button
                 type="button"
                 onClick={() => setOpen((v) => !v)}
-                className={cn('flex w-full items-center justify-between px-3 py-2 text-left', accentClass)}
+                className="flex w-full items-center justify-between bg-surface-50 px-3 py-2 text-left text-ink-900"
                 aria-expanded={open}
             >
                 <span className="flex items-center gap-2">
@@ -184,22 +193,20 @@ function ItemGroup({
                         ? <ChevronDown className="size-3.5 shrink-0" aria-hidden="true" />
                         : <ChevronRight className="size-3.5 shrink-0" aria-hidden="true" />
                     }
-                    <Icon className="size-3.5 shrink-0" aria-hidden="true" />
+                    <Icon className="size-3.5 shrink-0 text-ink-600" aria-hidden="true" />
                     <span className="text-xs font-semibold">{label}</span>
-                    <span className="flex size-4 items-center justify-center rounded-full bg-white/60 text-[10px] font-bold leading-none">
-                        {items.length}
-                    </span>
+                    <span className="text-xs text-ink-600">{items.length}</span>
                 </span>
 
                 {/* Completion pill */}
-                <span className="text-[10px] font-medium opacity-70">
+                <span className="text-xs text-ink-600">
                     {doneCount}/{items.length} done
                 </span>
             </button>
 
             {/* Item list */}
             {open && (
-                <ul className="flex flex-col gap-1.5 bg-surface-50 p-2">
+                <ul className="flex flex-col gap-1.5 border-t border-surface-100 bg-surface-50 p-2">
                     {items.map((item) => (
                         <ItemRow
                             key={`${item.item_type}-${item.id}`}
@@ -271,7 +278,7 @@ export function CoursePlayerPage() {
     return (
         <PageFrame
             breadcrumbs={[{ label: 'My courses', to: '/dashboard' }, { label: course?.title ?? '' }]}
-            title={course?.title}
+            title={course?.title ?? 'Course'}
             actions={
                 <>
                     <Link to={`/courses/${courseId}/forum`}>
@@ -281,12 +288,12 @@ export function CoursePlayerPage() {
                         </Button>
                     </Link>
                     {sortedModules.length > 0 && (
-                        <div className="flex items-center gap-2 rounded-lg border border-surface-100 bg-surface-0 px-3 py-2">
-                            <div>
-                                <p className="text-xs text-ink-600">Progress</p>
-                                <p className="text-lg font-semibold text-ink-900">{Math.round(overallPercent)}%</p>
+                        <div className="w-40">
+                            <div className="flex items-baseline justify-between gap-2 text-xs">
+                                <span className="text-ink-600">Progress</span>
+                                <span className="font-semibold text-ink-900">{Math.round(overallPercent)}% complete</span>
                             </div>
-                            <CircularProgress percent={overallPercent} size={36} showLabel={false} />
+                            <ProgressBar percent={overallPercent} className="mt-1" />
                         </div>
                     )}
                 </>
@@ -353,6 +360,7 @@ export function CoursePlayerPage() {
                     const assignments = sortedItems.filter((i) => i.item_type === 'assignment');
                     const evaluations = sortedItems.filter((i) => i.item_type === 'evaluation');
                     const hasItems = sortedItems.length > 0;
+                    const openCount = sortedItems.filter((i) => !i.is_complete).length;
 
                     return (
                         <Card
@@ -374,8 +382,6 @@ export function CoursePlayerPage() {
                             >
                                 {status === 'completed' ? (
                                     <CheckCircle2 className="size-4" aria-hidden="true" />
-                                ) : isLocked ? (
-                                    <Lock className="size-3.5" aria-hidden="true" />
                                 ) : (
                                     index + 1
                                 )}
@@ -385,28 +391,26 @@ export function CoursePlayerPage() {
                             <div className="flex items-center gap-3 pl-1">
                                 <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2">
-                                        <span className="shrink-0"><Badge label={display.label.toUpperCase()} tone={display.tone} icon={display.icon} /></span>
+                                        <span className="shrink-0"><Badge label={display.label} tone={display.tone} icon={display.icon} /></span>
                                         <span className="shrink-0 text-xs text-ink-600">
                                             Module {String(index + 1).padStart(2, '0')}
                                         </span>
-                                        {/* Mini count chips when collapsed */}
-                                        {!expanded && !isLocked && (
-                                            <span className="flex items-center gap-1">
-                                                {resources.length > 0 && (
-                                                    <span className="rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600">
-                                                        {resources.length}R
-                                                    </span>
-                                                )}
-                                                {assignments.length > 0 && (
-                                                    <span className="rounded-full bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-600">
-                                                        {assignments.length}A
-                                                    </span>
-                                                )}
-                                                {evaluations.length > 0 && (
-                                                    <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600">
-                                                        {evaluations.length}E
-                                                    </span>
-                                                )}
+                                        {/* What's inside, spelled out, when collapsed */}
+                                        {!expanded && !isLocked && hasItems && (
+                                            <span className="hidden truncate text-xs text-ink-600 sm:inline">
+                                                ·{' '}
+                                                {[
+                                                    resources.length > 0 && plural(resources.length, 'resource'),
+                                                    assignments.length > 0 && plural(assignments.length, 'assignment'),
+                                                    evaluations.length > 0 && plural(evaluations.length, 'evaluation'),
+                                                ]
+                                                    .filter(Boolean)
+                                                    .join(' · ')}
+                                            </span>
+                                        )}
+                                        {status === 'completed' && openCount > 0 && (
+                                            <span className="shrink-0 text-xs font-medium text-warning-600">
+                                                {plural(openCount, 'item')} not done yet
                                             </span>
                                         )}
                                     </div>
@@ -421,21 +425,15 @@ export function CoursePlayerPage() {
                                     )}
                                 </div>
 
-                                {/* Action button — locked modules get a disabled "Locked" pill;
-                                    completed modules get "Review"; everything else relies on the
+                                {/* Only completed modules get an action ("Review"); locked modules explain
+                                    themselves with the badge + reason, everything else uses the
                                     "Show N items" dropdown below instead of a duplicate button. */}
-                                {isLocked ? (
-                                    <Button variant="ghost" disabled className="shrink-0" size="sm">
-                                        Locked
-                                    </Button>
-                                ) : (
-                                    reviewItem && (
-                                        <Link to={itemLinkFor(reviewItem, courseId)} className="shrink-0">
-                                            <Button variant="secondary" size="sm">
-                                                Review
-                                            </Button>
-                                        </Link>
-                                    )
+                                {!isLocked && reviewItem && (
+                                    <Link to={itemLinkFor(reviewItem, courseId)} className="shrink-0">
+                                        <Button variant="secondary" size="sm">
+                                            Review
+                                        </Button>
+                                    </Link>
                                 )}
                             </div>
 
@@ -470,7 +468,6 @@ export function CoursePlayerPage() {
                                                     icon={BookOpen}
                                                     items={resources}
                                                     courseId={courseId}
-                                                    accentClass="bg-blue-50 text-blue-700"
                                                     defaultOpen={true}
                                                 />
                                             )}
@@ -480,7 +477,6 @@ export function CoursePlayerPage() {
                                                     icon={FileCheck2}
                                                     items={assignments}
                                                     courseId={courseId}
-                                                    accentClass="bg-violet-50 text-violet-700"
                                                     defaultOpen={true}
                                                 />
                                             )}
@@ -490,7 +486,6 @@ export function CoursePlayerPage() {
                                                     icon={ListChecks}
                                                     items={evaluations}
                                                     courseId={courseId}
-                                                    accentClass="bg-emerald-50 text-emerald-700"
                                                     defaultOpen={true}
                                                 />
                                             )}

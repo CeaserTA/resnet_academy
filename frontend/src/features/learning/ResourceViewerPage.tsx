@@ -206,7 +206,7 @@ export function ResourceViewerPage() {
 
     return (
         <PageFrame
-            width={isReading ? 'narrow' : 'default'}
+            width={isReading ? 'reading' : 'full'}
             breadcrumbs={[
                 { label: 'My courses', to: '/dashboard' },
                 { label: course?.title ?? '', to: `/learn/courses/${courseId}` },
@@ -214,7 +214,7 @@ export function ResourceViewerPage() {
             ]}
             title={resource.title}
             titleAdornment={isComplete ? <Badge label="Completed" tone="success" icon={CheckCircle2} /> : undefined}
-            subtitle={resource.description || undefined}
+            subtitle={course?.title}
             // Long lessons: the same action as the button at the end, reachable without scrolling.
             actions={
                 isReading && !isComplete ? (
@@ -225,6 +225,7 @@ export function ResourceViewerPage() {
                 ) : undefined
             }
         >
+            {resource.description && <p className="text-sm text-ink-600">{resource.description}</p>}
             <Card>
                 {resource.type === 'video' && (
                     <VideoPlayer

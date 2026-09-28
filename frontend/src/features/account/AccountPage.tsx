@@ -21,6 +21,7 @@ import {
     useUploadAvatar,
 } from '@/features/account/useAccount';
 import type { User } from '@/lib/api/types';
+import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 
@@ -223,6 +224,7 @@ export function AccountPage() {
     const requestDeactivation = useRequestAccountDeactivation();
     const logoutOtherSessions = useLogoutOtherSessions();
     const uploadAvatar = useUploadAvatar();
+    usePageHeader('My profile', 'Your details, address and account security');
 
     const [isConfirmingDeactivation, setIsConfirmingDeactivation] = useState(false);
     const [avatarError, setAvatarError] = useState<string | null>(null);
@@ -291,10 +293,8 @@ export function AccountPage() {
     const locationLabel = [user.city, user.country].filter(Boolean).join(', ');
 
     return (
-        <div className="mx-auto max-w-3xl">
-            <h1 className="text-2xl">My Profile</h1>
-
-            <Card className="mt-6 shadow-none">
+        <div>
+            <Card className="shadow-none">
                 {/* Profile */}
                 <div>
                     <div className="flex flex-wrap items-start justify-between gap-4">

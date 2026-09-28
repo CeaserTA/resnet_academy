@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
-import { CheckCircle2, MessageSquare, Pin, Plus, Search, ShieldAlert, X } from 'lucide-react';
+import { CheckCircle2, MessageSquare, Pin, Plus, ShieldAlert, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { SearchInput } from '@/components/ui/SearchInput';
 import { Select } from '@/components/ui/Select';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { Alert } from '@/components/ui/Alert';
@@ -20,6 +21,7 @@ import { cn, formatRelativeTime } from '@/lib/utils';
 import type { ForumPostAttachmentInput } from '@/features/communication/api';
 import type { ForumSort, ForumThread } from '@/lib/api/types';
 import { formatDate } from '@/lib/formatDate';
+import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 
 const SORT_OPTIONS: [ForumSort, string][] = [
     ['latest_activity', 'Latest activity'],
@@ -78,9 +80,10 @@ function DiscussionListItem({
     return (
         <button
             onClick={onSelect}
+            aria-current={isSelected ? 'true' : undefined}
             className={cn(
-                'flex w-full items-start gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors',
-                isSelected ? 'border-blue-600 bg-blue-600/5' : 'border-transparent hover:bg-surface-50',
+                'flex w-full items-start gap-3 border-l-2 px-4 py-3 text-left transition-colors',
+                isSelected ? 'border-blue-600 bg-blue-50' : 'border-transparent hover:bg-surface-50',
             )}
         >
             <MessageSquare className="mt-0.5 size-4 shrink-0 text-ink-600" aria-hidden="true" />
@@ -103,8 +106,8 @@ function DiscussionListItem({
                 </p>
             </div>
 
-            {/* Small, lightly overlapped avatars so neither set of initials is covered */}
-            <div className="flex shrink-0 -space-x-1.5">
+            {/* Creator + latest participant, side by side so both sets of initials show in full */}
+            <div className="flex shrink-0 gap-1">
                 {thread.creator && (
                     <Avatar name={thread.creator.name} src={thread.creator.avatar_url} size="sm" className="size-7 text-xs ring-2 ring-surface-0" />
                 )}
@@ -157,6 +160,7 @@ export function ForumPage() {
 
     const isStaff = user?.role === 'admin' || user?.role === 'instructor';
     const { data: course } = useCourse(courseId);
+    usePageHeader(course ? `${course.title} forum` : 'Forum', 'Ask questions and discuss the course with classmates and instructors');
     const threads = useMemo(() => threadPages?.pages.flatMap((page) => page.data) ?? [], [threadPages]);
     const pinnedThreads = threads.filter((thread) => thread.is_pinned);
     const groupedThreads = useMemo(() => {
@@ -219,7 +223,6 @@ export function ForumPage() {
                             { label: 'Forum' },
                         ]}
                     />
-                    <h1 className="mt-2 text-lg font-semibold text-ink-900">{course ? `${course.title} forum` : 'Forum'}</h1>
                 </div>
                 {isStaff && (
                     <Link to={`/courses/${courseId}/forum/moderation`}>
@@ -231,22 +234,18 @@ export function ForumPage() {
                 )}
             </div>
 
-            <div className="mt-4 flex flex-col gap-4 lg:flex-row">
+            <div className="mt-5 flex flex-col gap-4 lg:flex-row">
                 <div className={cn('flex flex-col gap-3', selectedThreadId ? 'hidden lg:flex lg:w-2/5' : 'w-full')}>
                     <div className="flex gap-2">
-                        <div className="relative flex-1">
-                            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-600" aria-hidden="true" />
-                            <input
-                                value={searchInput}
-                                onChange={(e) => setSearchInput(e.target.value)}
-                                placeholder="Search discussions..."
-                                aria-label="Search discussions"
-                                className="w-full rounded-md border border-surface-100 bg-surface-0 py-2 pl-9 pr-3 text-sm text-ink-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-                            />
-                        </div>
+                        <SearchInput
+                            value={searchInput}
+                            onChange={setSearchInput}
+                            placeholder="Search discussions…"
+                            className="ml-0 max-w-none flex-1 self-center"
+                        />
                         <Button onClick={() => setIsComposing((prev) => !prev)}>
                             <Plus className="size-4" aria-hidden="true" />
-                            New Discussion
+                            New discussion
                         </Button>
                     </div>
 
@@ -328,13 +327,15 @@ export function ForumPage() {
                             />
                         )}
 
+                        {threads.length > 0 && (
+                        <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
                         {pinnedThreads.length > 0 && (
                             <div>
-                                <p className="flex items-center gap-1 px-1 text-xs font-medium uppercase tracking-wide text-ink-600">
+                                <p className="flex items-center gap-1 border-b border-surface-100 bg-surface-50 px-4 py-2 text-xs font-medium uppercase tracking-wide text-ink-600">
                                     <Pin className="size-3" aria-hidden="true" />
                                     Pinned discussions
                                 </p>
-                                <div className="mt-1 flex flex-col gap-1">
+                                <div className="flex flex-col divide-y divide-surface-100">
                                     {pinnedThreads.map((thread) => (
                                         <DiscussionListItem
                                             key={thread.id}
@@ -350,8 +351,8 @@ export function ForumPage() {
 
                         {groupedThreads.map(([label, items]) => (
                             <div key={label}>
-                                <p className="px-1 text-xs font-medium uppercase tracking-wide text-ink-600">{label}</p>
-                                <div className="mt-1 flex flex-col gap-1">
+                                <p className="border-y border-surface-100 bg-surface-50 px-4 py-2 text-xs font-medium uppercase tracking-wide text-ink-600">{label}</p>
+                                <div className="flex flex-col divide-y divide-surface-100">
                                     {items.map((thread) => (
                                         <DiscussionListItem
                                             key={thread.id}
@@ -364,6 +365,8 @@ export function ForumPage() {
                                 </div>
                             </div>
                         ))}
+                        </div>
+                        )}
 
                         <div ref={sentinelRef} />
                         {isFetchingNextPage && <Spinner />}

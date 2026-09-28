@@ -30,10 +30,12 @@ import { Alert } from '@/components/ui/Alert';
 import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ProgressBar } from '@/components/ui/ProgressBar';
+import { VolumeCard } from '@/components/dashboard/VolumeCard';
 import { courseProgressStatusDisplay, enrolmentStatusDisplay } from '@/lib/statusBadge';
 import { ApiError } from '@/lib/api/client';
 import type { CourseReview, Enrolment, ProgressDashboardRow } from '@/lib/api/types';
 import { formatDate } from '@/lib/formatDate';
+import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 
 const MAX_RECEIPT_BYTES = 5 * 1024 * 1024;
 const PROFILE_MODAL_DISMISSED_KEY = 'profile_completion_modal_dismissed';
@@ -172,13 +174,14 @@ function WithdrawConfirmModal({ enrolment, onClose, onWithdrawSuccess }: { enrol
 
 // ─── Enrolment card ───────────────────────────────────────────────────────────
 
-function EnrolmentCard({ enrolment, progress, review, onWithdraw, onCancelTransfer, onReview }: {
+function EnrolmentCard({ enrolment, progress, review, onWithdraw, onCancelTransfer, onReview, onPay }: {
     enrolment: Enrolment;
     progress: ProgressDashboardRow | undefined;
     review: CourseReview | undefined;
     onWithdraw: () => void;
     onCancelTransfer: () => void;
     onReview: () => void;
+    onPay: () => void;
 }) {
     const status = enrolmentStatusDisplay(enrolment.status);
     const order = enrolment.order;
@@ -209,11 +212,15 @@ function EnrolmentCard({ enrolment, progress, review, onWithdraw, onCancelTransf
             {/* Body */}
             <div className="flex flex-1 flex-col gap-3 p-3">
                 <div>
-                    <div className="flex items-center gap-2">
-                        <Badge label={status.label} tone={status.tone} icon={status.icon} />
-                    </div>
+                    {/* "Confirmed" is the normal state and the progress badge below already says where the
+                        student is — show the enrolment badge only for states that need attention. */}
+                    {enrolment.status !== 'confirmed' && (
+                        <div className="mb-2 flex items-center gap-2">
+                            <Badge label={status.label} tone={status.tone} icon={status.icon} />
+                        </div>
+                    )}
                     <Link to={`/learn/courses/${enrolment.course.id}`}>
-                        <h3 className="mt-2 line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-tight text-ink-900 hover:text-blue-600">
+                        <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-tight text-ink-900 hover:text-blue-600">
                             {enrolment.course.title}
                         </h3>
                     </Link>
@@ -226,7 +233,7 @@ function EnrolmentCard({ enrolment, progress, review, onWithdraw, onCancelTransf
                     <div className="flex flex-col gap-2">
                         <div className="flex items-center justify-between gap-2">
                             <Badge label={progressStatus!.label} tone={progressStatus!.tone} icon={progressStatus!.icon} />
-                            <span className="font-mono text-xs font-medium text-ink-900">{progress.percent_complete}%</span>
+                            <span className="text-xs font-semibold text-ink-900">{Math.round(progress.percent_complete)}%</span>
                         </div>
                         <ProgressBar percent={progress.percent_complete} />
                         {/* An upcoming intake gets the date instead of a button that would only
@@ -234,7 +241,7 @@ function EnrolmentCard({ enrolment, progress, review, onWithdraw, onCancelTransf
                             yet, and saying so is clearer than a dead end. */}
                         {progress.status === 'upcoming' && progress.starts_on ? (
                             <div className="flex items-start gap-2 rounded-lg border border-surface-100 bg-surface-50 px-3 py-2 text-sm text-ink-600">
-                                <CalendarClock className="mt-0.5 size-4 shrink-0 text-ink-400" aria-hidden="true" />
+                                <CalendarClock className="mt-0.5 size-4 shrink-0 text-ink-600" aria-hidden="true" />
                                 <span>
                                     Starts{' '}
                                     <span className="font-medium text-ink-900">
@@ -286,10 +293,13 @@ function EnrolmentCard({ enrolment, progress, review, onWithdraw, onCancelTransf
                 )}
 
                 {order && order.remaining_balance > 0 && !pendingSubmission && (
-                    <div className="flex flex-col gap-1.5 border-t border-surface-100 pt-2">
+                    <div className="flex items-center justify-between gap-2 border-t border-surface-100 pt-2">
                         <p className="text-xs text-ink-600">
                             Amount owed: <span className="font-medium text-ink-900">{formatAmount(order.remaining_balance, order.currency)}</span>
                         </p>
+                        <button type="button" onClick={onPay} className="shrink-0 text-xs font-medium text-blue-600 hover:underline">
+                            Pay now
+                        </button>
                     </div>
                 )}
 
@@ -318,34 +328,21 @@ function OverviewStrip({ activeEnrolments, progressRows }: { activeEnrolments: E
 
     const inProgress = progressRows.filter((r) => r.status === 'in_progress').length;
     const completed = progressRows.filter((r) => r.status === 'completed').length;
+    const certificates = progressRows.filter((r) => r.certificate).length;
     const avgCompletion = progressRows.length > 0
         ? Math.round(progressRows.reduce((sum, r) => sum + r.percent_complete, 0) / progressRows.length)
         : 0;
 
     return (
-        <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
-            <div className="flex flex-wrap divide-x divide-surface-100">
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-4 py-3">
-                    <p className="text-xs font-medium uppercase tracking-wide text-ink-600">Enrolled</p>
-                    <p className="text-2xl font-bold text-ink-900">{activeEnrolments.length}</p>
-                    <p className="text-xs text-ink-600">{inProgress} in progress · {completed} completed</p>
-                </div>
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-4 py-3">
-                    <p className="text-xs font-medium uppercase tracking-wide text-ink-600">Avg. completion</p>
-                    <div className="flex items-end gap-1.5">
-                        <p className="text-2xl font-bold text-blue-600">{avgCompletion}%</p>
-                        <TrendingUp className="mb-1 size-3.5 text-blue-400" aria-hidden="true" />
-                    </div>
-                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-surface-100">
-                        <div className="h-full rounded-full bg-blue-600 transition-all duration-500" style={{ width: `${avgCompletion}%` }} role="presentation" />
-                    </div>
-                </div>
-                {/* Deadlines — placeholder until GET /me/upcoming-deadlines is available */}
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-4 py-3">
-                    <p className="text-xs font-medium uppercase tracking-wide text-ink-600">Upcoming deadlines</p>
-                    <p className="mt-1 text-xs italic text-ink-300">No data yet</p>
-                </div>
-            </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+            <VolumeCard icon={BookOpen} label="Enrolled" value={activeEnrolments.length} sub={`${inProgress} in progress · ${completed} completed`} />
+            <VolumeCard icon={TrendingUp} label="Avg. completion" value={`${avgCompletion}%`} sub="Across your active courses" />
+            <VolumeCard
+                icon={Award}
+                label="Certificates"
+                value={certificates}
+                sub={certificates === 0 ? 'Finish a course to earn one' : 'Download from each course card'}
+            />
         </div>
     );
 }
@@ -388,6 +385,9 @@ export function MyCoursesPage() {
         fetchProfileStatus();
     }, []);
 
+    const activeCount = (data?.data ?? []).filter((e) => e.status !== 'withdrawn' && e.status !== 'transferred').length;
+    usePageHeader('My courses', isLoading ? undefined : `${activeCount} active enrolment${activeCount !== 1 ? 's' : ''}`);
+
     const handleCloseProfileModal = () => {
         setShowProfileModal(false);
         sessionStorage.setItem(PROFILE_MODAL_DISMISSED_KEY, '1');
@@ -426,28 +426,20 @@ export function MyCoursesPage() {
                 <ProfileCompletionModal profileStatus={profileStatus} onClose={handleCloseProfileModal} />
             )}
 
-            {/* Page header */}
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                    <h1 className="text-lg font-semibold text-ink-900">My courses</h1>
-                    <p className="text-xs text-ink-600">
-                        {activeEnrolments.length} active enrolment{activeEnrolments.length !== 1 ? 's' : ''}
-                    </p>
-                </div>
-                <div className="flex items-center gap-2">
-                    {payableEnrolments.length > 0 && (
-                        <Button size="sm" variant="secondary" onClick={() => setIsMakingPayment(true)}>
-                            <CreditCard className="size-3.5" aria-hidden="true" />
-                            Make a payment
-                        </Button>
-                    )}
-                    <Link to="/courses">
-                        <Button size="sm" variant="secondary">
-                            <Compass className="size-3.5" aria-hidden="true" />
-                            Browse courses
-                        </Button>
-                    </Link>
-                </div>
+            {/* Page actions — the title and count are in the top bar */}
+            <div className="flex flex-wrap items-center justify-end gap-2">
+                {payableEnrolments.length > 0 && (
+                    <Button size="sm" variant="secondary" onClick={() => setIsMakingPayment(true)}>
+                        <CreditCard className="size-3.5" aria-hidden="true" />
+                        Make a payment
+                    </Button>
+                )}
+                <Link to="/courses">
+                    <Button size="sm" variant="secondary">
+                        <Compass className="size-3.5" aria-hidden="true" />
+                        Browse courses
+                    </Button>
+                </Link>
             </div>
 
             {/* Success messages */}
@@ -512,22 +504,9 @@ export function MyCoursesPage() {
                                 onWithdraw={() => setWithdrawingEnrolment(enrolment)}
                                 onCancelTransfer={() => handleCancelTransfer(enrolment.id)}
                                 onReview={() => setReviewingCourse({ id: enrolment.course.id, title: enrolment.course.title })}
+                                onPay={() => setIsMakingPayment(true)}
                             />
                         ))}
-
-                        {/* "Add a course" card — always visible at the end of the grid */}
-                        <Link
-                            to="/courses"
-                            className="flex min-h-[200px] flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-surface-200 bg-surface-0 p-6 text-center transition hover:border-blue-300 hover:bg-blue-50"
-                        >
-                            <span className="flex size-10 items-center justify-center rounded-full bg-blue-50 ring-1 ring-blue-100">
-                                <Compass className="size-5 text-blue-500" aria-hidden="true" />
-                            </span>
-                            <div>
-                                <p className="text-sm font-semibold text-ink-900">Add a course</p>
-                                <p className="mt-0.5 text-xs text-ink-600">Browse the catalogue and enrol</p>
-                            </div>
-                        </Link>
                     </div>
                 </div>
             )}

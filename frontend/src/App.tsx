@@ -112,7 +112,7 @@ function App() {
                     <Route
                         path="admin/courses/new"
                         element={
-                            <ProtectedRoute roles={['admin']}>
+                            <ProtectedRoute roles={['admin', 'instructor']}>
                                 <CourseFormPage />
                             </ProtectedRoute>
                         }

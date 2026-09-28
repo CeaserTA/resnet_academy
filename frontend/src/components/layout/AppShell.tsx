@@ -137,10 +137,11 @@ function TopBar() {
     return (
         <header className="flex shrink-0 items-center justify-between gap-3 border-b border-surface-100 bg-surface-0 px-3 py-2 sm:px-4">
             {header ? (
-                <div className="min-w-0 shrink-0">
-                    <h1 className="text-base font-semibold text-ink-900">{header.title}</h1>
+                <div className="min-w-0">
+                    {/* Long titles (course names) shorten with "…" rather than pushing the bell/menu off */}
+                    <h1 className="truncate text-base font-semibold text-ink-900">{header.title}</h1>
                     {header.subtitle && (
-                        <p className="text-xs text-ink-600">{header.subtitle}</p>
+                        <p className="truncate text-xs text-ink-600">{header.subtitle}</p>
                     )}
                 </div>
             ) : (

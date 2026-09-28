@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router';
-import { Archive, ArrowUpDown, Calendar, ChevronDown, ChevronUp, MoreVertical, Pencil, Plus, Users } from 'lucide-react';
+import { Link, useNavigate } from 'react-router';
+import { Archive, ArrowUpDown, Calendar, ChevronDown, ChevronRight, ChevronUp, MoreVertical, Pencil, Plus, Users } from 'lucide-react';
+import { SearchInput } from '@/components/ui/SearchInput';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
+import { useAuth } from '@/lib/auth/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Alert } from '@/components/ui/Alert';
@@ -13,8 +16,8 @@ import { CreateCohortModal } from './CreateCohortModal';
 import { EditCohortModal } from './EditCohortModal';
 import { cohortStatusDisplay } from '@/lib/statusBadge';
 import type { Cohort, CohortStatus } from '@/lib/api/types';
-import { formatDateRange } from '@/lib/formatDate';
-import { displayCohortName } from '@/lib/cohort';
+import { formatDate, formatDateRange } from '@/lib/formatDate';
+import { daysUntil, displayCohortName } from '@/lib/cohort';
 
 // ─── Sorting ──────────────────────────────────────────────────────────────────
 
@@ -51,9 +54,23 @@ function SortHeader({ label, active, dir, onClick }: { label: string; active: bo
 
 // ─── Row ──────────────────────────────────────────────────────────────────────
 
-function CohortRow({ cohort, onEdit, onError }: { cohort: Cohort; onEdit: () => void; onError: (message: string) => void }) {
+/** Where the intake stands, in plain words, from its dates. */
+function phaseLine(cohort: Cohort): string {
+    if (cohort.status === 'archived') return 'No longer offered';
+    const toStart = daysUntil(cohort.start_date);
+    const toEnd = daysUntil(cohort.end_date);
+    if (toEnd < 0) return 'Finished';
+    if (toStart <= 0) return 'Running now';
+    return toStart === 1 ? 'Starts tomorrow' : `Starts in ${toStart} days`;
+}
+
+function CohortRow({ cohort, canManage, onEdit, onError }: { cohort: Cohort; canManage: boolean; onEdit: () => void; onError: (message: string) => void }) {
     const updateCohort = useUpdateCohort(cohort.id);
     const status = cohortStatusDisplay(cohort.status);
+    const courseCount = cohort.course_count ?? cohort.courses.length;
+    const deadline = cohort.application_deadline ? daysUntil(cohort.application_deadline) : null;
+    const navigate = useNavigate();
+    const href = `/admin/cohorts/${cohort.id}`;
 
     const handleArchive = () => {
         if (!window.confirm(`Archive "${displayCohortName(cohort.name)}"? It will no longer be offered to students. You can restore it later from Edit.`)) {
@@ -66,14 +83,24 @@ function CohortRow({ cohort, onEdit, onError }: { cohort: Cohort; onEdit: () => 
     };
 
     return (
-        <tr className="hover:bg-surface-50">
+        <tr onClick={() => navigate(href)} className="group cursor-pointer transition-colors hover:bg-blue-50/60">
             <td className="px-4 py-3">
                 <Link
-                    to={`/admin/cohorts/${cohort.id}`}
-                    className="font-medium text-ink-900 hover:text-blue-600"
+                    to={href}
+                    onClick={(e) => e.stopPropagation()}
+                    className="font-medium text-ink-900 group-hover:text-blue-600"
                 >
                     {displayCohortName(cohort.name)}
                 </Link>
+                <p className="mt-0.5 text-xs text-ink-600">
+                    {phaseLine(cohort)}
+                    {cohort.status !== 'archived' && deadline !== null && deadline >= 0 && (
+                        // The accent colour only when applications close soon — the one thing to act on.
+                        <span className={deadline <= 7 ? 'font-medium text-accent-amber' : undefined}>
+                            {' · '}Apply by {formatDate(cohort.application_deadline!)}
+                        </span>
+                    )}
+                </p>
             </td>
             <td className="px-4 py-3 text-ink-600">
                 <span className="inline-flex items-center gap-1.5">
@@ -82,12 +109,13 @@ function CohortRow({ cohort, onEdit, onError }: { cohort: Cohort; onEdit: () => 
                 </span>
             </td>
             <td className="px-4 py-3 text-ink-600">
-                {cohort.course_count ?? cohort.courses.length}
+                {courseCount} course{courseCount === 1 ? '' : 's'}
             </td>
             <td className="px-4 py-3">
                 <Badge label={status.label} tone={status.tone} icon={status.icon} />
             </td>
-            <td className="px-2 py-3 text-right">
+            {canManage && (
+            <td className="px-2 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                 <DropdownMenu
                     align="right"
                     trigger={(toggle) => (
@@ -108,16 +136,37 @@ function CohortRow({ cohort, onEdit, onError }: { cohort: Cohort; onEdit: () => 
                     ]}
                 />
             </td>
+            )}
+            <td className="w-10 pr-4 text-right">
+                <ChevronRight className="ml-auto size-4 text-ink-300 transition-transform group-hover:translate-x-0.5 group-hover:text-blue-600" aria-hidden="true" />
+            </td>
         </tr>
     );
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+const STATUS_FILTERS: { value: CohortStatus | 'all'; label: string }[] = [
+    { value: 'all', label: 'All' },
+    { value: 'published', label: 'Published' },
+    { value: 'draft', label: 'Draft' },
+    { value: 'archived', label: 'Archived' },
+];
+
 export function CohortsListPage() {
-    usePageHeader('Cohorts', 'Intakes that offer courses to students — create a cohort, then attach courses to it.');
+    const { user } = useAuth();
+    // Creating, editing and archiving cohorts is admin-only (CohortPolicy) — instructors browse.
+    const canManage = user?.role === 'admin';
+    usePageHeader(
+        'Cohorts',
+        canManage
+            ? 'Intakes that offer courses to students — create a cohort, then attach courses to it.'
+            : 'Intakes and the courses they offer',
+    );
 
     const { data: cohorts, isLoading } = useCohorts();
+    const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState<CohortStatus | 'all'>('all');
     const [isCreating, setIsCreating] = useState(false);
     const [editingCohort, setEditingCohort] = useState<Cohort | null>(null);
     const [actionError, setActionError] = useState<string | null>(null);
@@ -129,23 +178,33 @@ export function CohortsListPage() {
 
     // Unsorted keeps the API's order; a header click sorts client-side.
     const sortedCohorts = useMemo(() => {
-        if (!cohorts || !sort) return cohorts ?? [];
+        const term = search.trim().toLowerCase();
+        const list = (cohorts ?? []).filter(
+            (c) =>
+                (statusFilter === 'all' || c.status === statusFilter) &&
+                (!term || displayCohortName(c.name).toLowerCase().includes(term)),
+        );
+        if (!sort) return list;
         const factor = sort.dir === 'asc' ? 1 : -1;
-        return [...cohorts].sort((a, b) =>
+        return [...list].sort((a, b) =>
             factor *
             (sort.key === 'dates'
                 ? a.start_date.localeCompare(b.start_date)
                 : STATUS_ORDER[a.status] - STATUS_ORDER[b.status]),
         );
-    }, [cohorts, sort]);
+    }, [cohorts, sort, search, statusFilter]);
 
     return (
-        <div className="mx-auto max-w-5xl space-y-4">
-            <div className="flex items-center justify-end">
-                <Button onClick={() => setIsCreating(true)}>
-                    <Plus className="size-4" aria-hidden="true" />
-                    New cohort
-                </Button>
+        <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+                <SearchInput value={search} onChange={setSearch} placeholder="Search cohorts…" className="ml-0 sm:w-56" />
+                <SegmentedTabs label="Cohort status" value={statusFilter} onChange={setStatusFilter} tabs={STATUS_FILTERS} />
+                {canManage && (
+                    <Button size="sm" className="ml-auto" onClick={() => setIsCreating(true)}>
+                        <Plus className="size-3.5" aria-hidden="true" />
+                        New cohort
+                    </Button>
+                )}
             </div>
 
             {actionError && <Alert variant="error" message={actionError} />}
@@ -159,13 +218,18 @@ export function CohortsListPage() {
             {!isLoading && sortedCohorts.length === 0 && (
                 <EmptyState
                     icon={Users}
-                    title="No cohorts yet"
-                    description="Create your first cohort, then assign existing courses to it."
+                    title={(cohorts ?? []).length === 0 ? 'No cohorts yet' : 'No cohorts match this filter'}
+                    description={
+                        (cohorts ?? []).length === 0
+                            ? canManage ? 'Create your first cohort, then assign existing courses to it.' : 'An admin creates cohorts; they will appear here.'
+                            : 'Try a different status or clear the search.'
+                    }
                 />
             )}
 
             {!isLoading && sortedCohorts.length > 0 && (
-                <div className="overflow-x-auto rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
+                <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
+                    <div className="overflow-x-auto">
                     <table className="w-full min-w-[640px] text-sm">
                         <thead>
                             <tr className="border-b border-surface-100 bg-surface-50">
@@ -173,7 +237,8 @@ export function CohortsListPage() {
                                 <SortHeader label="Dates" active={sort?.key === 'dates'} dir={sort?.dir ?? 'asc'} onClick={() => toggleSort('dates')} />
                                 <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-ink-600">Courses</th>
                                 <SortHeader label="Status" active={sort?.key === 'status'} dir={sort?.dir ?? 'asc'} onClick={() => toggleSort('status')} />
-                                <th className="w-12 px-2 py-2.5"><span className="sr-only">Actions</span></th>
+                                {canManage && <th className="w-12 px-2 py-2.5"><span className="sr-only">Actions</span></th>}
+                                <th className="w-10"><span className="sr-only">Open</span></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-surface-100">
@@ -181,16 +246,21 @@ export function CohortsListPage() {
                                 <CohortRow
                                     key={cohort.id}
                                     cohort={cohort}
+                                    canManage={canManage}
                                     onEdit={() => setEditingCohort(cohort)}
                                     onError={setActionError}
                                 />
                             ))}
                         </tbody>
                     </table>
+                    </div>
+                    <div className="border-t border-surface-100 bg-surface-50 px-4 py-2 text-xs text-ink-600">
+                        {sortedCohorts.length} cohort{sortedCohorts.length === 1 ? '' : 's'}
+                    </div>
                 </div>
             )}
 
-            <CreateCohortModal isOpen={isCreating} onClose={() => setIsCreating(false)} />
+            {canManage && <CreateCohortModal isOpen={isCreating} onClose={() => setIsCreating(false)} />}
 
             {/* Mounted per edit so the modal's form state initialises from the chosen cohort */}
             {editingCohort && (

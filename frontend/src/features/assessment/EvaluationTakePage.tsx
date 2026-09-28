@@ -438,7 +438,7 @@ export function EvaluationTakePage() {
 
         return (
             <PageFrame
-                width="narrow"
+                width="reading"
                 breadcrumbs={[
                     { label: 'My courses', to: '/dashboard' },
                     { label: course?.title ?? '', to: `/learn/courses/${courseId}` },

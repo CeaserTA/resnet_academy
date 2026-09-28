@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import {
     Award,
+    BookOpen,
     CheckCircle2,
     Clock,
     FileText,
@@ -51,7 +52,7 @@ function ExistingSubmission({ submission, onResubmit }: { submission: Assignment
                 <div className="px-4 py-3">
                     <p className="text-xs text-ink-600">
                         Submitted {formatDateTime(submission.submitted_at)}
-                        {submission.is_late && <span className="ml-2 text-amber-600">(late)</span>}
+                        {submission.is_late && <span className="ml-2 text-warning-600">(late)</span>}
                     </p>
                 </div>
             </div>
@@ -66,9 +67,9 @@ function ExistingSubmission({ submission, onResubmit }: { submission: Assignment
                         </div>
                     </div>
                     <div className="px-4 py-3">
-                        <p className="text-2xl font-bold text-success-600">{score} pts</p>
+                        <p className="text-2xl font-bold text-success-600">{formatPoints(score)} pts</p>
                         {submission.is_late && Number(submission.late_penalty_percent) > 0 && (
-                            <p className="mt-0.5 text-xs text-amber-600">
+                            <p className="mt-0.5 text-xs text-warning-600">
                                 {submission.late_penalty_percent}% late penalty applied
                             </p>
                         )}
@@ -84,8 +85,9 @@ function ExistingSubmission({ submission, onResubmit }: { submission: Assignment
             {/* Submitted content */}
             {submission.text_content && (
                 <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
-                    <div className="border-b border-surface-100 bg-surface-50 px-4 py-2.5">
-                        <p className="text-xs font-medium uppercase tracking-wide text-ink-600">Your answer</p>
+                    <div className="flex items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-3">
+                        <FileText className="size-4 shrink-0 text-blue-600" aria-hidden="true" />
+                        <p className="text-sm font-semibold text-ink-900">Your answer</p>
                     </div>
                     <p className="whitespace-pre-wrap px-4 py-3 text-sm text-ink-900 leading-relaxed">
                         {submission.text_content}
@@ -110,6 +112,11 @@ function ExistingSubmission({ submission, onResubmit }: { submission: Assignment
             </Button>
         </div>
     );
+}
+
+/** "100.00" → "100", "72.50" → "72.5". */
+function formatPoints(value: number | string): string {
+    return String(Number(Number(value).toFixed(1)));
 }
 
 // ─── Submission form ──────────────────────────────────────────────────────────
@@ -163,8 +170,8 @@ function SubmissionForm({ assignmentId, submissionType, onSuccess }: {
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             {error && <Alert variant="error" message={error} />}
 
-            <div className="overflow-hidden rounded-xl border border-dashed border-surface-100 bg-surface-50">
-                <div className="border-b border-surface-100 bg-surface-0 px-4 py-3">
+            <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
+                <div className="border-b border-surface-100 bg-surface-50 px-4 py-3">
                     <div className="flex items-center gap-2">
                         <Upload className="size-4 text-blue-600" aria-hidden="true" />
                         <p className="text-sm font-semibold text-ink-900">Your submission</p>
@@ -208,12 +215,14 @@ function SubmissionForm({ assignmentId, submissionType, onSuccess }: {
                         />
                     )}
                 </div>
-            </div>
 
-            <Button type="submit" isLoading={submit.isPending} className="w-full justify-center">
-                <Send className="size-4" aria-hidden="true" />
-                {submit.isPending ? 'Submitting…' : 'Submit assignment'}
-            </Button>
+                <div className="flex justify-end border-t border-surface-100 bg-surface-50 px-4 py-3">
+                    <Button type="submit" isLoading={submit.isPending}>
+                        <Send className="size-4" aria-hidden="true" />
+                        {submit.isPending ? 'Submitting…' : 'Submit assignment'}
+                    </Button>
+                </div>
+            </div>
         </form>
     );
 }
@@ -291,6 +300,7 @@ export function AssignmentSubmitPage() {
                 { label: assignment.title },
             ]}
             title={assignment.title}
+            subtitle={course?.title}
         >
 
             {/* Two-column layout */}
@@ -327,7 +337,7 @@ export function AssignmentSubmitPage() {
                             {/* Max score */}
                             <div className="flex items-center justify-between text-xs">
                                 <span className="text-ink-600">Max score</span>
-                                <span className="font-semibold text-ink-900">{assignment.max_score} pts</span>
+                                <span className="font-semibold text-ink-900">{formatPoints(assignment.max_score)} pts</span>
                             </div>
 
                             {/* Submission type */}
@@ -362,8 +372,9 @@ export function AssignmentSubmitPage() {
                     {/* Instructions */}
                     {assignment.instructions && (
                         <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
-                            <div className="border-b border-surface-100 bg-surface-50 px-4 py-2.5">
-                                <p className="text-xs font-medium uppercase tracking-wide text-ink-600">Instructions</p>
+                            <div className="flex items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-3">
+                                <BookOpen className="size-4 shrink-0 text-blue-600" aria-hidden="true" />
+                                <p className="text-sm font-semibold text-ink-900">Instructions</p>
                             </div>
                             <p className="whitespace-pre-wrap px-4 py-3 text-sm text-ink-900 leading-relaxed">
                                 {assignment.instructions}

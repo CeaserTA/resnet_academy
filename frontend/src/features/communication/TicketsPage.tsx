@@ -509,7 +509,6 @@ function StudentTicketsView() {
 
     return (
         <PageFrame
-            width="narrow"
             title="Support"
             subtitle="Raise and track support requests"
             actions={

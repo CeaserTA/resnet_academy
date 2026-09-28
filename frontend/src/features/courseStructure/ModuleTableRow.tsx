@@ -40,6 +40,7 @@ import type { ResourcePayload } from '@/features/courseStructure/api';
 import type { AssignmentPayload, EvaluationPayload } from '@/features/assessment/api';
 import { formatDate } from '@/lib/formatDate';
 import { displayCohortName } from '@/lib/cohort';
+import { DropdownMenu } from '@/components/ui/DropdownMenu';
 
 // ─── Resource type labels + icons ─────────────────────────────────────────────
 
@@ -91,37 +92,6 @@ function IconBtn({
             )}
         >
             {children}
-        </button>
-    );
-}
-
-// ─── Descriptive action button ────────────────────────────────────────────────
-
-function ActionBtn({
-    label,
-    description,
-    onClick,
-    icon: Icon,
-    colorClass,
-}: {
-    label: string;
-    description: string;
-    onClick: () => void;
-    icon: React.ElementType;
-    colorClass: string;
-}) {
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            title={description}
-            className={cn(
-                'group flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all',
-                colorClass,
-            )}
-        >
-            <Icon className="size-3.5 shrink-0" aria-hidden="true" />
-            <span>{label}</span>
         </button>
     );
 }
@@ -219,7 +189,6 @@ function ContentGroup({
     label,
     icon: Icon,
     count,
-    accentClass,
     emptyText,
     onAdd,
     children,
@@ -227,7 +196,6 @@ function ContentGroup({
     label: string;
     icon: React.ElementType;
     count: number;
-    accentClass: string;   // tailwind colour classes for the header stripe
     emptyText: string;
     onAdd: () => void;
     children: React.ReactNode;
@@ -237,7 +205,7 @@ function ContentGroup({
     return (
         <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0">
             {/* Group header */}
-            <div className={cn('flex items-center justify-between px-3 py-2', accentClass)}>
+            <div className="flex items-center justify-between border-b border-surface-100 bg-surface-50 px-3 py-2 text-ink-900">
                 <button
                     type="button"
                     onClick={() => setOpen((v) => !v)}
@@ -248,18 +216,16 @@ function ContentGroup({
                         ? <ChevronDown className="size-3.5 shrink-0" aria-hidden="true" />
                         : <ChevronRight className="size-3.5 shrink-0" aria-hidden="true" />
                     }
-                    <Icon className="size-3.5 shrink-0" aria-hidden="true" />
+                    <Icon className="size-3.5 shrink-0 text-ink-600" aria-hidden="true" />
                     <span className="text-xs font-semibold">{label}</span>
-                    <span className="flex size-4 items-center justify-center rounded-full bg-white/60 text-[10px] font-bold leading-none">
-                        {count}
-                    </span>
+                    <span className="text-xs text-ink-600">{count}</span>
                 </button>
 
                 {/* Add button lives on the group header */}
                 <button
                     type="button"
                     onClick={onAdd}
-                    className="flex items-center gap-1 rounded-md bg-white/60 px-2 py-0.5 text-xs font-medium transition hover:bg-white"
+                    className="flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium text-blue-600 transition hover:bg-blue-50"
                     aria-label={`Add ${label.toLowerCase()}`}
                 >
                     <Plus className="size-3" aria-hidden="true" />
@@ -281,9 +247,8 @@ function ContentGroup({
     );
 }
 
-// ─── Module summary chips ─────────────────────────────────────────────────────
+// ─── Module summary ───────────────────────────────────────────────────────────
 
-const CHIP_CLASS = 'whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold';
 
 /** "1 resource", "5 resources" — spelled out so a new admin doesn't have to decode "5R". */
 function countLabel(count: number, noun: string): string {
@@ -428,26 +393,17 @@ export function ModuleTableRow({
                             </span>
                             <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                                 <span className="text-sm font-medium text-ink-900">{module.title}</span>
-                                {/* Content summary chips — same colour coding as the Add modals */}
-                                <span className="flex flex-wrap items-center gap-1">
-                                    {resources.length > 0 && (
-                                        <span className={CHIP_CLASS + ' bg-blue-50 text-blue-600'}>
-                                            {countLabel(resources.length, 'resource')}
-                                        </span>
-                                    )}
-                                    {assignments.length > 0 && (
-                                        <span className={CHIP_CLASS + ' bg-violet-50 text-violet-600'}>
-                                            {countLabel(assignments.length, 'assignment')}
-                                        </span>
-                                    )}
-                                    {evaluations.length > 0 && (
-                                        <span className={CHIP_CLASS + ' bg-emerald-50 text-emerald-600'}>
-                                            {countLabel(evaluations.length, 'evaluation')}
-                                        </span>
-                                    )}
-                                    {module.items.length === 0 && (
-                                        <span className={CHIP_CLASS + ' bg-surface-100 text-ink-600'}>No content yet</span>
-                                    )}
+                                {/* Content summary — plain text, so colour is left for things that need attention */}
+                                <span className="text-xs text-ink-600">
+                                    {module.items.length === 0
+                                        ? 'No content yet'
+                                        : [
+                                            resources.length > 0 && countLabel(resources.length, 'resource'),
+                                            assignments.length > 0 && countLabel(assignments.length, 'assignment'),
+                                            evaluations.length > 0 && countLabel(evaluations.length, 'evaluation'),
+                                        ]
+                                            .filter(Boolean)
+                                            .join(' · ')}
                                 </span>
                             </span>
                         </button>
@@ -468,26 +424,25 @@ export function ModuleTableRow({
 
                 <td className="px-4 py-3">
                     <div className="flex flex-wrap items-center justify-end gap-1.5 lg:flex-nowrap">
-                        <ActionBtn
-                            label="Resource"
-                            description="Add a learning resource (video, document, link…)"
-                            onClick={() => { setAddingForm('resource'); setIsOpen(true); }}
-                            icon={FileEdit}
-                            colorClass="border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:border-blue-300"
-                        />
-                        <ActionBtn
-                            label="Assignment"
-                            description="Add a graded assignment"
-                            onClick={() => { setAddingForm('assignment'); setIsOpen(true); }}
-                            icon={FileCheck2}
-                            colorClass="border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 hover:border-violet-300"
-                        />
-                        <ActionBtn
-                            label="Evaluation"
-                            description="Add a quiz or evaluation"
-                            onClick={() => { setAddingForm('evaluation'); setIsOpen(true); }}
-                            icon={ListChecks}
-                            colorClass="border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300"
+                        <DropdownMenu
+                            align="right"
+                            trigger={(toggle) => (
+                                <button
+                                    type="button"
+                                    onClick={toggle}
+                                    aria-label={`Add content to ${module.title}`}
+                                    className="flex items-center gap-1 rounded-lg border border-blue-600 px-2.5 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-50"
+                                >
+                                    <Plus className="size-3.5" aria-hidden="true" />
+                                    Add
+                                    <ChevronDown className="size-3" aria-hidden="true" />
+                                </button>
+                            )}
+                            items={[
+                                { label: 'Resource', icon: FileEdit, onClick: () => { setAddingForm('resource'); setIsOpen(true); } },
+                                { label: 'Assignment', icon: FileCheck2, onClick: () => { setAddingForm('assignment'); setIsOpen(true); } },
+                                { label: 'Evaluation', icon: ListChecks, onClick: () => { setAddingForm('evaluation'); setIsOpen(true); } },
+                            ]}
                         />
                         <button
                             type="button"
@@ -521,7 +476,6 @@ export function ModuleTableRow({
                                 label="Resources"
                                 icon={FileEdit}
                                 count={resources.length}
-                                accentClass="bg-blue-50 text-blue-700"
                                 emptyText="No resources yet — click Add to get started."
                                 onAdd={() => setAddingForm('resource')}
                             >
@@ -540,7 +494,6 @@ export function ModuleTableRow({
                                 label="Assignments"
                                 icon={FileCheck2}
                                 count={assignments.length}
-                                accentClass="bg-violet-50 text-violet-700"
                                 emptyText="No assignments yet — click Add to get started."
                                 onAdd={() => setAddingForm('assignment')}
                             >
@@ -558,7 +511,6 @@ export function ModuleTableRow({
                                 label="Evaluations"
                                 icon={ListChecks}
                                 count={evaluations.length}
-                                accentClass="bg-emerald-50 text-emerald-700"
                                 emptyText="No evaluations yet — click Add to get started."
                                 onAdd={() => setAddingForm('evaluation')}
                             >

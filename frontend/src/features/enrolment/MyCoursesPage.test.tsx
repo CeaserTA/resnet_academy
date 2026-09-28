@@ -10,6 +10,7 @@ import { fetchProgressDashboard } from '@/features/progress/api';
 import { fetchMyReviews } from '@/features/reviews/api';
 import { profileApi } from '@/lib/api/profileApi';
 import type { Course, CourseApplication, CourseReview, Enrolment, Module, PaginatedResponse, ProgressDashboardRow } from '@/lib/api/types';
+import { PageHeaderProvider } from '@/lib/pageHeader/PageHeaderContext';
 
 const { course, enrolment, modules, progressRows } = vi.hoisted(() => {
     const course: Course = {
@@ -141,11 +142,11 @@ function renderPage() {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
     return render(
-        <QueryClientProvider client={queryClient}>
+        <QueryClientProvider client={queryClient}><PageHeaderProvider>
             <MemoryRouter>
                 <MyCoursesPage />
             </MemoryRouter>
-        </QueryClientProvider>,
+        </PageHeaderProvider></QueryClientProvider>,
     );
 }
 
@@ -339,7 +340,9 @@ function makeOrder(status: 'pending' | 'partial' | 'paid'): NonNullable<Enrolmen
     };
 }
 
-it('shows only the enrolment-status badge, not a competing order-status badge, when confirmed', async () => {
+// "Confirmed" is the normal state, so the card shows no enrolment badge for it (the progress badge
+// says where the student is) — and never a competing order-status badge.
+it('shows no status badge for a confirmed enrolment, and no competing order-status badge', async () => {
     vi.mocked(fetchMyEnrolments).mockResolvedValueOnce({
         data: [{ ...enrolment, status: 'confirmed', order: makeOrder('pending') }],
         meta: { current_page: 1, last_page: 1, per_page: 15, total: 1 },
@@ -348,7 +351,8 @@ it('shows only the enrolment-status badge, not a competing order-status badge, w
 
     renderPage();
 
-    expect(await screen.findByText('Confirmed')).toBeInTheDocument();
+    expect(await screen.findByText('Intro to Testing')).toBeInTheDocument();
+    expect(screen.queryByText('Confirmed')).not.toBeInTheDocument();
     expect(screen.queryByText('Pending')).not.toBeInTheDocument();
 });
 
@@ -477,7 +481,7 @@ it('does not render ProfileCompletionCard when profile is complete', async () =>
 
     renderPage();
 
-    await screen.findByText('My courses');
+    await screen.findByText('Browse courses');
 
     expect(screen.queryByText('Complete your profile')).not.toBeInTheDocument();
 });
@@ -488,7 +492,7 @@ it('hides ProfileCompletionCard on API error', async () => {
 
     renderPage();
 
-    await screen.findByText('My courses');
+    await screen.findByText('Browse courses');
 
     expect(screen.queryByText('Complete your profile')).not.toBeInTheDocument();
     expect(consoleSpy).toHaveBeenCalledWith('Failed to fetch profile status:', expect.any(Error));
@@ -508,16 +512,16 @@ it('positions ProfileCompletionCard at the top before other content', async () =
     await screen.findByText('Complete your profile');
 
     const container = screen.getByText('Complete your profile').closest('div');
-    const myCoursesHeading = screen.getByText('My courses');
+    const pageActions = screen.getByText('Browse courses');
 
-    // ProfileCompletionCard should appear before the "My courses" heading in DOM order
-    expect(container?.compareDocumentPosition(myCoursesHeading)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    // ProfileCompletionCard should appear before the page's own content in DOM order
+    expect(container?.compareDocumentPosition(pageActions)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
 });
 
 it('calls profileApi.getStatus on component mount', async () => {
     renderPage();
 
-    await screen.findByText('My courses');
+    await screen.findByText('Browse courses');
 
     expect(profileApi.getStatus).toHaveBeenCalledTimes(1);
 });

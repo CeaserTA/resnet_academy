@@ -1,37 +1,36 @@
 import type { ReactNode } from 'react';
 import { Breadcrumbs, type BreadcrumbItem } from '@/components/ui/Breadcrumbs';
+import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import { cn } from '@/lib/utils';
 
 const WIDTHS = {
-    /** Reading, forms, single-column pages. */
-    narrow: 'max-w-3xl',
-    /** Most content pages (course player, assignment, file resources). */
-    default: 'max-w-5xl',
-    /** Dashboards and split layouts. */
+    /** Same full width as the admin pages — dashboards, lists, course pages, forms. */
     full: '',
+    /** Long-form reading and quiz taking, where very long lines are hard to read. */
+    reading: 'mx-auto max-w-3xl',
 } as const;
 
 interface PageFrameProps {
     width?: keyof typeof WIDTHS;
     breadcrumbs?: BreadcrumbItem[];
-    title: ReactNode;
-    subtitle?: ReactNode;
-    /** Shown right after the title, e.g. a "Completed" badge. */
+    /** Shown in the top bar, like every admin page. */
+    title: string;
+    subtitle?: string;
+    /** Shown next to the breadcrumb, e.g. a "Completed" badge. */
     titleAdornment?: ReactNode;
-    /** Right-aligned header actions (buttons, progress). */
+    /** Right-aligned page actions (buttons, progress). */
     actions?: ReactNode;
     className?: string;
     children: ReactNode;
 }
 
 /**
- * Shared frame for student-facing pages: centred container, breadcrumb, and the same header as
- * the My courses dashboard (title, optional grey subtitle, actions on the right). Content blocks
- * sit 20px below the header and 20px apart (like My courses), so pages shouldn't add their own
- * top margins to their top-level blocks.
+ * Shared frame for student-facing pages. The title and subtitle go to the app's top bar (as on
+ * every admin page); the page itself starts with one row — breadcrumb on the left, actions on the
+ * right — then content blocks 20px apart. Pages shouldn't add their own top margins to those blocks.
  */
 export function PageFrame({
-    width = 'default',
+    width = 'full',
     breadcrumbs,
     title,
     subtitle,
@@ -40,22 +39,22 @@ export function PageFrame({
     className,
     children,
 }: PageFrameProps) {
-    return (
-        <div className={cn('mx-auto w-full', WIDTHS[width], className)}>
-            {breadcrumbs && <Breadcrumbs items={breadcrumbs} />}
+    usePageHeader(title, subtitle);
+    const hasToolbar = Boolean(breadcrumbs || titleAdornment || actions);
 
-            <div className={cn('flex flex-wrap items-center justify-between gap-3', breadcrumbs && 'mt-2')}>
-                <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                        <h1 className="text-lg font-semibold text-ink-900">{title}</h1>
+    return (
+        <div className={cn('w-full', WIDTHS[width], className)}>
+            {hasToolbar && (
+                <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                        {breadcrumbs && <Breadcrumbs items={breadcrumbs} />}
                         {titleAdornment}
                     </div>
-                    {subtitle && <p className="text-xs text-ink-600">{subtitle}</p>}
+                    {actions && <div className="ml-auto flex flex-wrap items-center gap-2">{actions}</div>}
                 </div>
-                {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
-            </div>
+            )}
 
-            <div className="mt-5 space-y-5">{children}</div>
+            <div className="space-y-5">{children}</div>
         </div>
     );
 }

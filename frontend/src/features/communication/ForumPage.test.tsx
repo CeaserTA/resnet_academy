@@ -6,6 +6,7 @@ import { it, expect, vi } from 'vitest';
 import { ForumPage } from '@/features/communication/ForumPage';
 import { AuthProvider } from '@/lib/auth/AuthContext';
 import type { ForumThread, PaginatedResponse, User } from '@/lib/api/types';
+import { PageHeaderProvider } from '@/lib/pageHeader/PageHeaderContext';
 
 const { student, feedThread, myThread } = vi.hoisted(() => {
     const student: User = {
@@ -97,7 +98,7 @@ function renderPage() {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
     return render(
-        <QueryClientProvider client={queryClient}>
+        <QueryClientProvider client={queryClient}><PageHeaderProvider>
             <MemoryRouter initialEntries={['/courses/1/forum']}>
                 <AuthProvider>
                     <Routes>
@@ -105,7 +106,7 @@ function renderPage() {
                     </Routes>
                 </AuthProvider>
             </MemoryRouter>
-        </QueryClientProvider>,
+        </PageHeaderProvider></QueryClientProvider>,
     );
 }
 
@@ -130,7 +131,7 @@ it('shows all discussions by default, switches to My discussions, and creates on
     expect(await screen.findByText('My own discussion')).toBeInTheDocument();
     expect(screen.queryByText('When is the next cohort')).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'New Discussion' }));
+    await user.click(screen.getByRole('button', { name: 'New discussion' }));
     await user.type(screen.getByLabelText('Title'), 'A new question');
     await user.type(screen.getByPlaceholderText('Share your thoughts'), 'Anyone free to study tonight?');
     await user.click(screen.getByRole('button', { name: 'Post' }));

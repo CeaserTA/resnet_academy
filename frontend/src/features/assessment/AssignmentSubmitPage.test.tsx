@@ -6,6 +6,7 @@ import { it, expect, vi, beforeEach } from 'vitest';
 import { AssignmentSubmitPage } from '@/features/assessment/AssignmentSubmitPage';
 import { AuthProvider } from '@/lib/auth/AuthContext';
 import type { Assignment, Course, User } from '@/lib/api/types';
+import { PageHeaderProvider } from '@/lib/pageHeader/PageHeaderContext';
 
 const { course, assignment, student, submitAssignmentMock } = vi.hoisted(() => {
     const course: Course = {
@@ -96,7 +97,7 @@ function renderPage() {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
     return render(
-        <QueryClientProvider client={queryClient}>
+        <QueryClientProvider client={queryClient}><PageHeaderProvider>
             <AuthProvider>
                 <MemoryRouter initialEntries={['/learn/assignments/5?course=1']}>
                     <Routes>
@@ -104,7 +105,7 @@ function renderPage() {
                     </Routes>
                 </MemoryRouter>
             </AuthProvider>
-        </QueryClientProvider>,
+        </PageHeaderProvider></QueryClientProvider>,
     );
 }
 

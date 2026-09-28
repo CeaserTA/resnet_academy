@@ -1,6 +1,6 @@
 ﻿import { useState } from 'react';
 import { useParams, Link } from 'react-router';
-import { ArrowLeft, BookOpen, ClipboardList, MessageCircle, Plus } from 'lucide-react';
+import { BookOpen, ClipboardList, MessageCircle, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
@@ -9,7 +9,11 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Modal } from '@/components/ui/Modal';
 import { Alert } from '@/components/ui/Alert';
 import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
-import { StatWidget } from '@/components/dashboard/StatWidget';
+import { VolumeCard } from '@/components/dashboard/VolumeCard';
+import { AttentionCard } from '@/components/dashboard/AttentionCard';
+import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
+import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
+import { useAuth } from '@/lib/auth/AuthContext';
 import { useCourse } from '@/features/catalogue/useCourses';
 import { useCreateModule, useDeleteModule, useModules, useUpdateModule } from '@/features/courseStructure/useCourseStructure';
 import { updateModule } from '@/features/courseStructure/api';
@@ -40,6 +44,9 @@ export function CourseBuilderPage() {
     const updateModuleMutation = useUpdateModule(courseId);
     const deleteModule = useDeleteModule(courseId);
     const queryClient = useQueryClient();
+    const { user } = useAuth();
+    const isAdmin = user?.role === 'admin';
+    usePageHeader(course?.title ?? 'Course', 'Modules, cohorts and analytics for this course');
 
     const [activeTab, setActiveTab] = useState<'modules' | 'cohorts' | 'analytics'>('modules');
 
@@ -176,23 +183,16 @@ export function CourseBuilderPage() {
     });
 
     return (
-        <div className="mx-auto max-w-7xl space-y-6">
+        <div className="space-y-5">
 
-            {/* ── Page header ──────────────────────────────────────────────── */}
+            {/* ── Breadcrumb + page actions — the title is in the top bar ── */}
             <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                    <Link
-                        to="/admin/courses"
-                        className="flex items-center gap-1 text-sm text-ink-600 hover:text-blue-600"
-                    >
-                        <ArrowLeft className="size-3.5" aria-hidden="true" />
-                        Courses
-                    </Link>
-                    <span className="text-ink-300" aria-hidden="true">/</span>
-                    <h1 className="text-base font-semibold text-ink-900">
-                        {course?.title ?? '…'}
-                    </h1>
-                </div>
+                <Breadcrumbs
+                    items={[
+                        { label: isAdmin ? 'Courses' : 'My courses', to: '/admin/courses' },
+                        { label: course?.title ?? 'Course' },
+                    ]}
+                />
 
                 <div className="flex items-center gap-2">
                     <Link to={`/courses/${courseId}/forum`}>
@@ -215,24 +215,19 @@ export function CourseBuilderPage() {
 
             {analytics && (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    <StatWidget
-                        icon={Users}
-                        label="Enrolled students"
-                        value={analytics.total_students}
-                        tone="progress"
-                    />
-                    <StatWidget
+                    <VolumeCard icon={Users} label="Enrolled students" value={analytics.total_students} sub="In every cohort of this course" />
+                    <VolumeCard
                         icon={TrendingUp}
                         label="Completion rate"
                         value={`${analytics.completion_rate}%`}
                         sub={`${analytics.completed_students} of ${analytics.total_students} completed`}
-                        tone="success"
                     />
-                    <StatWidget
+                    <AttentionCard
                         icon={AlertTriangle}
                         label="At-risk students"
                         value={analytics.at_risk_students.length}
-                        tone="danger"
+                        sub={analytics.at_risk_students.length > 0 ? 'See the Analytics tab' : 'Everyone is on track'}
+                        tone={analytics.at_risk_students.length > 0 ? 'warning' : 'neutral'}
                     />
                 </div>
             )}
@@ -240,7 +235,6 @@ export function CourseBuilderPage() {
             {/* Tabs */}
             <SegmentedTabs
                 label="Course sections"
-                className="mb-4 mt-6"
                 value={activeTab}
                 onChange={setActiveTab}
                 tabs={[
@@ -338,22 +332,38 @@ export function CourseBuilderPage() {
                 isOpen={moduleForm !== null}
                 onClose={() => setModuleForm(null)}
                 title={moduleForm?.mode === 'edit' ? 'Edit module' : 'New module'}
+                footer={
+                    <>
+                        <Button type="button" variant="ghost" onClick={() => setModuleForm(null)}>
+                            Cancel
+                        </Button>
+                        <Button type="submit" form="module-form" isLoading={createModule.isPending || updateModuleMutation.isPending}>
+                            {moduleForm?.mode === 'edit' ? 'Save changes' : 'Create module'}
+                        </Button>
+                    </>
+                }
             >
-                <form onSubmit={handleSubmitModule} className="flex flex-col gap-3">
+                <form id="module-form" onSubmit={handleSubmitModule} className="flex flex-col gap-4">
                     {formError && <Alert variant="error" message={formError} />}
                     <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} required />
                     <Textarea
-                        label="Description"
-                        rows={2}
+                        label="Description (optional)"
+                        rows={3}
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
+                        placeholder="What students will learn in this module"
                     />
-                    <Input
-                        label="Opens on (leave blank to unlock sequentially)"
-                        type="date"
-                        value={scheduledStartAt}
-                        onChange={(e) => setScheduledStartAt(e.target.value)}
-                    />
+                    <div>
+                        <Input
+                            label="Opens on (optional)"
+                            type="date"
+                            value={scheduledStartAt}
+                            onChange={(e) => setScheduledStartAt(e.target.value)}
+                        />
+                        <p className="mt-1 text-xs text-ink-600">
+                            Leave blank and the module unlocks once students finish the one before it.
+                        </p>
+                    </div>
                     {moduleForm?.mode === 'edit' && sortedModules.length > 1 && (
                         <div className="flex flex-col gap-1.5">
                             <label htmlFor="module-position" className="text-sm font-medium text-ink-900">Position</label>
@@ -361,7 +371,7 @@ export function CourseBuilderPage() {
                                 id="module-position"
                                 value={position}
                                 onChange={(e) => setPosition(Number(e.target.value))}
-                                className="rounded-lg border border-surface-100 bg-surface-0 px-3 py-2 text-sm text-ink-900 shadow-sm focus-visible:border-blue-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                                className="rounded-lg border border-surface-100 bg-surface-0 px-3 py-2 text-sm text-ink-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             >
                                 {sortedModules.map((m, i) => (
                                     <option key={m.id} value={i}>
@@ -374,14 +384,6 @@ export function CourseBuilderPage() {
                             </p>
                         </div>
                     )}
-                    <div className="flex gap-2">
-                        <Button type="submit" isLoading={createModule.isPending || updateModuleMutation.isPending}>
-                            {moduleForm?.mode === 'edit' ? 'Save changes' : 'Create module'}
-                        </Button>
-                        <Button type="button" variant="ghost" onClick={() => setModuleForm(null)}>
-                            Cancel
-                        </Button>
-                    </div>
                 </form>
             </Modal>
         </div>

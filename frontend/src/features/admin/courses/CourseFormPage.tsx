@@ -17,7 +17,10 @@ import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
 import { Spinner } from '@/components/ui/Spinner';
 import { ApiError } from '@/lib/api/client';
+import { useAuth } from '@/lib/auth/AuthContext';
 import { cn } from '@/lib/utils';
+import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
+import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 
 const MAX_THUMBNAIL_BYTES = 5 * 1024 * 1024;
 
@@ -57,16 +60,33 @@ const DEFAULT_POLICY_BY_LEVEL: Record<FormValues['level'], EnrolmentPolicy> = {
 
 // ─── Section card ─────────────────────────────────────────────────────────────
 
-function Section({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) {
+function Section({
+    title,
+    description,
+    children,
+    className,
+}: {
+    title: string;
+    description?: string;
+    children: React.ReactNode;
+    className?: string;
+}) {
     return (
-        <div className={cn('overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm', className)}>
-            <div className="border-b border-surface-100 bg-surface-50 px-4 py-3">
+        <section className={cn('overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm', className)}>
+            <div className="border-b border-surface-100 bg-surface-50 px-5 py-3">
                 <h2 className="text-sm font-semibold text-ink-900">{title}</h2>
+                {description && <p className="text-xs text-ink-600">{description}</p>}
             </div>
-            <div className="space-y-4 bg-blue-50/20 p-4">{children}</div>
-        </div>
+            <div className="space-y-4 p-5">{children}</div>
+        </section>
     );
 }
+
+const POLICY_LABEL: Record<EnrolmentPolicy, string> = {
+    open: 'Open',
+    advisory: 'Advisory',
+    application: 'Application',
+};
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -75,8 +95,13 @@ export function CourseFormPage() {
     const isEditing = !!id;
     const courseId = Number(id);
     const navigate = useNavigate();
+    const { user } = useAuth();
 
     const { data: course, isLoading: isLoadingCourse } = useCourse(courseId);
+    usePageHeader(
+        isEditing ? 'Edit course' : 'New course',
+        isEditing ? course?.title ?? 'Update the course details' : 'Fill in the details to create a course',
+    );
     const { data: categories } = useCategories();
     const { data: instructors } = useUsers('instructor');
     const createCourse = useCreateCourse();
@@ -126,7 +151,9 @@ export function CourseFormPage() {
                 application_require_portfolio_url: false,
                 currency: 'UGX',
                 confirmation_delay_hours: '24',
-                instructor_ids: [],
+                // An instructor creating a course teaches it — pre-tick them so it shows up under
+                // their courses (they can still add co-instructors).
+                instructor_ids: user?.role === 'instructor' ? [user.id] : [],
             },
         });
 
@@ -205,19 +232,27 @@ export function CourseFormPage() {
     if (isEditing && isLoadingCourse) return <Spinner />;
 
     return (
-        <div className="mx-auto max-w-6xl">
-
-            {/* Page header */}
-            <div className="mb-4">
-                <h1 className="text-lg font-semibold text-ink-900">
-                    {isEditing ? 'Edit course' : 'New course'}
-                </h1>
-                <p className="text-xs text-ink-600">
-                    {isEditing ? 'Update the course details below.' : 'Fill in the details to create a new course.'}
-                </p>
+        <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
+            {/* Action bar — pinned to the top of the page while you scroll, so Save is always in reach.
+                The negative margins let it span the page's padding so content never shows behind it. */}
+            <div className="sticky -top-4 z-20 -mx-4 -mt-4 sm:-top-5 flex flex-wrap items-center justify-between gap-3 border-b border-surface-100 bg-surface-50/95 px-4 py-3 backdrop-blur sm:-mx-5 sm:-mt-5 sm:px-5">
+                <Breadcrumbs
+                    items={[
+                        { label: user?.role === 'admin' ? 'Courses' : 'My courses', to: '/admin/courses' },
+                        ...(isEditing && course ? [{ label: course.title, to: `/admin/courses/${course.id}/modules` }] : []),
+                        { label: isEditing ? 'Edit details' : 'New course' },
+                    ]}
+                />
+                <div className="ml-auto flex items-center gap-2">
+                    <Button type="button" variant="ghost" onClick={() => navigate('/admin/courses')}>
+                        Cancel
+                    </Button>
+                    <Button type="submit" isLoading={isSubmitting}>
+                        {isEditing ? 'Save changes' : 'Create course'}
+                    </Button>
+                </div>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
                 {formError && <Alert variant="error" message={formError} />}
                 {Object.keys(errors).length > 0 && (
                     <Alert
@@ -226,32 +261,81 @@ export function CourseFormPage() {
                     />
                 )}
 
-                {/* Two-column layout */}
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-3">
+                    {/* ── Main form (2/3) ── */}
+                    <div className="space-y-5 lg:col-span-2">
+                        <Section title="Course image" description="Shown on the course card in the catalogue and at the top of the course page.">
+                            {thumbnailError && <Alert variant="error" message={thumbnailError} />}
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                                <div className="flex aspect-video w-full shrink-0 items-center justify-center overflow-hidden rounded-lg border border-dashed border-surface-100 bg-surface-50 text-ink-300 sm:w-64">
+                                    {thumbnailPreview || course?.thumbnail_url ? (
+                                        <img src={thumbnailPreview ?? course?.thumbnail_url ?? undefined} alt="" className="size-full object-cover" />
+                                    ) : (
+                                        <ImagePlus className="size-8" aria-hidden="true" />
+                                    )}
+                                </div>
+                                <div className="space-y-2">
+                                    <input
+                                        ref={thumbnailInputRef}
+                                        type="file"
+                                        accept="image/jpeg,image/png,image/webp"
+                                        className="hidden"
+                                        onChange={handleThumbnailChange}
+                                    />
+                                    <Button type="button" size="sm" variant="secondary" onClick={() => thumbnailInputRef.current?.click()}>
+                                        <ImagePlus className="size-3.5" aria-hidden="true" />
+                                        {thumbnailPreview || course?.thumbnail_url ? 'Change image' : 'Upload image'}
+                                    </Button>
+                                    <p className="text-xs text-ink-600">JPEG, PNG or WEBP, up to 5 MB.</p>
+                                    <p className="text-xs text-ink-600">A wide 16:9 image works best, e.g. 1280 × 720.</p>
+                                    {thumbnailFile && <p className="text-xs font-medium text-ink-900">New image selected — it's saved with the course.</p>}
+                                </div>
+                            </div>
+                        </Section>
 
-                    {/* LEFT — main fields (2/3) */}
-                    <div className="space-y-4 lg:col-span-2">
-
-                        {/* Basic info */}
-                        <Section title="Basic information">
+                        <Section title="Basic information" description="What students see in the catalogue.">
                             <Input label="Title" error={errors.title?.message} {...register('title')} />
 
-                            <div className="grid grid-cols-2 gap-3">
-                                <Select label="Level" {...register('level')}>
-                                    <option value="beginner">Beginner</option>
-                                    <option value="intermediate">Intermediate</option>
-                                    <option value="advanced">Advanced</option>
-                                </Select>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                <Controller
+                                    control={control}
+                                    name="level"
+                                    // Controller, not register(): the Radix select only shows a value it is given as a
+                                    // prop. Empty selections come from Radix itself (never a user pick), so ignore them.
+                                    render={({ field }) => (
+                                        <Select
+                                            label="Level"
+                                            name={field.name}
+                                            value={field.value ?? ''}
+                                            onChange={(e) => e.target.value && field.onChange(e.target.value)}
+                                        >
+                                            <option value="beginner">Beginner</option>
+                                            <option value="intermediate">Intermediate</option>
+                                            <option value="advanced">Advanced</option>
+                                        </Select>
+                                    )}
+                                />
 
                                 <div className="space-y-2">
                                     <div className="flex items-end gap-2">
                                         <div className="flex-1">
-                                            <Select label="Category" {...register('category_id')}>
-                                                <option value="">No category</option>
-                                                {categories?.map((cat) => (
-                                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                                ))}
-                                            </Select>
+                                            <Controller
+                                                control={control}
+                                                name="category_id"
+                                                render={({ field }) => (
+                                                    <Select
+                                                        label="Category"
+                                                        name={field.name}
+                                                        value={field.value || 'none'}
+                                                        onChange={(e) => e.target.value && field.onChange(e.target.value === 'none' ? '' : e.target.value)}
+                                                    >
+                                                        <option value="none">No category</option>
+                                                        {categories?.map((cat) => (
+                                                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                                        ))}
+                                                    </Select>
+                                                )}
+                                            />
                                         </div>
                                         <button
                                             type="button"
@@ -280,72 +364,59 @@ export function CourseFormPage() {
                                 </div>
                             </div>
 
-                            <Textarea label="Description" rows={3} {...register('description')} />
-                            <Textarea label="Prerequisites (informational only)" rows={2} {...register('prerequisites_text')} />
-                        </Section>
-
-                        {/* Thumbnail */}
-                        <Section title="Course thumbnail">
-                            {thumbnailError && <Alert variant="error" message={thumbnailError} />}
-                            <div className="flex items-center gap-4">
-                                <div className="flex h-24 w-40 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-surface-100 text-ink-300">
-                                    {thumbnailPreview || course?.thumbnail_url ? (
-                                        <img
-                                            src={thumbnailPreview ?? course?.thumbnail_url ?? undefined}
-                                            alt=""
-                                            className="size-full object-cover"
-                                        />
-                                    ) : (
-                                        <ImagePlus className="size-6" aria-hidden="true" />
-                                    )}
-                                </div>
-                                <div>
-                                    <input
-                                        ref={thumbnailInputRef}
-                                        type="file"
-                                        accept="image/jpeg,image/png,image/webp"
-                                        className="hidden"
-                                        onChange={handleThumbnailChange}
-                                    />
-                                    <Button type="button" size="sm" variant="secondary" onClick={() => thumbnailInputRef.current?.click()}>
-                                        <ImagePlus className="size-3.5" aria-hidden="true" />
-                                        {thumbnailFile ? 'Change image' : 'Upload image'}
-                                    </Button>
-                                    <p className="mt-1 text-xs text-ink-600">JPEG, PNG or WEBP · max 5 MB</p>
-                                </div>
+                            <Textarea label="Description" rows={4} placeholder="What the course covers and who it's for" {...register('description')} />
+                            <div>
+                                <Textarea label="Prerequisites (optional)" rows={2} {...register('prerequisites_text')} />
+                                <p className="mt-1 text-xs text-ink-600">Shown to students for information only — it doesn't block enrolment.</p>
                             </div>
                         </Section>
 
-                        {/* Pricing */}
-                        <Section title="Pricing">
-                            <div className="grid grid-cols-3 gap-3">
+                        <Section title="Pricing" description="What students pay. Set the price to 0 for a free course.">
+                            <div className="grid gap-3 sm:grid-cols-[1fr_7rem]">
                                 <Input label="Price" type="number" step="0.01" error={errors.price?.message} {...register('price')} />
-                                <Input label="Currency" maxLength={3} {...register('currency')} />
-                                <Input label="Confirmation delay (hours)" type="number" error={errors.confirmation_delay_hours?.message} {...register('confirmation_delay_hours')} />
+                                <Input label="Currency" maxLength={3} error={errors.currency?.message} {...register('currency')} />
                             </div>
                         </Section>
 
-                        {/* Enrolment strategy */}
-                        <Section title="Enrolment strategy">
-                            <div className="flex items-start justify-between gap-4">
-                                <p className="text-xs text-ink-600">
-                                    Defaults from level — Beginner: Open, Intermediate: Advisory, Advanced: Application.
+                        <Section title="Enrolment" description="How students join this course.">
+                            <div>
+                                <Input label="Confirmation delay (hours)" type="number" error={errors.confirmation_delay_hours?.message} {...register('confirmation_delay_hours')} />
+                                <p className="mt-1 text-xs text-ink-600">How long after enrolling a student receives their confirmation email.</p>
+                            </div>
+
+                            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-surface-100 bg-surface-50 px-3 py-2.5">
+                                <p className="text-sm text-ink-900">
+                                    {overridePolicy ? 'Custom policy' : <>Follows the level default: <span className="font-semibold">{POLICY_LABEL[DEFAULT_POLICY_BY_LEVEL[level]]}</span></>}
+                                    <span className="block text-xs text-ink-600">Beginner → Open · Intermediate → Advisory · Advanced → Application</span>
                                 </p>
-                                <label className="flex shrink-0 items-center gap-2 text-xs text-ink-900">
+                                <label className="flex shrink-0 items-center gap-2 text-sm text-ink-900">
                                     <input
                                         type="checkbox"
                                         checked={overridePolicy}
                                         onChange={(e) => setOverridePolicy(e.target.checked)}
+                                        aria-label="Override default policy"
                                     />
                                     Override
                                 </label>
                             </div>
 
-                            <Select label="Enrolment policy" disabled={!overridePolicy} {...register('enrolment_policy')}>
-                                <option value="open">Open — instant self-enrol</option>
-                                <option value="advisory">Advisory — prerequisites, then self-enrol</option>
-                                <option value="application">Application — admin reviews and approves</option>
-                            </Select>
+                            <Controller
+                                control={control}
+                                name="enrolment_policy"
+                                render={({ field }) => (
+                                    <Select
+                                        label="Enrolment policy"
+                                        disabled={!overridePolicy}
+                                        name={field.name}
+                                        value={field.value ?? ''}
+                                        onChange={(e) => e.target.value && field.onChange(e.target.value)}
+                                    >
+                                        <option value="open">Open — instant self-enrol</option>
+                                        <option value="advisory">Advisory — prerequisites, then self-enrol</option>
+                                        <option value="application">Application — admin reviews and approves</option>
+                                    </Select>
+                                )}
+                            />
 
                             {enrolmentPolicy === 'advisory' && (
                                 <label className="flex items-center gap-2 text-sm text-ink-900">
@@ -388,7 +459,7 @@ export function CourseFormPage() {
                                                                                 'rounded-md border px-2.5 py-1 font-medium transition-colors',
                                                                                 correctAnswerField.value === option
                                                                                     ? 'border-blue-600 bg-blue-600 text-white'
-                                                                                    : 'border-surface-200 bg-white text-ink-700 hover:border-blue-300',
+                                                                                    : 'border-surface-100 bg-surface-0 text-ink-900 hover:border-blue-400',
                                                                             )}
                                                                         >
                                                                             {option ? 'Yes' : 'No'}
@@ -437,29 +508,63 @@ export function CourseFormPage() {
                                 </div>
                             )}
                         </Section>
-
-                        {/* Status + change log — edit only */}
-                        {isEditing && (
-                            <Section title="Publishing">
-                                <div className="grid grid-cols-2 gap-3">
-                                    <Select label="Status" {...register('status')}>
-                                        <option value="draft">Draft</option>
-                                        <option value="published">Published</option>
-                                        <option value="archived">Archived</option>
-                                    </Select>
-                                    <Textarea label="What changed? (notifies enrolled students)" rows={2} {...register('change_summary')} />
-                                </div>
-                            </Section>
-                        )}
                     </div>
 
-                    {/* RIGHT — instructors (1/3) */}
-                    <div className="lg:self-start overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
+                    {/* ── Side panel (1/3): publishing + instructors ── */}
+                    <div className="space-y-5">
+                        {isEditing && (
+                            <section className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
+                                <div className="border-b border-surface-100 bg-surface-50 px-4 py-3">
+                                    <h2 className="text-sm font-semibold text-ink-900">Publishing</h2>
+                                    <p className="text-xs text-ink-600">Status, and what students are told about changes.</p>
+                                </div>
+                                <div className="space-y-4 p-4">
+                                    <Controller
+                                                control={control}
+                                                name="status"
+                                                render={({ field }) => (
+                                                    <Select
+                                                        label="Status"
+                                                        name={field.name}
+                                                        value={field.value ?? ''}
+                                                        onChange={(e) => e.target.value && field.onChange(e.target.value)}
+                                                    >
+                                                        <option value="draft">Draft</option>
+                                                        <option value="published">Published</option>
+                                                        <option value="archived">Archived</option>
+                                                    </Select>
+                                                )}
+                                            />
+                                            <div>
+                                                <Textarea label="What changed? (optional)" rows={3} {...register('change_summary')} />
+                                                <p className="mt-1 text-xs text-ink-600">Enrolled students are notified with this message.</p>
+                                            </div>
+                                </div>
+                            </section>
+                        )}
+
+                    <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
                         <div className="border-b border-surface-100 bg-surface-50 px-4 py-3">
                             <h2 className="text-sm font-semibold text-ink-900">Instructors</h2>
-                            <p className="text-xs text-ink-600">Assign one or more instructors to this course.</p>
+                            <p className="text-xs text-ink-600">
+                                {user?.role === 'instructor'
+                                    ? 'Only an admin can change who teaches a course.'
+                                    : 'Assign one or more instructors to this course.'}
+                            </p>
                         </div>
-                        <div className="bg-blue-50/20 p-4">
+                        {/* The instructor list comes from an admin-only endpoint, so instructors see who
+                            teaches the course (themselves when creating) rather than an empty picker. */}
+                        {user?.role === 'instructor' ? (
+                            <ul className="space-y-1.5 p-4 text-sm text-ink-900">
+                                {(isEditing ? course?.instructors ?? [] : [user]).map((person) => (
+                                    <li key={person.id}>
+                                        {person.name}
+                                        {person.id === user.id && <span className="text-ink-600"> (you)</span>}
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                        <div className="p-4">
                             <Controller
                                 control={control}
                                 name="instructor_ids"
@@ -490,19 +595,10 @@ export function CourseFormPage() {
                                 )}
                             />
                         </div>
+                        )}
+                    </div>
                     </div>
                 </div>
-
-                {/* Submit */}
-                <div className="flex items-center gap-3">
-                    <Button type="submit" isLoading={isSubmitting}>
-                        {isEditing ? 'Save changes' : 'Create course'}
-                    </Button>
-                    <Button type="button" variant="ghost" onClick={() => navigate('/admin/courses')}>
-                        Cancel
-                    </Button>
-                </div>
-            </form>
-        </div>
+        </form>
     );
 }
