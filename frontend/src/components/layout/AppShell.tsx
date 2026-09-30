@@ -10,6 +10,7 @@ import {
     CreditCard,
     FileCheck,
     GraduationCap,
+    Compass,
     LayoutDashboard,
     LifeBuoy,
     Menu,
@@ -79,10 +80,12 @@ function navItemsForRole(role: string): NavItem[] {
     }
 
     return [
-        { to: '/dashboard', label: 'My courses', icon: LayoutDashboard, end: true },
+        { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
+        { to: '/my-courses', label: 'My courses', icon: BookOpen },
+        { to: '/#courses', label: 'Browse catalogue', short: 'Browse', icon: Compass },
         { to: '/forums', label: 'Forums', icon: MessagesSquare },
-        { to: '/#courses', label: 'Browse catalogue', short: 'Browse', icon: BookOpen },
         ...communicationItems,
+        { to: '/certificates', label: 'Certificates', icon: Award },
     ];
 }
 

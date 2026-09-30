@@ -277,7 +277,7 @@ export function CoursePlayerPage() {
 
     return (
         <PageFrame
-            breadcrumbs={[{ label: 'My courses', to: '/dashboard' }, { label: course?.title ?? '' }]}
+            breadcrumbs={[{ label: 'My courses', to: '/my-courses' }, { label: course?.title ?? '' }]}
             title={course?.title ?? 'Course'}
             actions={
                 <>

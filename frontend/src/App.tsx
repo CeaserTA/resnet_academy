@@ -13,6 +13,9 @@ import { CourseDetailPage } from '@/features/catalogue/CourseDetailPage';
 import { CataloguePage } from '@/features/catalogue/CataloguePage';
 import { CohortPage } from '@/features/catalogue/CohortPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
+import { MyCoursesPage } from '@/features/enrolment/MyCoursesPage';
+import { MyCertificatesPage } from '@/features/certificates/MyCertificatesPage';
+import { MyPaymentsPage } from '@/features/payments/MyPaymentsPage';
 import { CourseListPage } from '@/features/admin/courses/CourseListPage';
 import { CourseFormPage } from '@/features/admin/courses/CourseFormPage';
 import { CohortsListPage } from '@/features/cohorts/CohortsListPage';
@@ -97,6 +100,30 @@ function App() {
                 >
                     <Route path="verify-email" element={<VerifyEmailNoticePage />} />
                     <Route path="dashboard" element={<DashboardPage />} />
+                    <Route
+                        path="my-courses"
+                        element={
+                            <ProtectedRoute roles={['student']}>
+                                <MyCoursesPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="payments"
+                        element={
+                            <ProtectedRoute roles={['student']}>
+                                <MyPaymentsPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="certificates"
+                        element={
+                            <ProtectedRoute roles={['student']}>
+                                <MyCertificatesPage />
+                            </ProtectedRoute>
+                        }
+                    />
                     <Route path="account" element={<AccountPage />} />
                     <Route path="profile/complete" element={<ProfileCompletionPage />} />
                     <Route path="profile/edit" element={<ProfileCompletionPage />} />

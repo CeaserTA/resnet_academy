@@ -218,7 +218,7 @@ export function ForumPage() {
                 <div className="min-w-0">
                     <Breadcrumbs
                         items={[
-                            isStaff ? { label: 'Courses', to: '/admin/courses' } : { label: 'My courses', to: '/dashboard' },
+                            isStaff ? { label: 'Courses', to: '/admin/courses' } : { label: 'My courses', to: '/my-courses' },
                             { label: course?.title ?? 'Course', to: isStaff ? `/admin/courses/${courseId}/modules` : `/learn/courses/${courseId}` },
                             { label: 'Forum' },
                         ]}

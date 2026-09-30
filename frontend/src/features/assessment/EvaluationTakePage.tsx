@@ -440,7 +440,7 @@ export function EvaluationTakePage() {
             <PageFrame
                 width="reading"
                 breadcrumbs={[
-                    { label: 'My courses', to: '/dashboard' },
+                    { label: 'My courses', to: '/my-courses' },
                     { label: course?.title ?? '', to: `/learn/courses/${courseId}` },
                     { label: overview.title },
                 ]}
@@ -482,7 +482,7 @@ export function EvaluationTakePage() {
             <div className="sticky top-0 z-20 flex flex-col gap-1 border-b border-surface-100 bg-surface-50 pb-3 pt-1 before:absolute before:inset-x-0 before:-top-8 before:h-8 before:bg-surface-50 before:content-['']">
                 <Breadcrumbs
                     items={[
-                        { label: 'My courses', to: '/dashboard' },
+                        { label: 'My courses', to: '/my-courses' },
                         { label: course?.title ?? '', to: `/learn/courses/${courseId}` },
                         { label: `Attempt #${session.attempt.attempt_number}` },
                     ]}

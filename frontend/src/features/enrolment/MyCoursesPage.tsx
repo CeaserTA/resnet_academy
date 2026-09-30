@@ -5,7 +5,6 @@ import {
     Award,
     BookOpen,
     CalendarClock,
-    Compass,
     CreditCard,
     LogOut,
     Star,
@@ -426,21 +425,15 @@ export function MyCoursesPage() {
                 <ProfileCompletionModal profileStatus={profileStatus} onClose={handleCloseProfileModal} />
             )}
 
-            {/* Page actions — the title and count are in the top bar */}
-            <div className="flex flex-wrap items-center justify-end gap-2">
-                {payableEnrolments.length > 0 && (
+            {/* Page action — only when something is owed; the title and count are in the top bar */}
+            {payableEnrolments.length > 0 && (
+                <div className="flex justify-end">
                     <Button size="sm" variant="secondary" onClick={() => setIsMakingPayment(true)}>
                         <CreditCard className="size-3.5" aria-hidden="true" />
                         Make a payment
                     </Button>
-                )}
-                <Link to="/courses">
-                    <Button size="sm" variant="secondary">
-                        <Compass className="size-3.5" aria-hidden="true" />
-                        Browse courses
-                    </Button>
-                </Link>
-            </div>
+                </div>
+            )}
 
             {/* Success messages */}
             {transferSuccessMessage && (
@@ -481,15 +474,11 @@ export function MyCoursesPage() {
 
             {/* Course grid */}
             {activeEnrolments.length === 0 ? (
+                // Informational only — "Browse catalogue" in the sidebar is the one way to enrol.
                 <EmptyState
                     icon={BookOpen}
-                    title="No courses yet"
-                    description="Browse the catalogue to find your first course."
-                    action={
-                        <Link to="/courses">
-                            <Button size="sm">Browse the catalogue</Button>
-                        </Link>
-                    }
+                    title="You haven't enrolled in any courses yet"
+                    description="Courses you enrol in will appear here."
                 />
             ) : (
                 <div>

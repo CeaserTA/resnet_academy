@@ -481,7 +481,7 @@ it('does not render ProfileCompletionCard when profile is complete', async () =>
 
     renderPage();
 
-    await screen.findByText('Browse courses');
+    await screen.findByText('Intro to Testing');
 
     expect(screen.queryByText('Complete your profile')).not.toBeInTheDocument();
 });
@@ -492,7 +492,7 @@ it('hides ProfileCompletionCard on API error', async () => {
 
     renderPage();
 
-    await screen.findByText('Browse courses');
+    await screen.findByText('Intro to Testing');
 
     expect(screen.queryByText('Complete your profile')).not.toBeInTheDocument();
     expect(consoleSpy).toHaveBeenCalledWith('Failed to fetch profile status:', expect.any(Error));
@@ -512,7 +512,7 @@ it('positions ProfileCompletionCard at the top before other content', async () =
     await screen.findByText('Complete your profile');
 
     const container = screen.getByText('Complete your profile').closest('div');
-    const pageActions = screen.getByText('Browse courses');
+    const pageActions = await screen.findByText('Intro to Testing');
 
     // ProfileCompletionCard should appear before the page's own content in DOM order
     expect(container?.compareDocumentPosition(pageActions)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
@@ -521,7 +521,7 @@ it('positions ProfileCompletionCard at the top before other content', async () =
 it('calls profileApi.getStatus on component mount', async () => {
     renderPage();
 
-    await screen.findByText('Browse courses');
+    await screen.findByText('Intro to Testing');
 
     expect(profileApi.getStatus).toHaveBeenCalledTimes(1);
 });

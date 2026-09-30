@@ -187,7 +187,7 @@ export function ResourceViewerPage() {
         return (
             <div className="mx-auto max-w-xl py-16 text-center">
                 <p className="text-ink-600">This link is missing course context.</p>
-                <Link to="/dashboard" className="mt-3 inline-block text-sm text-blue-600 hover:underline">
+                <Link to="/my-courses" className="mt-3 inline-block text-sm text-blue-600 hover:underline">
                     Back to my courses
                 </Link>
             </div>
@@ -208,7 +208,7 @@ export function ResourceViewerPage() {
         <PageFrame
             width={isReading ? 'reading' : 'full'}
             breadcrumbs={[
-                { label: 'My courses', to: '/dashboard' },
+                { label: 'My courses', to: '/my-courses' },
                 { label: course?.title ?? '', to: `/learn/courses/${courseId}` },
                 { label: resource.title },
             ]}

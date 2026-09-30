@@ -251,7 +251,7 @@ export function AssignmentSubmitPage() {
         return (
             <div className="mx-auto max-w-xl py-12 text-center">
                 <p className="text-ink-600">Assignment not found.</p>
-                <Link to="/dashboard" className="mt-3 inline-block text-sm text-blue-600 hover:underline">
+                <Link to="/my-courses" className="mt-3 inline-block text-sm text-blue-600 hover:underline">
                     Back to my courses
                 </Link>
             </div>
@@ -263,7 +263,7 @@ export function AssignmentSubmitPage() {
         return (
             <div className="mx-auto max-w-xl py-12 text-center">
                 <p className="text-ink-600">This link is missing course context.</p>
-                <Link to="/dashboard" className="mt-3 inline-block text-sm text-blue-600 hover:underline">
+                <Link to="/my-courses" className="mt-3 inline-block text-sm text-blue-600 hover:underline">
                     Back to my courses
                 </Link>
             </div>
@@ -295,7 +295,7 @@ export function AssignmentSubmitPage() {
     return (
         <PageFrame
             breadcrumbs={[
-                { label: 'My courses', to: '/dashboard' },
+                { label: 'My courses', to: '/my-courses' },
                 { label: course?.title ?? '', to: `/learn/courses/${courseId}` },
                 { label: assignment.title },
             ]}
