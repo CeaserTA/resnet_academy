@@ -44,7 +44,9 @@ export function StudentDashboardPage() {
     // In-progress = not yet completed, in a course the student is still enrolled in.
     const continueRows = (progressRows ?? []).filter((r) => r.status !== 'completed' && enrolledCourseIds.has(r.course.id));
     const certificateCount = certificates?.length ?? 0;
-    const finance = financeTotals(paidCourseOrders(enrolments));
+    const orders = paidCourseOrders(enrolments);
+    const finance = financeTotals(orders);
+    const unpaidCourses = orders.filter((o) => o.remaining_balance > 0 && o.currency === finance?.currency).length;
     const firstName = user?.first_name || user?.name?.split(' ')[0] || 'there';
 
     const contextLine = [
@@ -84,15 +86,27 @@ export function StudentDashboardPage() {
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                             <VolumeCard icon={Receipt} label="Total owed" value={formatMoney(finance.total, finance.currency)} sub="Across your paid courses" />
                             <VolumeCard icon={Wallet} label="Paid" value={formatMoney(finance.paid, finance.currency)} sub="Confirmed payments" />
-                            {/* The accent colour only when there is actually something left to pay. */}
-                            <AttentionCard
-                                icon={finance.outstanding > 0 ? AlertTriangle : CheckCircle2}
-                                label="Outstanding"
-                                value={formatMoney(finance.outstanding, finance.currency)}
-                                sub={finance.outstanding > 0 ? 'Pay from My courses' : 'Nothing left to pay'}
-                                tone={finance.outstanding > 0 ? 'warning' : 'neutral'}
-                                to={finance.outstanding > 0 ? '/my-courses' : undefined}
-                            />
+                            {/* The accent colour and a "Pay now" button only when something is left to pay —
+                                the button opens My courses with the payment window already open. "See all"
+                                above is the separate, read-only payment history. */}
+                            {finance.outstanding > 0 ? (
+                                <AttentionCard
+                                    icon={AlertTriangle}
+                                    label="Outstanding"
+                                    value={formatMoney(finance.outstanding, finance.currency)}
+                                    sub={`Across ${plural(unpaidCourses, 'unpaid course')}`}
+                                    tone="warning"
+                                    action={{ label: 'Pay now', to: '/my-courses?pay=1' }}
+                                />
+                            ) : (
+                                <AttentionCard
+                                    icon={CheckCircle2}
+                                    label="Outstanding"
+                                    value={formatMoney(0, finance.currency)}
+                                    sub="Nothing left to pay"
+                                    tone="neutral"
+                                />
+                            )}
                         </div>
                         {finance.hasOtherCurrencies && (
                             <p className="mt-2 text-xs text-ink-600">Totals shown in {finance.currency}. See all for payments in other currencies.</p>

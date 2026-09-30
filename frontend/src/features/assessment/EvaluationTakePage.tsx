@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router';
-import { Award, CheckCircle2, Clock, Eye, Hash, ListChecks, XCircle } from 'lucide-react';
+import { Award, CheckCircle2, Clock, Eye, Hash, ListChecks, RotateCcw, XCircle } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Alert } from '@/components/ui/Alert';
 import { Spinner } from '@/components/ui/Spinner';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
+import { Modal } from '@/components/ui/Modal';
 import { useCourse } from '@/features/catalogue/useCourses';
 import { ApiError } from '@/lib/api/client';
 import {
@@ -149,14 +150,22 @@ function CountdownBadge({ deadline, onExpire }: { deadline: Date; onExpire: () =
     );
 }
 
-function AttemptResult({ attempt }: { attempt: EvaluationAttempt }) {
+function AttemptResult({ attempt, retake }: { attempt: EvaluationAttempt; retake?: { label: string; onClick: () => void } }) {
     const [showReview, setShowReview] = useState(false);
 
     const reviewButton = (
-        <Button variant="outline" onClick={() => setShowReview(true)} className="mt-3">
-            <Eye className="size-4" />
-            Review answers
-        </Button>
+        <div className="mt-3 flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => setShowReview(true)}>
+                <Eye className="size-4" />
+                Review answers
+            </Button>
+            {retake && (
+                <Button onClick={retake.onClick}>
+                    <RotateCcw className="size-4" aria-hidden="true" />
+                    {retake.label}
+                </Button>
+            )}
+        </div>
     );
 
     if (attempt.status === 'submitted') {
@@ -201,6 +210,62 @@ function AttemptResult({ attempt }: { attempt: EvaluationAttempt }) {
     );
 }
 
+/** Confirms starting (or retaking) an evaluation in the app's own modal, with its key limits. */
+function StartConfirmModal({
+    overview,
+    isStarting,
+    error,
+    onConfirm,
+    onClose,
+}: {
+    overview: EvaluationOverview;
+    isStarting: boolean;
+    error: string | null;
+    onConfirm: () => void;
+    onClose: () => void;
+}) {
+    return (
+        <Modal
+            isOpen
+            onClose={onClose}
+            title={`Start ${overview.title}?`}
+            footer={
+                <>
+                    <Button variant="ghost" onClick={onClose}>Cancel</Button>
+                    <Button onClick={onConfirm} isLoading={isStarting}>Start now</Button>
+                </>
+            }
+        >
+            {error && <Alert variant="error" message={error} className="mb-3" />}
+            <p className="text-sm text-ink-600">
+                {overview.time_limit_minutes !== null
+                    ? 'Your attempt and the timer begin as soon as you start.'
+                    : 'Your attempt begins as soon as you start.'}
+            </p>
+            <dl className="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
+                <div className="rounded-lg bg-surface-50 px-3 py-2">
+                    <dt className="text-xs text-ink-600">Time limit</dt>
+                    <dd className="font-medium text-ink-900">
+                        {overview.time_limit_minutes !== null ? `${overview.time_limit_minutes} minutes` : 'None'}
+                    </dd>
+                </div>
+                <div className="rounded-lg bg-surface-50 px-3 py-2">
+                    <dt className="text-xs text-ink-600">Attempt</dt>
+                    <dd className="font-medium text-ink-900">
+                        {overview.max_attempts !== null
+                            ? `${overview.attempts_used + 1} of ${overview.max_attempts}`
+                            : `${overview.attempts_used + 1} (unlimited)`}
+                    </dd>
+                </div>
+                <div className="rounded-lg bg-surface-50 px-3 py-2">
+                    <dt className="text-xs text-ink-600">Questions</dt>
+                    <dd className="font-medium text-ink-900">{overview.question_count}</dd>
+                </div>
+            </dl>
+        </Modal>
+    );
+}
+
 function StatTile({ icon: Icon, label, value }: { icon: typeof Clock; label: string; value: string }) {
     return (
         <div className="flex items-center gap-3 rounded-md border border-surface-100 bg-surface-50 px-3 py-2.5">
@@ -231,6 +296,7 @@ function InstructionScreen({
     error: string | null;
 }) {
     const [reviewAttempt, setReviewAttempt] = useState<EvaluationAttempt | null>(null);
+    const [isConfirmingStart, setIsConfirmingStart] = useState(false);
 
     const completedAttempts = attempts.filter((a) => a.status === 'submitted' || a.status === 'graded');
     // Passing completes the evaluation for the student — after that there is nothing left
@@ -246,13 +312,8 @@ function InstructionScreen({
             onStart();
             return;
         }
-
-        const confirmed = window.confirm(
-            'Are you sure you want to start? Your attempt and timer will begin immediately.',
-        );
-        if (confirmed) {
-            onStart();
-        }
+        // Same styled confirm modal as the app's other confirmations (not the browser's confirm()).
+        setIsConfirmingStart(true);
     };
 
     const attemptsLabel =
@@ -350,6 +411,16 @@ function InstructionScreen({
                     attemptNumber={reviewAttempt.attempt_number}
                 />
             )}
+
+            {isConfirmingStart && (
+                <StartConfirmModal
+                    overview={overview}
+                    isStarting={isStarting}
+                    error={error}
+                    onConfirm={onStart}
+                    onClose={() => setIsConfirmingStart(false)}
+                />
+            )}
         </div>
     );
 }
@@ -376,6 +447,7 @@ export function EvaluationTakePage() {
     const [answers, setAnswers] = useState<AnswerState>({});
     const [result, setResult] = useState<EvaluationAttempt | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [isConfirmingRetake, setIsConfirmingRetake] = useState(false);
 
     const handleStart = () => {
         setError(null);
@@ -383,6 +455,8 @@ export function EvaluationTakePage() {
             onSuccess: (data) => {
                 setSession(data);
                 setAnswers(emptyAnswers(data.questions));
+                setResult(null);
+                setIsConfirmingRetake(false);
             },
             onError: (err) => setError(err instanceof ApiError ? err.message : 'Could not start this evaluation.'),
         });
@@ -457,6 +531,23 @@ export function EvaluationTakePage() {
         );
     }
 
+    // Retake: only after a graded attempt that did not pass, and only while attempts remain.
+    // `overview` is refetched when an attempt is submitted (useSubmitAttempt invalidates it), so
+    // attempts_remaining already counts the attempt just taken; null means unlimited.
+    const attemptsLeft = overview?.attempts_remaining ?? null;
+    const canRetake =
+        result !== null &&
+        result.status === 'graded' &&
+        result.passed === false &&
+        overview !== undefined &&
+        (attemptsLeft === null || attemptsLeft > 0);
+    const retake = canRetake
+        ? {
+            label: attemptsLeft === null ? 'Retake' : `Retake (${attemptsLeft} ${attemptsLeft === 1 ? 'attempt' : 'attempts'} left)`,
+            onClick: () => setIsConfirmingRetake(true),
+        }
+        : undefined;
+
     // Evaluation has no questions yet — guard before the student can submit an empty attempt
     if (session.questions.length === 0) {
         return (
@@ -495,7 +586,16 @@ export function EvaluationTakePage() {
 
             {result ? (
                 <div className="mt-6">
-                    <AttemptResult attempt={result} />
+                    <AttemptResult attempt={result} retake={retake} />
+                    {isConfirmingRetake && overview && (
+                        <StartConfirmModal
+                            overview={overview}
+                            isStarting={startAttempt.isPending}
+                            error={error}
+                            onConfirm={handleStart}
+                            onClose={() => setIsConfirmingRetake(false)}
+                        />
+                    )}
                 </div>
             ) : (
                 <div className="mt-6 flex flex-col gap-4">

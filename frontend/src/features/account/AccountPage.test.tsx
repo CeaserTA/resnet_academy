@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
@@ -68,19 +68,18 @@ function renderPage() {
     );
 }
 
-it('requires a second click to confirm deactivation, then calls the API', async () => {
+it('asks for confirmation in a modal before deactivating, then calls the API', async () => {
     const user = userEvent.setup();
     renderPage();
 
     expect(await screen.findByText(/quiet@example.com/)).toBeInTheDocument();
 
-    const deactivateButton = screen.getByRole('button', { name: 'Deactivate my account' });
-    await user.click(deactivateButton);
+    await user.click(screen.getByRole('button', { name: 'Deactivate my account' }));
 
-    expect(await screen.findByRole('button', { name: 'Confirm deactivation?' })).toBeInTheDocument();
+    const dialog = await screen.findByRole('dialog', { name: 'Deactivate your account?' });
     expect(requestAccountDeactivation).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole('button', { name: 'Confirm deactivation?' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Deactivate account' }));
 
     expect(requestAccountDeactivation).toHaveBeenCalledTimes(1);
 });

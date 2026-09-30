@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import {
     ArrowRight,
     Award,
@@ -357,7 +357,9 @@ export function MyCoursesPage() {
     const cancelTransferRequest = useCancelTransferRequest();
 
     const [withdrawingEnrolment, setWithdrawingEnrolment] = useState<Enrolment | null>(null);
-    const [isMakingPayment, setIsMakingPayment] = useState(false);
+    // "Pay now" on the Dashboard links here with ?pay=1 to open the payment window straight away.
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [isMakingPayment, setIsMakingPayment] = useState(() => searchParams.get('pay') === '1');
     const [reviewingCourse, setReviewingCourse] = useState<{ id: number; title: string } | null>(null);
     const [profileStatus, setProfileStatus] = useState<ProfileStatus | null>(null);
     const [showProfileModal, setShowProfileModal] = useState(false);
@@ -387,6 +389,14 @@ export function MyCoursesPage() {
     const activeCount = (data?.data ?? []).filter((e) => e.status !== 'withdrawn' && e.status !== 'transferred').length;
     usePageHeader('My courses', isLoading ? undefined : `${activeCount} active enrolment${activeCount !== 1 ? 's' : ''}`);
 
+    // One-shot: drop ?pay=1 once read, so a refresh or back-navigation doesn't reopen the window.
+    useEffect(() => {
+        if (searchParams.has('pay')) {
+            searchParams.delete('pay');
+            setSearchParams(searchParams, { replace: true });
+        }
+    }, [searchParams, setSearchParams]);
+
     const handleCloseProfileModal = () => {
         setShowProfileModal(false);
         sessionStorage.setItem(PROFILE_MODAL_DISMISSED_KEY, '1');
@@ -400,8 +410,11 @@ export function MyCoursesPage() {
         }
     };
 
-    const handleCancelTransfer = async (enrolmentId: number) => {
-        await cancelTransferRequest.mutateAsync(enrolmentId);
+    // Low-stakes and reversible (the student can request a transfer again), so it acts straight
+    // away — but says so, like the other enrolment actions on this page.
+    const handleCancelTransfer = async (enrolment: Enrolment) => {
+        await cancelTransferRequest.mutateAsync(enrolment.id);
+        setTransferSuccessMessage(`Transfer request cancelled — you're still enrolled in ${enrolment.course.title}.`);
     };
 
     if (isLoading) return <Spinner />;
@@ -491,7 +504,7 @@ export function MyCoursesPage() {
                                 progress={progressByCourseId.get(enrolment.course.id)}
                                 review={reviewByCourseId.get(enrolment.course.id)}
                                 onWithdraw={() => setWithdrawingEnrolment(enrolment)}
-                                onCancelTransfer={() => handleCancelTransfer(enrolment.id)}
+                                onCancelTransfer={() => handleCancelTransfer(enrolment)}
                                 onReview={() => setReviewingCourse({ id: enrolment.course.id, title: enrolment.course.title })}
                                 onPay={() => setIsMakingPayment(true)}
                             />
@@ -501,7 +514,7 @@ export function MyCoursesPage() {
             )}
 
             {/* Modals */}
-            {isMakingPayment && (
+            {isMakingPayment && payableEnrolments.length > 0 && (
                 <MakePaymentModal
                     enrolments={payableEnrolments}
                     onClose={() => setIsMakingPayment(false)}

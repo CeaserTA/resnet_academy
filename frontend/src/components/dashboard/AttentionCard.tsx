@@ -8,7 +8,10 @@ export interface AttentionCardProps {
     value: number | string;
     sub: string;
     tone: 'danger' | 'warning' | 'neutral';
+    /** Makes the whole card a link. Ignored when `action` is given. */
     to?: string;
+    /** An explicit call-to-action button inside the card; the card itself is then not clickable. */
+    action?: { label: string; to: string };
 }
 
 const ATTENTION_STYLES: Record<AttentionCardProps['tone'], { card: string; icon: string; value: string }> = {
@@ -22,10 +25,10 @@ const ATTENTION_STYLES: Record<AttentionCardProps['tone'], { card: string; icon:
  * "Needs action" card shared by the admin and instructor dashboards. Tinted only when there is
  * something to do, so the accent colour stays rare and meaningful.
  */
-export function AttentionCard({ icon: Icon, label, value, sub, tone, to }: AttentionCardProps) {
+export function AttentionCard({ icon: Icon, label, value, sub, tone, to, action }: AttentionCardProps) {
     const s = ATTENTION_STYLES[tone];
     const inner = (
-        <div className={cn('group flex flex-col gap-3 rounded-xl border p-4 shadow-sm transition-all hover:shadow-md', s.card)}>
+        <div className={cn('group flex flex-col gap-3 rounded-xl border p-4 shadow-sm', !action && 'transition-all hover:shadow-md', s.card)}>
             <div className="flex items-start justify-between">
                 <p className="text-xs font-medium uppercase tracking-widest text-ink-600">{label}</p>
                 <span className={cn('flex size-7 items-center justify-center rounded-lg', s.icon)}>
@@ -34,8 +37,16 @@ export function AttentionCard({ icon: Icon, label, value, sub, tone, to }: Atten
             </div>
             <p className={cn('text-3xl font-bold tabular-nums', s.value)}>{value}</p>
             <p className="text-xs text-ink-600">{sub}</p>
+            {action && (
+                <Link
+                    to={action.to}
+                    className="inline-flex items-center justify-center self-start rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                >
+                    {action.label}
+                </Link>
+            )}
         </div>
     );
-    if (to) return <Link to={to} className="block">{inner}</Link>;
+    if (to && !action) return <Link to={to} className="block">{inner}</Link>;
     return inner;
 }

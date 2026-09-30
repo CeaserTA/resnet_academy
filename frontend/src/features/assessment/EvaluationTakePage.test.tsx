@@ -71,8 +71,6 @@ vi.mock('@/features/assessment/api', () => ({
 }));
 
 beforeEach(() => {
-    // jsdom's confirm() returns false by default; the start flow gates on it.
-    vi.stubGlobal('confirm', vi.fn(() => true));
 });
 
 it('shows instructions first, then lets a student answer a question and see whether they passed', async () => {
@@ -94,6 +92,8 @@ it('shows instructions first, then lets a student answer a question and see whet
     expect(screen.getByText('No time limit')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Start Evaluation' }));
+    // Starting is confirmed in the app's own modal, not the browser's confirm().
+    await user.click(await screen.findByRole('button', { name: 'Start now' }));
 
     expect(await screen.findByText('1. What is 2 + 2?')).toBeInTheDocument();
     // Never shown an answer key on this screen.
