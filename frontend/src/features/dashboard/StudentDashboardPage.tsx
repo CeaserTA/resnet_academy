@@ -140,17 +140,15 @@ export function StudentDashboardPage() {
             <div className="grid grid-cols-1 gap-5 xl:grid-cols-3 xl:items-start">
                 {/* ═══ Main column ═══ */}
                 <div className="space-y-5 xl:col-span-2">
-                    {/* Welcome banner — navy like the sidebar; decorative shapes in translucent white */}
-                    <section className="relative overflow-hidden rounded-2xl bg-blue-700 px-6 py-6 text-white shadow-sm sm:px-8">
-                        <span className="pointer-events-none absolute -right-10 -top-14 size-48 rounded-full bg-white/10" aria-hidden="true" />
-                        <span className="pointer-events-none absolute -bottom-16 right-40 size-40 rounded-full bg-white/5" aria-hidden="true" />
+                    {/* Welcome banner */}
+                    <section className="relative overflow-hidden rounded-2xl bg-navy px-6 py-6 text-white shadow-sm sm:px-8">
                         <div className="relative flex items-center justify-between gap-6">
                             <div className="min-w-0">
-                                <p className="text-xs font-medium text-blue-100">
+                                <p className="text-xs font-medium text-navy-foreground/50">
                                     {WEEKDAY.format(today)}, {formatDate(today)}
                                 </p>
-                                <h1 className="mt-2 font-display text-2xl font-semibold text-white sm:text-3xl">Welcome back, {firstName}!</h1>
-                                <p className="mt-1 text-sm text-blue-100">
+                                <h1 className="mt-2 font-display text-2xl font-semibold text-navy-foreground sm:text-3xl">Welcome back, {firstName}!</h1>
+                                <p className="mt-1 text-sm text-navy-foreground/70">
                                     {nextCourse
                                         ? `Pick up where you left off in ${nextCourse.enrolment.course.title}.`
                                         : enrolments.length > 0
@@ -160,7 +158,7 @@ export function StudentDashboardPage() {
                                 {nextCourse && (
                                     <Link
                                         to={`/learn/courses/${nextCourse.enrolment.course.id}`}
-                                        className="mt-4 inline-flex items-center gap-2 rounded-lg bg-surface-0 px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm transition-colors hover:bg-blue-50"
+                                        className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-500"
                                     >
                                         <PlayCircle className="size-4" aria-hidden="true" />
                                         Continue learning
@@ -170,12 +168,28 @@ export function StudentDashboardPage() {
                             <img
                                 src="/images/online_study.jpg"
                                 alt=""
-                                className="hidden h-32 w-48 shrink-0 rounded-xl object-cover ring-4 ring-white/15 md:block lg:h-36 lg:w-56"
+                                className="hidden h-32 w-48 shrink-0 rounded-xl object-cover opacity-80 ring-4 ring-white/10 md:block lg:h-36 lg:w-56"
                             />
                         </div>
                     </section>
 
                     {paymentMessage && <Alert variant="success" message={paymentMessage} onDismiss={() => setPaymentMessage(null)} />}
+
+                    {/* Quick stats strip */}
+                    {enrolments.length > 0 && (
+                        <div className="grid grid-cols-3 gap-3">
+                            {[
+                                { label: 'Enrolled', value: enrolments.length, color: 'text-primary', bg: 'bg-blue-50' },
+                                { label: 'Completed', value: completedCount, color: 'text-success-600', bg: 'bg-surface-50' },
+                                { label: 'Certificates', value: certificateCount, color: 'text-accent-amber', bg: 'bg-surface-50' },
+                            ].map(({ label, value, color, bg }) => (
+                                <div key={label} className={`flex flex-col gap-1 rounded-2xl border border-border ${bg} px-4 py-4`}>
+                                    <p className={`text-2xl font-bold tabular-nums ${color}`}>{value}</p>
+                                    <p className="text-xs text-ink-600">{label}</p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
                     {/* Your courses — enrolled cards (progress + next step), then recommended ones in the same grid */}
                     <section>
@@ -206,7 +220,7 @@ export function StudentDashboardPage() {
                                     const upcoming = progress?.status === 'upcoming' && progress.starts_on;
                                     const done = progress?.status === 'completed';
                                     return (
-                                        <article key={enrolment.id} className="flex flex-col overflow-hidden rounded-2xl border border-surface-100 bg-surface-0 shadow-sm transition-shadow hover:shadow-md">
+                                        <article key={enrolment.id} className="flex flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-sm transition-shadow hover:shadow-md">
                                             <Link to={`/learn/courses/${course.id}`} className="relative block h-32 overflow-hidden bg-blue-50">
                                                 {image ? (
                                                     <img src={image} alt="" className="size-full object-cover transition duration-300 hover:scale-105" />
@@ -242,10 +256,10 @@ export function StudentDashboardPage() {
                                                     <Link
                                                         to={`/learn/courses/${course.id}`}
                                                         className={cn(
-                                                            'mt-auto inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                                                            'mt-auto inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors active:scale-95',
                                                             done
-                                                                ? 'border border-blue-600 text-blue-600 hover:bg-blue-50'
-                                                                : 'bg-blue-600 text-white shadow-sm hover:bg-blue-700',
+                                                                ? 'border border-primary text-primary hover:bg-blue-50'
+                                                                : 'bg-primary text-white shadow-sm hover:bg-blue-700',
                                                         )}
                                                     >
                                                         {done ? 'Review course' : percent === 0 ? 'Start course' : 'Continue'}
@@ -271,7 +285,7 @@ export function StudentDashboardPage() {
                                     return (
                                         <article
                                             key={`rec-${course.id}`}
-                                            className="flex flex-col overflow-hidden rounded-2xl border border-dashed border-blue-100 bg-surface-0 shadow-sm transition-shadow hover:shadow-md"
+                                            className="flex flex-col overflow-hidden rounded-2xl border border-border bg-surface-50 shadow-sm transition-shadow hover:shadow-md"
                                         >
                                             <Link to={`/courses/${course.id}`} className="group relative block h-32 overflow-hidden bg-blue-50">
                                                 {image ? (
@@ -296,7 +310,7 @@ export function StudentDashboardPage() {
                                                 </div>
                                                 <Link
                                                     to={`/courses/${course.id}`}
-                                                    className="mt-auto inline-flex items-center justify-center gap-1.5 rounded-lg border border-surface-100 px-3 py-2 text-sm font-medium text-ink-900 transition-colors hover:border-blue-600 hover:text-blue-600"
+                                                    className="mt-auto inline-flex items-center justify-center gap-1.5 rounded-full border border-border px-4 py-2 text-sm font-semibold text-ink-900 transition-colors hover:border-primary hover:text-primary"
                                                 >
                                                     View course
                                                     <ArrowRight className="size-4" aria-hidden="true" />
@@ -323,8 +337,8 @@ export function StudentDashboardPage() {
                                 { label: 'Completed', value: completedCount },
                                 { label: 'Certificates', value: certificateCount },
                             ].map(({ label, value }) => (
-                                <div key={label} className="rounded-xl bg-blue-50 px-2 py-2.5">
-                                    <dd className="text-lg font-bold tabular-nums text-blue-700">{value}</dd>
+                                <div key={label} className="rounded-xl border border-border bg-surface-50 px-2 py-2.5">
+                                    <dd className="text-lg font-bold tabular-nums text-primary">{value}</dd>
                                     <dt className="text-[11px] text-ink-600">{label}</dt>
                                 </div>
                             ))}
