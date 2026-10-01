@@ -9,11 +9,11 @@ import {
     ChevronRight,
     ChevronUp,
     Circle,
+    ClipboardList,
     FileCheck2,
     ListChecks,
     Lock,
     MessageCircle,
-    Star,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -26,6 +26,7 @@ import { useCoursePlayer } from '@/features/learning/useLearning';
 import { useProgressDashboard } from '@/features/progress/useProgress';
 import { ReviewFormModal } from '@/features/reviews/ReviewFormModal';
 import { useMyReviews } from '@/features/reviews/useReviews';
+import { ReviewStatus } from '@/features/reviews/ReviewStatus';
 import {
     describeLockedModule,
     findNextIncompleteItemInUnlockedModules,
@@ -232,9 +233,10 @@ export function CoursePlayerPage() {
     const { data: course } = useCourse(courseId);
     const { modules, progress } = useCoursePlayer(courseId);
     const { data: progressRows } = useProgressDashboard();
-    const { data: myReviews } = useMyReviews();
+    const { data: myReviews, isSuccess: reviewsLoaded } = useMyReviews();
     const [manualToggles, setManualToggles] = useState<Record<number, boolean>>({});
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState<'content' | 'assessments'>('content');
 
     if (modules.isLoading || progress.isLoading) {
         return <Spinner />;
@@ -274,6 +276,23 @@ export function CoursePlayerPage() {
     function reviewItemForModule(module: Module): ModuleItem | null {
         return flattenModuleItems([module])[0] ?? null;
     }
+
+    // Aggregate all assignments + evaluations across every module for the Assessments tab
+    const assessmentModules = sortedModules
+        .map((module) => {
+            const sortedItems = module.items.slice().sort((a, b) => a.order_index - b.order_index);
+            return {
+                module,
+                assignments: sortedItems.filter((i) => i.item_type === 'assignment'),
+                evaluations: sortedItems.filter((i) => i.item_type === 'evaluation'),
+            };
+        })
+        .filter(({ assignments, evaluations }) => assignments.length > 0 || evaluations.length > 0);
+
+    const totalAssessments = assessmentModules.reduce(
+        (sum, { assignments, evaluations }) => sum + assignments.length + evaluations.length,
+        0,
+    );
 
     return (
         <PageFrame
@@ -333,136 +352,162 @@ export function CoursePlayerPage() {
             ) : courseCompleted ? (
                 <div className="flex items-center justify-between gap-2">
                     <Alert variant="success" message="You've completed this course!" className="flex-1" />
-                    {hasCompletedCourse && !myReview && (
-                        <Button variant="secondary" onClick={() => setIsReviewModalOpen(true)} className="shrink-0 text-sm">
-                            <Star className="size-4" aria-hidden="true" />
-                            Rate & Review
-                        </Button>
+                    {hasCompletedCourse && (
+                        <ReviewStatus review={myReview} isLoaded={reviewsLoaded} onReview={() => setIsReviewModalOpen(true)} />
                     )}
                 </div>
             ) : null}
 
-            {/* Module list */}
-            <div className="flex flex-col gap-3">
-                {sortedModules.map((module, index) => {
-                    const status = statusFor(module.id);
-                    const display = statusDisplay[status];
-                    const isLocked = status === 'locked';
-                    const lockedReason = isLocked
-                        ? describeLockedModule(module, sortedModules, progressByModuleId, cohortStartsOn)
-                        : null;
-                    const expanded = isExpanded(module.id);
-                    const reviewItem = status === 'completed' ? reviewItemForModule(module) : null;
+            {/* Tab bar */}
+            <div className="flex gap-1 rounded-xl border border-border bg-surface-50 p-1">
+                <button
+                    type="button"
+                    onClick={() => setActiveTab('content')}
+                    className={cn(
+                        'flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                        activeTab === 'content'
+                            ? 'bg-white shadow-sm text-ink-900'
+                            : 'text-ink-600 hover:text-ink-900',
+                    )}
+                >
+                    <BookOpen className="size-4" aria-hidden="true" />
+                    Content
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setActiveTab('assessments')}
+                    className={cn(
+                        'flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                        activeTab === 'assessments'
+                            ? 'bg-white shadow-sm text-ink-900'
+                            : 'text-ink-600 hover:text-ink-900',
+                    )}
+                >
+                    <ClipboardList className="size-4" aria-hidden="true" />
+                    Assessments
+                    {totalAssessments > 0 && (
+                        <span className={cn(
+                            'flex size-5 items-center justify-center rounded-full text-xs font-semibold',
+                            activeTab === 'assessments'
+                                ? 'bg-primary text-white'
+                                : 'bg-surface-100 text-ink-600',
+                        )}>
+                            {totalAssessments}
+                        </span>
+                    )}
+                </button>
+            </div>
 
-                    // Split items into three groups
-                    const sortedItems = module.items.slice().sort((a, b) => a.order_index - b.order_index);
-                    const resources = sortedItems.filter((i) => i.item_type === 'resource');
-                    const assignments = sortedItems.filter((i) => i.item_type === 'assignment');
-                    const evaluations = sortedItems.filter((i) => i.item_type === 'evaluation');
-                    const hasItems = sortedItems.length > 0;
-                    const openCount = sortedItems.filter((i) => !i.is_complete).length;
+            {/* Content tab — module list with Resources only inside each card */}
+            {activeTab === 'content' && (
+                <div className="flex flex-col gap-3">
+                    {sortedModules.map((module, index) => {
+                        const status = statusFor(module.id);
+                        const display = statusDisplay[status];
+                        const isLocked = status === 'locked';
+                        const lockedReason = isLocked
+                            ? describeLockedModule(module, sortedModules, progressByModuleId, cohortStartsOn)
+                            : null;
+                        const expanded = isExpanded(module.id);
+                        const reviewItem = status === 'completed' ? reviewItemForModule(module) : null;
 
-                    return (
-                        <Card
-                            key={module.id}
-                            className={cn(
-                                'relative overflow-visible',
-                                isLocked && 'opacity-60',
-                                status === 'in_progress' && 'border-blue-600 ring-1 ring-blue-600/20',
-                            )}
-                        >
-                            {/* Module number bubble */}
-                            <div
+                        // Content tab shows resources only; assignments/evaluations live in Assessments tab
+                        const sortedItems = module.items.slice().sort((a, b) => a.order_index - b.order_index);
+                        const resources = sortedItems.filter((i) => i.item_type === 'resource');
+                        const assessments = sortedItems.filter((i) => i.item_type === 'assignment' || i.item_type === 'evaluation');
+                        const hasResources = resources.length > 0;
+                        const openCount = sortedItems.filter((i) => !i.is_complete).length;
+
+                        return (
+                            <Card
+                                key={module.id}
                                 className={cn(
-                                    'absolute -left-3 top-4 flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ring-4 ring-surface-50',
-                                    status === 'completed' && 'bg-success-600 text-white',
-                                    status === 'in_progress' && 'bg-blue-600 text-white',
-                                    (status === 'not_started' || status === 'locked') && 'bg-surface-100 text-ink-600',
+                                    'relative overflow-visible',
+                                    isLocked && 'opacity-60',
+                                    status === 'in_progress' && 'border-blue-600 ring-1 ring-blue-600/20',
                                 )}
                             >
-                                {status === 'completed' ? (
-                                    <CheckCircle2 className="size-4" aria-hidden="true" />
-                                ) : (
-                                    index + 1
-                                )}
-                            </div>
-
-                            {/* Module header row */}
-                            <div className="flex items-center gap-3 pl-1">
-                                <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-2">
-                                        <span className="shrink-0"><Badge label={display.label} tone={display.tone} icon={display.icon} /></span>
-                                        <span className="shrink-0 text-xs text-ink-600">
-                                            Module {String(index + 1).padStart(2, '0')}
-                                        </span>
-                                        {/* What's inside, spelled out, when collapsed */}
-                                        {!expanded && !isLocked && hasItems && (
-                                            <span className="hidden truncate text-xs text-ink-600 sm:inline">
-                                                ·{' '}
-                                                {[
-                                                    resources.length > 0 && plural(resources.length, 'resource'),
-                                                    assignments.length > 0 && plural(assignments.length, 'assignment'),
-                                                    evaluations.length > 0 && plural(evaluations.length, 'evaluation'),
-                                                ]
-                                                    .filter(Boolean)
-                                                    .join(' · ')}
-                                            </span>
-                                        )}
-                                        {status === 'completed' && openCount > 0 && (
-                                            <span className="shrink-0 text-xs font-medium text-warning-600">
-                                                {plural(openCount, 'item')} not done yet
-                                            </span>
-                                        )}
-                                    </div>
-                                    <h3 className="mt-1 text-base font-semibold">{module.title}</h3>
-                                    {module.description && (
-                                        <p className={cn('mt-0.5 text-sm text-ink-600', !expanded && 'line-clamp-1')}>
-                                            {module.description}
-                                        </p>
+                                {/* Module number bubble */}
+                                <div
+                                    className={cn(
+                                        'absolute -left-3 top-4 flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ring-4 ring-surface-50',
+                                        status === 'completed' && 'bg-success-600 text-white',
+                                        status === 'in_progress' && 'bg-blue-600 text-white',
+                                        (status === 'not_started' || status === 'locked') && 'bg-surface-100 text-ink-600',
                                     )}
-                                    {lockedReason && (
-                                        <p className="mt-1 text-sm text-ink-600">{lockedReason}</p>
+                                >
+                                    {status === 'completed' ? (
+                                        <CheckCircle2 className="size-4" aria-hidden="true" />
+                                    ) : (
+                                        index + 1
                                     )}
                                 </div>
 
-                                {/* Only completed modules get an action ("Review"); locked modules explain
-                                    themselves with the badge + reason, everything else uses the
-                                    "Show N items" dropdown below instead of a duplicate button. */}
-                                {!isLocked && reviewItem && (
-                                    <Link to={itemLinkFor(reviewItem, courseId)} className="shrink-0">
-                                        <Button variant="secondary" size="sm">
-                                            Review
-                                        </Button>
-                                    </Link>
-                                )}
-                            </div>
+                                {/* Module header row */}
+                                <div className="flex items-center gap-3 pl-1">
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className="shrink-0"><Badge label={display.label} tone={display.tone} icon={display.icon} /></span>
+                                            <span className="shrink-0 text-xs text-ink-600">
+                                                Module {String(index + 1).padStart(2, '0')}
+                                            </span>
+                                            {/* What's inside, spelled out, when collapsed */}
+                                            {!expanded && !isLocked && hasResources && (
+                                                <span className="hidden truncate text-xs text-ink-600 sm:inline">
+                                                    · {plural(resources.length, 'resource')}
+                                                    {assessments.length > 0 && ` · ${plural(assessments.length, 'assessment')}`}
+                                                </span>
+                                            )}
+                                            {status === 'completed' && openCount > 0 && (
+                                                <span className="shrink-0 text-xs font-medium text-warning-600">
+                                                    {plural(openCount, 'item')} not done yet
+                                                </span>
+                                            )}
+                                        </div>
+                                        <h3 className="mt-1 text-base font-semibold">{module.title}</h3>
+                                        {module.description && (
+                                            <p className={cn('mt-0.5 text-sm text-ink-600', !expanded && 'line-clamp-1')}>
+                                                {module.description}
+                                            </p>
+                                        )}
+                                        {lockedReason && (
+                                            <p className="mt-1 text-sm text-ink-600">{lockedReason}</p>
+                                        )}
+                                    </div>
 
-                            {/* Expand/collapse toggle (only for unlocked modules with items) */}
-                            {!isLocked && hasItems && (
-                                <>
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setManualToggles((prev) => ({ ...prev, [module.id]: !expanded }))
-                                        }
-                                        className="mt-2 flex w-full items-center justify-between border-t border-surface-100 pt-2 text-xs font-medium text-blue-600"
-                                    >
-                                        <span className="flex items-center gap-1">
-                                            {expanded
-                                                ? <ChevronUp className="size-3.5" aria-hidden="true" />
-                                                : <ChevronDown className="size-3.5" aria-hidden="true" />
+                                    {!isLocked && reviewItem && (
+                                        <Link to={itemLinkFor(reviewItem, courseId)} className="shrink-0">
+                                            <Button variant="secondary" size="sm">
+                                                Review
+                                            </Button>
+                                        </Link>
+                                    )}
+                                </div>
+
+                                {/* Expand/collapse toggle — resources only */}
+                                {!isLocked && hasResources && (
+                                    <>
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setManualToggles((prev) => ({ ...prev, [module.id]: !expanded }))
                                             }
-                                            {expanded ? 'Hide content' : `Show ${sortedItems.length} item${sortedItems.length !== 1 ? 's' : ''}`}
-                                        </span>
-                                        <span className="text-ink-600">
-                                            {sortedItems.filter((i) => i.is_complete).length}/{sortedItems.length} completed
-                                        </span>
-                                    </button>
+                                            className="mt-2 flex w-full items-center justify-between border-t border-surface-100 pt-2 text-xs font-medium text-blue-600"
+                                        >
+                                            <span className="flex items-center gap-1">
+                                                {expanded
+                                                    ? <ChevronUp className="size-3.5" aria-hidden="true" />
+                                                    : <ChevronDown className="size-3.5" aria-hidden="true" />
+                                                }
+                                                {expanded ? 'Hide resources' : `Show ${resources.length} resource${resources.length !== 1 ? 's' : ''}`}
+                                            </span>
+                                            <span className="text-ink-600">
+                                                {resources.filter((i) => i.is_complete).length}/{resources.length} completed
+                                            </span>
+                                        </button>
 
-                                    {/* Three collapsible groups */}
-                                    {expanded && (
-                                        <div className="mt-2 flex flex-col gap-2">
-                                            {resources.length > 0 && (
+                                        {expanded && (
+                                            <div className="mt-2 flex flex-col gap-2">
                                                 <ItemGroup
                                                     label="Resources"
                                                     icon={BookOpen}
@@ -470,36 +515,92 @@ export function CoursePlayerPage() {
                                                     courseId={courseId}
                                                     defaultOpen={true}
                                                 />
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+
+                                {/* Hint to visit Assessments tab if this module has assessments but no resources */}
+                                {!isLocked && !hasResources && assessments.length > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveTab('assessments')}
+                                        className="mt-2 flex w-full items-center gap-1.5 border-t border-surface-100 pt-2 text-xs text-blue-600 hover:underline"
+                                    >
+                                        <ClipboardList className="size-3.5" aria-hidden="true" />
+                                        {plural(assessments.length, 'assessment')} — see Assessments tab
+                                    </button>
+                                )}
+                            </Card>
+                        );
+                    })}
+                </div>
+            )}
+
+            {/* Assessments tab — all assignments + evaluations across all modules */}
+            {activeTab === 'assessments' && (
+                <div className="flex flex-col gap-4">
+                    {assessmentModules.length === 0 ? (
+                        <div className="rounded-2xl border border-border bg-surface-50 px-6 py-10 text-center">
+                            <ClipboardList className="mx-auto size-8 text-ink-300" aria-hidden="true" />
+                            <p className="mt-2 text-sm font-medium text-ink-900">No assessments in this course</p>
+                            <p className="text-xs text-ink-600">Assignments and evaluations will appear here once added.</p>
+                        </div>
+                    ) : (
+                        assessmentModules.map(({ module, assignments, evaluations }, idx) => {
+                            const status = statusFor(module.id);
+                            const display = statusDisplay[status];
+                            const isLocked = status === 'locked';
+
+                            return (
+                                <div key={module.id} className={cn('space-y-2', isLocked && 'opacity-60')}>
+                                    {/* Module heading */}
+                                    <div className="flex items-center gap-2 px-1">
+                                        <div
+                                            className={cn(
+                                                'flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+                                                status === 'completed' && 'bg-success-600 text-white',
+                                                status === 'in_progress' && 'bg-blue-600 text-white',
+                                                (status === 'not_started' || status === 'locked') && 'bg-surface-100 text-ink-600',
                                             )}
-                                            {assignments.length > 0 && (
-                                                <ItemGroup
-                                                    label="Assignments"
-                                                    icon={FileCheck2}
-                                                    items={assignments}
-                                                    courseId={courseId}
-                                                    defaultOpen={true}
-                                                />
-                                            )}
-                                            {evaluations.length > 0 && (
-                                                <ItemGroup
-                                                    label="Evaluations"
-                                                    icon={ListChecks}
-                                                    items={evaluations}
-                                                    courseId={courseId}
-                                                    defaultOpen={true}
-                                                />
+                                        >
+                                            {status === 'completed' ? (
+                                                <CheckCircle2 className="size-3.5" aria-hidden="true" />
+                                            ) : (
+                                                idx + 1
                                             )}
                                         </div>
+                                        <h3 className="text-sm font-semibold text-ink-900">{module.title}</h3>
+                                        <Badge label={display.label} tone={display.tone} icon={display.icon} />
+                                    </div>
+
+                                    {assignments.length > 0 && (
+                                        <ItemGroup
+                                            label="Assignments"
+                                            icon={FileCheck2}
+                                            items={assignments}
+                                            courseId={courseId}
+                                            defaultOpen={!isLocked}
+                                        />
                                     )}
-                                </>
-                            )}
-                        </Card>
-                    );
-                })}
-            </div>
+                                    {evaluations.length > 0 && (
+                                        <ItemGroup
+                                            label="Evaluations"
+                                            icon={ListChecks}
+                                            items={evaluations}
+                                            courseId={courseId}
+                                            defaultOpen={!isLocked}
+                                        />
+                                    )}
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
+            )}
 
             {isReviewModalOpen && course && (
-                <ReviewFormModal course={course} onClose={() => setIsReviewModalOpen(false)} />
+                <ReviewFormModal course={course} existingReview={myReview} onClose={() => setIsReviewModalOpen(false)} />
             )}
         </PageFrame>
     );
