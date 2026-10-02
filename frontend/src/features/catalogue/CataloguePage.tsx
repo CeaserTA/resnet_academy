@@ -98,6 +98,27 @@ function FaqItem({ q, a }: { q: string; a: string }) {
     );
 }
 
+/** Mobile-only accordion row for the "What's included" items */
+function IncludeAccordionItem({ icon: Icon, title, description }: { icon: React.ElementType; title: string; description: string }) {
+    const [open, setOpen] = useState(false);
+    return (
+        <div className="border-t border-border">
+            <button
+                onClick={() => setOpen((v) => !v)}
+                aria-expanded={open}
+                className="flex w-full items-center gap-3 py-3 text-left"
+            >
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50">
+                    <Icon className="size-4 text-primary" aria-hidden="true" />
+                </div>
+                <span className="flex-1 text-sm font-semibold text-ink-900">{title}</span>
+                <ChevronDown className={cn('size-4 shrink-0 text-ink-300 transition-transform duration-200', open && 'rotate-180')} aria-hidden="true" />
+            </button>
+            {open && <p className="pb-3 pl-11 text-sm leading-6 text-ink-600">{description}</p>}
+        </div>
+    );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export function CataloguePage() {
@@ -434,7 +455,17 @@ export function CataloguePage() {
                                 <p className="mt-2 text-sm leading-6 text-ink-600">
                                     Technical practice combined with feedback and career preparation.
                                 </p>
-                                <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+
+                                {/* Mobile: accordion list */}
+                                <div className="mt-4 sm:hidden">
+                                    {includes.map(({ icon, title, description }) => (
+                                        <IncludeAccordionItem key={title} icon={icon} title={title} description={description} />
+                                    ))}
+                                    <div className="border-t border-border" />
+                                </div>
+
+                                {/* sm+: original 2-col grid */}
+                                <div className="mt-5 hidden grid-cols-2 gap-3 sm:grid">
                                     {includes.map(({ icon: Icon, title, description }) => (
                                         <div key={title} className="flex items-start gap-3 rounded-xl border border-border bg-surface-50 p-3">
                                             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50">
@@ -458,7 +489,26 @@ export function CataloguePage() {
                     <div className="mx-auto max-w-7xl">
                         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">Your learning journey</p>
                         <h2 className="mt-3 text-3xl text-navy-foreground sm:text-4xl">From first lesson to finished portfolio.</h2>
-                        <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+
+                        {/* Mobile: horizontal scroll strip */}
+                        <div className="mt-5 flex gap-0 overflow-x-auto pb-2 sm:hidden" style={{ scrollSnapType: 'x mandatory' }}>
+                            {journey.map(({ number, label }, i) => (
+                                <div
+                                    key={number}
+                                    className="flex min-w-[64%] shrink-0 flex-col gap-2 border-l-2 border-white/20 pl-4 pr-6"
+                                    style={{ scrollSnapAlign: 'start' }}
+                                >
+                                    <p className="font-display text-xl font-semibold text-accent-amber">{number}</p>
+                                    <p className="text-sm leading-5 text-navy-foreground/80">{label}</p>
+                                    {i < journey.length - 1 && (
+                                        <span className="mt-1 text-xs text-white/30">swipe →</span>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* sm+: original 4-col grid */}
+                        <div className="mt-6 hidden gap-6 sm:grid sm:grid-cols-2 lg:grid-cols-4">
                             {journey.map(({ number, label }) => (
                                 <div key={number} className="flex flex-col gap-3">
                                     <div className="h-px w-full bg-white/20" aria-hidden="true" />
