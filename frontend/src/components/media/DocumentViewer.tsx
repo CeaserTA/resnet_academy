@@ -1,5 +1,16 @@
-import { ExternalLink, FileText } from 'lucide-react';
+import { Download, ExternalLink, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+/** True for files served from this machine / a private network, which Microsoft's servers can't fetch. */
+function isPrivateUrl(url: string): boolean {
+    try {
+        const { hostname } = new URL(url, window.location.href);
+        return hostname === 'localhost' || hostname.endsWith('.local') || hostname.endsWith('.test')
+            || /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(hostname);
+    } catch {
+        return false;
+    }
+}
 
 interface DocumentViewerProps {
     fileUrl: string | null | undefined;
@@ -32,6 +43,32 @@ export function DocumentViewer({ fileUrl, fileType, title, className }: Document
     const embedSrc = isOffice
         ? `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`
         : fileUrl;
+
+    // Microsoft's viewer can't reach a file on this machine (local dev storage), so rather than
+    // its generic error, say why and offer the file directly.
+    if (isOffice && isPrivateUrl(fileUrl)) {
+        return (
+            <div className={cn('flex flex-col items-center gap-3 rounded-lg border border-surface-100 bg-surface-50 px-6 py-10 text-center', className)}>
+                <FileText className="size-8 text-blue-600" aria-hidden="true" />
+                <div>
+                    <p className="text-sm font-medium text-ink-900">
+                        {fileType === 'pptx' ? 'Slide' : 'Document'} preview isn&apos;t available for files stored on this computer
+                    </p>
+                    <p className="text-xs text-ink-600">It appears here once the file is on the public file storage. You can still open it below.</p>
+                </div>
+                <div className="flex items-center gap-4">
+                    <a href={fileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm text-blue-600 hover:underline">
+                        <ExternalLink className="size-4" aria-hidden="true" />
+                        Open in a new tab
+                    </a>
+                    <a href={fileUrl} download className="inline-flex items-center gap-2 text-sm text-blue-600 hover:underline">
+                        <Download className="size-4" aria-hidden="true" />
+                        Download
+                    </a>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className={cn('flex flex-col gap-2', className)}>

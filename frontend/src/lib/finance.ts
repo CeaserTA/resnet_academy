@@ -5,6 +5,11 @@ export function formatMoney(amount: string | number, currency: string): string {
     return new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 }).format(Number(amount));
 }
 
+/** Enrolments the student can pay towards now: a balance is left and no payment is awaiting review. */
+export function payableEnrolments(enrolments: Enrolment[]): Enrolment[] {
+    return enrolments.filter((e) => e.order && e.order.remaining_balance > 0 && !e.order.pending_submission);
+}
+
 /** Orders that actually cost something (free courses create zero-value orders). */
 export function paidCourseOrders(enrolments: Enrolment[]): Order[] {
     return enrolments.flatMap((e) => (e.order && Number(e.order.amount) > 0 ? [e.order] : []));

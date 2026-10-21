@@ -29,7 +29,7 @@ import { formatDateTime } from '@/lib/formatDate';
 
 // ─── Existing submission panel ────────────────────────────────────────────────
 
-function ExistingSubmission({ submission, onResubmit }: { submission: AssignmentSubmission; onResubmit: () => void }) {
+function ExistingSubmission({ submission }: { submission: AssignmentSubmission }) {
     const isGraded = submission.status === 'graded';
     const score = submission.final_score ?? submission.raw_score;
 
@@ -106,10 +106,6 @@ function ExistingSubmission({ submission, onResubmit }: { submission: Assignment
                     View submitted file
                 </a>
             )}
-
-            <Button variant="secondary" size="sm" onClick={onResubmit} className="self-start">
-                Submit another attempt
-            </Button>
         </div>
     );
 }
@@ -240,7 +236,6 @@ export function AssignmentSubmitPage() {
     const { data: enrolmentsPage, isLoading: enrolmentsLoading } = useMyEnrolments();
     const { data: submissions, isLoading: submissionsLoading } = useAssignmentSubmissions(assignmentId, !!assignment);
 
-    const [showResubmitForm, setShowResubmitForm] = useState(false);
     const [justSubmitted, setJustSubmitted] = useState(false);
 
     if (assignmentLoading || enrolmentsLoading) {
@@ -287,7 +282,9 @@ export function AssignmentSubmitPage() {
     const isOverdue = assignment.due_at !== null && new Date(assignment.due_at) < new Date();
     const latestSubmission: AssignmentSubmission | null =
         !submissionsLoading && submissions && submissions.length > 0 ? submissions[0] : null;
-    const hasExistingSubmission = !!latestSubmission && !showResubmitForm && !justSubmitted;
+    // One submission per assignment from the student's side — once submitted, the page shows it
+    // (and later the grade); there is no resubmit path.
+    const hasExistingSubmission = !!latestSubmission;
 
     // Completion progress for the progress bar
     const attemptCount = submissions?.length ?? 0;
@@ -404,10 +401,7 @@ export function AssignmentSubmitPage() {
 
                     {/* Existing submission */}
                     {hasExistingSubmission && latestSubmission && (
-                        <ExistingSubmission
-                            submission={latestSubmission}
-                            onResubmit={() => setShowResubmitForm(true)}
-                        />
+                        <ExistingSubmission submission={latestSubmission} />
                     )}
 
                     {/* Submission form */}
@@ -415,10 +409,7 @@ export function AssignmentSubmitPage() {
                         <SubmissionForm
                             assignmentId={assignmentId}
                             submissionType={assignment.submission_type}
-                            onSuccess={() => {
-                                setShowResubmitForm(false);
-                                setJustSubmitted(true);
-                            }}
+                            onSuccess={() => setJustSubmitted(true)}
                         />
                     )}
                 </div>
