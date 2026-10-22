@@ -13,7 +13,7 @@ import {
 import { useMyEnrolments, useWithdrawEnrolment, useCancelTransferRequest } from '@/features/enrolment/useEnrolments';
 import { useDismissCourseApplication, useMyCourseApplications } from '@/features/courseApplications/useCourseApplications';
 import { useProgressDashboard } from '@/features/progress/useProgress';
-import { certificateDownloadUrl } from '@/features/progress/api';
+import { CertificateViewerModal } from '@/features/certificates/CertificateViewerModal';
 import { ApplicationStatusCard } from '@/features/enrolment/ApplicationStatusCard';
 import { ReviewFormModal } from '@/features/reviews/ReviewFormModal';
 import { useMyReviews } from '@/features/reviews/useReviews';
@@ -34,6 +34,7 @@ import type { CourseReview, Enrolment, ProgressDashboardRow } from '@/lib/api/ty
 import { formatDate } from '@/lib/formatDate';
 import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import { MakePaymentModal } from '@/features/enrolment/MakePaymentModal';
+import { payableEnrolments as payableEnrolmentsOf } from '@/lib/finance';
 
 const PROFILE_MODAL_DISMISSED_KEY = 'profile_completion_modal_dismissed';
 
@@ -74,7 +75,7 @@ function WithdrawConfirmModal({ enrolment, onClose, onWithdrawSuccess }: { enrol
 
 // ─── Enrolment card ───────────────────────────────────────────────────────────
 
-function EnrolmentCard({ enrolment, progress, review, reviewsLoaded, onWithdraw, onCancelTransfer, onReview, onPay }: {
+function EnrolmentCard({ enrolment, progress, review, reviewsLoaded, onWithdraw, onCancelTransfer, onReview, onPay, onViewCertificate }: {
     enrolment: Enrolment;
     progress: ProgressDashboardRow | undefined;
     review: CourseReview | undefined;
@@ -83,6 +84,7 @@ function EnrolmentCard({ enrolment, progress, review, reviewsLoaded, onWithdraw,
     onCancelTransfer: () => void;
     onReview: () => void;
     onPay: () => void;
+    onViewCertificate: () => void;
 }) {
     const status = enrolmentStatusDisplay(enrolment.status);
     const order = enrolment.order;
@@ -162,29 +164,15 @@ function EnrolmentCard({ enrolment, progress, review, reviewsLoaded, onWithdraw,
                             </Link>
                         )}
                         {progress.certificate && (
-                            /*
-                                Always the download endpoint, never the stored file URL: that URL
-                                is null until the PDF has been rendered, which previously left an
-                                href-less anchor reading "Certificate generating…" that could
-                                never be clicked. The endpoint renders on demand, so the link is
-                                live as soon as the certificate is issued.
-
-                                rel="noopener" only — NOT "noreferrer", for the same reason as the
-                                live-session join link: this target is a Sanctum-authenticated API
-                                route, and the stateful middleware only honours the session cookie
-                                when the Origin/Referer header identifies this SPA. "noreferrer"
-                                strips it, so the logged-in student is treated as a guest and
-                                bounced to /login instead of getting their certificate.
-                            */
-                            <a
-                                href={certificateDownloadUrl(progress.certificate.id)}
-                                target="_blank"
-                                rel="noopener"
-                                className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:underline"
+                            // Opens the in-app viewer, which has the Download button.
+                            <button
+                                type="button"
+                                onClick={onViewCertificate}
+                                className="inline-flex items-center gap-1.5 self-start text-xs text-blue-600 hover:underline"
                             >
                                 <Award className="size-3.5" aria-hidden="true" />
-                                Download certificate
-                            </a>
+                                View certificate
+                            </button>
                         )}
                         {progress.certificate && (
                             <ReviewStatus review={review} isLoaded={reviewsLoaded} onReview={onReview} />
@@ -264,6 +252,7 @@ export function MyCoursesPage() {
     const [searchParams, setSearchParams] = useSearchParams();
     const [isMakingPayment, setIsMakingPayment] = useState(() => searchParams.get('pay') === '1');
     const [reviewingCourse, setReviewingCourse] = useState<{ id: number; title: string } | null>(null);
+    const [viewingCertificate, setViewingCertificate] = useState<{ id: number; certificate_number: string; course: { title: string } } | null>(null);
     const [profileStatus, setProfileStatus] = useState<ProfileStatus | null>(null);
     const [showProfileModal, setShowProfileModal] = useState(false);
     const [transferSuccessMessage, setTransferSuccessMessage] = useState<string | null>(null);
@@ -323,9 +312,7 @@ export function MyCoursesPage() {
     if (isLoading) return <Spinner />;
 
     const activeEnrolments = (data?.data ?? []).filter((e) => e.status !== 'withdrawn' && e.status !== 'transferred');
-    const payableEnrolments = activeEnrolments.filter(
-        (e) => e.order && e.order.remaining_balance > 0 && !e.order.pending_submission,
-    );
+    const payableEnrolments = payableEnrolmentsOf(activeEnrolments);
     const progressByCourseId = new Map((progressRows ?? []).map((r) => [r.course.id, r]));
     const reviewByCourseId = new Map((myReviews ?? []).flatMap((r) => (r.course ? [[r.course.id, r] as const] : [])));
     const sortedApplications = (applications ?? [])
@@ -411,6 +398,10 @@ export function MyCoursesPage() {
                                 onCancelTransfer={() => handleCancelTransfer(enrolment)}
                                 onReview={() => setReviewingCourse({ id: enrolment.course.id, title: enrolment.course.title })}
                                 onPay={() => setIsMakingPayment(true)}
+                                onViewCertificate={() => {
+                                    const certificate = progressByCourseId.get(enrolment.course.id)?.certificate;
+                                    if (certificate) setViewingCertificate({ ...certificate, course: { title: enrolment.course.title } });
+                                }}
                             />
                         ))}
                     </div>
@@ -430,6 +421,7 @@ export function MyCoursesPage() {
             {withdrawingEnrolment && (
                 <WithdrawConfirmModal enrolment={withdrawingEnrolment} onClose={() => setWithdrawingEnrolment(null)} onWithdrawSuccess={handleWithdrawSuccess} />
             )}
+            <CertificateViewerModal certificate={viewingCertificate} onClose={() => setViewingCertificate(null)} />
             {reviewingCourse && (
                 <ReviewFormModal
                     course={reviewingCourse}

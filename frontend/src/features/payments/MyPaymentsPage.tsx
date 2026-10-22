@@ -1,4 +1,4 @@
-import { ExternalLink, Receipt } from 'lucide-react';
+import { Receipt } from 'lucide-react';
 import { PageFrame } from '@/components/layout/PageFrame';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -8,6 +8,7 @@ import { orderStatusDisplay, paymentSubmissionStatusDisplay } from '@/lib/status
 import { formatMoney, paidCourseOrders } from '@/lib/finance';
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { cn } from '@/lib/utils';
+import { ReceiptThumbnailButton } from '@/components/media/ReceiptPreview';
 
 const HEAD = 'text-xs font-medium uppercase tracking-wide text-ink-600';
 const INVOICE_COLS = 'grid-cols-[minmax(160px,1fr)_110px_110px_110px_110px]';
@@ -110,15 +111,7 @@ export function MyPaymentsPage() {
                                                     </div>
                                                     <span className="text-right text-sm font-semibold tabular-nums text-ink-900">{formatMoney(payment.amount, order.currency)}</span>
                                                     <span><Badge label={status.label} tone={status.tone} icon={status.icon} /></span>
-                                                    <a
-                                                        href={payment.receipt_url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
-                                                    >
-                                                        View
-                                                        <ExternalLink className="size-3.5" aria-hidden="true" />
-                                                    </a>
+                                                    <ReceiptThumbnailButton url={payment.receipt_url} />
                                                 </li>
                                             );
                                         })}

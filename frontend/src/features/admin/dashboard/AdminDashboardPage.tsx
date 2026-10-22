@@ -1,8 +1,8 @@
 import { useState } from 'react';
+import { useQueries } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import {
     AlertTriangle,
-    ArrowRight,
     BookOpen,
     CalendarRange,
     CreditCard,
@@ -25,6 +25,12 @@ import { Modal } from '@/components/ui/Modal';
 import { VolumeCard } from '@/components/dashboard/VolumeCard';
 import { AttentionCard } from '@/components/dashboard/AttentionCard';
 import { QuickActionButton, type QuickAction } from '@/components/dashboard/QuickActionButton';
+import { DashboardPanel, NeedsActionBand, SectionLabel, ViewAllLink } from '@/components/dashboard/DashboardPanel';
+import { PageFrame } from '@/components/layout/PageFrame';
+import { AtRiskPanel } from '@/components/dashboard/AtRiskPanel';
+import { collectAtRisk, worstAtRiskCourse } from '@/lib/atRisk';
+import { useCourses } from '@/features/catalogue/useCourses';
+import { fetchCourseAnalytics } from '@/features/analytics/api';
 import { useDashboardSummary } from '@/features/admin/dashboard/useDashboard';
 import { useOrders, usePaymentSummary } from '@/features/admin/payments/useAdminPayments';
 import { useCourseApplications } from '@/features/courseApplications/useCourseApplications';
@@ -32,7 +38,6 @@ import { useCohorts } from '@/features/cohorts/useCohorts';
 import { cohortPhase, daysUntil, displayCohortName } from '@/lib/cohort';
 import type { Cohort } from '@/lib/api/types';
 import { BulkImportForm } from '@/features/admin/enrolments/BulkImportForm';
-import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import { formatRelativeTime } from '@/lib/utils';
 import { describeAuditLogEntry } from '@/lib/auditLog';
 import { cn } from '@/lib/utils';
@@ -79,7 +84,6 @@ function CohortRow({ cohort }: { cohort: Cohort }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export function AdminDashboardPage() {
-    usePageHeader('Dashboard', 'Overview of your academy');
     const { data, isLoading } = useDashboardSummary();
     // The summary endpoint doesn't carry these, so read them from the same endpoints the
     // Applications / Payments / Cohorts pages use.
@@ -89,13 +93,35 @@ export function AdminDashboardPage() {
     const { data: cohorts } = useCohorts();
     const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
 
+    // Who is at risk, and in which course — the summary only carries the total. Same per-course
+    // analytics the instructor dashboard uses, for every published course.
+    const { data: coursesData } = useCourses({});
+    const publishedCourses = (coursesData?.data ?? []).filter((c) => c.status === 'published');
+    const analytics = useQueries({
+        queries: publishedCourses.map((course) => ({
+            queryKey: ['courses', course.id, 'analytics'],
+            queryFn: () => fetchCourseAnalytics(course.id),
+        })),
+    });
+    const atRiskList = collectAtRisk(publishedCourses, analytics.map((q) => q.data));
+    const worstCourse = worstAtRiskCourse(atRiskList);
+
     if (isLoading || !data) {
-        return <div className="flex h-64 items-center justify-center"><Spinner /></div>;
+        return (
+            <PageFrame title="Dashboard" subtitle="Overview of your academy">
+                <div className="flex h-64 items-center justify-center"><Spinner /></div>
+            </PageFrame>
+        );
     }
 
-    const revenue = data.revenue_by_currency[0];
+    // The first currency is the headline; any others are listed underneath rather than dropped.
+    const [revenue, ...otherRevenue] = data.revenue_by_currency;
     const totalRevenue = revenue ? formatCurrency(revenue.total, revenue.currency) : formatCurrency(0, 'UGX');
-    const outstanding = paymentSummary?.by_currency[0];
+    const outstanding = paymentSummary?.by_currency.find((c) => c.currency === (revenue?.currency ?? 'UGX')) ?? paymentSummary?.by_currency[0];
+    const revenueSub = [
+        ...otherRevenue.map((r) => `+ ${formatCurrency(r.total, r.currency)}`),
+        ...(outstanding ? [`${formatCurrency(outstanding.outstanding, outstanding.currency)} still outstanding`] : []),
+    ].join(' · ');
 
     // Certificates ÷ confirmed enrolments — labelled as what it is, not "completion".
     const certificateRate = data.confirmed_enrolments > 0
@@ -121,25 +147,24 @@ export function AdminDashboardPage() {
     ];
 
     return (
-        <div className="max-w-7xl space-y-5">
+        <PageFrame title="Dashboard" subtitle="Overview of your academy">
 
             {/* ── Needs action ──────────────────────────────────────────────── */}
             {/* Sits on a tinted band with a stronger label so it reads as "act on this", while the
                 Volume row below stays flat on the page background as purely informational. */}
-            <section className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
-                <p className="mb-3 text-xs font-bold uppercase tracking-widest text-blue-700">Needs action</p>
+            <NeedsActionBand>
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
-                    <AttentionCard icon={AlertTriangle} label="At-risk students" value={data.at_risk_students} sub="No activity in 14 days" tone="danger" to="/admin/courses" />
-                    <AttentionCard icon={CreditCard} label="Payments" value={paymentsToReview ?? '—'} sub="Receipts to confirm" tone="warning" to="/admin/payments" />
-                    <AttentionCard icon={FileCheck} label="Applications" value={pendingApplications?.meta.total ?? '—'} sub="Waiting for a decision" tone="neutral" to="/admin/applications" />
-                    <AttentionCard icon={LifeBuoy} label="Open tickets" value={data.open_tickets} sub="Awaiting response" tone="neutral" to="/tickets" />
-                    <AttentionCard icon={Star} label="Pending reviews" value={data.pending_reviews} sub="Awaiting approval" tone="neutral" to="/admin/reviews" />
+                    <AttentionCard icon={AlertTriangle} label="At-risk students" value={data.at_risk_students} sub="No activity in 14 days" tone={data.at_risk_students > 0 ? 'danger' : 'neutral'} to={worstCourse ? `/admin/courses/${worstCourse.id}/gradebook` : undefined} />
+                    <AttentionCard icon={CreditCard} label="Payments" value={paymentsToReview ?? '—'} sub="Receipts to confirm" tone={paymentsToReview ? 'warning' : 'neutral'} to="/admin/payments" />
+                    <AttentionCard icon={FileCheck} label="Applications" value={pendingApplications?.meta.total ?? '—'} sub="Waiting for a decision" tone={pendingApplications?.meta.total ? 'warning' : 'neutral'} to="/admin/applications" />
+                    <AttentionCard icon={LifeBuoy} label="Open tickets" value={data.open_tickets} sub="Awaiting response" tone={data.open_tickets > 0 ? 'warning' : 'neutral'} to="/tickets" />
+                    <AttentionCard icon={Star} label="Pending reviews" value={data.pending_reviews} sub="Awaiting approval" tone={data.pending_reviews > 0 ? 'warning' : 'neutral'} to="/admin/reviews" />
                 </div>
-            </section>
+            </NeedsActionBand>
 
             {/* ── Volume metrics ────────────────────────────────────────────── */}
             <section>
-                <p className="mb-2.5 text-xs font-semibold uppercase tracking-widest text-ink-600">Volume</p>
+                <SectionLabel>Volume</SectionLabel>
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                     <VolumeCard icon={Users} label="Total students" value={data.students.toLocaleString()} />
                     <VolumeCard icon={UserCheck} label="Active enrolments" value={data.confirmed_enrolments.toLocaleString()} />
@@ -147,7 +172,7 @@ export function AdminDashboardPage() {
                         icon={Wallet}
                         label="Received (MTD)"
                         value={totalRevenue}
-                        sub={outstanding ? `${formatCurrency(outstanding.outstanding, outstanding.currency)} still outstanding` : undefined}
+                        sub={revenueSub || undefined}
                     />
                     <VolumeCard
                         icon={TrendingUp}
@@ -162,13 +187,7 @@ export function AdminDashboardPage() {
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
 
                 {/* Recent activity — 2/3 */}
-                <div className="lg:col-span-2 overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
-                    <div className="flex items-center justify-between border-b border-surface-100 bg-surface-50 px-4 py-3">
-                        <h2 className="text-sm font-semibold text-ink-900">Recent activity</h2>
-                        <Link to="/admin/audit-log" className="flex items-center gap-1 text-xs text-blue-600 hover:underline">
-                            View all <ArrowRight className="size-3" aria-hidden="true" />
-                        </Link>
-                    </div>
+                <DashboardPanel title="Recent activity" action={<ViewAllLink to="/admin/audit-log" />} className="lg:col-span-2">
 
                     {recentActivity.length === 0 ? (
                         <p className="px-4 py-8 text-center text-sm text-ink-600">Nothing logged yet.</p>
@@ -194,31 +213,24 @@ export function AdminDashboardPage() {
                             ))}
                         </ul>
                     )}
-                </div>
+                </DashboardPanel>
 
                 {/* Right column — quick actions + course breakdown */}
                 <div className="flex flex-col gap-4">
+                    <AtRiskPanel entries={atRiskList} isLoading={!coursesData || analytics.some((q) => q.isLoading)} limit={5} />
+
 
                     {/* Quick actions */}
-                    <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
-                        <div className="border-b border-surface-100 bg-surface-50 px-4 py-3">
-                            <h2 className="text-sm font-semibold text-ink-900">Quick actions</h2>
-                        </div>
+                    <DashboardPanel title="Quick actions">
                         <div className="flex flex-col gap-1.5 p-3">
                             {quickActions.map((action) => (
                                 <QuickActionButton key={action.label} action={action} />
                             ))}
                         </div>
-                    </div>
+                    </DashboardPanel>
 
                     {/* Cohorts */}
-                    <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
-                        <div className="flex items-center justify-between border-b border-surface-100 bg-surface-50 px-4 py-3">
-                            <h2 className="text-sm font-semibold text-ink-900">Cohorts</h2>
-                            <Link to="/admin/cohorts" className="flex items-center gap-1 text-xs text-blue-600 hover:underline">
-                                All cohorts <ArrowRight className="size-3" aria-hidden="true" />
-                            </Link>
-                        </div>
+                    <DashboardPanel title="Cohorts" action={<ViewAllLink to="/admin/cohorts" label="All cohorts" />}>
                         {activeCohorts.length === 0 ? (
                             <p className="px-4 py-5 text-center text-sm text-ink-600">No open or running cohorts.</p>
                         ) : (
@@ -235,13 +247,13 @@ export function AdminDashboardPage() {
                             <GraduationCap className="size-3.5 text-ink-300" aria-hidden="true" />
                             {data.certificates_issued} certificates issued
                         </p>
-                    </div>
+                    </DashboardPanel>
                 </div>
             </div>
 
             <Modal isOpen={isBulkImportOpen} onClose={() => setIsBulkImportOpen(false)} title="Bulk enrolment import">
                 <BulkImportForm onClose={() => setIsBulkImportOpen(false)} />
             </Modal>
-        </div>
+        </PageFrame>
     );
 }

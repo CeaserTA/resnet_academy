@@ -21,6 +21,8 @@ import { cn } from '@/lib/utils';
 import type { User, UserRole, UserStatus } from '@/lib/api/types';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { matchesSearch } from '@/lib/search';
+import { useAllAdminEnrolments } from '@/features/admin/enrolments/useAdminEnrolments';
+import { displayCohortName } from '@/lib/cohort';
 
 type RoleTab = 'all' | UserRole;
 
@@ -156,6 +158,17 @@ export function ProvisionUserPage() {
     const [search, setSearch] = useState('');
     usePageHeader('Team', 'Every user in the system, and their role.');
 
+    // Which cohort (intake + year) each student is in — from their enrolments, withdrawn ones excluded.
+    const { data: allEnrolments } = useAllAdminEnrolments(roleTab === 'all' || roleTab === 'student');
+    const cohortsByStudent = new Map<number, { key: number; cohort: string; course: string }[]>();
+    (allEnrolments ?? [])
+        .filter((e) => e.status !== 'withdrawn' && e.status !== 'transferred')
+        .forEach((e) => {
+            const list = cohortsByStudent.get(e.student.id) ?? [];
+            list.push({ key: e.id, cohort: displayCohortName(e.cohort_course?.cohort_name) || 'Self-paced', course: e.course.title });
+            cohortsByStudent.set(e.student.id, list);
+        });
+
     const filteredUsers = useMemo(
         () => (users ?? []).filter((member) => matchesSearch(search, member.name, member.email)),
         [users, search],
@@ -209,10 +222,11 @@ export function ProvisionUserPage() {
                     <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
                         {/* Scrolls sideways on narrow screens instead of clipping columns */}
                         <div className="overflow-x-auto">
-                            <div className="min-w-[570px]">
+                            <div className="min-w-[720px]">
                                 {/* Column headers */}
-                                <div className="grid grid-cols-[minmax(180px,1fr)_130px_minmax(140px,1fr)_60px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
+                                <div className="grid grid-cols-[minmax(180px,1fr)_minmax(150px,1fr)_120px_minmax(130px,1fr)_60px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
                                     <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Name</span>
+                                    <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Cohort</span>
                                     <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Role</span>
                                     <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Status</span>
                                     <span />
@@ -228,7 +242,7 @@ export function ProvisionUserPage() {
                                         return (
                                             <li
                                                 key={member.id}
-                                                className="grid grid-cols-[minmax(180px,1fr)_130px_minmax(140px,1fr)_60px] items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-50"
+                                                className="grid grid-cols-[minmax(180px,1fr)_minmax(150px,1fr)_120px_minmax(130px,1fr)_60px] items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-50"
                                             >
                                                 {/* Name */}
                                                 <div className="flex min-w-0 items-center gap-2">
@@ -241,6 +255,22 @@ export function ProvisionUserPage() {
                                                         <p className="truncate text-sm text-ink-900">{member.name}</p>
                                                         <p className="truncate text-xs text-ink-600">{member.email}</p>
                                                     </div>
+                                                </div>
+
+                                                {/* Cohort — students only: each intake (and its year) they're enrolled in */}
+                                                <div className="min-w-0">
+                                                    {member.role !== 'student' ? (
+                                                        <span className="text-xs text-ink-300">—</span>
+                                                    ) : (cohortsByStudent.get(member.id) ?? []).length === 0 ? (
+                                                        <span className="text-xs text-ink-600">Not enrolled</span>
+                                                    ) : (
+                                                        (cohortsByStudent.get(member.id) ?? []).map((c) => (
+                                                            <p key={c.key} className="truncate text-xs text-ink-900" title={`${c.cohort} · ${c.course}`}>
+                                                                <span className="font-medium">{c.cohort}</span>
+                                                                <span className="text-ink-600"> · {c.course}</span>
+                                                            </p>
+                                                        ))
+                                                    )}
                                                 </div>
 
                                                 {/* Role */}

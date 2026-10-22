@@ -510,8 +510,9 @@ export function CourseFormPage() {
                         </Section>
                     </div>
 
-                    {/* ── Side panel (1/3): publishing + instructors ── */}
-                    <div className="space-y-5">
+                    {/* ── Side panel (1/3): publishing + instructors — stays in view beside the long
+                        form (below the sticky action bar) instead of leaving an empty column ── */}
+                    <div className="space-y-5 lg:sticky lg:top-16">
                         {isEditing && (
                             <section className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
                                 <div className="border-b border-surface-100 bg-surface-50 px-4 py-3">

@@ -26,6 +26,7 @@ import { useCourseAnalytics } from '@/features/analytics/useAnalytics';
 import { AtRiskStudentsTable } from '@/features/analytics/AtRiskStudentsTable';
 import { EnrollmentTable } from '@/features/analytics/EnrollmentTable';
 import { CourseCohortsPanel } from '@/features/cohorts/CourseCohortsPanel';
+import { CourseAssessmentsPanel } from '@/features/assessment/CourseAssessmentsPanel';
 import { AlertTriangle, TrendingUp, Users } from 'lucide-react';
 
 /**
@@ -46,9 +47,9 @@ export function CourseBuilderPage() {
     const queryClient = useQueryClient();
     const { user } = useAuth();
     const isAdmin = user?.role === 'admin';
-    usePageHeader(course?.title ?? 'Course', 'Modules, cohorts and analytics for this course');
+    usePageHeader(course?.title ?? 'Course', 'Modules, assessments, cohorts and analytics for this course');
 
-    const [activeTab, setActiveTab] = useState<'modules' | 'cohorts' | 'analytics'>('modules');
+    const [activeTab, setActiveTab] = useState<'modules' | 'assessments' | 'cohorts' | 'analytics'>('modules');
 
     // One modal for both creating and editing a module.
     const [moduleForm, setModuleForm] = useState<{ mode: 'create' } | { mode: 'edit'; module: Module } | null>(null);
@@ -239,6 +240,7 @@ export function CourseBuilderPage() {
                 onChange={setActiveTab}
                 tabs={[
                     { value: 'modules', label: 'Modules' },
+                    { value: 'assessments', label: 'Assessments' },
                     { value: 'cohorts', label: 'Cohorts' },
                     { value: 'analytics', label: 'Analytics' },
                 ]}
@@ -310,6 +312,11 @@ export function CourseBuilderPage() {
 
                     <TrashedModulesSection courseId={courseId} />
                 </>
+            )}
+
+            {/* Assessments Tab — every assignment and quiz of the course on one page */}
+            {activeTab === 'assessments' && (
+                isLoading ? <div className="flex justify-center py-10"><Spinner /></div> : <CourseAssessmentsPanel courseId={courseId} modules={sortedModules} />
             )}
 
             {/* Cohorts Tab */}

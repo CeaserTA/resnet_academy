@@ -8,7 +8,21 @@ import { PageHeaderProvider } from '@/lib/pageHeader/PageHeaderContext';
 import type { DashboardSummary } from '@/lib/api/types';
 
 vi.mock('@/features/catalogue/api', () => ({
-    fetchCourses: vi.fn().mockResolvedValue({ data: [] }),
+    fetchCourses: vi.fn().mockResolvedValue({ data: [{ id: 6, title: 'SEO', status: 'published', instructors: [] }] }),
+}));
+
+// One published course with an at-risk student — the at-risk card should open its gradebook.
+vi.mock('@/features/analytics/api', () => ({
+    fetchCourseAnalytics: vi.fn().mockResolvedValue({
+        total_students: 5,
+        completed_students: 1,
+        completion_rate: 20,
+        at_risk_students: [
+            { student: { id: 9, name: 'Henry Lutaaya', email: 'henry@example.com' }, enrolled_at: '2026-08-22T12:00:00Z', last_engaged_at: null, final_grade_percent: null, risk_factor: 'No activity' },
+        ],
+        engagement_summary: {},
+        roster: [],
+    }),
 }));
 
 const { summary } = vi.hoisted(() => {
@@ -124,7 +138,8 @@ it('shows needs-action counts, honest volume metrics, cohorts and readable activ
     // Needs action — including the counts that come from other endpoints
     expect(await screen.findByRole('link', { name: /Payments\s*2\s*Receipts to confirm/ })).toHaveAttribute('href', '/admin/payments');
     expect(await screen.findByRole('link', { name: /Applications\s*7\s*Waiting for a decision/ })).toHaveAttribute('href', '/admin/applications');
-    expect(screen.getByRole('link', { name: /At-risk students\s*4/ })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: /At-risk students\s*4/ })).toHaveAttribute('href', '/admin/courses/6/gradebook');
+    expect(await screen.findByText('Henry Lutaaya')).toBeInTheDocument();
 
     // Cohorts: open cohorts shown with a humanised name; archived ones hidden
     expect(await screen.findByText('November 2099')).toBeInTheDocument();

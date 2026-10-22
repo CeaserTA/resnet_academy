@@ -1,4 +1,4 @@
-import type { Enrolment, Order } from '@/lib/api/types';
+import type { Enrolment, Order, PaymentSubmission } from '@/lib/api/types';
 
 /** "UGX 450,000" — same formatter as the admin Payments page. */
 export function formatMoney(amount: string | number, currency: string): string {
@@ -40,4 +40,20 @@ export function financeTotals(orders: Order[]): FinanceTotals | null {
         outstanding: same.reduce((sum, o) => sum + Number(o.remaining_balance), 0),
         hasOtherCurrencies: currencies.length > 1,
     };
+}
+
+/**
+ * The latest decided payment (confirmed or rejected) per course, newest first — what the
+ * student should hear about: "accepted" or "not accepted, because…". A rejected payment that
+ * has since been resubmitted is replaced by the newer submission's state.
+ */
+export function latestPaymentUpdates(enrolments: Enrolment[]): { courseTitle: string; submission: PaymentSubmission; currency: string }[] {
+    return enrolments
+        .flatMap((e) => {
+            const latest = [...(e.order?.payment_submissions ?? [])].sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+            return latest && latest.status !== 'pending' && e.order
+                ? [{ courseTitle: e.course.title, submission: latest, currency: e.order.currency }]
+                : [];
+        })
+        .sort((a, b) => (b.submission.reviewed_at ?? b.submission.created_at).localeCompare(a.submission.reviewed_at ?? a.submission.created_at));
 }

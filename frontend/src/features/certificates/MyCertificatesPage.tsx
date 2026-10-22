@@ -1,12 +1,16 @@
+import { useState } from 'react';
 import { Link } from 'react-router';
-import { Award, Download, ShieldCheck } from 'lucide-react';
+import { Award, Download, Eye, ShieldCheck } from 'lucide-react';
 import { PageFrame } from '@/components/layout/PageFrame';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Spinner } from '@/components/ui/Spinner';
 import { Alert } from '@/components/ui/Alert';
+import { Button } from '@/components/ui/Button';
+import { CertificateViewerModal } from '@/features/certificates/CertificateViewerModal';
 import { certificateDownloadUrl } from '@/features/progress/api';
 import { useMyCertificates } from '@/features/progress/useProgress';
 import { formatDate } from '@/lib/formatDate';
+import type { Certificate } from '@/lib/api/types';
 
 /**
  * The student's earned certificates — real `certificates` records (issued automatically when the
@@ -15,6 +19,7 @@ import { formatDate } from '@/lib/formatDate';
 export function MyCertificatesPage() {
     const { data: certificates, isLoading, isError } = useMyCertificates();
     const count = certificates?.length ?? 0;
+    const [viewing, setViewing] = useState<Certificate | null>(null);
 
     return (
         <PageFrame
@@ -73,22 +78,27 @@ export function MyCertificatesPage() {
                                     <ShieldCheck className="size-4" aria-hidden="true" />
                                     Verify
                                 </Link>
-                                {/* rel="noopener" only — the download route needs the session cookie, which
-                                    "noreferrer" would strip (see the same link on My courses). */}
-                                <a
-                                    href={certificateDownloadUrl(certificate.id)}
-                                    target="_blank"
-                                    rel="noopener"
-                                    className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700"
-                                >
-                                    <Download className="size-4" aria-hidden="true" />
-                                    Download PDF
-                                </a>
+                                <div className="flex items-center gap-2">
+                                    <Button size="sm" variant="outline" onClick={() => setViewing(certificate)}>
+                                        <Eye className="size-3.5" aria-hidden="true" />
+                                        View
+                                    </Button>
+                                    {/* rel="noopener" only — the download route needs the session cookie, which
+                                        "noreferrer" would strip (see the same link on My courses). */}
+                                    <Button size="sm" asChild>
+                                        <a href={certificateDownloadUrl(certificate.id)} target="_blank" rel="noopener">
+                                            <Download className="size-3.5" aria-hidden="true" />
+                                            Download
+                                        </a>
+                                    </Button>
+                                </div>
                             </div>
                         </li>
                     ))}
                 </ul>
             )}
+
+            <CertificateViewerModal certificate={viewing} onClose={() => setViewing(null)} />
         </PageFrame>
     );
 }

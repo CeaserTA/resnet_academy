@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Award, Download, RefreshCw, Search } from 'lucide-react';
+import { Award, Download, Eye, RefreshCw, Search } from 'lucide-react';
 import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { useCourses } from '@/features/catalogue/useCourses';
 import { useCohorts } from '@/features/cohorts/useCohorts';
 import { certificateDownloadUrl } from '@/features/progress/api';
+import { CertificateViewerModal } from '@/features/certificates/CertificateViewerModal';
 import { useAdminCertificates, useRegenerateCertificate } from '@/features/admin/certificates/useAdminCertificates';
 import type { AdminCertificate, CertificateStatus } from '@/lib/api/types';
 import { formatDate } from '@/lib/formatDate';
@@ -38,6 +39,7 @@ export function AdminCertificatesPage() {
     const [status, setStatus] = useState<CertificateStatus | 'all'>('all');
     const [page, setPage] = useState(1);
     const [actionError, setActionError] = useState<string | null>(null);
+    const [viewing, setViewing] = useState<AdminCertificate | null>(null);
 
     const { data: courses } = useCourses({});
     const { data: cohorts } = useCohorts();
@@ -183,15 +185,24 @@ export function AdminCertificatesPage() {
                                             only — "noreferrer" strips the Referer Sanctum needs, and the
                                             admin would be bounced to /login.
                                         */}
+                                        <button
+                                            type="button"
+                                            onClick={() => setViewing(certificate)}
+                                            aria-label={`View certificate ${certificate.certificate_number}`}
+                                            className="inline-flex items-center gap-1 rounded-lg border border-surface-100 px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-600/10"
+                                        >
+                                            <Eye className="size-3.5" aria-hidden="true" />
+                                            View
+                                        </button>
                                         <a
                                             href={certificateDownloadUrl(certificate.id)}
                                             target="_blank"
                                             rel="noopener"
-                                            aria-label={`Open certificate ${certificate.certificate_number}`}
+                                            aria-label={`Download certificate ${certificate.certificate_number}`}
                                             className="inline-flex items-center gap-1 rounded-lg border border-surface-100 px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-600/10"
                                         >
                                             <Download className="size-3.5" aria-hidden="true" />
-                                            Open
+                                            Download
                                         </a>
                                         {certificate.status === 'generating' && (
                                             <button
@@ -238,6 +249,8 @@ export function AdminCertificatesPage() {
                     )}
                 </div>
             )}
+
+            <CertificateViewerModal certificate={viewing} onClose={() => setViewing(null)} />
         </div>
     );
 }

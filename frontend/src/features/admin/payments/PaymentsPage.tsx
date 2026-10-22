@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Modal } from '@/components/ui/Modal';
+import { ReceiptPreview, ReceiptThumbnailButton } from '@/components/media/ReceiptPreview';
 import { Pagination } from '@/components/ui/Pagination';
 import { VolumeCard } from '@/components/dashboard/VolumeCard';
 import { cn } from '@/lib/utils';
@@ -102,13 +103,7 @@ function ViewOrderModal({ order, onClose }: { order: Order; onClose: () => void 
     return (
         <Modal isOpen onClose={onClose} title={`Order #${order.id}`}>
             {latestSubmission ? (
-                <a href={latestSubmission.receipt_url} target="_blank" rel="noreferrer">
-                    <img
-                        src={latestSubmission.receipt_url}
-                        alt="Payment receipt"
-                        className="aspect-video w-full rounded-md object-cover"
-                    />
-                </a>
+                <ReceiptPreview url={latestSubmission.receipt_url} className="max-h-80" />
             ) : (
                 <>
                     <div className="flex aspect-video items-center justify-center rounded-md bg-surface-100 text-ink-300">
@@ -236,11 +231,7 @@ function ConfirmPaymentModal({ order, submission, onClose }: { order: Order; sub
                     This applies <span className="font-medium text-ink-900">{formatAmount(submission.amount, order.currency)}</span> from{' '}
                     <span className="font-medium text-ink-900">{order.student?.name ?? 'this student'}</span> to their order. This can&apos;t be undone.
                 </p>
-                {submission && (
-                    <a href={submission.receipt_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
-                        View submitted receipt
-                    </a>
-                )}
+                {submission && <ReceiptPreview url={submission.receipt_url} className="max-h-72" />}
             </div>
         </Modal>
     );
@@ -298,26 +289,7 @@ function RejectPaymentModal({ order, submission, onClose }: { order: Order; subm
 }
 
 function ReceiptCell({ order }: { order: Order }) {
-    if (order.pending_submission) {
-        return (
-            <a href={order.pending_submission.receipt_url} target="_blank" rel="noreferrer">
-                <img
-                    src={order.pending_submission.receipt_url}
-                    alt="Submitted receipt"
-                    className="size-10 rounded-md object-cover"
-                />
-            </a>
-        );
-    }
-
-    return (
-        <span
-            className="flex size-10 items-center justify-center rounded-md bg-surface-100 text-ink-300"
-            aria-label="No receipt submitted yet"
-        >
-            <ImageIcon className="size-4" aria-hidden="true" />
-        </span>
-    );
+    return <ReceiptThumbnailButton url={order.pending_submission?.receipt_url} studentName={order.student?.name} />;
 }
 
 export function PaymentsPage() {

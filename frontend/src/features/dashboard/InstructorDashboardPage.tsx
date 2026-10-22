@@ -2,24 +2,31 @@ import { Link } from 'react-router';
 import { useQueries } from '@tanstack/react-query';
 import {
     AlertTriangle,
-    ArrowRight,
     BookOpen,
+    CalendarRange,
     ClipboardList,
     FileCheck,
     GraduationCap,
     LifeBuoy,
     MessageSquare,
+    PencilLine,
     Plus,
     TrendingUp,
     Users,
 } from 'lucide-react';
 import { AttentionCard } from '@/components/dashboard/AttentionCard';
+import { DashboardPanel, NeedsActionBand, SectionLabel, ViewAllLink } from '@/components/dashboard/DashboardPanel';
+import { PageFrame } from '@/components/layout/PageFrame';
+import { assessmentItems, useAssessmentActivity, useModulesForCourses } from '@/features/assessment/useAssessmentActivity';
+import { formatRelativeTime } from '@/lib/utils';
+import { AtRiskPanel } from '@/components/dashboard/AtRiskPanel';
+import { collectAtRisk, worstAtRiskCourse } from '@/lib/atRisk';
 import { QuickActionButton, type QuickAction } from '@/components/dashboard/QuickActionButton';
 import { VolumeCard } from '@/components/dashboard/VolumeCard';
 import { Button } from '@/components/ui/Button';
+import { ProgressBar } from '@/components/ui/ProgressBar';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import { useCourses } from '@/features/catalogue/useCourses';
 import { useCourseApplications } from '@/features/courseApplications/useCourseApplications';
 import { useTickets } from '@/features/communication/useCommunication';
@@ -44,7 +51,6 @@ const STATUS_TEXT: Record<string, string> = {
 export function InstructorDashboardPage() {
     const { user } = useAuth();
     const firstName = user?.first_name || user?.name?.split(' ')[0] || '';
-    usePageHeader('Dashboard', firstName ? `Welcome back, ${firstName}` : 'Your courses and activity at a glance');
 
     const { data: coursesData, isLoading } = useCourses({});
     const { data: applications } = useCourseApplications();
@@ -74,22 +80,40 @@ export function InstructorDashboardPage() {
     const pendingApplications = (applications?.data ?? []).filter((a) => a.status === 'pending').length;
     const openTickets = (tickets ?? []).filter((t) => t.status === 'open').length;
     const completionRate = totals.students > 0 ? Math.round((totals.completed / totals.students) * 100) : 0;
-    const firstCourse = myCourses[0];
+    const atRiskList = collectAtRisk(myCourses, analytics.map((q) => q.data));
+
+    // Grading queue: every submitted assignment / quiz attempt still waiting for a mark.
+    const moduleQueries = useModulesForCourses(myCourses.map((c) => c.id));
+    const gradableItems = myCourses.flatMap((course, i) => assessmentItems(moduleQueries[i]?.data ?? [], course.id, course.title));
+    const grading = useAssessmentActivity(gradableItems);
+    const gradingLoaded = moduleQueries.every((q) => !q.isLoading) && !grading.isLoading;
+    const worstCourse = worstAtRiskCourse(atRiskList);
     const count = (n: number) => (analyticsLoaded ? n : '—');
 
+    // Engagement per course (the analytics endpoint counts events over its last 30 days).
+    const engagementRows = myCourses
+        .map((course, i) => {
+            const summary = analytics[i]?.data?.engagement_summary ?? {};
+            const lessons = summary.resource_viewed ?? 0;
+            const assignments = summary.assignment_submitted ?? 0;
+            const quizzes = summary.quiz_attempted ?? 0;
+            return { course, lessons, assignments, quizzes, total: lessons + assignments + quizzes };
+        })
+        .sort((a, b) => b.total - a.total);
+    const maxEngagement = Math.max(1, ...engagementRows.map((r) => r.total));
+
+    const subtitle = firstName ? `Welcome back, ${firstName}` : 'Your courses and activity at a glance';
+
     if (isLoading) {
-        return <div className="flex h-64 items-center justify-center"><Spinner /></div>;
+        return (
+            <PageFrame title="Dashboard" subtitle={subtitle}>
+                <div className="flex h-64 items-center justify-center"><Spinner /></div>
+            </PageFrame>
+        );
     }
 
     const quickActions: QuickAction[] = [
-        ...(firstCourse
-            ? [{
-                label: 'Open gradebook',
-                description: myCourses.length === 1 ? firstCourse.title : `${firstCourse.title} (+${myCourses.length - 1} more in My courses)`,
-                icon: ClipboardList,
-                to: `/admin/courses/${firstCourse.id}/gradebook`,
-            }]
-            : []),
+        { label: 'Cohorts', description: 'Intakes running your courses', icon: CalendarRange, to: '/admin/cohorts' },
         {
             label: 'Review applications',
             description: pendingApplications > 0 ? `${pendingApplications} awaiting a decision` : 'Nothing waiting',
@@ -106,28 +130,36 @@ export function InstructorDashboardPage() {
     ];
 
     return (
-        <div className="space-y-5">
-            {/* Page action — the title is in the top bar */}
-            <div className="flex justify-end">
+        <PageFrame
+            title="Dashboard"
+            subtitle={subtitle}
+            actions={
                 <Button size="sm" asChild>
                     <Link to="/admin/courses/new">
                         <Plus className="size-3.5" aria-hidden="true" />
                         New course
                     </Link>
                 </Button>
-            </div>
+            }
+        >
 
             {/* ── Needs action — the one blue-tinted block; amber only where something waits ── */}
-            <section className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
-                <p className="mb-3 text-xs font-bold uppercase tracking-widest text-blue-700">Needs action</p>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <NeedsActionBand>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <AttentionCard
+                        icon={PencilLine}
+                        label="To grade"
+                        value={gradingLoaded ? grading.tasks.length : '—'}
+                        sub="Assignments and quizzes handed in"
+                        tone={gradingLoaded && grading.tasks.length > 0 ? 'warning' : 'neutral'}
+                    />
                     <AttentionCard
                         icon={AlertTriangle}
                         label="At-risk students"
                         value={count(totals.atRisk)}
                         sub="Inactive or falling behind"
                         tone={analyticsLoaded && totals.atRisk > 0 ? 'warning' : 'neutral'}
-                        to={firstCourse ? `/admin/courses/${firstCourse.id}/gradebook` : undefined}
+                        to={worstCourse ? `/admin/courses/${worstCourse.id}/gradebook` : undefined}
                     />
                     <AttentionCard
                         icon={FileCheck}
@@ -146,11 +178,11 @@ export function InstructorDashboardPage() {
                         to="/tickets"
                     />
                 </div>
-            </section>
+            </NeedsActionBand>
 
             {/* ── Your numbers — neutral, informational ── */}
             <section>
-                <p className="mb-2.5 text-xs font-semibold uppercase tracking-widest text-ink-600">Your teaching</p>
+                <SectionLabel>Your teaching</SectionLabel>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <VolumeCard
                         icon={BookOpen}
@@ -170,7 +202,7 @@ export function InstructorDashboardPage() {
 
             {/* ── Quick actions — one row of cards across the full width (2 × 2 on tablets) ── */}
             <section>
-                <p className="mb-2.5 text-xs font-semibold uppercase tracking-widest text-ink-600">Quick actions</p>
+                <SectionLabel>Quick actions</SectionLabel>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     {quickActions.map((action) => (
                         <QuickActionButton key={action.label} action={action} />
@@ -178,15 +210,9 @@ export function InstructorDashboardPage() {
                 </div>
             </section>
 
-            {/* ── Courses ── */}
-            <div>
-                <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
-                    <div className="flex items-center justify-between border-b border-surface-100 bg-surface-50 px-4 py-3">
-                        <h2 className="text-sm font-semibold text-ink-900">Your courses</h2>
-                        <Link to="/admin/courses" className="flex items-center gap-1 text-xs text-blue-600 hover:underline">
-                            View all <ArrowRight className="size-3" aria-hidden="true" />
-                        </Link>
-                    </div>
+            {/* ── Courses (2/3) + at-risk students (1/3) — same bottom row as the admin dashboard ── */}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <DashboardPanel title="Your courses" action={<ViewAllLink to="/admin/courses" />} className="lg:col-span-2">
 
                     {myCourses.length === 0 ? (
                         <EmptyState
@@ -207,11 +233,8 @@ export function InstructorDashboardPage() {
                             {myCourses.slice(0, 6).map((course, i) => {
                                 const stats = analytics[i]?.data;
                                 return (
-                                    <li key={course.id}>
-                                        <Link
-                                            to={`/admin/courses/${course.id}/modules`}
-                                            className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-50"
-                                        >
+                                    <li key={course.id} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-50">
+                                        <Link to={`/admin/courses/${course.id}/modules`} className="flex min-w-0 flex-1 items-center gap-3">
                                             <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-surface-100">
                                                 {course.thumbnail_url ? (
                                                     <img src={course.thumbnail_url} alt="" className="size-full object-cover" />
@@ -227,19 +250,101 @@ export function InstructorDashboardPage() {
                                                     </span>
                                                     {course.category && ` · ${course.category.name}`}
                                                     {stats && ` · ${stats.total_students} student${stats.total_students === 1 ? '' : 's'}`}
-                                                    {stats && stats.at_risk_students.length > 0 && ` · ${stats.at_risk_students.length} at risk`}
+                                                    {stats && stats.at_risk_students.length > 0 && (
+                                                        <span className="text-accent-amber"> · {stats.at_risk_students.length} at risk</span>
+                                                    )}
                                                 </span>
+                                                {stats && stats.total_students > 0 && (
+                                                    <span className="mt-1.5 flex items-center gap-2">
+                                                        <ProgressBar percent={stats.completion_rate} className="h-1 max-w-40" />
+                                                        <span className="text-[11px] tabular-nums text-ink-600">{Math.round(stats.completion_rate)}% completed</span>
+                                                    </span>
+                                                )}
                                             </span>
-                                            <ArrowRight className="size-3.5 shrink-0 text-ink-300" aria-hidden="true" />
                                         </Link>
+                                        <Button size="sm" variant="outline" asChild className="shrink-0">
+                                            <Link to={`/admin/courses/${course.id}/gradebook`} aria-label={`Gradebook for ${course.title}`}>
+                                                <ClipboardList className="size-3.5" aria-hidden="true" />
+                                                <span className="hidden sm:inline">Gradebook</span>
+                                            </Link>
+                                        </Button>
                                     </li>
                                 );
                             })}
                         </ul>
                     )}
-                </div>
+            </DashboardPanel>
 
+            <div className="flex flex-col gap-4">
+                <DashboardPanel title={grading.tasks.length > 0 ? `To grade (${grading.tasks.length})` : 'To grade'}>
+                    {!gradingLoaded ? (
+                        <div className="flex justify-center py-6"><Spinner /></div>
+                    ) : grading.tasks.length === 0 ? (
+                        <p className="px-4 py-5 text-center text-sm text-ink-600">Nothing waiting — all work is marked.</p>
+                    ) : (
+                        <ul className="divide-y divide-surface-100">
+                            {grading.tasks.slice(0, 6).map((task) => (
+                                <li key={task.key} className="flex items-center gap-3 px-4 py-3">
+                                    <span className="min-w-0 flex-1">
+                                        <span className="block truncate text-sm font-medium text-ink-900">{task.studentName}</span>
+                                        <span className="block truncate text-xs text-ink-600">
+                                            {task.kind === 'quiz' ? 'Quiz' : 'Assignment'}: {task.itemTitle} · {task.courseTitle}
+                                        </span>
+                                        {task.submittedAt && <span className="block text-[11px] text-ink-600">Handed in {formatRelativeTime(task.submittedAt)}</span>}
+                                    </span>
+                                    <Button size="sm" asChild className="shrink-0">
+                                        <Link to={task.href}>Grade</Link>
+                                    </Button>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </DashboardPanel>
+                <AtRiskPanel entries={atRiskList} isLoading={!analyticsLoaded} />
             </div>
-        </div>
+            </div>
+
+            {/* ── Engagement — what students actually did in each course over the last 30 days ── */}
+            {myCourses.length > 0 && (
+                <DashboardPanel title="Engagement · last 30 days">
+                    {!analyticsLoaded ? (
+                        <div className="flex justify-center py-6"><Spinner /></div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full min-w-[560px] text-sm">
+                                <thead>
+                                    <tr className="border-b border-surface-100 text-left text-xs font-medium uppercase tracking-wide text-ink-600">
+                                        <th className="px-4 py-2.5 font-medium">Course</th>
+                                        <th className="px-4 py-2.5 text-right font-medium">Lessons viewed</th>
+                                        <th className="px-4 py-2.5 text-right font-medium">Assignments</th>
+                                        <th className="px-4 py-2.5 text-right font-medium">Quizzes</th>
+                                        <th className="w-1/4 px-4 py-2.5 font-medium">Activity</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-surface-100">
+                                    {engagementRows.map(({ course, lessons, assignments, quizzes, total }) => (
+                                        <tr key={course.id} className="hover:bg-surface-50">
+                                            <td className="max-w-0 truncate px-4 py-2.5 font-medium text-ink-900">
+                                                <Link to={`/admin/courses/${course.id}/gradebook`} className="hover:text-blue-600">{course.title}</Link>
+                                            </td>
+                                            <td className="px-4 py-2.5 text-right tabular-nums text-ink-900">{lessons}</td>
+                                            <td className="px-4 py-2.5 text-right tabular-nums text-ink-900">{assignments}</td>
+                                            <td className="px-4 py-2.5 text-right tabular-nums text-ink-900">{quizzes}</td>
+                                            <td className="px-4 py-2.5">
+                                                {total === 0 ? (
+                                                    <span className="text-xs text-ink-600">No activity</span>
+                                                ) : (
+                                                    <ProgressBar percent={(total / maxEngagement) * 100} className="h-1.5" />
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </DashboardPanel>
+            )}
+        </PageFrame>
     );
 }

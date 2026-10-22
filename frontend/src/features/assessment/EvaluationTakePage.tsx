@@ -304,7 +304,10 @@ function InstructionScreen({
     const alreadyCompleted = attempts.some((a) => a.passed === true);
     const hasInProgress = overview.in_progress_attempt !== null;
     const attemptsExhausted = overview.attempts_remaining === 0;
-    const canStart = !alreadyCompleted && !attemptsExhausted && overview.question_count > 0;
+    // An attempt with written answers waits for the instructor to mark it. Starting another
+    // meanwhile only burns an attempt (and repeats the same questions), so wait for the mark.
+    const awaitingMarking = attempts.some((a) => a.status === 'submitted');
+    const canStart = !alreadyCompleted && !attemptsExhausted && !awaitingMarking && overview.question_count > 0;
 
     const handleStartClick = () => {
         // Resuming an already-running attempt needs no confirmation — its timer started earlier.
@@ -358,8 +361,17 @@ function InstructionScreen({
                         </p>
                     ) : (
                         <>
-                            {attemptsExhausted && (
-                                <Alert variant="error" message="You have used all of your attempts for this evaluation." />
+                            {awaitingMarking && !hasInProgress && (
+                                <Alert
+                                    variant="warning"
+                                    message="Your last attempt is waiting for your instructor to mark the written answers. You'll get a notification with your result — the next module opens once you pass."
+                                />
+                            )}
+                            {attemptsExhausted && !awaitingMarking && (
+                                <Alert
+                                    variant="error"
+                                    message="You have used all of your attempts for this evaluation. Message your instructor or contact support if you need another attempt."
+                                />
                             )}
                             {!attemptsExhausted && overview.question_count === 0 && (
                                 <Alert variant="error" message="This evaluation has no questions yet. Check back later." />
