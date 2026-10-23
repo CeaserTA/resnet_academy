@@ -58,7 +58,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await logoutRequest();
         // Clear per-session UI state so the profile completion modal re-appears on next login
         sessionStorage.removeItem('profile_completion_modal_dismissed');
-        queryClient.clear();
+        // Not queryClient.clear(): that also removes the current-user query this provider is
+        // subscribed to, so setting it to null afterwards created a new query nobody watched and
+        // the app stayed "signed in" until a refresh. Drop everything else, then sign out.
+        forgetPreviousUser();
         queryClient.setQueryData(CURRENT_USER_QUERY_KEY, null);
     };
 
