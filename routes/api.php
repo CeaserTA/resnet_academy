@@ -32,6 +32,7 @@ use App\Http\Controllers\Api\V1\ForumPostReportController;
 use App\Http\Controllers\Api\V1\ForumTagController;
 use App\Http\Controllers\Api\V1\ForumThreadController;
 use App\Http\Controllers\Api\V1\GradebookController;
+use App\Http\Controllers\Api\V1\GradingQueueController;
 use App\Http\Controllers\Api\V1\GroupController;
 use App\Http\Controllers\Api\V1\MessageController;
 use App\Http\Controllers\Api\V1\ModuleController;
@@ -131,6 +132,9 @@ Route::prefix('v1')->group(function (): void {
         // Certificate support (admin-only — enforced by CertificatePolicy, not just the nav).
         Route::get('/admin/certificates', [AdminCertificateController::class, 'index']);
         Route::post('/admin/certificates/{certificate}/regenerate', [AdminCertificateController::class, 'regenerate']);
+        // Withhold / give back a certificate (BACKEND_CHANGES.md §5).
+        Route::post('/admin/certificates/{certificate}/revoke', [AdminCertificateController::class, 'revoke']);
+        Route::post('/admin/certificates/{certificate}/restore', [AdminCertificateController::class, 'restore']);
         Route::get('/admin/orders', [AdminOrderController::class, 'index']);
         Route::get('/admin/orders/summary', [AdminOrderController::class, 'summary']);
         Route::patch('/admin/orders/{order}', [AdminOrderController::class, 'update']);
@@ -217,9 +221,14 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/attempts/{attempt}/review', [EvaluationAttemptController::class, 'review']);
         Route::post('/attempts/{attempt}/submit', [EvaluationAttemptController::class, 'submit']);
         Route::post('/attempts/{attempt}/grade', [EvaluationAttemptController::class, 'grade']);
+        // Staff give a student extra attempts (BACKEND_CHANGES.md §3).
+        Route::post('/evaluations/{evaluation}/students/{student}/extra-attempts', [EvaluationAttemptController::class, 'grantExtraAttempts']);
 
         // Gradebook (FR-21) — aggregated assignment + evaluation grades per student per course.
         Route::get('/courses/{course}/gradebook', [GradebookController::class, 'show']);
+        // Grading queue — everything handed in and waiting for a mark, across the courses the
+        // staff member grades (BACKEND_CHANGES.md §1).
+        Route::get('/grading-queue', [GradingQueueController::class, 'index']);
 
         // Analytics dashboard (business rule "Analytics dashboard") — completion rates,
         // at-risk flags, engagement metrics, admin/instructor only.

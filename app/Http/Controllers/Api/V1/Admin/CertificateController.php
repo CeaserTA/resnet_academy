@@ -33,7 +33,7 @@ final class CertificateController extends Controller
             'search' => ['nullable', 'string', 'max:100'],
             'course_id' => ['nullable', 'integer', 'exists:courses,id'],
             'cohort_id' => ['nullable', 'integer', 'exists:cohorts,id'],
-            'status' => ['nullable', Rule::in(['generating', 'ready'])],
+            'status' => ['nullable', Rule::in(['generating', 'ready', 'revoked'])],
         ]);
 
         $certificates = Certificate::query()
@@ -57,8 +57,9 @@ final class CertificateController extends Controller
                     ->whereColumn('enrolments.course_id', 'certificates.course_id')
                     ->where('cohort_courses.cohort_id', $cohortId));
             })
-            ->when(($validated['status'] ?? null) === 'generating', fn (Builder $query) => $query->whereNull('certificate_url'))
-            ->when(($validated['status'] ?? null) === 'ready', fn (Builder $query) => $query->whereNotNull('certificate_url'))
+            ->when(($validated['status'] ?? null) === 'generating', fn (Builder $query) => $query->whereNull('revoked_at')->whereNull('certificate_url'))
+            ->when(($validated['status'] ?? null) === 'ready', fn (Builder $query) => $query->whereNull('revoked_at')->whereNotNull('certificate_url'))
+            ->when(($validated['status'] ?? null) === 'revoked', fn (Builder $query) => $query->whereNotNull('revoked_at'))
             ->latest('issued_at')
             ->latest('id')
             ->paginate(25)
@@ -102,6 +103,38 @@ final class CertificateController extends Controller
      *
      * @param  \Illuminate\Support\Collection<int, Certificate>  $certificates
      */
+    /**
+     * Withhold a certificate from its student, with a reason they're told (BACKEND_CHANGES.md §5).
+     */
+    public function revoke(Request $request, Certificate $certificate): AdminCertificateResource
+    {
+        $this->authorize('revoke', $certificate);
+
+        $validated = $request->validate(['reason' => ['required', 'string', 'max:500']]);
+
+        $this->certificateService->revoke($certificate, $request->user(), $validated['reason']);
+
+        return $this->fresh($certificate);
+    }
+
+    /** Give a revoked certificate back to its student. */
+    public function restore(Request $request, Certificate $certificate): AdminCertificateResource
+    {
+        $this->authorize('revoke', $certificate);
+
+        $this->certificateService->restore($certificate, $request->user());
+
+        return $this->fresh($certificate);
+    }
+
+    private function fresh(Certificate $certificate): AdminCertificateResource
+    {
+        $certificate->refresh()->load(['student', 'course']);
+        $this->attachCohorts(collect([$certificate]));
+
+        return new AdminCertificateResource($certificate);
+    }
+
     private function attachCohorts($certificates): void
     {
         if ($certificates->isEmpty()) {

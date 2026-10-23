@@ -49,6 +49,7 @@ final class EvaluationController extends Controller
             ->get();
 
         $attemptsUsed = $myAttempts->count();
+        $maxAttempts = $evaluation->maxAttemptsFor($user);
         $inProgress = $myAttempts->first(fn (EvaluationAttempt $attempt): bool => $attempt->submitted_at === null);
 
         return response()->json([
@@ -59,13 +60,14 @@ final class EvaluationController extends Controller
                 'instructions' => $evaluation->instructions,
                 'pass_score' => $evaluation->pass_score,
                 'time_limit_minutes' => $evaluation->time_limit_minutes,
-                'max_attempts' => $evaluation->max_attempts,
+                // Includes extra attempts staff granted this student (BACKEND_CHANGES.md §3).
+                'max_attempts' => $maxAttempts,
                 'question_count' => $questionCount,
                 'total_points' => (float) $evaluation->questions()->sum('points'),
                 'attempts_used' => $attemptsUsed,
-                'attempts_remaining' => $evaluation->max_attempts === null
+                'attempts_remaining' => $maxAttempts === null
                     ? null
-                    : max(0, $evaluation->max_attempts - $attemptsUsed),
+                    : max(0, $maxAttempts - $attemptsUsed),
                 'in_progress_attempt' => $inProgress === null ? null : [
                     'id' => $inProgress->id,
                     'started_at' => $inProgress->started_at->toIso8601String(),
