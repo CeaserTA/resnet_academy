@@ -10,6 +10,7 @@ import type {
     EvaluationOverview,
     Gradebook,
     GradingQueueEntry,
+    OutOfAttemptsEntry,
     PaginatedResponse,
     Question,
     QuestionBank,
@@ -242,6 +243,12 @@ export async function gradeAttempt(
 /** Everything handed in and waiting for a mark, across the courses the user grades. */
 export async function fetchGradingQueue(courseId?: number): Promise<GradingQueueEntry[]> {
     const { data } = await apiClient.get<{ data: GradingQueueEntry[] }>('/grading-queue', { params: courseId ? { course_id: courseId } : undefined });
+    return data.data;
+}
+
+/** Students out of quiz attempts without passing, across the courses the user grades. */
+export async function fetchOutOfAttempts(): Promise<OutOfAttemptsEntry[]> {
+    const { data } = await apiClient.get<{ data: OutOfAttemptsEntry[] }>('/grading-queue/out-of-attempts');
     return data.data;
 }
 

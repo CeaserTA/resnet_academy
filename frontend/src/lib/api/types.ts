@@ -888,3 +888,16 @@ export interface GradingQueueEntry {
     is_late: boolean;
     submitted_at: string | null;
 }
+
+/** A student who used every attempt on a quiz without passing — needs "another attempt" from staff. */
+export interface OutOfAttemptsEntry {
+    evaluation_id: number;
+    evaluation_title: string;
+    pass_score: number;
+    module: { id: number; title: string; order_index: number };
+    course: { id: number; title: string };
+    student: { id: number; name: string; email: string } | null;
+    attempts_used: number;
+    best_score_percent: number;
+    last_attempt_at: string | null;
+}

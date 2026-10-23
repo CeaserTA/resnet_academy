@@ -9,7 +9,7 @@ comments, so `grep -rn "BACKEND_CHANGES.md §3"` finds every line belonging to a
 
 | § | Change | Migration | New endpoint |
 |---|---|---|---|
-| 1 | Grading queue for staff | — | `GET /api/v1/grading-queue` |
+| 1 | Grading queue for staff | — | `GET /api/v1/grading-queue`, `GET /api/v1/grading-queue/out-of-attempts` |
 | 2 | No new quiz attempt while one awaits marking | — | — |
 | 3 | Staff can give a student extra quiz attempts | `evaluation_attempt_allowances` | `POST /api/v1/evaluations/{evaluation}/students/{student}/extra-attempts` |
 | 4 | Receipt/file links 404'd after an R2 upload fell back to local disk | — | — |
@@ -30,6 +30,13 @@ Each entry: `kind` (`assignment`|`quiz`), `id` (submission/attempt id), `item_id
 `module {id,title,order_index}`, `course {id,title}`, `student {id,name,email}`, `attempt_number`,
 `is_late`, `submitted_at`.
 
+`GET /api/v1/grading-queue/out-of-attempts[?course_id=]` (same access rules) lists students who
+used every attempt on a quiz (`max_attempts` + any extra granted, §3) without passing and have
+nothing waiting to be marked. Auto-marked quizzes never appear in the main queue, so without this
+a student stuck on a required quiz was invisible to staff. Each entry: `evaluation_id`,
+`evaluation_title`, `pass_score`, `module`, `course`, `student`, `attempts_used`,
+`best_score_percent`, `last_attempt_at`. The list empties for that student once §3 grants an attempt.
+
 Also: `AssignmentResource` now includes `course_id` (like `EvaluationResource` already did) so the
 grading page can link back to its course.
 
@@ -37,7 +44,7 @@ grading page can link back to its course.
 `app/Http/Controllers/Api/V1/GradingQueueController.php` (new), `routes/api.php`,
 `app/Http/Resources/AssignmentResource.php`.
 
-**Tests:** `tests/Feature/Assessment/GradingQueueTest.php` — instructor scope, admin scope + filter, student denied.
+**Tests:** `tests/Feature/Assessment/GradingQueueTest.php` — instructor scope, admin scope + filter, student denied, out-of-attempts list (and it clears after a grant).
 
 ## §2 No new quiz attempt while the last one awaits marking
 

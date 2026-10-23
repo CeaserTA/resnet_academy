@@ -72,3 +72,28 @@ it('denies students', function (): void {
 
     $this->actingAs($student)->getJson('/api/v1/grading-queue')->assertForbidden();
 });
+
+it('lists students out of quiz attempts without passing, until staff grant another (BACKEND_CHANGES.md §1, §3)', function (): void {
+    $admin = User::factory()->admin()->create();
+    $student = User::factory()->student()->create();
+    $course = Course::factory()->create(['created_by' => $admin->id]);
+    $evaluation = Evaluation::factory()->for(Module::factory()->for($course)->create())->create(['max_attempts' => 2, 'pass_score' => 70]);
+
+    foreach ([1, 2] as $n) {
+        EvaluationAttempt::factory()->for($evaluation)->create([
+            'student_id' => $student->id, 'attempt_number' => $n, 'status' => EvaluationAttemptStatus::Graded,
+            'score_percent' => 40, 'passed' => false, 'submitted_at' => now()->subHours(3 - $n),
+        ]);
+    }
+
+    $this->actingAs($admin)->getJson('/api/v1/grading-queue/out-of-attempts')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.student.id', $student->id)
+        ->assertJsonPath('data.0.attempts_used', 2);
+
+    $this->actingAs($admin)->postJson("/api/v1/evaluations/{$evaluation->id}/students/{$student->id}/extra-attempts")->assertOk();
+
+    $this->actingAs($admin)->getJson('/api/v1/grading-queue/out-of-attempts')->assertOk()->assertJsonCount(0, 'data');
+    $this->actingAs($student)->getJson('/api/v1/grading-queue/out-of-attempts')->assertForbidden();
+});

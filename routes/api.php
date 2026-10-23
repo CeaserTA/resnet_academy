@@ -229,6 +229,7 @@ Route::prefix('v1')->group(function (): void {
         // Grading queue — everything handed in and waiting for a mark, across the courses the
         // staff member grades (BACKEND_CHANGES.md §1).
         Route::get('/grading-queue', [GradingQueueController::class, 'index']);
+        Route::get('/grading-queue/out-of-attempts', [GradingQueueController::class, 'outOfAttempts']);
 
         // Analytics dashboard (business rule "Analytics dashboard") — completion rates,
         // at-risk flags, engagement metrics, admin/instructor only.

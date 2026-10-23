@@ -17,6 +17,7 @@ import {
     fetchEvaluationOverview,
     fetchGradebook,
     fetchGradingQueue,
+    fetchOutOfAttempts,
     grantExtraAttempts,
     fetchMyEvaluationAttempts,
     fetchQuestionBanks,
@@ -214,12 +215,20 @@ export function useGradingQueue(courseId?: number) {
     });
 }
 
-export function useGrantExtraAttempts(evaluationId: number) {
+export function useOutOfAttempts() {
+    return useQuery({ queryKey: ['grading-queue', 'out-of-attempts'], queryFn: fetchOutOfAttempts });
+}
+
+/** Give a student another attempt; pass the evaluation per call (Grading page) or fix it (quiz page). */
+export function useGrantExtraAttempts(evaluationId?: number) {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: ({ studentId, attempts, reason }: { studentId: number; attempts?: number; reason?: string }) =>
-            grantExtraAttempts(evaluationId, studentId, attempts, reason),
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['evaluations', evaluationId] }),
+        mutationFn: ({ studentId, attempts, reason, evaluationId: perCall }: { studentId: number; attempts?: number; reason?: string; evaluationId?: number }) =>
+            grantExtraAttempts((perCall ?? evaluationId)!, studentId, attempts, reason),
+        onSuccess: (_data, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['evaluations', variables.evaluationId ?? evaluationId] });
+            queryClient.invalidateQueries({ queryKey: ['grading-queue'] });
+        },
     });
 }
 

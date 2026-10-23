@@ -17,7 +17,7 @@ import {
 import { AttentionCard } from '@/components/dashboard/AttentionCard';
 import { DashboardPanel, NeedsActionBand, SectionLabel, ViewAllLink } from '@/components/dashboard/DashboardPanel';
 import { PageFrame } from '@/components/layout/PageFrame';
-import { useGradingQueue } from '@/features/assessment/useAssessment';
+import { useGradingQueue, useOutOfAttempts } from '@/features/assessment/useAssessment';
 import { AtRiskPanel } from '@/components/dashboard/AtRiskPanel';
 import { collectAtRisk, worstAtRiskCourse } from '@/lib/atRisk';
 import { QuickActionButton, type QuickAction } from '@/components/dashboard/QuickActionButton';
@@ -85,6 +85,8 @@ export function InstructorDashboardPage() {
     const { data: gradingQueue, isLoading: gradingLoading } = useGradingQueue();
     const gradingLoaded = !gradingLoading;
     const toGrade = gradingQueue ?? [];
+    const { data: outOfAttempts } = useOutOfAttempts();
+    const stuckCount = outOfAttempts?.length ?? 0;
     const toGradeByCourse = [...toGrade.reduce((map, e) => map.set(e.course.id, { course: e.course, n: (map.get(e.course.id)?.n ?? 0) + 1 }), new Map<number, { course: { id: number; title: string }; n: number }>()).values()]
         .sort((a, b) => b.n - a.n);
     const worstCourse = worstAtRiskCourse(atRiskList);
@@ -280,10 +282,20 @@ export function InstructorDashboardPage() {
                 <DashboardPanel title="To grade" action={<ViewAllLink to="/grading" label="Open grading" />}>
                     {!gradingLoaded ? (
                         <div className="flex justify-center py-6"><Spinner /></div>
-                    ) : toGrade.length === 0 ? (
+                    ) : toGrade.length === 0 && stuckCount === 0 ? (
                         <p className="px-4 py-5 text-center text-sm text-ink-600">Nothing waiting — all work is marked.</p>
                     ) : (
                         <ul className="divide-y divide-surface-100">
+                            {stuckCount > 0 && (
+                                <li>
+                                    <Link to="/grading" className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-surface-50">
+                                        <span className="truncate text-sm text-ink-900">Out of quiz attempts</span>
+                                        <span className="shrink-0 rounded-full bg-danger-600/10 px-2 py-0.5 text-xs font-semibold text-danger-600">
+                                            {stuckCount} student{stuckCount === 1 ? '' : 's'}
+                                        </span>
+                                    </Link>
+                                </li>
+                            )}
                             {toGradeByCourse.map(({ course, n }) => (
                                 <li key={course.id}>
                                     <Link to="/grading" className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-surface-50">

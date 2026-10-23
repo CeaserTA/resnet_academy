@@ -75,6 +75,59 @@ final class GradingQueueService
     }
 
     /**
+     * Students who used every attempt on a quiz without passing (extra attempts already granted
+     * included) — they can't finish the module until staff give them another attempt
+     * (BACKEND_CHANGES.md §1, §3). Auto-marked quizzes never appear in forUser(), so without this
+     * nobody would notice them.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function outOfAttemptsForUser(User $user, ?int $courseId = null): array
+    {
+        $courseIds = $this->gradableCourseIds($user, $courseId);
+
+        $attempts = EvaluationAttempt::query()
+            ->where('status', '!=', EvaluationAttemptStatus::InProgress)
+            ->whereHas('evaluation', fn (Builder $e) => $e->whereNotNull('max_attempts')
+                ->whereHas('module', fn (Builder $m) => $m->whereIn('course_id', $courseIds)))
+            ->with(['student:id,name,email', 'evaluation.module.course:id,title', 'evaluation.attemptAllowances'])
+            ->get();
+
+        return $attempts
+            ->groupBy(fn (EvaluationAttempt $a) => "{$a->evaluation_id}:{$a->student_id}")
+            ->map(function ($group): ?array {
+                /** @var EvaluationAttempt $latest */
+                $latest = $group->sortByDesc('attempt_number')->first();
+                $evaluation = $latest->evaluation;
+                $extra = (int) $evaluation->attemptAllowances->firstWhere('student_id', $latest->student_id)?->extra_attempts;
+                $allowed = (int) $evaluation->max_attempts + $extra;
+
+                // Passed, still waiting for a mark, or attempts left → not stuck.
+                if ($group->contains(fn (EvaluationAttempt $a) => $a->passed === true)
+                    || $group->contains(fn (EvaluationAttempt $a) => $a->status === EvaluationAttemptStatus::Submitted)
+                    || $group->count() < $allowed) {
+                    return null;
+                }
+
+                return [
+                    'evaluation_id' => $evaluation->id,
+                    'evaluation_title' => $evaluation->title,
+                    'pass_score' => (float) $evaluation->pass_score,
+                    'module' => ['id' => $evaluation->module->id, 'title' => $evaluation->module->title, 'order_index' => $evaluation->module->order_index],
+                    'course' => ['id' => $evaluation->module->course->id, 'title' => $evaluation->module->course->title],
+                    'student' => $latest->student ? ['id' => $latest->student->id, 'name' => $latest->student->name, 'email' => $latest->student->email] : null,
+                    'attempts_used' => $group->count(),
+                    'best_score_percent' => (float) $group->max('score_percent'),
+                    'last_attempt_at' => $latest->submitted_at?->toIso8601String(),
+                ];
+            })
+            ->filter()
+            ->sortByDesc('last_attempt_at')
+            ->values()
+            ->all();
+    }
+
+    /**
      * @return list<int>
      */
     private function gradableCourseIds(User $user, ?int $courseId): array

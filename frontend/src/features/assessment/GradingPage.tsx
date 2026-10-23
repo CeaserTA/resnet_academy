@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { ClipboardList, Clock, FileCheck2, Hourglass, PencilLine } from 'lucide-react';
+import { ClipboardList, Clock, FileCheck2, Hourglass, PencilLine, RotateCcw } from 'lucide-react';
 import { PageFrame } from '@/components/layout/PageFrame';
 import { DashboardPanel, SectionLabel } from '@/components/dashboard/DashboardPanel';
 import { VolumeCard } from '@/components/dashboard/VolumeCard';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { Spinner } from '@/components/ui/Spinner';
-import { useGradingQueue } from '@/features/assessment/useAssessment';
+import { useGrantExtraAttempts, useGradingQueue, useOutOfAttempts } from '@/features/assessment/useAssessment';
 import { formatRelativeTime } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import type { GradingQueueEntry } from '@/lib/api/types';
@@ -32,7 +32,11 @@ function daysWaiting(submittedAt: string | null): number {
  * "mark these" piles, oldest first; each pile opens that item's grading page.
  */
 export function GradingPage() {
-    const { data: queue, isLoading } = useGradingQueue();
+    const { data: queue, isLoading: isLoadingQueue } = useGradingQueue();
+    const { data: outOfAttempts, isLoading: isLoadingStuck } = useOutOfAttempts();
+    const grant = useGrantExtraAttempts();
+    const isLoading = isLoadingQueue || isLoadingStuck;
+    const stuck = outOfAttempts ?? [];
     const [courseId, setCourseId] = useState<number | 'all'>('all');
     const [search, setSearch] = useState('');
 
@@ -57,7 +61,7 @@ export function GradingPage() {
         <PageFrame title="Grading" subtitle={isLoading ? undefined : `${entries.length} waiting for a mark`}>
             {isLoading ? (
                 <div className="flex justify-center py-12"><Spinner /></div>
-            ) : entries.length === 0 ? (
+            ) : entries.length === 0 && stuck.length === 0 ? (
                 <div className="rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
                     <EmptyState icon={PencilLine} title="All caught up" description="Nothing is waiting for a mark. New submissions and quiz attempts appear here." />
                 </div>
@@ -100,7 +104,41 @@ export function GradingPage() {
                         </div>
                     </div>
 
-                    {piles.length === 0 && <p className="py-6 text-center text-sm text-ink-600">No students match your search.</p>}
+                    {/* Out of attempts — auto-marked quizzes never need a mark, so these students
+                        would otherwise be invisible while stuck on a required quiz. */}
+                    {stuck.length > 0 && (
+                        <DashboardPanel title={`Out of attempts (${stuck.length})`}>
+                            <p className="border-b border-surface-100 px-4 py-2 text-xs text-ink-600">
+                                These students used every attempt on a quiz without passing, so the next module stays locked until you give them another attempt.
+                            </p>
+                            <ul className="divide-y divide-surface-100">
+                                {stuck.map((entry) => {
+                                    const busy = grant.isPending && grant.variables?.evaluationId === entry.evaluation_id && grant.variables?.studentId === entry.student?.id;
+                                    return (
+                                        <li key={`${entry.evaluation_id}-${entry.student?.id}`} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                                            <div className="min-w-0 flex-1">
+                                                <p className="truncate text-sm font-medium text-ink-900">{entry.student?.name ?? 'Student'}</p>
+                                                <p className="truncate text-xs text-ink-600">
+                                                    Quiz: {entry.evaluation_title} · {entry.course.title} · best {entry.best_score_percent}% (pass {entry.pass_score}%) · {entry.attempts_used} attempts used
+                                                </p>
+                                            </div>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                isLoading={busy}
+                                                onClick={() => entry.student && grant.mutate({ evaluationId: entry.evaluation_id, studentId: entry.student.id })}
+                                            >
+                                                <RotateCcw className="size-3.5" aria-hidden="true" />
+                                                Give another attempt
+                                            </Button>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </DashboardPanel>
+                    )}
+
+                    {piles.length === 0 && entries.length > 0 && <p className="py-6 text-center text-sm text-ink-600">No students match your search.</p>}
 
                     {piles.map((pile) => {
                         const first = pile[0];

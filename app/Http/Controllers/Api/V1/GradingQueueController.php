@@ -28,4 +28,17 @@ final class GradingQueueController extends Controller
             'data' => $this->gradingQueue->forUser($user, isset($validated['course_id']) ? (int) $validated['course_id'] : null),
         ]);
     }
+
+    /** Students out of quiz attempts without passing — they need "another attempt" from staff. */
+    public function outOfAttempts(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless(in_array($user->role, [UserRole::Admin, UserRole::Instructor], true), 403);
+
+        $validated = $request->validate(['course_id' => ['nullable', 'integer']]);
+
+        return response()->json([
+            'data' => $this->gradingQueue->outOfAttemptsForUser($user, isset($validated['course_id']) ? (int) $validated['course_id'] : null),
+        ]);
+    }
 }
