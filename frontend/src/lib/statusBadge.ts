@@ -18,6 +18,7 @@ import {
     Unlock,
     User,
     XCircle,
+    RotateCcw,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { BadgeTone } from '@/components/ui/Badge';
@@ -234,6 +235,9 @@ const notificationTypeMap: Record<string, StatusDisplay> = {
     payment_submitted: { label: 'Payment submitted', tone: 'warning', icon: CreditCard },
     payment_confirmed: { label: 'Payment confirmed', tone: 'success', icon: CheckCircle2 },
     payment_rejected: { label: 'Payment rejected', tone: 'danger', icon: XCircle },
+    evaluation_extra_attempt: { label: 'Another attempt', tone: 'success', icon: RotateCcw },
+    certificate_revoked: { label: 'Certificate withheld', tone: 'danger', icon: XCircle },
+    certificate_restored: { label: 'Certificate restored', tone: 'success', icon: Award },
 };
 
 const defaultNotificationTypeDisplay: StatusDisplay = { label: 'Notification', tone: 'neutral', icon: Circle };

@@ -9,6 +9,7 @@ import type {
     EvaluationAttempt,
     EvaluationOverview,
     Gradebook,
+    GradingQueueEntry,
     PaginatedResponse,
     Question,
     QuestionBank,
@@ -235,6 +236,21 @@ export async function gradeAttempt(
     const { data } = await apiClient.post<{ data: EvaluationAttempt }>(`/attempts/${attemptId}/grade`, {
         answer_grades: answerGrades,
     });
+    return data.data;
+}
+
+/** Everything handed in and waiting for a mark, across the courses the user grades. */
+export async function fetchGradingQueue(courseId?: number): Promise<GradingQueueEntry[]> {
+    const { data } = await apiClient.get<{ data: GradingQueueEntry[] }>('/grading-queue', { params: courseId ? { course_id: courseId } : undefined });
+    return data.data;
+}
+
+/** Staff give one student extra attempts at a quiz. */
+export async function grantExtraAttempts(evaluationId: number, studentId: number, attempts = 1, reason?: string): Promise<{ extra_attempts: number; max_attempts: number | null }> {
+    const { data } = await apiClient.post<{ data: { extra_attempts: number; max_attempts: number | null } }>(
+        `/evaluations/${evaluationId}/students/${studentId}/extra-attempts`,
+        { attempts, reason },
+    );
     return data.data;
 }
 

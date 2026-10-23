@@ -35,13 +35,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         retry: false,
     });
 
+    // Everything cached belongs to whoever was signed in. Data fetched as one user (e.g. an
+    // instructor's modules, where every lesson's is_complete is null) must never be shown to the
+    // next one — that made a student's finished lessons look undone and hid unlocked modules.
+    const forgetPreviousUser = () => {
+        queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== CURRENT_USER_QUERY_KEY[0] });
+    };
+
     const login = async (email: string, password: string) => {
         await loginRequest(email, password);
+        forgetPreviousUser();
         await refetch();
     };
 
     const register = async (name: string, email: string, password: string, passwordConfirmation: string) => {
         await registerRequest(name, email, password, passwordConfirmation);
+        forgetPreviousUser();
         await refetch();
     };
 
@@ -49,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await logoutRequest();
         // Clear per-session UI state so the profile completion modal re-appears on next login
         sessionStorage.removeItem('profile_completion_modal_dismissed');
+        queryClient.clear();
         queryClient.setQueryData(CURRENT_USER_QUERY_KEY, null);
     };
 

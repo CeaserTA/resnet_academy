@@ -30,6 +30,7 @@ import { EvaluationTakePage } from '@/features/assessment/EvaluationTakePage';
 import { EvaluationEditPage } from '@/features/assessment/EvaluationEditPage';
 import { EvaluationGradingPage } from '@/features/assessment/EvaluationGradingPage';
 import { GradebookPage } from '@/features/assessment/GradebookPage';
+import { GradingPage } from '@/features/assessment/GradingPage';
 import { AttendanceRosterPage } from '@/features/progress/AttendanceRosterPage';
 import { MessagesPage } from '@/features/communication/MessagesPage';
 import { TicketsPage } from '@/features/communication/TicketsPage';
@@ -237,6 +238,14 @@ function App() {
                         element={
                             <ProtectedRoute roles={['admin', 'instructor']}>
                                 <GradebookPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="grading"
+                        element={
+                            <ProtectedRoute roles={['admin', 'instructor']}>
+                                <GradingPage />
                             </ProtectedRoute>
                         }
                     />

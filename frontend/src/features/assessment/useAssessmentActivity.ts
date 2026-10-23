@@ -1,6 +1,5 @@
 import { useQueries } from '@tanstack/react-query';
 import { fetchAssignmentSubmissions, fetchEvaluationAttempts } from '@/features/assessment/api';
-import { fetchModules } from '@/features/courseStructure/api';
 import type { AssignmentModuleItem, AssignmentSubmission, EvaluationAttempt, EvaluationModuleItem, Module } from '@/lib/api/types';
 
 export type AssessmentItem = { module: Module; courseId: number; courseTitle: string } & (AssignmentModuleItem | EvaluationModuleItem);
@@ -63,11 +62,4 @@ export function useAssessmentActivity(items: AssessmentItem[]) {
         .sort((a, b) => a.submittedAt.localeCompare(b.submittedAt));
 
     return { perItem, tasks, isLoading: results.some((r) => r.isLoading) };
-}
-
-/** Modules of several courses at once (same key as the course builder). */
-export function useModulesForCourses(courseIds: number[]) {
-    return useQueries({
-        queries: courseIds.map((id) => ({ queryKey: ['courses', id, 'modules'], queryFn: () => fetchModules(id) })),
-    });
 }

@@ -439,6 +439,8 @@ export interface AssignmentSubmission {
 
 export interface Assignment {
     id: number;
+    module_id?: number;
+    course_id?: number | null;
     title: string;
     instructions: string | null;
     submission_type: AssignmentSubmissionType;
@@ -856,14 +858,33 @@ export interface DashboardSummary {
  * state — a render that exhausts its retries only logs — so a failed certificate also reads
  * 'generating', which is why the admin screen offers regeneration for it.
  */
-export type CertificateStatus = 'generating' | 'ready';
+export type CertificateStatus = 'generating' | 'ready' | 'revoked';
 
 export interface AdminCertificate {
     id: number;
     certificate_number: string;
     status: CertificateStatus;
+    revoked_at?: string | null;
+    revoke_reason?: string | null;
     issued_at: string;
     student: { id: number; name: string; email: string };
     course: { id: number; title: string };
     cohort: { id: number; name: string } | null;
+}
+
+// --- Grading queue (BACKEND_CHANGES.md §1) ----------------------------------------------------
+
+/** One piece of handed-in work still waiting for a mark. */
+export interface GradingQueueEntry {
+    kind: 'assignment' | 'quiz';
+    /** Submission id (assignment) or attempt id (quiz). */
+    id: number;
+    item_id: number;
+    item_title: string;
+    module: { id: number; title: string; order_index: number };
+    course: { id: number; title: string };
+    student: { id: number; name: string; email: string } | null;
+    attempt_number: number;
+    is_late: boolean;
+    submitted_at: string | null;
 }

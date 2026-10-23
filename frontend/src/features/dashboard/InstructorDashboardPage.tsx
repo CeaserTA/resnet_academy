@@ -17,8 +17,7 @@ import {
 import { AttentionCard } from '@/components/dashboard/AttentionCard';
 import { DashboardPanel, NeedsActionBand, SectionLabel, ViewAllLink } from '@/components/dashboard/DashboardPanel';
 import { PageFrame } from '@/components/layout/PageFrame';
-import { assessmentItems, useAssessmentActivity, useModulesForCourses } from '@/features/assessment/useAssessmentActivity';
-import { formatRelativeTime } from '@/lib/utils';
+import { useGradingQueue } from '@/features/assessment/useAssessment';
 import { AtRiskPanel } from '@/components/dashboard/AtRiskPanel';
 import { collectAtRisk, worstAtRiskCourse } from '@/lib/atRisk';
 import { QuickActionButton, type QuickAction } from '@/components/dashboard/QuickActionButton';
@@ -82,11 +81,12 @@ export function InstructorDashboardPage() {
     const completionRate = totals.students > 0 ? Math.round((totals.completed / totals.students) * 100) : 0;
     const atRiskList = collectAtRisk(myCourses, analytics.map((q) => q.data));
 
-    // Grading queue: every submitted assignment / quiz attempt still waiting for a mark.
-    const moduleQueries = useModulesForCourses(myCourses.map((c) => c.id));
-    const gradableItems = myCourses.flatMap((course, i) => assessmentItems(moduleQueries[i]?.data ?? [], course.id, course.title));
-    const grading = useAssessmentActivity(gradableItems);
-    const gradingLoaded = moduleQueries.every((q) => !q.isLoading) && !grading.isLoading;
+    // Grading: only the headline here (how much, in which course) — the Grading page has the work.
+    const { data: gradingQueue, isLoading: gradingLoading } = useGradingQueue();
+    const gradingLoaded = !gradingLoading;
+    const toGrade = gradingQueue ?? [];
+    const toGradeByCourse = [...toGrade.reduce((map, e) => map.set(e.course.id, { course: e.course, n: (map.get(e.course.id)?.n ?? 0) + 1 }), new Map<number, { course: { id: number; title: string }; n: number }>()).values()]
+        .sort((a, b) => b.n - a.n);
     const worstCourse = worstAtRiskCourse(atRiskList);
     const count = (n: number) => (analyticsLoaded ? n : '—');
 
@@ -149,9 +149,10 @@ export function InstructorDashboardPage() {
                     <AttentionCard
                         icon={PencilLine}
                         label="To grade"
-                        value={gradingLoaded ? grading.tasks.length : '—'}
+                        value={gradingLoaded ? toGrade.length : '—'}
                         sub="Assignments and quizzes handed in"
-                        tone={gradingLoaded && grading.tasks.length > 0 ? 'warning' : 'neutral'}
+                        tone={gradingLoaded && toGrade.length > 0 ? 'warning' : 'neutral'}
+                        to="/grading"
                     />
                     <AttentionCard
                         icon={AlertTriangle}
@@ -276,25 +277,19 @@ export function InstructorDashboardPage() {
             </DashboardPanel>
 
             <div className="flex flex-col gap-4">
-                <DashboardPanel title={grading.tasks.length > 0 ? `To grade (${grading.tasks.length})` : 'To grade'}>
+                <DashboardPanel title="To grade" action={<ViewAllLink to="/grading" label="Open grading" />}>
                     {!gradingLoaded ? (
                         <div className="flex justify-center py-6"><Spinner /></div>
-                    ) : grading.tasks.length === 0 ? (
+                    ) : toGrade.length === 0 ? (
                         <p className="px-4 py-5 text-center text-sm text-ink-600">Nothing waiting — all work is marked.</p>
                     ) : (
                         <ul className="divide-y divide-surface-100">
-                            {grading.tasks.slice(0, 6).map((task) => (
-                                <li key={task.key} className="flex items-center gap-3 px-4 py-3">
-                                    <span className="min-w-0 flex-1">
-                                        <span className="block truncate text-sm font-medium text-ink-900">{task.studentName}</span>
-                                        <span className="block truncate text-xs text-ink-600">
-                                            {task.kind === 'quiz' ? 'Quiz' : 'Assignment'}: {task.itemTitle} · {task.courseTitle}
-                                        </span>
-                                        {task.submittedAt && <span className="block text-[11px] text-ink-600">Handed in {formatRelativeTime(task.submittedAt)}</span>}
-                                    </span>
-                                    <Button size="sm" asChild className="shrink-0">
-                                        <Link to={task.href}>Grade</Link>
-                                    </Button>
+                            {toGradeByCourse.map(({ course, n }) => (
+                                <li key={course.id}>
+                                    <Link to="/grading" className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-surface-50">
+                                        <span className="truncate text-sm text-ink-900">{course.title}</span>
+                                        <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-accent-amber">{n} to grade</span>
+                                    </Link>
                                 </li>
                             ))}
                         </ul>

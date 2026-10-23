@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Award, Download, Eye, RefreshCw, Search } from 'lucide-react';
+import { Award, Ban, Download, Eye, RefreshCw, RotateCcw, Search } from 'lucide-react';
 import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -10,7 +10,10 @@ import { useCourses } from '@/features/catalogue/useCourses';
 import { useCohorts } from '@/features/cohorts/useCohorts';
 import { certificateDownloadUrl } from '@/features/progress/api';
 import { CertificateViewerModal } from '@/features/certificates/CertificateViewerModal';
-import { useAdminCertificates, useRegenerateCertificate } from '@/features/admin/certificates/useAdminCertificates';
+import { useAdminCertificates, useRegenerateCertificate, useRestoreCertificate, useRevokeCertificate } from '@/features/admin/certificates/useAdminCertificates';
+import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
+import { Textarea } from '@/components/ui/Textarea';
 import type { AdminCertificate, CertificateStatus } from '@/lib/api/types';
 import { formatDate } from '@/lib/formatDate';
 import { displayCohortName } from '@/lib/cohort';
@@ -19,12 +22,13 @@ const STATUS_TABS: [CertificateStatus | 'all', string][] = [
     ['all', 'All'],
     ['generating', 'Generating'],
     ['ready', 'Ready'],
+    ['revoked', 'Revoked'],
 ];
 
 const selectClass =
     'rounded-lg border border-surface-100 bg-surface-0 px-3 py-1.5 text-sm text-ink-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600';
 
-const GRID = 'grid grid-cols-[minmax(180px,1.3fr)_minmax(160px,1.2fr)_minmax(150px,1fr)_110px_100px_170px] items-center gap-2';
+const GRID = 'grid grid-cols-[minmax(180px,1.3fr)_minmax(160px,1.2fr)_minmax(150px,1fr)_110px_100px_260px] items-center gap-2';
 
 /**
  * Admin-only support screen for issued certificates: find a student's certificate quickly, open
@@ -40,6 +44,8 @@ export function AdminCertificatesPage() {
     const [page, setPage] = useState(1);
     const [actionError, setActionError] = useState<string | null>(null);
     const [viewing, setViewing] = useState<AdminCertificate | null>(null);
+    const [revoking, setRevoking] = useState<AdminCertificate | null>(null);
+    const [revokeReason, setRevokeReason] = useState('');
 
     const { data: courses } = useCourses({});
     const { data: cohorts } = useCohorts();
@@ -61,6 +67,29 @@ export function AdminCertificatesPage() {
         page,
     });
     const regenerate = useRegenerateCertificate();
+    const revoke = useRevokeCertificate();
+    const restore = useRestoreCertificate();
+
+    const handleRevoke = async () => {
+        if (!revoking || !revokeReason.trim()) return;
+        setActionError(null);
+        try {
+            await revoke.mutateAsync({ certificateId: revoking.id, reason: revokeReason.trim() });
+            setRevoking(null);
+            setRevokeReason('');
+        } catch (err) {
+            setActionError(err instanceof ApiError ? err.message : 'Could not revoke this certificate.');
+        }
+    };
+
+    const handleRestore = async (certificate: AdminCertificate) => {
+        setActionError(null);
+        try {
+            await restore.mutateAsync(certificate.id);
+        } catch (err) {
+            setActionError(err instanceof ApiError ? err.message : 'Could not restore this certificate.');
+        }
+    };
 
     const certificates = data?.data ?? [];
     const meta = data?.meta;
@@ -170,7 +199,11 @@ export function AdminCertificatesPage() {
 
                                     <p className="truncate font-mono text-xs text-ink-600">{certificate.certificate_number}</p>
 
-                                    {certificate.status === 'ready' ? (
+                                    {certificate.status === 'revoked' ? (
+                                        <span title={certificate.revoke_reason ?? undefined}>
+                                            <Badge label="Revoked" tone="danger" icon={Ban} />
+                                        </span>
+                                    ) : certificate.status === 'ready' ? (
                                         <Badge label="Ready" tone="success" />
                                     ) : (
                                         <Badge label="Generating" tone="warning" />
@@ -216,6 +249,28 @@ export function AdminCertificatesPage() {
                                                 Regenerate
                                             </button>
                                         )}
+                                        {certificate.status === 'revoked' ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRestore(certificate)}
+                                                disabled={restore.isPending}
+                                                aria-label={`Restore certificate ${certificate.certificate_number}`}
+                                                className="inline-flex items-center gap-1 rounded-lg border border-surface-100 px-2 py-1 text-xs font-medium text-success-600 hover:bg-success-600/10 disabled:opacity-50"
+                                            >
+                                                <RotateCcw className="size-3.5" aria-hidden="true" />
+                                                Restore
+                                            </button>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                onClick={() => setRevoking(certificate)}
+                                                aria-label={`Revoke certificate ${certificate.certificate_number}`}
+                                                className="inline-flex items-center gap-1 rounded-lg border border-surface-100 px-2 py-1 text-xs font-medium text-danger-600 hover:bg-danger-600/10"
+                                            >
+                                                <Ban className="size-3.5" aria-hidden="true" />
+                                                Revoke
+                                            </button>
+                                        )}
                                     </div>
                                 </li>
                             );
@@ -251,6 +306,38 @@ export function AdminCertificatesPage() {
             )}
 
             <CertificateViewerModal certificate={viewing} onClose={() => setViewing(null)} />
+
+            {revoking && (
+                <Modal
+                    isOpen
+                    onClose={() => setRevoking(null)}
+                    title="Revoke this certificate?"
+                    footer={
+                        <>
+                            <Button variant="ghost" onClick={() => setRevoking(null)}>Cancel</Button>
+                            <Button variant="destructive" onClick={handleRevoke} isLoading={revoke.isPending} disabled={!revokeReason.trim()}>
+                                Revoke certificate
+                            </Button>
+                        </>
+                    }
+                >
+                    <div className="flex flex-col gap-3 text-sm">
+                        <p className="text-ink-600">
+                            <span className="font-medium text-ink-900">{revoking.student.name}</span> will no longer see or download their certificate for{' '}
+                            <span className="font-medium text-ink-900">{revoking.course.title}</span>, and verifying{' '}
+                            <span className="font-mono">{revoking.certificate_number}</span> will fail. You can restore it later.
+                        </p>
+                        <Textarea
+                            label="Reason (shown to the student)"
+                            rows={3}
+                            value={revokeReason}
+                            onChange={(e) => setRevokeReason(e.target.value)}
+                            placeholder="e.g. Outstanding fees must be cleared before the certificate is released."
+                            required
+                        />
+                    </div>
+                </Modal>
+            )}
         </div>
     );
 }

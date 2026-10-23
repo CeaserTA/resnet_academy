@@ -16,6 +16,8 @@ import {
     fetchEvaluationAttempts,
     fetchEvaluationOverview,
     fetchGradebook,
+    fetchGradingQueue,
+    grantExtraAttempts,
     fetchMyEvaluationAttempts,
     fetchQuestionBanks,
     gradeAttempt,
@@ -113,6 +115,7 @@ export function useGradeSubmission(assignmentId: number) {
         }) => gradeSubmission(submissionId, payload),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['assignments', assignmentId, 'submissions'] });
+            queryClient.invalidateQueries({ queryKey: ['grading-queue'] });
         },
     });
 }
@@ -198,7 +201,25 @@ export function useGradeAttempt(evaluationId: number) {
         }) => gradeAttempt(attemptId, answerGrades),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['evaluations', evaluationId, 'attempts'] });
+            queryClient.invalidateQueries({ queryKey: ['grading-queue'] });
         },
+    });
+}
+
+/** Everything waiting for a mark (admin: all courses; instructor: courses they teach). */
+export function useGradingQueue(courseId?: number) {
+    return useQuery({
+        queryKey: ['grading-queue', courseId ?? 'all'],
+        queryFn: () => fetchGradingQueue(courseId),
+    });
+}
+
+export function useGrantExtraAttempts(evaluationId: number) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ studentId, attempts, reason }: { studentId: number; attempts?: number; reason?: string }) =>
+            grantExtraAttempts(evaluationId, studentId, attempts, reason),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['evaluations', evaluationId] }),
     });
 }
 

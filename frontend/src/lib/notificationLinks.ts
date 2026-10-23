@@ -24,6 +24,8 @@ export function notificationLink(notification: AppNotification, role: string | u
             return isStaff ? '/admin/enrolments' : '/my-courses';
         case 'payment_submission':
             return isStaff ? '/admin/payments' : '/payments';
+        case 'evaluation':
+            return id ? (isStaff ? `/admin/evaluations/${id}/grading` : `/learn/evaluations/${id}`) : null;
         case 'module':
         case 'assignment_submission':
         case 'evaluation_attempt':
