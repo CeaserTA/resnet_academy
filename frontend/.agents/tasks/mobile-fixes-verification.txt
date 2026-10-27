@@ -1,0 +1,3 @@
+tsc --noEmit: PASS (exit code 0, no errors)
+Run date: 2025
+Changes: text-before-image mobile order (AboutSection), BrandIntro overlay, dashboard mobile layout verified, CataloguePage stray whitespace fixed.

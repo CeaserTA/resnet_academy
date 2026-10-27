@@ -598,6 +598,6 @@ export function CataloguePage() {
                 onLoginClick={() => openAuth('login')}
                 onSignupClick={() => openAuth('signup')}
             />
-        </div >
+        </div>
     );
 }
