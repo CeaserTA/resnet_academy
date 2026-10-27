@@ -254,7 +254,7 @@ function MobileNav({ items }: { items: NavItem[] }) {
                             </Dialog.Close>
                         </div>
                         <Dialog.Description className="sr-only">Other sections of the app</Dialog.Description>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                             {moreItems.map(({ to, label, icon: Icon, end }) => (
                                 <NavLink
                                     key={to}

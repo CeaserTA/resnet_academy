@@ -71,10 +71,10 @@ function QuestionCard({
     };
 
     return (
-        <Card>
+        <Card className="p-3 sm:p-4">
             {/* Anti-cheating: question text + options are unselectable and block clipboard/context menu. */}
             <div className="select-none" {...antiCheatHandlers()}>
-                <p className="font-medium text-ink-900">
+                <p className="text-sm sm:text-base font-medium text-ink-900">
                     <span>{`${index + 1}. ${question.question_text}`}</span>
                     <span className="ml-2 text-xs text-ink-600">({question.points} pts)</span>
                 </p>

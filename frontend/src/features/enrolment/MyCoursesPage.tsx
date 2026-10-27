@@ -103,7 +103,7 @@ function EnrolmentCard({ enrolment, progress, review, reviewsLoaded, onWithdraw,
         <Card className="flex flex-col gap-0 p-0 overflow-hidden">
             {/* Thumbnail */}
             <Link to={`/learn/courses/${enrolment.course.id}`} className="block" aria-label={`View ${enrolment.course.title}`}>
-                <div className="h-32 w-full overflow-hidden bg-surface-100">
+                <div className="h-28 sm:h-32 w-full overflow-hidden bg-surface-100">
                     {enrolment.course.thumbnail_url ? (
                         <img src={enrolment.course.thumbnail_url} alt={enrolment.course.title} className="h-full w-full object-cover transition duration-300 hover:scale-105" />
                     ) : (
@@ -115,7 +115,7 @@ function EnrolmentCard({ enrolment, progress, review, reviewsLoaded, onWithdraw,
             </Link>
 
             {/* Body */}
-            <div className="flex flex-1 flex-col gap-3 p-3">
+            <div className="flex flex-1 flex-col gap-3 p-3 sm:p-4">
                 <div>
                     {/* "Confirmed" is the normal state and the progress badge below already says where the
                         student is — show the enrolment badge only for states that need attention. */}

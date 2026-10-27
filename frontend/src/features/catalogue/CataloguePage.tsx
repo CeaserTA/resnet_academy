@@ -133,6 +133,7 @@ export function CataloguePage() {
     const [activeLevel, setActiveLevel] = useState<string | undefined>(() => {
         return searchParams.get('level') ?? undefined;
     });
+    const [showAllBenefits, setShowAllBenefits] = useState(false);
 
     const apiFilters: CourseFilters = useMemo(() => ({ status: 'published' }), []);
 
@@ -458,10 +459,17 @@ export function CataloguePage() {
 
                                 {/* Mobile: accordion list */}
                                 <div className="mt-4 sm:hidden">
-                                    {includes.map(({ icon, title, description }) => (
+                                    {(showAllBenefits ? includes : includes.slice(0, 3)).map(({ icon, title, description }) => (
                                         <IncludeAccordionItem key={title} icon={icon} title={title} description={description} />
                                     ))}
                                     <div className="border-t border-border" />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowAllBenefits((v) => !v)}
+                                        className="mt-2 text-sm text-primary underline"
+                                    >
+                                        {showAllBenefits ? 'Show fewer' : 'Show all 6 benefits'}
+                                    </button>
                                 </div>
 
                                 {/* sm+: original 2-col grid */}
@@ -490,18 +498,18 @@ export function CataloguePage() {
                         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">Your learning journey</p>
                         <h2 className="mt-3 text-3xl text-navy-foreground sm:text-4xl">From first lesson to finished portfolio.</h2>
 
-                        {/* Mobile: horizontal scroll strip */}
-                        <div className="mt-5 flex gap-0 overflow-x-auto pb-2 sm:hidden" style={{ scrollSnapType: 'x mandatory' }}>
+                        {/* Mobile: compact vertical timeline */}
+                        <div className="mt-5 flex flex-col gap-0 sm:hidden">
                             {journey.map(({ number, label }, i) => (
-                                <div
-                                    key={number}
-                                    className="flex min-w-[64%] shrink-0 flex-col gap-2 border-l-2 border-white/20 pl-4 pr-6"
-                                    style={{ scrollSnapAlign: 'start' }}
-                                >
-                                    <p className="font-display text-xl font-semibold text-accent-amber">{number}</p>
-                                    <p className="text-sm leading-5 text-navy-foreground/80">{label}</p>
+                                <div key={number}>
+                                    <div className="flex items-start gap-3">
+                                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/20 text-xs font-bold">
+                                            {i + 1}
+                                        </div>
+                                        <p className="text-sm text-navy-foreground/90 py-1">{label}</p>
+                                    </div>
                                     {i < journey.length - 1 && (
-                                        <span className="mt-1 text-xs text-white/30">swipe →</span>
+                                        <div className="ml-3 h-4 w-px bg-white/20" aria-hidden="true" />
                                     )}
                                 </div>
                             ))}
@@ -521,7 +529,7 @@ export function CataloguePage() {
                 </section>
 
                 {/* ── Section 7: FAQ ───────────────────────────────────────────── */}
-                <section className="border-t border-border bg-white px-4 py-12 sm:px-6 lg:px-8">
+                < section className="border-t border-border bg-white px-4 py-12 sm:px-6 lg:px-8" >
                     <div className="mx-auto max-w-7xl">
                         <div className="grid gap-10 lg:grid-cols-3">
 
@@ -556,10 +564,10 @@ export function CataloguePage() {
                             </div>
                         </div>
                     </div>
-                </section>
+                </section >
 
                 {/* ── Section 7: Final enrolment prompt ───────────────────────── */}
-                <section className="border-t border-border bg-surface-50 px-4 py-8 sm:px-6 lg:px-8">
+                < section className="border-t border-border bg-surface-50 px-4 py-8 sm:px-6 lg:px-8" >
                     <div className="mx-auto max-w-7xl flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
                         <div>
                             <h2 className="text-2xl text-ink-900 sm:text-3xl">Ready to take the next step?</h2>
@@ -583,8 +591,8 @@ export function CataloguePage() {
                             </Link>
                         </div>
                     </div>
-                </section>
-            </main>
+                </section >
+            </main >
 
             <Footer
                 onLoginClick={() => openAuth('login')}

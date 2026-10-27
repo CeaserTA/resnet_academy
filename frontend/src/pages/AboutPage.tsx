@@ -100,7 +100,7 @@ function ReadMore({ children }: { children: React.ReactNode }) {
     const [expanded, setExpanded] = useState(false);
     return (
         <div>
-            <div className={expanded ? undefined : 'line-clamp-3 sm:line-clamp-none'}>
+            <div className={expanded ? undefined : 'line-clamp-2 sm:line-clamp-none'}>
                 {children}
             </div>
             <button
@@ -452,8 +452,8 @@ export function AboutPage() {
                             </p>
                         </div>
 
-                        {/* Mobile: horizontal scroll strip */}
-                        <div className="flex gap-3 overflow-x-auto pb-2 sm:hidden" style={{ scrollSnapType: 'x mandatory' }}>
+                        {/* Mobile: vertical stack */}
+                        <div className="flex flex-col gap-3 sm:hidden">
                             {[
                                 { icon: Code2, title: 'Code reviews', description: 'Mentors review every project submission with line-level feedback.' },
                                 { icon: MessageSquare, title: 'Weekly check-ins', description: 'Short weekly sessions to answer questions and unblock progress.' },
@@ -461,8 +461,7 @@ export function AboutPage() {
                             ].map(({ icon: Icon, title, description }) => (
                                 <div
                                     key={title}
-                                    className="flex min-w-[72%] shrink-0 flex-col gap-3 rounded-2xl border border-border bg-surface-50 p-4"
-                                    style={{ scrollSnapAlign: 'start' }}
+                                    className="flex w-full flex-col gap-3 rounded-2xl border border-border bg-surface-50 p-4"
                                 >
                                     <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
                                         <Icon className="size-4 text-primary" aria-hidden="true" />

@@ -464,9 +464,9 @@ export function CoursePlayerPage() {
                                                 </span>
                                             )}
                                         </div>
-                                        <h3 className="mt-1 text-base font-semibold">{module.title}</h3>
+                                        <h3 className="mt-1 text-sm sm:text-base font-semibold line-clamp-2">{module.title}</h3>
                                         {module.description && (
-                                            <p className={cn('mt-0.5 text-sm text-ink-600', !expanded && 'line-clamp-1')}>
+                                            <p className={cn('mt-0.5 text-xs sm:text-sm text-ink-600', !expanded && 'line-clamp-1')}>
                                                 {module.description}
                                             </p>
                                         )}

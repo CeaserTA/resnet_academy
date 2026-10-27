@@ -313,7 +313,7 @@ export function StudentDashboardPage() {
                                     const certificate = progress?.certificate;
                                     return (
                                         <article key={enrolment.id} className="flex flex-col overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm transition-shadow hover:shadow-md">
-                                            <Link to={`/learn/courses/${course.id}`} className="group relative block h-32 overflow-hidden bg-blue-50">
+                                            <Link to={`/learn/courses/${course.id}`} className="group relative block h-28 sm:h-32 overflow-hidden bg-blue-50">
                                                 {image ? (
                                                     <img src={image} alt="" className="size-full object-cover transition duration-300 group-hover:scale-105" />
                                                 ) : (
@@ -389,7 +389,7 @@ export function StudentDashboardPage() {
                                             key={`rec-${course.id}`}
                                             className="flex flex-col overflow-hidden rounded-xl border border-surface-100 bg-surface-50 shadow-sm transition-shadow hover:shadow-md"
                                         >
-                                            <Link to={`/courses/${course.id}`} className="group relative block h-32 overflow-hidden bg-blue-50">
+                                            <Link to={`/courses/${course.id}`} className="group relative block h-28 sm:h-32 overflow-hidden bg-blue-50">
                                                 {image ? (
                                                     <img src={image} alt="" className="size-full object-cover transition duration-300 group-hover:scale-105" />
                                                 ) : (

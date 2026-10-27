@@ -93,7 +93,7 @@ export function Hero({ onJoinCohortClick: _onJoinCohortClick }: HeroProps) {
                         </form>
 
                         {/* Stats row */}
-                        <div className="mt-8 flex flex-wrap gap-8">
+                        <div className="mt-8 flex flex-wrap gap-4 sm:gap-8">
                             <div className="flex items-center gap-3">
                                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
                                     <Monitor className="size-5 text-primary" aria-hidden="true" />

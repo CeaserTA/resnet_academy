@@ -301,7 +301,7 @@ export function AssignmentSubmitPage() {
         >
 
             {/* Two-column layout */}
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:items-start">
 
                 {/* LEFT — assignment details (1/3) */}
                 <div className="flex flex-col gap-3">
@@ -381,7 +381,7 @@ export function AssignmentSubmitPage() {
                 </div>
 
                 {/* RIGHT — submission area (2/3) */}
-                <div className="lg:col-span-2 flex flex-col gap-3">
+                <div className="md:col-span-2 flex flex-col gap-3">
 
                     {/* Success */}
                     {justSubmitted && (
