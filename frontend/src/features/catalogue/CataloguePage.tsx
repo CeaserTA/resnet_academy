@@ -529,7 +529,7 @@ export function CataloguePage() {
                 </section>
 
                 {/* ── Section 7: FAQ ───────────────────────────────────────────── */}
-                < section className="border-t border-border bg-white px-4 py-12 sm:px-6 lg:px-8" >
+                <section className="border-t border-border bg-white px-4 py-12 sm:px-6 lg:px-8">
                     <div className="mx-auto max-w-7xl">
                         <div className="grid gap-10 lg:grid-cols-3">
 
@@ -564,10 +564,10 @@ export function CataloguePage() {
                             </div>
                         </div>
                     </div>
-                </section >
+                </section>
 
                 {/* ── Section 7: Final enrolment prompt ───────────────────────── */}
-                < section className="border-t border-border bg-surface-50 px-4 py-8 sm:px-6 lg:px-8" >
+                <section className="border-t border-border bg-surface-50 px-4 py-8 sm:px-6 lg:px-8">
                     <div className="mx-auto max-w-7xl flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
                         <div>
                             <h2 className="text-2xl text-ink-900 sm:text-3xl">Ready to take the next step?</h2>
@@ -591,8 +591,8 @@ export function CataloguePage() {
                             </Link>
                         </div>
                     </div>
-                </section >
-            </main >
+                </section>
+            </main>
 
             <Footer
                 onLoginClick={() => openAuth('login')}
