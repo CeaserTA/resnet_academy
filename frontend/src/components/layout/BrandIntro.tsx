@@ -8,10 +8,13 @@ export function BrandIntro() {
 
   useEffect(() => {
     if (sessionStorage.getItem('resnet_intro_shown')) return;
-    sessionStorage.setItem('resnet_intro_shown', '1');
     setVisible(true);
     const fadeTimer = setTimeout(() => setFading(true), 1200);
-    const removeTimer = setTimeout(() => setVisible(false), 1600);
+    // Write the flag only after the animation has fully played
+    const removeTimer = setTimeout(() => {
+      sessionStorage.setItem('resnet_intro_shown', '1');
+      setVisible(false);
+    }, 1600);
     return () => { clearTimeout(fadeTimer); clearTimeout(removeTimer); };
   }, []);
 
@@ -19,9 +22,8 @@ export function BrandIntro() {
 
   return (
     <div
-      className={`fixed inset-0 z-[200] flex flex-col items-center justify-center bg-[#fafbfc] transition-opacity duration-400 lg:hidden ${
-        fading ? 'opacity-0' : 'opacity-100'
-      }`}
+      className={`fixed inset-0 z-[200] flex flex-col items-center justify-center bg-[#fafbfc] transition-opacity duration-[400ms] lg:hidden ${fading ? 'opacity-0' : 'opacity-100'
+        }`}
       aria-hidden="true"
     >
       <GraduationCap className="size-10 text-primary" />

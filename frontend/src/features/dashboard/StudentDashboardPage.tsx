@@ -264,7 +264,7 @@ export function StudentDashboardPage() {
                     {enrolments.length > 0 && (
                         <section>
                             <SectionLabel>Your learning</SectionLabel>
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                                 <VolumeCard icon={BookOpen} label="Enrolled" value={enrolments.length} sub={`${inProgress.length} in progress`} />
                                 <VolumeCard icon={CheckCircle2} label="Completed" value={completedCount} sub={`of ${plural(enrolments.length, 'course')}`} />
                                 <VolumeCard
