@@ -13,8 +13,8 @@ import { cn } from '@/lib/utils';
 
 export function NeedsActionBand({ children }: { children: ReactNode }) {
     return (
-        <section className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
-            <p className="mb-3 text-xs font-bold uppercase tracking-widest text-blue-700">Needs action</p>
+        <section className="rounded-2xl border border-border bg-surface-50 p-4">
+            <p className="mb-3 text-xs font-bold uppercase tracking-widest text-primary">Needs action</p>
             {children}
         </section>
     );

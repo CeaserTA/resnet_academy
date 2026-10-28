@@ -4,6 +4,7 @@ import {
     AlertTriangle,
     BookOpen,
     CalendarRange,
+    CheckCircle2,
     ClipboardList,
     FileCheck,
     GraduationCap,
@@ -104,11 +105,14 @@ export function InstructorDashboardPage() {
         .sort((a, b) => b.total - a.total);
     const maxEngagement = Math.max(1, ...engagementRows.map((r) => r.total));
 
+    // Day greeting
+    const hour = new Date().getHours();
+    const dayGreeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
     const subtitle = firstName ? `Welcome back, ${firstName}` : 'Your courses and activity at a glance';
 
     if (isLoading) {
         return (
-            <PageFrame title="Dashboard" subtitle={subtitle}>
+            <PageFrame title="Dashboard">
                 <div className="flex h-64 items-center justify-center"><Spinner /></div>
             </PageFrame>
         );
@@ -132,20 +136,44 @@ export function InstructorDashboardPage() {
     ];
 
     return (
-        <PageFrame
-            title="Dashboard"
-            subtitle={subtitle}
-            actions={
-                <Button size="sm" asChild>
-                    <Link to="/admin/courses/new">
-                        <Plus className="size-3.5" aria-hidden="true" />
-                        New course
-                    </Link>
-                </Button>
-            }
-        >
+        <PageFrame title="Dashboard">
 
-            {/* ── Needs action — the one blue-tinted block; amber only where something waits ── */}
+            {/* ── Welcome banner ── */}
+            <div className="rounded-2xl bg-navy px-6 py-6 shadow-sm sm:px-8">
+                <div className="flex items-center justify-between gap-6">
+                    {/* Left: greeting + CTA */}
+                    <div className="flex flex-col gap-3">
+                        <p className="text-sm text-navy-foreground/50">{dayGreeting}</p>
+                        <h1 className="font-display text-2xl font-bold text-navy-foreground sm:text-3xl">
+                            Instructor Dashboard
+                        </h1>
+                        <p className="text-sm text-navy-foreground/70">{subtitle}</p>
+                        <div className="mt-1">
+                            <Link
+                                to="/admin/courses/new"
+                                className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
+                            >
+                                <Plus className="size-3.5" aria-hidden="true" />
+                                New course
+                            </Link>
+                        </div>
+                    </div>
+
+                    {/* Right: quick stat chips — hidden on mobile */}
+                    <div className="hidden shrink-0 flex-col items-end gap-2 md:flex">
+                        <span className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-navy-foreground">
+                            <span className="font-bold">{myCourses.length}</span>&nbsp;
+                            {myCourses.length === 1 ? 'course' : 'courses'}
+                        </span>
+                        <span className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-navy-foreground">
+                            <span className="font-bold">{analyticsLoaded ? totals.students : '—'}</span>&nbsp;
+                            {totals.students === 1 ? 'student' : 'students'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {/* ── Needs action — the one tinted block; amber only where something waits ── */}
             <NeedsActionBand>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     <AttentionCard
@@ -186,37 +214,44 @@ export function InstructorDashboardPage() {
             {/* ── Your numbers — neutral, informational ── */}
             <section>
                 <SectionLabel>Your teaching</SectionLabel>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                     <VolumeCard
                         icon={BookOpen}
                         label="Courses"
                         value={myCourses.length}
                         sub={`${published} published · ${drafts} draft${drafts === 1 ? '' : 's'}`}
+                        accentColor="primary"
                     />
-                    <VolumeCard icon={Users} label="Students" value={count(totals.students)} sub="Across your courses" />
+                    <VolumeCard
+                        icon={Users}
+                        label="Students"
+                        value={count(totals.students)}
+                        sub="Across your courses"
+                        accentColor="success"
+                    />
                     <VolumeCard
                         icon={TrendingUp}
                         label="Completion rate"
                         value={analyticsLoaded ? `${completionRate}%` : '—'}
                         sub={analyticsLoaded ? `${totals.completed} of ${totals.students} finished` : 'Loading…'}
+                        accentColor="amber"
                     />
                 </div>
             </section>
 
-            {/* ── Quick actions — one row of cards across the full width (2 × 2 on tablets) ── */}
+            {/* ── Quick actions — 2-col on mobile, 2-col on tablet, 4-col on desktop ── */}
             <section>
                 <SectionLabel>Quick actions</SectionLabel>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     {quickActions.map((action) => (
                         <QuickActionButton key={action.label} action={action} />
                     ))}
                 </div>
             </section>
 
-            {/* ── Courses (2/3) + at-risk students (1/3) — same bottom row as the admin dashboard ── */}
+            {/* ── Courses (2/3) + at-risk students (1/3) ── */}
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <DashboardPanel title="Your courses" action={<ViewAllLink to="/admin/courses" />} className="lg:col-span-2">
-
+                <DashboardPanel title="Your courses" action={<ViewAllLink to="/admin/courses" />} className="lg:col-span-2">
                     {myCourses.length === 0 ? (
                         <EmptyState
                             icon={GraduationCap}
@@ -238,11 +273,12 @@ export function InstructorDashboardPage() {
                                 return (
                                     <li key={course.id} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-50">
                                         <Link to={`/admin/courses/${course.id}/modules`} className="flex min-w-0 flex-1 items-center gap-3">
-                                            <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-surface-100">
+                                            {/* Thumbnail placeholder: primary/10 tint instead of plain grey */}
+                                            <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary/10">
                                                 {course.thumbnail_url ? (
                                                     <img src={course.thumbnail_url} alt="" className="size-full object-cover" />
                                                 ) : (
-                                                    <BookOpen className="size-4 text-ink-600" aria-hidden="true" />
+                                                    <BookOpen className="size-4 text-primary" aria-hidden="true" />
                                                 )}
                                             </span>
                                             <span className="min-w-0 flex-1">
@@ -259,13 +295,15 @@ export function InstructorDashboardPage() {
                                                 </span>
                                                 {stats && stats.total_students > 0 && (
                                                     <span className="mt-1.5 flex items-center gap-2">
-                                                        <ProgressBar percent={stats.completion_rate} className="h-1 max-w-40" />
+                                                        {/* Progress bar: h-1.5 for better visibility */}
+                                                        <ProgressBar percent={stats.completion_rate} className="h-1.5 max-w-40" />
                                                         <span className="text-[11px] tabular-nums text-ink-600">{Math.round(stats.completion_rate)}% completed</span>
                                                     </span>
                                                 )}
                                             </span>
                                         </Link>
-                                        <Button size="sm" variant="outline" asChild className="shrink-0">
+                                        {/* Gradebook button: rounded-full */}
+                                        <Button size="sm" variant="outline" asChild className="shrink-0 rounded-full">
                                             <Link to={`/admin/courses/${course.id}/gradebook`} aria-label={`Gradebook for ${course.title}`}>
                                                 <ClipboardList className="size-3.5" aria-hidden="true" />
                                                 <span className="hidden sm:inline">Gradebook</span>
@@ -276,39 +314,43 @@ export function InstructorDashboardPage() {
                             })}
                         </ul>
                     )}
-            </DashboardPanel>
-
-            <div className="flex flex-col gap-4">
-                <DashboardPanel title="To grade" action={<ViewAllLink to="/grading" label="Open grading" />}>
-                    {!gradingLoaded ? (
-                        <div className="flex justify-center py-6"><Spinner /></div>
-                    ) : toGrade.length === 0 && stuckCount === 0 ? (
-                        <p className="px-4 py-5 text-center text-sm text-ink-600">Nothing waiting — all work is marked.</p>
-                    ) : (
-                        <ul className="divide-y divide-surface-100">
-                            {stuckCount > 0 && (
-                                <li>
-                                    <Link to="/grading" className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-surface-50">
-                                        <span className="truncate text-sm text-ink-900">Out of quiz attempts</span>
-                                        <span className="shrink-0 rounded-full bg-danger-600/10 px-2 py-0.5 text-xs font-semibold text-danger-600">
-                                            {stuckCount} student{stuckCount === 1 ? '' : 's'}
-                                        </span>
-                                    </Link>
-                                </li>
-                            )}
-                            {toGradeByCourse.map(({ course, n }) => (
-                                <li key={course.id}>
-                                    <Link to="/grading" className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-surface-50">
-                                        <span className="truncate text-sm text-ink-900">{course.title}</span>
-                                        <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-accent-amber">{n} to grade</span>
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
                 </DashboardPanel>
-                <AtRiskPanel entries={atRiskList} isLoading={!analyticsLoaded} />
-            </div>
+
+                <div className="flex flex-col gap-4">
+                    <DashboardPanel title="To grade" action={<ViewAllLink to="/grading" label="Open grading" />}>
+                        {!gradingLoaded ? (
+                            <div className="flex justify-center py-6"><Spinner /></div>
+                        ) : toGrade.length === 0 && stuckCount === 0 ? (
+                            /* "Nothing waiting" with CheckCircle2 icon */
+                            <p className="flex items-center justify-center gap-2 px-4 py-5 text-center text-sm text-ink-600">
+                                <CheckCircle2 className="size-4 shrink-0 text-success-600" aria-hidden="true" />
+                                Nothing waiting — all work is marked.
+                            </p>
+                        ) : (
+                            <ul className="divide-y divide-surface-100">
+                                {stuckCount > 0 && (
+                                    <li>
+                                        <Link to="/grading" className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-surface-50">
+                                            <span className="truncate text-sm text-ink-900">Out of quiz attempts</span>
+                                            <span className="shrink-0 rounded-full bg-danger-600/10 px-2 py-0.5 text-xs font-semibold text-danger-600">
+                                                {stuckCount} student{stuckCount === 1 ? '' : 's'}
+                                            </span>
+                                        </Link>
+                                    </li>
+                                )}
+                                {toGradeByCourse.map(({ course, n }) => (
+                                    <li key={course.id}>
+                                        <Link to="/grading" className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-surface-50">
+                                            <span className="truncate text-sm text-ink-900">{course.title}</span>
+                                            <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-accent-amber">{n} to grade</span>
+                                        </Link>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </DashboardPanel>
+                    <AtRiskPanel entries={atRiskList} isLoading={!analyticsLoaded} />
+                </div>
             </div>
 
             {/* ── Engagement — what students actually did in each course over the last 30 days ── */}
@@ -317,10 +359,12 @@ export function InstructorDashboardPage() {
                     {!analyticsLoaded ? (
                         <div className="flex justify-center py-6"><Spinner /></div>
                     ) : (
+                        /* Wrapped with rounded-xl overflow-hidden border border-border */
                         <div className="overflow-x-auto">
                             <table className="w-full min-w-[560px] text-sm">
-                                <thead>
-                                    <tr className="border-b border-surface-100 text-left text-xs font-medium uppercase tracking-wide text-ink-600">
+                                {/* thead with bg-surface-50 */}
+                                <thead className="bg-surface-50">
+                                    <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wide text-ink-600">
                                         <th className="px-4 py-2.5 font-medium">Course</th>
                                         <th className="px-4 py-2.5 text-right font-medium">Lessons viewed</th>
                                         <th className="px-4 py-2.5 text-right font-medium">Assignments</th>
@@ -332,7 +376,7 @@ export function InstructorDashboardPage() {
                                     {engagementRows.map(({ course, lessons, assignments, quizzes, total }) => (
                                         <tr key={course.id} className="hover:bg-surface-50">
                                             <td className="max-w-0 truncate px-4 py-2.5 font-medium text-ink-900">
-                                                <Link to={`/admin/courses/${course.id}/gradebook`} className="hover:text-blue-600">{course.title}</Link>
+                                                <Link to={`/admin/courses/${course.id}/gradebook`} className="hover:text-primary">{course.title}</Link>
                                             </td>
                                             <td className="px-4 py-2.5 text-right tabular-nums text-ink-900">{lessons}</td>
                                             <td className="px-4 py-2.5 text-right tabular-nums text-ink-900">{assignments}</td>
