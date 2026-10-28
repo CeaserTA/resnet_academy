@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import {
@@ -61,7 +61,7 @@ function CohortRow({ cohort }: { cohort: Cohort }) {
     return (
         <li>
             <Link to={`/admin/cohorts/${cohort.id}`} className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-surface-50">
-                <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <CalendarRange className="size-3.5" aria-hidden="true" />
                 </span>
                 <span className="min-w-0 flex-1">
@@ -83,7 +83,17 @@ function CohortRow({ cohort }: { cohort: Cohort }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+function useDayGreeting() {
+    return useMemo(() => {
+        const hour = new Date().getHours();
+        if (hour < 12) return 'Good morning';
+        if (hour < 18) return 'Good afternoon';
+        return 'Good evening';
+    }, []);
+}
+
 export function AdminDashboardPage() {
+    const greeting = useDayGreeting();
     const { data, isLoading } = useDashboardSummary();
     // The summary endpoint doesn't carry these, so read them from the same endpoints the
     // Applications / Payments / Cohorts pages use.
@@ -147,7 +157,33 @@ export function AdminDashboardPage() {
     ];
 
     return (
-        <PageFrame title="Dashboard" subtitle="Overview of your academy">
+        <PageFrame title="Dashboard">
+
+            {/* ── Welcome banner ────────────────────────────────────────────── */}
+            <div className="flex items-center justify-between gap-4 rounded-2xl bg-navy px-6 py-6 shadow-sm sm:px-8">
+                <div className="min-w-0">
+                    <p className="text-xs text-navy-foreground/50">{greeting}, Admin</p>
+                    <h1 className="font-display text-2xl font-semibold text-navy-foreground sm:text-3xl">Admin Dashboard</h1>
+                    <p className="mt-0.5 text-sm text-navy-foreground/70">Overview of your academy</p>
+                    <div className="mt-4 flex flex-wrap gap-3">
+                        <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-navy-foreground">
+                            {data.students.toLocaleString()} students
+                        </span>
+                        <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-navy-foreground">
+                            {data.confirmed_enrolments.toLocaleString()} active enrolments
+                        </span>
+                        <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-navy-foreground">
+                            {data.certificates_issued.toLocaleString()} certificates issued
+                        </span>
+                    </div>
+                </div>
+                <div className="hidden md:flex items-center gap-3">
+                    <div className="rounded-xl bg-white/10 px-4 py-3 text-center">
+                        <p className="text-xs font-medium text-navy-foreground/60 uppercase tracking-wider">Total Revenue</p>
+                        <p className="mt-0.5 text-lg font-bold text-navy-foreground">{totalRevenue}</p>
+                    </div>
+                </div>
+            </div>
 
             {/* ── Needs action ──────────────────────────────────────────────── */}
             {/* Sits on a tinted band with a stronger label so it reads as "act on this", while the
@@ -166,19 +202,21 @@ export function AdminDashboardPage() {
             <section>
                 <SectionLabel>Volume</SectionLabel>
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                    <VolumeCard icon={Users} label="Total students" value={data.students.toLocaleString()} />
-                    <VolumeCard icon={UserCheck} label="Active enrolments" value={data.confirmed_enrolments.toLocaleString()} />
+                    <VolumeCard icon={Users} label="Total students" value={data.students.toLocaleString()} accentColor="primary" />
+                    <VolumeCard icon={UserCheck} label="Active enrolments" value={data.confirmed_enrolments.toLocaleString()} accentColor="success" />
                     <VolumeCard
                         icon={Wallet}
                         label="Received (MTD)"
                         value={totalRevenue}
                         sub={revenueSub || undefined}
+                        accentColor="amber"
                     />
                     <VolumeCard
                         icon={TrendingUp}
                         label="Certificate rate"
                         value={certificateRate}
                         sub={`${data.certificates_issued} of ${data.confirmed_enrolments.toLocaleString()} enrolments`}
+                        accentColor="primary"
                     />
                 </div>
             </section>
@@ -222,7 +260,7 @@ export function AdminDashboardPage() {
 
                     {/* Quick actions */}
                     <DashboardPanel title="Quick actions">
-                        <div className="flex flex-col gap-1.5 p-3">
+                        <div className="grid grid-cols-2 gap-2 p-3">
                             {quickActions.map((action) => (
                                 <QuickActionButton key={action.label} action={action} />
                             ))}
