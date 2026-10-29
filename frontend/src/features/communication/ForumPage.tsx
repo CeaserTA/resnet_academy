@@ -243,7 +243,7 @@ export function ForumPage() {
                             placeholder="Search discussions…"
                             className="ml-0 max-w-none flex-1 self-center"
                         />
-                        <Button onClick={() => setIsComposing((prev) => !prev)}>
+                        <Button onClick={() => setIsComposing((prev) => !prev)} className="rounded-full">
                             <Plus className="size-4" aria-hidden="true" />
                             New discussion
                         </Button>
@@ -328,44 +328,44 @@ export function ForumPage() {
                         )}
 
                         {threads.length > 0 && (
-                        <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
-                        {pinnedThreads.length > 0 && (
-                            <div>
-                                <p className="flex items-center gap-1 border-b border-surface-100 bg-surface-50 px-4 py-2 text-xs font-medium uppercase tracking-wide text-ink-600">
-                                    <Pin className="size-3" aria-hidden="true" />
-                                    Pinned discussions
-                                </p>
-                                <div className="flex flex-col divide-y divide-surface-100">
-                                    {pinnedThreads.map((thread) => (
-                                        <DiscussionListItem
-                                            key={thread.id}
-                                            thread={thread}
-                                            isSelected={thread.id === selectedThreadId}
-                                            onSelect={() => openThread(thread.id)}
-                                            query={search}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+                            <div className="overflow-hidden rounded-xl border border-border bg-surface-0 shadow-sm">
+                                {pinnedThreads.length > 0 && (
+                                    <div>
+                                        <p className="flex items-center gap-1 border-b border-border bg-surface-50 px-4 py-2 text-xs font-medium uppercase tracking-wide text-ink-600">
+                                            <Pin className="size-3" aria-hidden="true" />
+                                            Pinned discussions
+                                        </p>
+                                        <div className="flex flex-col divide-y divide-border">
+                                            {pinnedThreads.map((thread) => (
+                                                <DiscussionListItem
+                                                    key={thread.id}
+                                                    thread={thread}
+                                                    isSelected={thread.id === selectedThreadId}
+                                                    onSelect={() => openThread(thread.id)}
+                                                    query={search}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
 
-                        {groupedThreads.map(([label, items]) => (
-                            <div key={label}>
-                                <p className="border-y border-surface-100 bg-surface-50 px-4 py-2 text-xs font-medium uppercase tracking-wide text-ink-600">{label}</p>
-                                <div className="flex flex-col divide-y divide-surface-100">
-                                    {items.map((thread) => (
-                                        <DiscussionListItem
-                                            key={thread.id}
-                                            thread={thread}
-                                            isSelected={thread.id === selectedThreadId}
-                                            onSelect={() => openThread(thread.id)}
-                                            query={search}
-                                        />
-                                    ))}
-                                </div>
+                                {groupedThreads.map(([label, items]) => (
+                                    <div key={label}>
+                                        <p className="border-y border-border bg-surface-50 px-4 py-2 text-xs font-medium uppercase tracking-wide text-ink-600">{label}</p>
+                                        <div className="flex flex-col divide-y divide-border">
+                                            {items.map((thread) => (
+                                                <DiscussionListItem
+                                                    key={thread.id}
+                                                    thread={thread}
+                                                    isSelected={thread.id === selectedThreadId}
+                                                    onSelect={() => openThread(thread.id)}
+                                                    query={search}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                        ))}
-                        </div>
                         )}
 
                         <div ref={sentinelRef} />
@@ -374,7 +374,7 @@ export function ForumPage() {
                 </div>
 
                 {selectedThreadId && (
-                    <div className="flex w-full flex-col rounded-lg border border-surface-100 bg-surface-0 p-4 lg:w-3/5">
+                    <div className="flex w-full flex-col rounded-lg border border-border bg-surface-0 p-4 lg:w-3/5">
                         <div className="mb-2 flex justify-end">
                             <Button variant="ghost" className="px-2 py-1" onClick={closeThread} aria-label="Back to discussions">
                                 <X className="size-4" aria-hidden="true" />

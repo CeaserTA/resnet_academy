@@ -20,6 +20,7 @@ import {
 import { AttemptReviewModal } from '@/features/assessment/AttemptReviewModal';
 import type { AttemptAnswerInput } from '@/features/assessment/api';
 import { PageFrame } from '@/components/layout/PageFrame';
+import { cn } from '@/lib/utils';
 import type {
     AttemptQuestion,
     EvaluationAttempt,
@@ -81,17 +82,30 @@ function QuestionCard({
 
                 {isChoice && (
                     <div className="mt-3 flex flex-col gap-2">
-                        {question.options.map((option) => (
-                            <label key={option.id} className="flex items-center gap-2 text-sm text-ink-900">
-                                <input
-                                    type={isMulti ? 'checkbox' : 'radio'}
-                                    name={`question-${question.id}`}
-                                    checked={answer.selectedOptionIds.includes(option.id)}
-                                    onChange={() => toggleOption(option.id)}
-                                />
-                                {option.option_text}
-                            </label>
-                        ))}
+                        {question.options.map((option) => {
+                            const isSelected = answer.selectedOptionIds.includes(option.id);
+                            return (
+                                <button
+                                    key={option.id}
+                                    type="button"
+                                    onClick={() => toggleOption(option.id)}
+                                    className={cn(
+                                        'flex items-center gap-3 rounded-xl border px-4 py-2.5 text-left text-sm transition-colors',
+                                        isSelected
+                                            ? 'border-primary bg-primary/10 text-primary font-medium'
+                                            : 'border-border bg-surface-0 text-ink-900 hover:border-primary/50 hover:bg-surface-50',
+                                    )}
+                                >
+                                    <span className={cn(
+                                        'flex size-4 shrink-0 items-center justify-center rounded-full border-2',
+                                        isSelected ? 'border-primary bg-primary' : 'border-ink-300',
+                                    )}>
+                                        {isSelected && <span className="size-1.5 rounded-full bg-white" />}
+                                    </span>
+                                    {option.option_text}
+                                </button>
+                            );
+                        })}
                     </div>
                 )}
             </div>
@@ -623,7 +637,7 @@ export function EvaluationTakePage() {
                         />
                     ))}
 
-                    <Button onClick={handleSubmit} isLoading={submitAttempt.isPending} className="self-start">
+                    <Button onClick={handleSubmit} isLoading={submitAttempt.isPending} className="self-start rounded-full">
                         Submit attempt
                     </Button>
                 </div>

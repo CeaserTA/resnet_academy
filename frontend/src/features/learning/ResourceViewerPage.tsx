@@ -120,6 +120,8 @@ function VideoPlayer({
                 />
             </div>
 
+            <p className="text-xs text-ink-600">Simulated player — real video will appear here once Bunny Stream is configured.</p>
+
             <div className="flex items-center justify-between text-sm text-ink-600">
                 <Button variant="secondary" onClick={() => setIsPlaying((p) => !p)}>
                     {isPlaying ? (
@@ -154,7 +156,7 @@ function FileInfo({ fileUrl, fileType, sizeKb }: { fileUrl?: string | null; file
     if (!fileName && details.length === 0) return null;
 
     return (
-        <div className="flex min-w-0 items-center gap-3 rounded-lg border border-surface-100 bg-surface-50 px-3 py-2.5">
+        <div className="flex min-w-0 items-center gap-3 rounded-lg border border-border bg-surface-50 px-3 py-2.5">
             <FileText className="size-5 shrink-0 text-blue-600" aria-hidden="true" />
             <div className="min-w-0">
                 {fileName && <p className="truncate text-sm font-medium text-ink-900">{fileName}</p>}
@@ -258,7 +260,7 @@ export function ResourceViewerPage() {
                             <Button
                                 onClick={() => markRead.mutate(resource.id)}
                                 isLoading={markRead.isPending}
-                                className="self-start"
+                                className="self-start rounded-full"
                             >
                                 Mark as read
                             </Button>
@@ -281,7 +283,7 @@ export function ResourceViewerPage() {
                             <Button
                                 onClick={() => markRead.mutate(resource.id)}
                                 isLoading={markRead.isPending}
-                                className="self-start"
+                                className="self-start rounded-full"
                             >
                                 Mark as read
                             </Button>
@@ -309,7 +311,7 @@ export function ResourceViewerPage() {
                             <Button
                                 onClick={() => markOpened.mutate(resource.id)}
                                 isLoading={markOpened.isPending}
-                                className="self-start"
+                                className="self-start rounded-full"
                             >
                                 Mark as complete
                             </Button>
@@ -405,7 +407,7 @@ export function ResourceViewerPage() {
                     {prevItem ? (
                         <Link
                             to={itemLinkFor(prevItem, courseId)}
-                            className="flex min-w-0 items-center gap-1.5 text-sm text-ink-600 hover:text-blue-600"
+                            className="flex min-w-0 items-center gap-1.5 rounded-xl border border-border bg-surface-0 px-4 py-3 text-sm text-ink-600 transition-colors hover:border-primary hover:bg-surface-50"
                         >
                             <ChevronLeft className="size-4 shrink-0" aria-hidden="true" />
                             <span className="flex flex-col items-start">
@@ -420,7 +422,7 @@ export function ResourceViewerPage() {
                     {nextItem && (
                         <Link
                             to={itemLinkFor(nextItem, courseId)}
-                            className="flex min-w-0 items-center gap-1.5 text-right text-sm text-ink-600 hover:text-blue-600"
+                            className="flex min-w-0 items-center gap-1.5 rounded-xl border border-border bg-surface-0 px-4 py-3 text-right text-sm text-ink-600 transition-colors hover:border-primary hover:bg-surface-50"
                         >
                             <span className="flex flex-col items-end">
                                 <span className="text-xs text-ink-600">Next</span>

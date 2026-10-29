@@ -213,7 +213,7 @@ function SubmissionForm({ assignmentId, submissionType, onSuccess }: {
                 </div>
 
                 <div className="flex justify-end border-t border-surface-100 bg-surface-50 px-4 py-3">
-                    <Button type="submit" isLoading={submit.isPending}>
+                    <Button type="submit" isLoading={submit.isPending} className="rounded-full">
                         <Send className="size-4" aria-hidden="true" />
                         {submit.isPending ? 'Submitting…' : 'Submit assignment'}
                     </Button>

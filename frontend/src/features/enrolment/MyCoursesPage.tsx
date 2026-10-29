@@ -107,8 +107,8 @@ function EnrolmentCard({ enrolment, progress, review, reviewsLoaded, onWithdraw,
                     {enrolment.course.thumbnail_url ? (
                         <img src={enrolment.course.thumbnail_url} alt={enrolment.course.title} className="h-full w-full object-cover transition duration-300 hover:scale-105" />
                     ) : (
-                        <div className="flex h-full items-center justify-center">
-                            <BookOpen className="size-8 text-ink-300" aria-hidden="true" />
+                        <div className="flex h-full items-center justify-center bg-primary/10">
+                            <BookOpen className="size-8 text-primary" aria-hidden="true" />
                         </div>
                     )}
                 </div>
@@ -157,7 +157,7 @@ function EnrolmentCard({ enrolment, progress, review, reviewsLoaded, onWithdraw,
                             </div>
                         ) : (
                             <Link to={continueHref}>
-                                <Button variant="primary" size="sm" className="w-full justify-center">
+                                <Button variant="primary" size="sm" className="w-full justify-center rounded-full">
                                     {isCompleted ? 'Review course' : progress.percent_complete === 0 ? 'Start learning' : 'Continue learning'}
                                     <ArrowRight className="size-3.5" aria-hidden="true" />
                                 </Button>
@@ -225,13 +225,14 @@ function OverviewStrip({ activeEnrolments, progressRows }: { activeEnrolments: E
 
     return (
         <div className="grid gap-3 sm:grid-cols-3">
-            <VolumeCard icon={BookOpen} label="Enrolled" value={activeEnrolments.length} sub={`${inProgress} in progress · ${completed} completed`} />
-            <VolumeCard icon={TrendingUp} label="Avg. completion" value={`${avgCompletion}%`} sub="Across your active courses" />
+            <VolumeCard icon={BookOpen} label="Enrolled" value={activeEnrolments.length} sub={`${inProgress} in progress · ${completed} completed`} accentColor="primary" />
+            <VolumeCard icon={TrendingUp} label="Avg. completion" value={`${avgCompletion}%`} sub="Across your active courses" accentColor="amber" />
             <VolumeCard
                 icon={Award}
                 label="Certificates"
                 value={certificates}
                 sub={certificates === 0 ? 'Finish a course to earn one' : 'Download from each course card'}
+                accentColor="success"
             />
         </div>
     );
@@ -322,6 +323,14 @@ export function MyCoursesPage() {
 
     return (
         <div className="space-y-5">
+
+            {/* Page header banner */}
+            <header className="rounded-2xl bg-navy px-5 py-5 shadow-sm">
+                <h1 className="font-display text-2xl font-semibold text-navy-foreground">My Courses</h1>
+                <p className="text-sm text-navy-foreground/70">
+                    {activeCount} active enrolment{activeCount !== 1 ? 's' : ''}
+                </p>
+            </header>
 
             {/* Profile completion modal — shown once per session when profile is incomplete */}
             {showProfileModal && profileStatus && (
