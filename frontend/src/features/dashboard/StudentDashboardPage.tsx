@@ -438,7 +438,7 @@ export function StudentDashboardPage() {
                             <Link
                                 to="/profile/edit"
                                 aria-label="Edit profile"
-                                className="flex size-8 shrink-0 items-center justify-center rounded-lg text-blue-600 transition-colors hover:bg-blue-50"
+                                className="flex size-8 shrink-0 items-center justify-center rounded-lg text-primary transition-colors hover:bg-primary/10"
                             >
                                 <PencilLine className="size-4" aria-hidden="true" />
                             </Link>
@@ -475,7 +475,7 @@ export function StudentDashboardPage() {
                                 </div>
 
                                 {hasPendingPayment && (
-                                    <p className="flex items-start gap-2 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700">
+                                    <p className="flex items-start gap-2 rounded-lg bg-primary/10 px-3 py-2 text-xs text-primary">
                                         <Clock className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
                                         A payment is awaiting confirmation — we&apos;ll notify you once it&apos;s confirmed.
                                     </p>
@@ -538,7 +538,7 @@ export function StudentDashboardPage() {
                                         <Link
                                             to="/messages"
                                             aria-label={`Message ${person.name}`}
-                                            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-blue-600 transition-colors hover:bg-blue-50"
+                                            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-primary transition-colors hover:bg-primary/10"
                                         >
                                             <MessageSquare className="size-4" aria-hidden="true" />
                                         </Link>
@@ -550,21 +550,25 @@ export function StudentDashboardPage() {
                 </aside>
             </div>
 
-            {isPaying && payable.length > 0 && (
-                <MakePaymentModal
-                    enrolments={payable}
-                    onClose={() => setIsPaying(false)}
-                    onSubmitted={() => setPaymentMessage("Payment submitted — we'll notify you once an admin confirms it.")}
-                />
-            )}
+            {
+                isPaying && payable.length > 0 && (
+                    <MakePaymentModal
+                        enrolments={payable}
+                        onClose={() => setIsPaying(false)}
+                        onSubmitted={() => setPaymentMessage("Payment submitted — we'll notify you once an admin confirms it.")}
+                    />
+                )
+            }
             <CertificateViewerModal certificate={viewingCertificate} onClose={() => setViewingCertificate(null)} />
-            {reviewingCourse && (
-                <ReviewFormModal
-                    course={reviewingCourse}
-                    existingReview={reviewByCourse.get(reviewingCourse.id)}
-                    onClose={() => setReviewingCourse(null)}
-                />
-            )}
-        </PageFrame>
+            {
+                reviewingCourse && (
+                    <ReviewFormModal
+                        course={reviewingCourse}
+                        existingReview={reviewByCourse.get(reviewingCourse.id)}
+                        onClose={() => setReviewingCourse(null)}
+                    />
+                )
+            }
+        </PageFrame >
     );
 }

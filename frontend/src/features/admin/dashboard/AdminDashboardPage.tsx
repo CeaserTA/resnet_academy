@@ -67,7 +67,7 @@ function CohortRow({ cohort }: { cohort: Cohort }) {
                 <span className="min-w-0 flex-1">
                     <span className="flex items-center justify-between gap-2">
                         <span className="truncate text-sm font-medium text-ink-900">{displayCohortName(cohort.name)}</span>
-                        <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold', running ? 'bg-blue-600/10 text-blue-600' : 'bg-success-600/10 text-success-600')}>
+                        <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold', running ? 'bg-primary/10 text-primary' : 'bg-success-600/10 text-success-600')}>
                             {running ? 'Running' : 'Open'}
                         </span>
                     </span>
