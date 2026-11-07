@@ -1,5 +1,5 @@
 import { useAuth } from '@/lib/auth/AuthContext';
-import { MyCoursesPage } from '@/features/enrolment/MyCoursesPage';
+import { StudentDashboardPage } from '@/features/dashboard/StudentDashboardPage';
 import { AdminDashboardPage } from '@/features/admin/dashboard/AdminDashboardPage';
 import { InstructorDashboardPage } from '@/features/dashboard/InstructorDashboardPage';
 
@@ -12,5 +12,5 @@ export function DashboardPage() {
 
     if (user?.role === 'admin') return <AdminDashboardPage />;
     if (user?.role === 'instructor') return <InstructorDashboardPage />;
-    return <MyCoursesPage />;
+    return <StudentDashboardPage />;
 }

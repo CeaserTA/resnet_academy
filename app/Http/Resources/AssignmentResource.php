@@ -23,6 +23,8 @@ final class AssignmentResource extends JsonResource
         return [
             'id' => $this->id,
             'module_id' => $this->module_id,
+            // Same as EvaluationResource — lets the grading page link back to its course (BACKEND_CHANGES.md §1).
+            'course_id' => $this->module?->course_id,
             'title' => $this->title,
             'instructions' => $this->instructions,
             'submission_type' => $this->submission_type->value,

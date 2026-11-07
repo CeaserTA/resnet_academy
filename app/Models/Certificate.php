@@ -22,11 +22,21 @@ final class Certificate extends Model
         'certificate_number',
         'certificate_url',
         'issued_at',
+        'revoked_at',
+        'revoked_by',
+        'revoke_reason',
     ];
 
     protected $casts = [
         'issued_at' => 'datetime',
+        'revoked_at' => 'datetime',
     ];
+
+    /** Withheld by an admin (BACKEND_CHANGES.md §5). */
+    public function isRevoked(): bool
+    {
+        return $this->revoked_at !== null;
+    }
 
     /**
      * @return BelongsTo<User, $this>

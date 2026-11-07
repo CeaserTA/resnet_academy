@@ -3,6 +3,7 @@ import { ArrowLeft, CheckCircle2, XCircle } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
 import { Badge } from '@/components/ui/Badge';
 import { useAttendanceRoster } from '@/features/progress/useProgress';
+import { formatDateTime } from '@/lib/formatDate';
 
 /**
  * Business rule "Attendance tracking": who showed up to a live_session resource, for the
@@ -51,7 +52,7 @@ export function AttendanceRosterPage() {
                                     )}
                                 </td>
                                 <td className="px-4 py-3 text-right font-mono text-xs text-ink-600">
-                                    {entry.marked_at ? new Date(entry.marked_at).toLocaleString() : '—'}
+                                    {entry.marked_at ? formatDateTime(entry.marked_at) : '—'}
                                 </td>
                             </tr>
                         ))}

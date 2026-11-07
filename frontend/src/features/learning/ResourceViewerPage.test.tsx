@@ -1,9 +1,10 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { it, expect, vi } from 'vitest';
 import { ResourceViewerPage } from '@/features/learning/ResourceViewerPage';
 import type { Module, ResourceItem } from '@/lib/api/types';
+import { PageHeaderProvider } from '@/lib/pageHeader/PageHeaderContext';
 
 const { firstResource, secondResource, modules } = vi.hoisted(() => {
     const firstResource: ResourceItem = {
@@ -64,20 +65,20 @@ function renderViewer(resourceId: number) {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
     return render(
-        <QueryClientProvider client={queryClient}>
+        <QueryClientProvider client={queryClient}><PageHeaderProvider>
             <MemoryRouter initialEntries={[`/learn/resources/${resourceId}?course=1`]}>
                 <Routes>
                     <Route path="/learn/resources/:id" element={<ResourceViewerPage />} />
                 </Routes>
             </MemoryRouter>
-        </QueryClientProvider>,
+        </PageHeaderProvider></QueryClientProvider>,
     );
 }
 
 it('shows a Next link but no Previous link on the first item', async () => {
     renderViewer(10);
 
-    expect(await screen.findByRole('heading', { name: 'Intro document' })).toBeInTheDocument();
+    expect(within(await screen.findByRole('navigation', { name: 'Breadcrumb' })).getByText('Intro document')).toBeInTheDocument();
     expect(screen.queryByText('Previous')).not.toBeInTheDocument();
     const nextLink = screen.getByText('Next').closest('a');
     expect(nextLink).toHaveAttribute('href', '/learn/resources/11?course=1');
@@ -86,7 +87,7 @@ it('shows a Next link but no Previous link on the first item', async () => {
 it('shows a Previous link but no Next link on the last item', async () => {
     renderViewer(11);
 
-    expect(await screen.findByRole('heading', { name: 'Follow-up document' })).toBeInTheDocument();
+    expect(within(await screen.findByRole('navigation', { name: 'Breadcrumb' })).getByText('Follow-up document')).toBeInTheDocument();
     expect(screen.queryByText('Next')).not.toBeInTheDocument();
     const prevLink = screen.getByText('Previous').closest('a');
     expect(prevLink).toHaveAttribute('href', '/learn/resources/10?course=1');

@@ -7,6 +7,8 @@ interface ModalProps {
     isOpen: boolean;
     onClose: () => void;
     title: string;
+    /** Optional element beside the title, e.g. a status badge. */
+    titleAdornment?: ReactNode;
     children: ReactNode;
     footer?: ReactNode;
     className?: string;
@@ -17,7 +19,7 @@ interface ModalProps {
  * Built on Radix's Dialog for real focus trapping, return-focus-on-close, and Escape/overlay-click
  * handling — the hand-rolled version this replaced had none of that (no focus trap at all).
  */
-export function Modal({ isOpen, onClose, title, children, footer, className, bodyClassName }: ModalProps) {
+export function Modal({ isOpen, onClose, title, titleAdornment, children, footer, className, bodyClassName }: ModalProps) {
     return (
         <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <Dialog.Portal>
@@ -30,7 +32,10 @@ export function Modal({ isOpen, onClose, title, children, footer, className, bod
                     )}
                 >
                     <div className="flex shrink-0 items-center justify-between border-b border-surface-100 bg-surface-50 px-5 py-3.5">
-                        <Dialog.Title className="text-sm font-semibold text-ink-900">{title}</Dialog.Title>
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
+                            <Dialog.Title className="text-sm font-semibold text-ink-900">{title}</Dialog.Title>
+                            {titleAdornment}
+                        </div>
                         <Dialog.Close asChild>
                             <button
                                 aria-label="Close"

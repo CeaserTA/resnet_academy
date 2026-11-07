@@ -57,12 +57,12 @@ describe('UpdateProfileRequest Validation Error Message Specificity Property Tes
         foreach ($fieldNamesToBreak as $fieldName) {
             // Generate invalid data for this field based on its type
             $invalidData[$fieldName] = match($fieldName) {
-                'phone' => $this->generateInvalidPhone(),
-                'country' => $this->generateInvalidTextField(),
-                'city' => $this->generateInvalidTextField(),
-                'highest_qualification' => $this->generateInvalidQualification(),
-                'linkedin_profile' => $this->generateInvalidUrl(),
-                'portfolio_website' => $this->generateInvalidUrl(),
+                'phone' => generateInvalidPhone(),
+                'country' => generateInvalidTextField(),
+                'city' => generateInvalidTextField(),
+                'highest_qualification' => generateInvalidQualification(),
+                'linkedin_profile' => generateInvalidUrl(),
+                'portfolio_website' => generateInvalidUrl(),
                 default => 'invalid',
             };
         }
@@ -338,7 +338,7 @@ describe('UpdateProfileRequest Validation Error Message Specificity Property Tes
         $shouldBreakPortfolio = $this->faker->boolean(50);
         
         if ($shouldBreakPhone) {
-            $invalidData['phone'] = $this->generateInvalidPhone();
+            $invalidData['phone'] = generateInvalidPhone();
             $expectedErrorFields[] = 'phone';
         }
         
@@ -353,17 +353,17 @@ describe('UpdateProfileRequest Validation Error Message Specificity Property Tes
         }
         
         if ($shouldBreakQualification) {
-            $invalidData['highest_qualification'] = $this->generateInvalidQualification();
+            $invalidData['highest_qualification'] = generateInvalidQualification();
             $expectedErrorFields[] = 'highest_qualification';
         }
         
         if ($shouldBreakLinkedIn) {
-            $invalidData['linkedin_profile'] = $this->generateInvalidUrl();
+            $invalidData['linkedin_profile'] = generateInvalidUrl();
             $expectedErrorFields[] = 'linkedin_profile';
         }
         
         if ($shouldBreakPortfolio) {
-            $invalidData['portfolio_website'] = $this->generateInvalidUrl();
+            $invalidData['portfolio_website'] = generateInvalidUrl();
             $expectedErrorFields[] = 'portfolio_website';
         }
         

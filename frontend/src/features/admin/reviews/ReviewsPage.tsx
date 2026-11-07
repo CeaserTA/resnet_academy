@@ -18,6 +18,9 @@ import {
 import { reviewStatusDisplay } from '@/lib/statusBadge';
 import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import type { CourseReview, ReviewStatus } from '@/lib/api/types';
+import { SearchInput } from '@/components/ui/SearchInput';
+import { matchesSearch } from '@/lib/search';
+import { formatDate, formatDateTime } from '@/lib/formatDate';
 
 type Tab = 'all' | 'pending' | 'approved' | 'rejected';
 
@@ -43,7 +46,7 @@ function ViewReviewModal({ review, onClose }: { review: CourseReview; onClose: (
                 </div>
                 <div className="flex items-center justify-between gap-4">
                     <span className="text-ink-600">Submitted</span>
-                    <span className="text-ink-900">{new Date(review.created_at).toLocaleString()}</span>
+                    <span className="text-ink-900">{formatDateTime(review.created_at)}</span>
                 </div>
 
                 {review.review_text && (
@@ -106,150 +109,166 @@ export function ReviewsPage() {
     const setFeatured = useSetCourseReviewFeatured();
 
     const [tab, setTab] = useState<Tab>('all');
+    const [search, setSearch] = useState('');
     const [viewingReview, setViewingReview] = useState<CourseReview | null>(null);
     const [rejectingReview, setRejectingReview] = useState<CourseReview | null>(null);
 
     const reviews = [...(data ?? [])]
         .filter((review) => tab === 'all' || review.status === tab)
+        // Reviews carry the student's name but not their email, so search name + course.
+        .filter((review) => matchesSearch(search, review.student?.name, review.course?.title))
         .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
 
     return (
         <div className="space-y-4">
-            {/* Segmented tab bar */}
-            <div className="flex items-center gap-0.5 rounded-lg border border-surface-100 bg-surface-50 p-0.5 self-start">
-                {(
-                    [
-                        ['all', 'All'],
-                        ['pending', 'Pending'],
-                        ['approved', 'Approved'],
-                        ['rejected', 'Rejected'],
-                    ] as const
-                ).map(([value, label]) => (
-                    <button
-                        key={value}
-                        onClick={() => setTab(value)}
-                        className={cn(
-                            'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                            tab === value ? 'bg-blue-600 text-white shadow-sm' : 'text-ink-600 hover:text-ink-900',
-                        )}
-                    >
-                        {label}
-                    </button>
-                ))}
+            {/* Filter row: status tabs + search (same layout as Enrolments) */}
+            <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-0.5 rounded-lg border border-surface-100 bg-surface-50 p-0.5">
+                    {(
+                        [
+                            ['all', 'All'],
+                            ['pending', 'Pending'],
+                            ['approved', 'Approved'],
+                            ['rejected', 'Rejected'],
+                        ] as const
+                    ).map(([value, label]) => (
+                        <button
+                            key={value}
+                            onClick={() => setTab(value)}
+                            className={cn(
+                                'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                                tab === value ? 'bg-blue-600 text-white shadow-sm' : 'text-ink-600 hover:text-ink-900',
+                            )}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
+                <SearchInput value={search} onChange={setSearch} placeholder="Search student or course" label="Search reviews by student name or course" />
             </div>
 
             {isLoading && <Spinner className="mt-6" />}
 
             {!isLoading && reviews.length === 0 && (
-                <EmptyState icon={Info} title="No reviews" description="Nothing matches this tab." className="mt-6" />
+                <EmptyState
+                    icon={Info}
+                    title="No reviews"
+                    description={search.trim() ? `No reviews match "${search.trim()}".` : 'Nothing matches this tab.'}
+                    className="mt-6"
+                />
             )}
 
             {!isLoading && reviews.length > 0 && (
                 <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
-                    {/* Column headers */}
-                    <div className="grid grid-cols-[minmax(160px,1fr)_minmax(140px,1fr)_100px_minmax(120px,2fr)_110px_100px_80px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
-                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Student</span>
-                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Course</span>
-                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Rating</span>
-                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Review</span>
-                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Status</span>
-                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600 text-right">Submitted</span>
-                        <span />
-                    </div>
+                    {/* Scrolls sideways on narrow screens instead of clipping columns */}
+                    <div className="overflow-x-auto">
+                        <div className="min-w-[890px]">
+                            {/* Column headers */}
+                            <div className="grid grid-cols-[minmax(160px,1fr)_minmax(140px,1fr)_100px_minmax(120px,2fr)_110px_100px_80px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
+                                <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Student</span>
+                                <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Course</span>
+                                <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Rating</span>
+                                <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Review</span>
+                                <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Status</span>
+                                <span className="text-xs font-medium uppercase tracking-wide text-ink-600 text-right">Submitted</span>
+                                <span />
+                            </div>
 
-                    {/* Rows */}
-                    <ul className="divide-y divide-surface-100">
-                        {reviews.map((review) => {
-                            const status = reviewStatusDisplay(review.status);
+                            {/* Rows */}
+                            <ul aria-label="Course reviews" className="divide-y divide-surface-100">
+                                {reviews.map((review) => {
+                                    const status = reviewStatusDisplay(review.status);
 
-                            return (
-                                <li
-                                    key={review.id}
-                                    className="grid grid-cols-[minmax(160px,1fr)_minmax(140px,1fr)_100px_minmax(120px,2fr)_110px_100px_80px] items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-50"
-                                >
-                                    {/* Student */}
-                                    <div className="flex min-w-0 items-center gap-2">
-                                        {review.student ? (
-                                            <>
-                                                <Avatar
-                                                    name={review.student.name}
-                                                    size="sm"
-                                                    className="size-7 shrink-0 text-xs"
-                                                />
-                                                <p className="truncate text-sm font-medium text-ink-900">{review.student.name}</p>
-                                            </>
-                                        ) : (
-                                            <span className="text-sm text-ink-600">—</span>
-                                        )}
-                                    </div>
+                                    return (
+                                        <li
+                                            key={review.id}
+                                            className="grid grid-cols-[minmax(160px,1fr)_minmax(140px,1fr)_100px_minmax(120px,2fr)_110px_100px_80px] items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-50"
+                                        >
+                                            {/* Student */}
+                                            <div className="flex min-w-0 items-center gap-2">
+                                                {review.student ? (
+                                                    <>
+                                                        <Avatar
+                                                            name={review.student.name}
+                                                            size="sm"
+                                                            className="size-7 shrink-0 text-xs"
+                                                        />
+                                                        <p className="truncate text-sm font-medium text-ink-900">{review.student.name}</p>
+                                                    </>
+                                                ) : (
+                                                    <span className="text-sm text-ink-600">—</span>
+                                                )}
+                                            </div>
 
-                                    {/* Course */}
-                                    <p className="truncate text-sm text-ink-600">{review.course?.title}</p>
+                                            {/* Course */}
+                                            <p className="truncate text-sm text-ink-600">{review.course?.title}</p>
 
-                                    {/* Rating */}
-                                    <StarRating value={review.rating} readOnly size="sm" />
+                                            {/* Rating */}
+                                            <StarRating value={review.rating} readOnly size="sm" />
 
-                                    {/* Review text */}
-                                    <p className="truncate text-sm text-ink-600">{review.review_text || '—'}</p>
+                                            {/* Review text */}
+                                            <p className="truncate text-sm text-ink-600">{review.review_text || '—'}</p>
 
-                                    {/* Status */}
-                                    <Badge label={status.label} tone={status.tone} icon={status.icon} />
+                                            {/* Status */}
+                                            <Badge label={status.label} tone={status.tone} icon={status.icon} />
 
-                                    {/* Submitted */}
-                                    <p className="text-right font-mono text-xs text-ink-600">
-                                        {new Date(review.created_at).toLocaleDateString()}
-                                    </p>
+                                            {/* Submitted */}
+                                            <p className="text-right font-mono text-xs text-ink-600">
+                                                {formatDate(review.created_at)}
+                                            </p>
 
-                                    {/* Actions */}
-                                    <div className="flex items-center justify-end gap-1">
-                                        {review.status === 'pending' && (
-                                            <>
+                                            {/* Actions */}
+                                            <div className="flex items-center justify-end gap-1">
+                                                {review.status === 'pending' && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => approveReview.mutate(review.id)}
+                                                            aria-label={`Approve ${review.student?.name}'s review`}
+                                                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-ink-900"
+                                                        >
+                                                            <Check className="size-4 text-success-600" aria-hidden="true" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setRejectingReview(review)}
+                                                            aria-label={`Reject ${review.student?.name}'s review`}
+                                                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-danger-600/10 hover:text-danger-600"
+                                                        >
+                                                            <X className="size-4" aria-hidden="true" />
+                                                        </button>
+                                                    </>
+                                                )}
+                                                {review.status === 'approved' && (
+                                                    <button
+                                                        onClick={() =>
+                                                            setFeatured.mutate({ id: review.id, isFeatured: !review.is_featured })
+                                                        }
+                                                        aria-label={
+                                                            review.is_featured
+                                                                ? `Unfeature ${review.student?.name}'s review`
+                                                                : `Feature ${review.student?.name}'s review`
+                                                        }
+                                                        className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-ink-900"
+                                                    >
+                                                        <Star
+                                                            className={cn('size-4', review.is_featured ? 'fill-amber-500 text-amber-500' : '')}
+                                                            aria-hidden="true"
+                                                        />
+                                                    </button>
+                                                )}
                                                 <button
-                                                    onClick={() => approveReview.mutate(review.id)}
-                                                    aria-label={`Approve ${review.student?.name}'s review`}
+                                                    onClick={() => setViewingReview(review)}
+                                                    aria-label={`View ${review.student?.name}'s review`}
                                                     className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-ink-900"
                                                 >
-                                                    <Check className="size-4 text-success-600" aria-hidden="true" />
+                                                    <Eye className="size-4" aria-hidden="true" />
                                                 </button>
-                                                <button
-                                                    onClick={() => setRejectingReview(review)}
-                                                    aria-label={`Reject ${review.student?.name}'s review`}
-                                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-danger-600/10 hover:text-danger-600"
-                                                >
-                                                    <X className="size-4" aria-hidden="true" />
-                                                </button>
-                                            </>
-                                        )}
-                                        {review.status === 'approved' && (
-                                            <button
-                                                onClick={() =>
-                                                    setFeatured.mutate({ id: review.id, isFeatured: !review.is_featured })
-                                                }
-                                                aria-label={
-                                                    review.is_featured
-                                                        ? `Unfeature ${review.student?.name}'s review`
-                                                        : `Feature ${review.student?.name}'s review`
-                                                }
-                                                className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-ink-900"
-                                            >
-                                                <Star
-                                                    className={cn('size-4', review.is_featured ? 'fill-amber-500 text-amber-500' : '')}
-                                                    aria-hidden="true"
-                                                />
-                                            </button>
-                                        )}
-                                        <button
-                                            onClick={() => setViewingReview(review)}
-                                            aria-label={`View ${review.student?.name}'s review`}
-                                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-ink-900"
-                                        >
-                                            <Eye className="size-4" aria-hidden="true" />
-                                        </button>
-                                    </div>
-                                </li>
-                            );
-                        })}
-                    </ul>
+                                            </div>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             )}
 

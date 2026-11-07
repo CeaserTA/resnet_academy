@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { ChevronDown, LifeBuoy, LogOut, Pencil, Settings2 } from 'lucide-react';
+import { ChevronDown, KeyRound, LifeBuoy, LogOut, UserRound } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth/AuthContext';
 
 /**
- * Top-bar profile dropdown. "Account settings" jumps to the same /account page as "Edit
- * profile" — there's one unified profile page, not a separate settings screen — but scrolls to
- * its Security section via the #security hash (see AccountPage's scroll-into-view effect).
+ * Top-bar profile dropdown. Both links open the one /account page; "Password & security" scrolls
+ * straight to its Security section via the #security hash (see AccountPage's scroll-into-view
+ * effect). Named for where they land, so they don't read as two settings screens.
  */
 export function ProfileMenu({ className }: { className?: string }) {
     const { user, logout } = useAuth();
@@ -57,8 +57,8 @@ export function ProfileMenu({ className }: { className?: string }) {
                         onClick={() => setIsOpen(false)}
                         className="flex items-center gap-2 px-3 py-2 text-sm text-ink-900 hover:bg-surface-50"
                     >
-                        <Pencil className="size-4" aria-hidden="true" />
-                        Edit profile
+                        <UserRound className="size-4" aria-hidden="true" />
+                        My profile
                     </Link>
 
                     <Link
@@ -66,8 +66,8 @@ export function ProfileMenu({ className }: { className?: string }) {
                         onClick={() => setIsOpen(false)}
                         className="flex items-center gap-2 px-3 py-2 text-sm text-ink-900 hover:bg-surface-50"
                     >
-                        <Settings2 className="size-4" aria-hidden="true" />
-                        Account settings
+                        <KeyRound className="size-4" aria-hidden="true" />
+                        Password &amp; security
                     </Link>
 
                     <Link

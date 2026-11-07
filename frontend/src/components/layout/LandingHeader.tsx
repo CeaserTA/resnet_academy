@@ -197,8 +197,16 @@ export function LandingHeader({ onLoginClick, onSignupClick }: LandingHeaderProp
             </div>
 
             {/* ── Mobile menu ────────────────────────────────────────────────── */}
-            {mobileMenuOpen && (
-                <div className="border-t border-[#e8ecf1] bg-white px-4 py-4 sm:px-6 lg:hidden">
+            <div
+                className={cn(
+                    'overflow-hidden transition-all duration-200 lg:hidden',
+                    mobileMenuOpen ? 'max-h-96' : 'max-h-0 py-0',
+                )}
+            >
+                <div className={cn(
+                    'border-t border-[#e8ecf1] bg-white px-4 sm:px-6',
+                    mobileMenuOpen ? 'py-4' : 'py-0',
+                )}>
                     <nav className="flex flex-col gap-1">
                         {navLinks.map(({ label, to }) => (
                             <NavLink
@@ -233,7 +241,7 @@ export function LandingHeader({ onLoginClick, onSignupClick }: LandingHeaderProp
                         )}
                     </nav>
                 </div>
-            )}
+            </div>
         </header>
     );
 }

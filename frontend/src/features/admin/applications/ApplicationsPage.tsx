@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { useCourses } from '@/features/catalogue/useCourses';
 import {
     useApproveCourseApplication,
+    useAllCourseApplications,
     useCourseApplications,
     useRejectCourseApplication,
 } from '@/features/courseApplications/useCourseApplications';
@@ -18,6 +19,10 @@ import { courseApplicationStatusDisplay } from '@/lib/statusBadge';
 import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import { useAuth } from '@/lib/auth/AuthContext';
 import type { CourseApplication, CourseApplicationStatus } from '@/lib/api/types';
+import { SearchInput } from '@/components/ui/SearchInput';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { matchesSearch } from '@/lib/search';
+import { formatDate, formatDateTime } from '@/lib/formatDate';
 
 type Tab = 'all' | 'pending' | 'rejected' | 'approved';
 
@@ -43,7 +48,7 @@ function ViewApplicationModal({ application, onClose }: { application: CourseApp
                 </div>
                 <div className="flex items-center justify-between gap-4">
                     <span className="text-ink-600">Applied</span>
-                    <span className="text-ink-900">{new Date(application.applied_at).toLocaleString()}</span>
+                    <span className="text-ink-900">{formatDateTime(application.applied_at)}</span>
                 </div>
                 {application.approved_automatically ? (
                     <div className="flex items-center justify-between gap-4">
@@ -177,16 +182,24 @@ export function ApplicationsPage() {
     );
     const [tab, setTab] = useState<Tab>('all');
     const [page, setPage] = useState(1);
-    const { data, isLoading } = useCourseApplications({ status: tab === 'all' ? undefined : tab, page });
+    const [search, setSearch] = useState('');
+    const term = useDebouncedValue(search.trim());
+    const isSearching = term !== '';
+    const status = tab === 'all' ? undefined : tab;
+    const { data, isLoading: isLoadingPage } = useCourseApplications({ status, page });
+    // While searching, filter the whole list for this tab, not just the current page.
+    const { data: allForTab, isLoading: isLoadingAll } = useAllCourseApplications(status, isSearching);
+    const isLoading = isSearching ? isLoadingAll : isLoadingPage;
     const approveApplication = useApproveCourseApplication();
 
     const [viewingApplication, setViewingApplication] = useState<CourseApplication | null>(null);
     const [rejectingApplication, setRejectingApplication] = useState<CourseApplication | null>(null);
 
-    const applications = [...(data?.data ?? [])].sort(
-        (a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status],
-    );
-    const meta = data?.meta;
+    const applications = [...((isSearching ? allForTab : data?.data) ?? [])]
+        .filter((application) => matchesSearch(term, application.student.name, application.student.email))
+        .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
+    // Search results are one filtered list, so page controls only apply when not searching.
+    const meta = isSearching ? undefined : data?.meta;
 
     const switchTab = (nextTab: Tab) => {
         setTab(nextTab);
@@ -195,112 +208,125 @@ export function ApplicationsPage() {
 
     return (
         <div className="space-y-4">
-            {/* Segmented tab bar */}
-            <div className="flex items-center gap-0.5 rounded-lg border border-surface-100 bg-surface-50 p-0.5 self-start">
-                {(
-                    [
-                        ['all', 'All'],
-                        ['pending', 'Pending'],
-                        ['rejected', 'Rejected'],
-                        ['approved', 'Approved'],
-                    ] as const
-                ).map(([value, label]) => (
-                    <button
-                        key={value}
-                        onClick={() => switchTab(value)}
-                        className={cn(
-                            'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                            tab === value ? 'bg-blue-600 text-white shadow-sm' : 'text-ink-600 hover:text-ink-900',
-                        )}
-                    >
-                        {label}
-                    </button>
-                ))}
+            {/* Filter row: status tabs + search (same layout as Enrolments) */}
+            <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-0.5 rounded-lg border border-surface-100 bg-surface-50 p-0.5">
+                    {(
+                        [
+                            ['all', 'All'],
+                            ['pending', 'Pending'],
+                            ['rejected', 'Rejected'],
+                            ['approved', 'Approved'],
+                        ] as const
+                    ).map(([value, label]) => (
+                        <button
+                            key={value}
+                            onClick={() => switchTab(value)}
+                            className={cn(
+                                'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                                tab === value ? 'bg-blue-600 text-white shadow-sm' : 'text-ink-600 hover:text-ink-900',
+                            )}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
+                <SearchInput value={search} onChange={setSearch} placeholder="Search name or email" label="Search applications by student name or email" />
             </div>
 
             {isLoading && <Spinner className="mt-6" />}
 
             {!isLoading && applications.length === 0 && (
-                <EmptyState icon={Info} title="No applications" description="Nothing matches this tab." className="mt-6" />
+                <EmptyState
+                    icon={Info}
+                    title="No applications"
+                    description={isSearching ? `No applications match "${term}".` : 'Nothing matches this tab.'}
+                    className="mt-6"
+                />
             )}
 
             {!isLoading && applications.length > 0 && (
                 <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
-                    {/* Column headers */}
-                    <div className="grid grid-cols-[minmax(180px,1fr)_minmax(140px,1fr)_120px_110px_80px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
-                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Student</span>
-                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Course</span>
-                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Status</span>
-                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600 text-right">Applied</span>
-                        <span />
-                    </div>
+                    {/* Scrolls sideways on narrow screens instead of clipping columns */}
+                    <div className="overflow-x-auto">
+                        <div className="min-w-[700px]">
+                            {/* Column headers */}
+                            <div className="grid grid-cols-[minmax(180px,1fr)_minmax(140px,1fr)_120px_110px_80px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
+                                <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Student</span>
+                                <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Course</span>
+                                <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Status</span>
+                                <span className="text-xs font-medium uppercase tracking-wide text-ink-600 text-right">Applied</span>
+                                <span />
+                            </div>
 
-                    {/* Rows */}
-                    <ul className="divide-y divide-surface-100">
-                        {applications.map((application) => {
-                            const status = courseApplicationStatusDisplay(application.status);
+                            {/* Rows */}
+                            <ul className="divide-y divide-surface-100">
+                                {applications.map((application) => {
+                                    const status = courseApplicationStatusDisplay(application.status);
 
-                            return (
-                                <li
-                                    key={application.id}
-                                    className="grid grid-cols-[minmax(180px,1fr)_minmax(140px,1fr)_120px_110px_80px] items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-50"
-                                >
-                                    {/* Student */}
-                                    <div className="flex min-w-0 items-center gap-2">
-                                        <Avatar
-                                            name={application.student.name}
-                                            size="sm"
-                                            className="size-7 shrink-0 text-xs"
-                                        />
-                                        <div className="min-w-0">
-                                            <p className="truncate text-sm font-medium text-ink-900">{application.student.name}</p>
-                                            <p className="truncate text-xs text-ink-600">{application.student.email}</p>
-                                        </div>
-                                    </div>
+                                    return (
+                                        <li
+                                            key={application.id}
+                                            className="grid grid-cols-[minmax(180px,1fr)_minmax(140px,1fr)_120px_110px_80px] items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-50"
+                                        >
+                                            {/* Student */}
+                                            <div className="flex min-w-0 items-center gap-2">
+                                                <Avatar
+                                                    name={application.student.name}
+                                                    size="sm"
+                                                    className="size-7 shrink-0 text-xs"
+                                                />
+                                                <div className="min-w-0">
+                                                    <p className="truncate text-sm font-medium text-ink-900">{application.student.name}</p>
+                                                    <p className="truncate text-xs text-ink-600">{application.student.email}</p>
+                                                </div>
+                                            </div>
 
-                                    {/* Course */}
-                                    <p className="truncate text-sm text-ink-600">{application.course.title}</p>
+                                            {/* Course */}
+                                            <p className="truncate text-sm text-ink-600">{application.course.title}</p>
 
-                                    {/* Status */}
-                                    <Badge label={status.label} tone={status.tone} icon={status.icon} />
+                                            {/* Status */}
+                                            <Badge label={status.label} tone={status.tone} icon={status.icon} />
 
-                                    {/* Applied */}
-                                    <p className="text-right font-mono text-xs text-ink-600">
-                                        {new Date(application.applied_at).toLocaleDateString()}
-                                    </p>
+                                            {/* Applied */}
+                                            <p className="text-right font-mono text-xs text-ink-600">
+                                                {formatDate(application.applied_at)}
+                                            </p>
 
-                                    {/* Actions */}
-                                    <div className="flex items-center justify-end gap-1">
-                                        {application.status === 'pending' && (
-                                            <>
+                                            {/* Actions */}
+                                            <div className="flex items-center justify-end gap-1">
+                                                {application.status === 'pending' && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => approveApplication.mutate(application.id)}
+                                                            aria-label={`Approve ${application.student.name}`}
+                                                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-ink-900"
+                                                        >
+                                                            <Check className="size-4 text-success-600" aria-hidden="true" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setRejectingApplication(application)}
+                                                            aria-label={`Reject ${application.student.name}`}
+                                                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-danger-600/10 hover:text-danger-600"
+                                                        >
+                                                            <X className="size-4" aria-hidden="true" />
+                                                        </button>
+                                                    </>
+                                                )}
                                                 <button
-                                                    onClick={() => approveApplication.mutate(application.id)}
-                                                    aria-label={`Approve ${application.student.name}`}
+                                                    onClick={() => setViewingApplication(application)}
+                                                    aria-label={`View ${application.student.name}`}
                                                     className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-ink-900"
                                                 >
-                                                    <Check className="size-4 text-success-600" aria-hidden="true" />
+                                                    <Eye className="size-4" aria-hidden="true" />
                                                 </button>
-                                                <button
-                                                    onClick={() => setRejectingApplication(application)}
-                                                    aria-label={`Reject ${application.student.name}`}
-                                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-danger-600/10 hover:text-danger-600"
-                                                >
-                                                    <X className="size-4" aria-hidden="true" />
-                                                </button>
-                                            </>
-                                        )}
-                                        <button
-                                            onClick={() => setViewingApplication(application)}
-                                            aria-label={`View ${application.student.name}`}
-                                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-ink-900"
-                                        >
-                                            <Eye className="size-4" aria-hidden="true" />
-                                        </button>
-                                    </div>
-                                </li>
-                            );
-                        })}
-                    </ul>
+                                            </div>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             )}
 

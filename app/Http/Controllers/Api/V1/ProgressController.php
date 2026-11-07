@@ -110,6 +110,7 @@ final class ProgressController extends Controller
             $certificate = Certificate::query()
                 ->where('student_id', $student->id)
                 ->where('course_id', $course->id)
+                ->whereNull('revoked_at')
                 ->first();
 
             return [

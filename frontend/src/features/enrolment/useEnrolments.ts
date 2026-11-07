@@ -25,7 +25,7 @@ export function useWithdrawEnrolment() {
 
     return useMutation({
         mutationFn: ({ enrolmentId, note }: { enrolmentId: number; note?: string }) =>
-            withdrawEnrolment(enrolmentId, note),
+            note !== undefined ? withdrawEnrolment(enrolmentId, note) : withdrawEnrolment(enrolmentId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['enrolments', 'me'] });
         },

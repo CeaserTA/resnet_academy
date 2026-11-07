@@ -190,3 +190,44 @@ it('rejects a second submit on an attempt that was already submitted', function 
 
     expect(EvaluationAttemptAnswer::where('attempt_id', $attemptId)->count())->toBe(1);
 });
+
+it('lets staff grant extra attempts once a student has used them all (BACKEND_CHANGES.md §3)', function (): void {
+    ['admin' => $admin, 'student' => $student, 'evaluation' => $evaluation, 'question' => $question, 'wrongOption' => $wrongOption] =
+        setUpEvaluationWithOneMcqQuestion(passScore: 70, maxAttempts: 1);
+
+    $first = $this->actingAs($student)->postJson("/api/v1/evaluations/{$evaluation->id}/attempts");
+    $this->actingAs($student)->postJson("/api/v1/attempts/{$first->json('data.attempt.id')}/submit", [
+        'answers' => [['question_id' => $question->id, 'selected_option_ids' => [$wrongOption->id]]],
+    ])->assertOk();
+    $this->actingAs($student)->postJson("/api/v1/evaluations/{$evaluation->id}/attempts")->assertForbidden();
+
+    // A student can't grant themselves attempts.
+    $this->actingAs($student)->postJson("/api/v1/evaluations/{$evaluation->id}/students/{$student->id}/extra-attempts")->assertForbidden();
+
+    $this->actingAs($admin)
+        ->postJson("/api/v1/evaluations/{$evaluation->id}/students/{$student->id}/extra-attempts", ['attempts' => 1, 'reason' => 'Retry after revision'])
+        ->assertOk()
+        ->assertJsonPath('data.extra_attempts', 1)
+        ->assertJsonPath('data.max_attempts', 2);
+
+    $this->actingAs($student)->getJson("/api/v1/evaluations/{$evaluation->id}/overview")
+        ->assertJsonPath('data.attempts_remaining', 1);
+    $this->actingAs($student)->postJson("/api/v1/evaluations/{$evaluation->id}/attempts")->assertCreated();
+});
+
+it('refuses a new attempt while the last one is waiting for manual marking (BACKEND_CHANGES.md §2)', function (): void {
+    ['student' => $student, 'evaluation' => $evaluation] = setUpEvaluationWithOneMcqQuestion(passScore: 70, maxAttempts: 3);
+
+    EvaluationAttempt::create([
+        'evaluation_id' => $evaluation->id,
+        'student_id' => $student->id,
+        'attempt_number' => 1,
+        'started_at' => now()->subHour(),
+        'submitted_at' => now()->subMinutes(30),
+        'status' => \App\Enums\EvaluationAttemptStatus::Submitted,
+    ]);
+
+    $this->actingAs($student)->postJson("/api/v1/evaluations/{$evaluation->id}/attempts")
+        ->assertStatus(422)
+        ->assertJsonFragment(['message' => 'Your last attempt is still waiting to be marked. You can try again once your instructor has graded it.']);
+});

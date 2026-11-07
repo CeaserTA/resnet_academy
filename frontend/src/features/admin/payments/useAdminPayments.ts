@@ -2,10 +2,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { confirmPaymentSubmission, fetchOrders, fetchPaymentSummary, rejectPaymentSubmission, updateOrder } from '@/features/admin/payments/api';
 import type { OrderStatus } from '@/lib/api/types';
 
-export function useOrders(status?: OrderStatus) {
+export function useOrders(status?: OrderStatus, page = 1) {
     return useQuery({
-        queryKey: ['admin', 'orders', status ?? null],
-        queryFn: () => fetchOrders(status),
+        queryKey: ['admin', 'orders', status ?? null, page],
+        queryFn: () => fetchOrders(status, page),
     });
 }
 

@@ -12,7 +12,12 @@ final class CertificatePolicy
 {
     public function view(User $user, Certificate $certificate): bool
     {
-        return $user->role === UserRole::Admin || $user->id === $certificate->student_id;
+        if ($user->role === UserRole::Admin) {
+            return true;
+        }
+
+        // A revoked certificate is withheld from its student (BACKEND_CHANGES.md §5).
+        return $user->id === $certificate->student_id && ! $certificate->isRevoked();
     }
 
     /**
@@ -25,6 +30,11 @@ final class CertificatePolicy
     }
 
     public function regenerate(User $user, Certificate $certificate): bool
+    {
+        return $user->role === UserRole::Admin;
+    }
+
+    public function revoke(User $user, Certificate $certificate): bool
     {
         return $user->role === UserRole::Admin;
     }

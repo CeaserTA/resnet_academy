@@ -216,7 +216,7 @@ export function ForumComposer({
                         aria-label="Attach an image"
                         className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-ink-600 hover:bg-surface-100"
                     >
-                        <ImageIcon className="size-4 text-amber-600" aria-hidden="true" />
+                        <ImageIcon className="size-4 text-accent-amber" aria-hidden="true" />
                         Image
                     </button>
                     <button
@@ -234,7 +234,7 @@ export function ForumComposer({
                         aria-label="Attach audio"
                         className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-ink-600 hover:bg-surface-100"
                     >
-                        <Music className="size-4 text-emerald-600" aria-hidden="true" />
+                        <Music className="size-4 text-success-600" aria-hidden="true" />
                         Audio
                     </button>
                     <button
@@ -244,7 +244,7 @@ export function ForumComposer({
                         aria-pressed={isArticleMode}
                         className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs hover:bg-surface-100 ${isArticleMode ? 'bg-surface-100 text-ink-900' : 'text-ink-600'}`}
                     >
-                        <FileText className="size-4 text-rose-600" aria-hidden="true" />
+                        <FileText className="size-4 text-navy" aria-hidden="true" />
                         Article
                     </button>
                 </div>

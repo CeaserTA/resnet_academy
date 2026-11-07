@@ -53,6 +53,25 @@ const EVENT_DESCRIPTIONS: Record<string, string | Describer> = {
         return `bulk-imported ${imported} enrolment(s) (${skipped} skipped)`;
     },
 
+    'cohort.created': (log) => {
+        const name = metaString(log, 'name');
+        return name ? `created the cohort "${name}"` : 'created a cohort';
+    },
+    'cohort_course.created': 'added a course to a cohort',
+    'course_section.created': 'opened a new course offering',
+
+    'course_application.submitted': 'applied for a course',
+    'course_application.approved': 'approved a course application',
+    'course_application.rejected': 'rejected a course application',
+
+    'course_review.submitted': (log) => {
+        const rating = metaString(log, 'rating');
+        return rating ? `left a ${rating}-star course review` : 'left a course review';
+    },
+    'course_review.approved': 'approved a course review',
+    'course_review.featured': (log) =>
+        log.meta?.is_featured === false ? 'removed a review from the featured list' : 'featured a course review',
+
     'grade.changed': (log) => {
         if (log.entity_type === 'evaluation_attempt') {
             const score = metaString(log, 'score_percent');
@@ -68,8 +87,10 @@ const EVENT_DESCRIPTIONS: Record<string, string | Describer> = {
         return to ? `recorded a payment, updating the balance to ${to}` : 'recorded a payment';
     },
     'order.payment_confirmed': (log) => {
-        const to = metaString(log, 'to');
-        return to ? `confirmed a payment, updating the balance to ${to}` : 'confirmed a payment';
+        const status = metaString(log, 'status');
+        if (status === 'paid') return 'confirmed a payment — the order is now fully paid';
+        if (status === 'partial') return 'confirmed a part-payment';
+        return 'confirmed a payment';
     },
     'order.payment_rejected': (log) => {
         const amount = metaString(log, 'amount');

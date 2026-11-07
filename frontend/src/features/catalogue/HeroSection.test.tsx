@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { it, expect, vi, beforeEach } from 'vitest';
 import { HeroSection } from '@/features/catalogue/HeroSection';
 import { AuthProvider } from '@/lib/auth/AuthContext';
+import { AuthModalProvider } from '@/lib/auth/AuthModalContext';
 import type { User } from '@/lib/api/types';
 
 const { student } = vi.hoisted(() => {
@@ -48,7 +49,9 @@ function renderHero() {
         <QueryClientProvider client={queryClient}>
             <MemoryRouter>
                 <AuthProvider>
-                    <HeroSection />
+                    <AuthModalProvider>
+                        <HeroSection />
+                    </AuthModalProvider>
                 </AuthProvider>
             </MemoryRouter>
         </QueryClientProvider>,
@@ -63,7 +66,7 @@ it('shows a "Create free account" CTA for a logged-out visitor', async () => {
     fetchCurrentUser.mockResolvedValue(null);
     renderHero();
 
-    expect(await screen.findByRole('link', { name: /Create free account/ })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Create free account/ })).toBeInTheDocument();
 });
 
 it('hides the "Create free account" CTA once a user is logged in', async () => {
@@ -71,7 +74,7 @@ it('hides the "Create free account" CTA once a user is logged in', async () => {
     renderHero();
 
     expect(await screen.findByRole('button', { name: /Browse courses/ })).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /Create free account/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Create free account/ })).not.toBeInTheDocument();
 });
 
 it('scrolls the course grid into view when "Browse courses" is clicked', async () => {
