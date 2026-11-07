@@ -177,11 +177,5 @@ return [
      *     ],
      * ],
      */
-    'security_strategy' => [
-        MiddlewareAuthSecurityStrategy::class,
-        [
-            'middleware' => ['auth:sanctum', 'auth'],
-            'scheme' => SecurityScheme::apiKey('cookie', 'laravel_session'),
-        ],
-    ],
+     'security_strategy' => null,
 ];
