@@ -216,7 +216,7 @@ it('numbers modules and offers a Start Module action linking to the next incompl
     renderPlayer();
 
     expect(await screen.findByText('Module 01')).toBeInTheDocument();
-    const startLink = screen.getByRole('link', { name: 'Start Module' });
+    const startLink = screen.getByRole('link', { name: /Welcome/ });
     expect(startLink).toHaveAttribute('href', '/learn/resources/10?course=1');
 });
 
@@ -226,10 +226,10 @@ it('collapses and re-expands a module’s resource list', async () => {
 
     expect(await screen.findAllByText('Welcome')).toHaveLength(2);
 
-    await user.click(screen.getByRole('button', { name: /View 1 Resource/ }));
+    await user.click(screen.getByRole('button', { name: /Hide resources/ }));
     expect(screen.getAllByText('Welcome')).toHaveLength(1); // only the Continue banner now
 
-    await user.click(screen.getByRole('button', { name: /View 1 Resource/ }));
+    await user.click(screen.getByRole('button', { name: /Show 1 resource/ }));
     expect(screen.getAllByText('Welcome')).toHaveLength(2);
 });
 
@@ -284,7 +284,7 @@ it('shows a Rate & Review prompt once the course is complete and not yet reviewe
 
     renderPlayer();
 
-    expect(await screen.findByRole('button', { name: /Rate & Review this course/ })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Rate this course/ })).toBeInTheDocument();
 });
 
 it('hides the Rate & Review prompt once a review has already been submitted', async () => {

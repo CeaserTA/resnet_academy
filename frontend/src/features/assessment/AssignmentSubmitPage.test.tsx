@@ -86,7 +86,16 @@ vi.mock('@/features/catalogue/api', () => ({
 
 vi.mock('@/features/assessment/api', () => ({
     fetchAssignment: vi.fn().mockResolvedValue(assignment),
+    fetchAssignmentSubmissions: vi.fn().mockResolvedValue([]),
     submitAssignment: submitAssignmentMock,
+}));
+
+vi.mock('@/features/enrolment/api', () => ({
+    fetchMyEnrolments: vi.fn().mockResolvedValue({
+        data: [{ id: 1, course, status: 'confirmed' }],
+        meta: { current_page: 1, last_page: 1, per_page: 15, total: 1 },
+        links: { first: null, last: null, prev: null, next: null },
+    }),
 }));
 
 vi.mock('@/features/auth/api', () => ({
@@ -133,7 +142,7 @@ it('updates the chosen filename and submits it as a real file upload', async () 
 
     expect(await screen.findByText('project.zip')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Submit Assignment' }));
+    await user.click(screen.getByRole('button', { name: 'Submit assignment' }));
 
     expect(await screen.findByText(/Submission received/)).toBeInTheDocument();
     expect(submitAssignmentMock).toHaveBeenCalledWith(5, { file, text_content: undefined });
@@ -144,7 +153,7 @@ it('blocks submission with an inline error when no file is chosen', async () => 
     renderPage();
 
     await screen.findByText('No file chosen');
-    await user.click(screen.getByRole('button', { name: 'Submit Assignment' }));
+    await user.click(screen.getByRole('button', { name: 'Submit assignment' }));
 
     expect(await screen.findByText('Choose a file to submit.')).toBeInTheDocument();
     expect(submitAssignmentMock).not.toHaveBeenCalled();

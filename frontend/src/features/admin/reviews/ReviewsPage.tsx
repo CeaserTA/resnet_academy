@@ -175,7 +175,7 @@ export function ReviewsPage() {
                             </div>
 
                             {/* Rows */}
-                            <ul className="divide-y divide-surface-100">
+                            <ul aria-label="Course reviews" className="divide-y divide-surface-100">
                                 {reviews.map((review) => {
                                     const status = reviewStatusDisplay(review.status);
 

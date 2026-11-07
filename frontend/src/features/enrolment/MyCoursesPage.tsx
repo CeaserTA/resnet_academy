@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import {
     ArrowRight,
@@ -272,7 +272,8 @@ export function MyCoursesPage() {
                 ) {
                     setShowProfileModal(true);
                 }
-            } catch {
+            } catch (error) {
+                console.error('Failed to fetch profile status:', error);
                 setProfileStatus(null);
             }
         };

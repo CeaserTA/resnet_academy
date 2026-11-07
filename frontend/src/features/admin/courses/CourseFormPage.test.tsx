@@ -162,7 +162,7 @@ it('overriding the policy and adding application questions saves them', async ()
 
     await screen.findByLabelText('Title');
     await user.click(screen.getByRole('checkbox', { name: 'Override default policy' }));
-    await selectRadixOption(user, 'Enrollment policy', 'Application — admin reviews and approves');
+    await selectRadixOption(user, 'Enrolment policy', 'Application — admin reviews and approves');
     await user.click(screen.getByRole('button', { name: 'Add question' }));
     await user.type(screen.getByLabelText('Question 1'), 'Why do you want to take this course?');
     await user.click(screen.getByRole('button', { name: 'Save changes' }));

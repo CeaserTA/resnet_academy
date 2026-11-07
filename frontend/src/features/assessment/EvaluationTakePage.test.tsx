@@ -99,7 +99,7 @@ it('shows instructions first, then lets a student answer a question and see whet
     // Never shown an answer key on this screen.
     expect(screen.queryByText(/is_correct/i)).not.toBeInTheDocument();
 
-    await user.click(screen.getByLabelText('4'));
+    await user.click(screen.getByRole('button', { name: '4' }));
     await user.click(screen.getByRole('button', { name: 'Submit attempt' }));
 
     expect(await screen.findByText('Score: 100.00%')).toBeInTheDocument();

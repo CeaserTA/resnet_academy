@@ -68,6 +68,15 @@ export function ProfileCompletionPage() {
     const navigate = useNavigate();
     const { pathname } = useLocation();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        return () => {
+            if (redirectTimerRef.current) {
+                clearTimeout(redirectTimerRef.current);
+            }
+        };
+    }, []);
     usePageHeader(
         pathname.endsWith('/edit') ? 'Edit profile' : 'Complete your profile',
         'Required to apply for courses',
@@ -126,7 +135,7 @@ export function ProfileCompletionPage() {
     const validateField = (name: string, value: string): string | undefined => {
         if (name === 'phone') {
             if (!value.trim()) return 'Phone number is required';
-            if (!/^[0-9\s\-\+]+$/.test(value)) return 'Digits, spaces, hyphens and + only';
+            if (!/^[0-9\s\-+]+$/.test(value)) return 'Digits, spaces, hyphens and + only';
             if (value.length < 8) return 'At least 8 characters';
             if (value.length > 20) return 'Max 20 characters';
         }
@@ -215,7 +224,7 @@ export function ProfileCompletionPage() {
             await refetch();
             setSubmitSuccess(true);
 
-            setTimeout(() => {
+            redirectTimerRef.current = setTimeout(() => {
                 const returnUrl = sessionStorage.getItem('returnUrl');
                 if (returnUrl) { sessionStorage.removeItem('returnUrl'); navigate(returnUrl); }
                 else navigate('/dashboard');
@@ -390,8 +399,15 @@ export function ProfileCompletionPage() {
                     </Section>
                 </div>
 
-                {/* Centered save button */}
-                <div className="flex justify-center pt-1">
+                {/* Action buttons */}
+                <div className="flex items-center justify-center gap-3 pt-1">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => navigate('/dashboard')}
+                    >
+                        Cancel
+                    </Button>
                     <Button
                         type="submit"
                         disabled={!isFormValid() || isSubmitting}

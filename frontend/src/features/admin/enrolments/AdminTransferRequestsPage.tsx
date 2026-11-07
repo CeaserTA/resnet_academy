@@ -261,8 +261,7 @@ export function AdminTransferRequestsPage() {
                             {/* Rows */}
                             <ul className="divide-y divide-surface-100">
                                 {enrolments.map((enrolment) => {
-                                    const orderStatus = enrolment.order ? orderStatusDisplay(enrolment.order.status) : null;
-                                    const transferRequestedAt = enrolment.transfer_requested_at 
+                                    const orderStatus = enrolment.order ? orderStatusDisplay(enrolment.order.status) : null; const transferRequestedAt = enrolment.transfer_requested_at
                                         ? formatDate(enrolment.transfer_requested_at)
                                         : '—';
 

@@ -65,5 +65,5 @@ it('renders the course title, level, category, and price', () => {
     expect(screen.getByText('Beginner')).toBeInTheDocument();
     expect(screen.getByText('Web Development')).toBeInTheDocument();
     expect(screen.getByText('UGX 50,000')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'View Course' })).toHaveAttribute('href', '/courses/1');
+    expect(screen.getByRole('link', { name: 'View Introduction to Laravel' })).toHaveAttribute('href', '/courses/1');
 });

@@ -280,7 +280,7 @@ it('shows the "Applications" heading and reassurance copy while an application i
     renderPage();
 
     expect(await screen.findByText('Applications')).toBeInTheDocument();
-    expect(screen.getByText(/no need to check back/)).toBeInTheDocument();
+    expect(screen.getByText(/you'll be notified/i)).toBeInTheDocument();
 });
 
 it('shows the "Application updates" heading once every application is resolved', async () => {
@@ -292,7 +292,7 @@ it('shows the "Application updates" heading once every application is resolved',
 
     expect(await screen.findByText('Application updates')).toBeInTheDocument();
     expect(screen.getByText('Track the status of your course applications.')).toBeInTheDocument();
-    expect(screen.queryByText(/no need to check back/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/you'll be notified/i)).not.toBeInTheDocument();
 });
 
 it('does not show the reassurance copy when applications are in mixed states', async () => {
@@ -305,7 +305,7 @@ it('does not show the reassurance copy when applications are in mixed states', a
 
     expect(await screen.findByText('Application updates')).toBeInTheDocument();
     expect(screen.getByText('Track the status of your course applications.')).toBeInTheDocument();
-    expect(screen.queryByText(/no need to check back/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/you'll be notified/i)).not.toBeInTheDocument();
 });
 
 it('lists applications most-recent-first', async () => {

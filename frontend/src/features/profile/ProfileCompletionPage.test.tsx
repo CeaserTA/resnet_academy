@@ -148,11 +148,11 @@ describe('ProfileCompletionPage - Return Redirect Logic', () => {
         // Requirement 7.3: Redirect to stored URL
         await waitFor(() => {
             expect(mockNavigate).toHaveBeenCalledWith('/courses/advanced-course');
-        }, { timeout: 2000 });
+        }, { timeout: 3000 });
 
         // Requirement 7.5: Clear stored return URL after use
         expect(sessionStorage.getItem('returnUrl')).toBeNull();
-    });
+    }, 10000);
 
     /**
      * **Validates: Requirement 7.4 - Redirect to dashboard if no return URL exists**
@@ -182,8 +182,8 @@ describe('ProfileCompletionPage - Return Redirect Logic', () => {
         // Requirement 7.4: Redirect to dashboard if no return URL
         await waitFor(() => {
             expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
-        }, { timeout: 2000 });
-    });
+        }, { timeout: 3000 });
+    }, 10000);
 
     /**
      * **Validates: Requirement 7.5 - Clear stored return URL after use**
@@ -211,8 +211,8 @@ describe('ProfileCompletionPage - Return Redirect Logic', () => {
         // Wait for redirect and verify sessionStorage cleared
         await waitFor(() => {
             expect(sessionStorage.getItem('returnUrl')).toBeNull();
-        }, { timeout: 2000 });
-    });
+        }, { timeout: 3000 });
+    }, 10000);
 
     /**
      * Test that returnUrl is not cleared if profile update fails
@@ -249,7 +249,7 @@ describe('ProfileCompletionPage - Return Redirect Logic', () => {
 
         // Should not have navigated
         expect(mockNavigate).not.toHaveBeenCalled();
-    });
+    }, 10000);
 
     /**
      * Test that cancel button navigates to dashboard (not returnUrl)

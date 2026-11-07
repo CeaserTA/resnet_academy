@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -130,7 +130,8 @@ it('shows needs-action counts, honest volume metrics, cohorts and readable activ
     // Volume
     expect(await screen.findByText('42')).toBeInTheDocument();
     expect(screen.getByText('60')).toBeInTheDocument();
-    expect(screen.getByText('UGX 500.0K')).toBeInTheDocument();
+    const receivedCard = screen.getByText('Received (MTD)').closest<HTMLElement>('.rounded-xl')!;
+    expect(within(receivedCard).getByText('UGX 500.0K')).toBeInTheDocument();
     expect(await screen.findByText('UGX 1.5M still outstanding')).toBeInTheDocument();
     expect(screen.getByText('Certificate rate')).toBeInTheDocument();
     expect(screen.getByText('12 of 60 enrolments')).toBeInTheDocument();
