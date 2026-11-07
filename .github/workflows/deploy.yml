@@ -1,0 +1,94 @@
+name: Deploy ResNet Academy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: academy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy Laravel and React
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Deploy to production VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh -o StrictHostKeyChecking=yes \
+            "$VPS_USER@$VPS_HOST" 'bash -se' <<'DEPLOY'
+          set -euo pipefail
+
+          APP=/home/admin/web/academy.resnetsystems.com/private
+          WEB=/home/admin/web/academy.resnetsystems.com/public_html
+
+          cd "$APP"
+
+          echo "Checking production configuration..."
+          test -f .env
+          test -f frontend/.env.production
+          test -f "$WEB/index.php"
+          test -f "$WEB/.htaccess"
+
+          echo "Checking repository status..."
+          test -z "$(git status --porcelain)"
+
+          echo "Fetching latest code..."
+          git fetch origin main
+          git merge --ff-only origin/main
+
+          echo "Installing frontend dependencies..."
+          cd "$APP/frontend"
+          npm ci --no-audit --no-fund
+
+          echo "Building React frontend..."
+          npm run build
+
+          test -f "$APP/frontend/dist/index.html"
+
+          echo "Installing Laravel dependencies..."
+          cd "$APP"
+          composer install \
+            --no-dev \
+            --prefer-dist \
+            --optimize-autoloader \
+            --no-interaction
+
+          echo "Running database migrations..."
+          php artisan migrate --force
+
+          echo "Refreshing Laravel caches..."
+          php artisan optimize:clear
+          php artisan config:cache
+          php artisan view:cache
+
+          echo "Publishing React assets..."
+          rsync -a --exclude="/index.html" "$APP/frontend/dist/" "$WEB/"
+
+          echo "Publishing index.html last..."
+          cp "$APP/frontend/dist/index.html" "$WEB/index.html"
+
+          echo "Deployment successful!"
+          DEPLOY
