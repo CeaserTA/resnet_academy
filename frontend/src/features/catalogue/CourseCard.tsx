@@ -115,6 +115,15 @@ export function CourseCard({
                         {initial}
                     </span>
                 </div>
+
+                {/* Mobile-only: description overlaid at the bottom of the image */}
+                {course.description && (
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/40 to-transparent px-3 pb-3 pt-8 sm:hidden">
+                        <p className="line-clamp-2 text-xs leading-5 text-white/90">
+                            {course.description}
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* ── Body ── */}
@@ -132,9 +141,9 @@ export function CourseCard({
                     {course.title}
                 </h3>
 
-                {/* Description */}
+                {/* Description — hidden on mobile (shown as image overlay), visible sm+ */}
                 {course.description && (
-                    <p className="line-clamp-2 text-sm leading-6 text-ink-600">
+                    <p className="hidden line-clamp-2 text-sm leading-6 text-ink-600 sm:block">
                         {course.description}
                     </p>
                 )}

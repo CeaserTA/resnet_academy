@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router';
 import {
     BookOpen,
@@ -93,6 +94,26 @@ const steps = [
     { number: '04', icon: GraduationCap, title: 'Graduate', outcome: 'Leave with a portfolio, a certificate, and a community.' },
 ];
 
+// ─── Read-more helper (mobile only) ──────────────────────────────────────────
+
+function ReadMore({ children }: { children: React.ReactNode }) {
+    const [expanded, setExpanded] = useState(false);
+    return (
+        <div>
+            <div className={expanded ? undefined : 'line-clamp-2 sm:line-clamp-none'}>
+                {children}
+            </div>
+            <button
+                type="button"
+                onClick={() => setExpanded((v) => !v)}
+                className="mt-1 text-xs font-semibold text-primary underline underline-offset-2 hover:no-underline sm:hidden"
+            >
+                {expanded ? 'Show less' : 'Read more'}
+            </button>
+        </div>
+    );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export function AboutPage() {
@@ -142,8 +163,20 @@ export function AboutPage() {
                                 </Link>
                             </div>
 
-                            {/* Stat cards — 2×2 grid, each with distinct colour */}
-                            <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                            {/* Stat cards — compact strip on mobile, full cards on sm+ */}
+                            <div className="mt-6 grid grid-cols-4 gap-2 sm:hidden">
+                                {statCards.map(({ value, label, gradient }) => (
+                                    <div
+                                        key={label}
+                                        className="flex flex-col items-center rounded-xl p-2 text-center"
+                                        style={{ background: gradient }}
+                                    >
+                                        <p className="text-base font-bold leading-none text-white">{value}</p>
+                                        <p className="mt-1 text-[9px] leading-3 text-white/80">{label}</p>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="mt-8 hidden grid-cols-2 gap-3 sm:grid sm:grid-cols-4">
                                 {statCards.map(({ value, label, gradient, cardBg, dots }) => (
                                     <div
                                         key={label}
@@ -192,16 +225,18 @@ export function AboutPage() {
                                     </div>
                                     <p className="text-sm font-semibold uppercase tracking-[0.15em] text-ink-900">Our Mission</p>
                                 </div>
-                                <p className="text-base leading-7 text-ink-600">
-                                    To make quality, practical tech education accessible to every
-                                    motivated learner in Uganda and East Africa — regardless of their
-                                    background, location, or prior experience.
-                                </p>
-                                <p className="text-sm leading-6 text-ink-600">
-                                    We do this through project-based curricula, small cohorts with
-                                    experienced mentors, and a commitment to career outcomes — not
-                                    just certificates.
-                                </p>
+                                <ReadMore>
+                                    <p className="text-base leading-7 text-ink-600">
+                                        To make quality, practical tech education accessible to every
+                                        motivated learner in Uganda and East Africa — regardless of their
+                                        background, location, or prior experience.
+                                    </p>
+                                    <p className="mt-2 text-sm leading-6 text-ink-600">
+                                        We do this through project-based curricula, small cohorts with
+                                        experienced mentors, and a commitment to career outcomes — not
+                                        just certificates.
+                                    </p>
+                                </ReadMore>
                             </div>
 
                             {/* Vision card */}
@@ -212,15 +247,17 @@ export function AboutPage() {
                                     </div>
                                     <p className="text-sm font-semibold uppercase tracking-[0.15em] text-ink-900">Our Vision</p>
                                 </div>
-                                <p className="text-base leading-7 text-ink-600">
-                                    A Uganda and East Africa where any young person with drive can
-                                    build a meaningful career in technology — without having to
-                                    leave their country or spend years in a classroom.
-                                </p>
-                                <p className="text-sm leading-6 text-ink-600">
-                                    We want to be the training ground that produces the region's
-                                    most job-ready developers, designers, and digital entrepreneurs.
-                                </p>
+                                <ReadMore>
+                                    <p className="text-base leading-7 text-ink-600">
+                                        A Uganda and East Africa where any young person with drive can
+                                        build a meaningful career in technology — without having to
+                                        leave their country or spend years in a classroom.
+                                    </p>
+                                    <p className="mt-2 text-sm leading-6 text-ink-600">
+                                        We want to be the training ground that produces the region's
+                                        most job-ready developers, designers, and digital entrepreneurs.
+                                    </p>
+                                </ReadMore>
                             </div>
 
                         </div>
@@ -407,15 +444,36 @@ export function AboutPage() {
                 {/* §6 Mentors ─────────────────────────────────────────────── */}
                 <section className="border-t border-border bg-white px-4 py-12 sm:px-6 lg:px-8">
                     <div className="mx-auto max-w-7xl">
-                        <div className="mb-8 text-center">
+                        <div className="mb-6 text-center">
                             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">The team</p>
                             <h2 className="mt-3 text-3xl text-ink-900 sm:text-4xl">How our mentors support you.</h2>
                             <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-ink-600">
                                 Every learner is supported by an experienced mentor — not just during lessons, but between sessions too.
                             </p>
                         </div>
-                        {/* TODO: Replace with real mentor profiles */}
-                        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+
+                        {/* Mobile: vertical stack */}
+                        <div className="flex flex-col gap-3 sm:hidden">
+                            {[
+                                { icon: Code2, title: 'Code reviews', description: 'Mentors review every project submission with line-level feedback.' },
+                                { icon: MessageSquare, title: 'Weekly check-ins', description: 'Short weekly sessions to answer questions and unblock progress.' },
+                                { icon: Briefcase, title: 'Career guidance', description: 'CV reviews, portfolio advice, and direct employer introductions.' },
+                            ].map(({ icon: Icon, title, description }) => (
+                                <div
+                                    key={title}
+                                    className="flex w-full flex-col gap-3 rounded-2xl border border-border bg-surface-50 p-4"
+                                >
+                                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
+                                        <Icon className="size-4 text-primary" aria-hidden="true" />
+                                    </div>
+                                    <p className="text-sm font-semibold text-ink-900">{title}</p>
+                                    <p className="text-xs leading-5 text-ink-600">{description}</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* sm+: original 3-col grid */}
+                        <div className="hidden gap-5 sm:grid sm:grid-cols-2 lg:grid-cols-3">
                             {[
                                 { icon: Code2, title: 'Code reviews', description: 'Mentors review every project submission with line-level feedback.' },
                                 { icon: MessageSquare, title: 'Weekly check-ins', description: 'Short weekly sessions to answer questions and unblock progress.' },
@@ -436,16 +494,16 @@ export function AboutPage() {
                 </section>
 
                 {/* §7 Graduate story + Final CTA — navy, two columns ───────── */}
-                <section className="border-t border-border bg-navy px-4 py-12 sm:px-6 lg:px-8">
+                <section className="border-t border-border bg-navy px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
                     <div className="mx-auto max-w-7xl">
-                        <div className="grid gap-10 lg:grid-cols-2">
+                        <div className="grid gap-8 lg:grid-cols-2">
 
                             {/* Left: graduate story */}
                             <div>
                                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">Graduate outcomes</p>
-                                <h2 className="mt-3 text-3xl text-navy-foreground sm:text-4xl">From learner to employed.</h2>
+                                <h2 className="mt-3 text-2xl text-navy-foreground sm:text-3xl lg:text-4xl">From learner to employed.</h2>
                                 {/* TODO: Replace with real graduate story */}
-                                <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-5">
+                                <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-4 sm:p-5">
                                     <p className="text-xs font-semibold uppercase tracking-widest text-white/30">Coming soon</p>
                                     <p className="mt-2 text-sm leading-6 text-navy-foreground/60">
                                         We are collecting verified graduate stories from our 2024 and 2025 cohorts.
@@ -458,11 +516,11 @@ export function AboutPage() {
 
                             {/* Right: final CTA */}
                             <div className="flex flex-col justify-center">
-                                <h2 className="text-2xl text-navy-foreground sm:text-3xl">Ready to take the next step?</h2>
+                                <h2 className="text-xl text-navy-foreground sm:text-2xl lg:text-3xl">Ready to take the next step?</h2>
                                 <p className="mt-3 text-sm leading-7 text-navy-foreground/60">
                                     Browse our courses, check upcoming cohort dates, or reach out if you need help choosing the right path.
                                 </p>
-                                <div className="mt-6 flex flex-wrap gap-3">
+                                <div className="mt-5 flex flex-wrap gap-3">
                                     <Link
                                         to="/courses"
                                         className="inline-flex items-center rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"

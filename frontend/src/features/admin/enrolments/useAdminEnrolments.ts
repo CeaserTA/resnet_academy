@@ -9,6 +9,24 @@ export function useAdminEnrolments(filters: AdminEnrolmentFilters) {
     });
 }
 
+/**
+ * Every enrolment across all pages (the endpoint pages at 25). Used where a page needs each
+ * student's cohorts at once, e.g. the Team list.
+ */
+export function useAllAdminEnrolments(enabled = true) {
+    return useQuery({
+        queryKey: ['admin', 'enrolments', 'all'],
+        enabled,
+        queryFn: async () => {
+            const first = await fetchAdminEnrolments({ page: 1 });
+            const rest = await Promise.all(
+                Array.from({ length: first.meta.last_page - 1 }, (_, i) => fetchAdminEnrolments({ page: i + 2 })),
+            );
+            return [first, ...rest].flatMap((page) => page.data);
+        },
+    });
+}
+
 export function useUpdateEnrolmentStatus() {
     const queryClient = useQueryClient();
 
@@ -21,10 +39,10 @@ export function useUpdateEnrolmentStatus() {
     });
 }
 
-export function useTransferRequests() {
+export function useTransferRequests(page = 1) {
     return useQuery({
-        queryKey: ['admin', 'transfer-requests'],
-        queryFn: () => getTransferRequests(),
+        queryKey: ['admin', 'transfer-requests', page],
+        queryFn: () => getTransferRequests(page),
     });
 }
 

@@ -60,4 +60,27 @@ final class Evaluation extends Model
     {
         return $this->hasMany(EvaluationAttempt::class);
     }
+
+    /**
+     * @return HasMany<EvaluationAttemptAllowance, $this>
+     */
+    public function attemptAllowances(): HasMany
+    {
+        return $this->hasMany(EvaluationAttemptAllowance::class);
+    }
+
+    /**
+     * Attempts this student may use: max_attempts plus any extra attempts staff granted them.
+     * Null means unlimited.
+     */
+    public function maxAttemptsFor(User $student): ?int
+    {
+        if ($this->max_attempts === null) {
+            return null;
+        }
+
+        $extra = (int) $this->attemptAllowances()->where('student_id', $student->id)->value('extra_attempts');
+
+        return (int) $this->max_attempts + $extra;
+    }
 }

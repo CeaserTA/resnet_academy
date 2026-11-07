@@ -145,7 +145,7 @@ export function MarkdownComposer({ value, onChange, onKeyDown, placeholder, rows
                     onChange={(e) => onChange(e.target.value)}
                     onKeyDown={onKeyDown}
                     required={required}
-                    className="font-mono text-sm"
+                    className="text-sm"
                 />
             )}
         </div>

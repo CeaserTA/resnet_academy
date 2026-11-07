@@ -9,18 +9,21 @@ import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Modal } from '@/components/ui/Modal';
 import { Alert } from '@/components/ui/Alert';
+import { Pagination } from '@/components/ui/Pagination';
 import { useCourses } from '@/features/catalogue/useCourses';
 import { useCohortCoursesForCourse } from '@/features/cohorts/useCohorts';
 import { useTransferRequests, useTransferEnrolment, useRefundEnrolment } from '@/features/admin/enrolments/useAdminEnrolments';
 import { orderStatusDisplay } from '@/lib/statusBadge';
 import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import type { AdminEnrolment } from '@/lib/api/types';
+import { formatDate } from '@/lib/formatDate';
+import { displayCohortName } from '@/lib/cohort';
 
 function formatAmount(amount: string | number, currency: string): string {
     return new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 }).format(Number(amount));
 }
 
-function TransferModal({ enrolment, courses, onClose }: { enrolment: AdminEnrolment; courses: { id: number; title: string }[]; onClose: () => void }) {
+function TransferModal({ enrolment, courses, onClose, onSuccess }: { enrolment: AdminEnrolment; courses: { id: number; title: string }[]; onClose: () => void; onSuccess: () => void }) {
     const transferEnrolment = useTransferEnrolment();
     const [selectedCourseId, setSelectedCourseId] = useState<string>('');
     const [selectedCohortCourseId, setSelectedCohortCourseId] = useState<string>('');
@@ -45,7 +48,7 @@ function TransferModal({ enrolment, courses, onClose }: { enrolment: AdminEnrolm
                     note: note || undefined,
                 },
             });
-            onClose();
+            onSuccess();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Could not complete transfer.');
         }
@@ -72,7 +75,7 @@ function TransferModal({ enrolment, courses, onClose }: { enrolment: AdminEnrolm
 
                 <div className="text-sm text-ink-600">
                     <p><strong>Current course:</strong> {enrolment.course.title}</p>
-                    {enrolment.cohort_course && <p><strong>Current cohort:</strong> {enrolment.cohort_course.cohort_name}</p>}
+                    {enrolment.cohort_course && <p><strong>Current cohort:</strong> {displayCohortName(enrolment.cohort_course.cohort_name)}</p>}
                 </div>
 
                 <Select
@@ -96,7 +99,7 @@ function TransferModal({ enrolment, courses, onClose }: { enrolment: AdminEnrolm
                         <option value="">Select a cohort offering</option>
                         {cohortCourses?.map((cc) => (
                             <option key={cc.id} value={cc.id}>
-                                {cc.cohort_name}
+                                {displayCohortName(cc.cohort_name)}
                             </option>
                         ))}
                     </Select>
@@ -116,7 +119,7 @@ function TransferModal({ enrolment, courses, onClose }: { enrolment: AdminEnrolm
     );
 }
 
-function RefundModal({ enrolment, onClose }: { enrolment: AdminEnrolment; onClose: () => void }) {
+function RefundModal({ enrolment, onClose, onSuccess }: { enrolment: AdminEnrolment; onClose: () => void; onSuccess: () => void }) {
     const refundEnrolment = useRefundEnrolment();
     const [refundAmount, setRefundAmount] = useState<string>('');
     const [note, setNote] = useState<string>('');
@@ -145,7 +148,7 @@ function RefundModal({ enrolment, onClose }: { enrolment: AdminEnrolment; onClos
                     note: note || undefined,
                 },
             });
-            onClose();
+            onSuccess();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Could not process refund.');
         }
@@ -203,14 +206,21 @@ function RefundModal({ enrolment, onClose }: { enrolment: AdminEnrolment; onClos
 export function AdminTransferRequestsPage() {
     usePageHeader('Transfer Requests', 'Manage student transfer requests after payment.');
     
-    const { data, isLoading } = useTransferRequests();
+    const [page, setPage] = useState(1);
+    const { data, isLoading } = useTransferRequests(page);
     const { data: courses } = useCourses({});
-    
+
     const [transferringEnrolment, setTransferringEnrolment] = useState<AdminEnrolment | null>(null);
     const [refundingEnrolment, setRefundingEnrolment] = useState<AdminEnrolment | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-    const enrolments = data ?? [];
+    // Resolving the last request on the final page shrinks the list — step back to the new
+    // last page instead of showing an empty one.
+    if (data && page > data.meta.last_page && data.meta.last_page >= 1) {
+        setPage(data.meta.last_page);
+    }
+
+    const enrolments = data?.data ?? [];
 
     const handleTransferSuccess = (studentName: string) => {
         setSuccessMessage(`Successfully transferred ${studentName} to another course.`);
@@ -234,84 +244,90 @@ export function AdminTransferRequestsPage() {
 
             {!isLoading && enrolments.length > 0 && (
                 <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
-                    {/* Column headers */}
-                    <div className="grid grid-cols-[minmax(180px,1.2fr)_minmax(160px,1.2fr)_minmax(120px,1fr)_120px_140px_140px_120px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
-                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Student</span>
-                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Current course</span>
-                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Amount paid</span>
-                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Order status</span>
-                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Requested at</span>
-                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Note</span>
-                        <span className="text-xs font-medium uppercase tracking-wide text-ink-600 text-right">Actions</span>
+                    {/* Scrolls sideways on narrow screens instead of clipping columns */}
+                    <div className="overflow-x-auto">
+                        <div className="min-w-[1060px]">
+                            {/* Column headers */}
+                            <div className="grid grid-cols-[minmax(180px,1.2fr)_minmax(160px,1.2fr)_minmax(120px,1fr)_120px_140px_140px_120px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
+                                <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Student</span>
+                                <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Current course</span>
+                                <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Amount paid</span>
+                                <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Order status</span>
+                                <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Requested at</span>
+                                <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Note</span>
+                                <span className="text-xs font-medium uppercase tracking-wide text-ink-600 text-right">Actions</span>
+                            </div>
+
+                            {/* Rows */}
+                            <ul className="divide-y divide-surface-100">
+                                {enrolments.map((enrolment) => {
+                                    const orderStatus = enrolment.order ? orderStatusDisplay(enrolment.order.status) : null; const transferRequestedAt = enrolment.transfer_requested_at
+                                        ? formatDate(enrolment.transfer_requested_at)
+                                        : '—';
+
+                                    return (
+                                        <li
+                                            key={enrolment.id}
+                                            className="grid grid-cols-[minmax(180px,1.2fr)_minmax(160px,1.2fr)_minmax(120px,1fr)_120px_140px_140px_120px] items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-50"
+                                        >
+                                            {/* Student */}
+                                            <div className="flex min-w-0 items-center gap-2">
+                                                <Avatar name={enrolment.student.name} size="sm" className="size-7 shrink-0 text-xs" />
+                                                <div className="min-w-0">
+                                                    <p className="truncate text-sm font-medium text-ink-900">{enrolment.student.name}</p>
+                                                    <p className="truncate text-xs text-ink-600">{enrolment.student.email}</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Course & cohort */}
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm text-ink-900">{enrolment.course.title}</p>
+                                                <p className="truncate text-xs text-ink-600">{displayCohortName(enrolment.cohort_course?.cohort_name) || '—'}</p>
+                                            </div>
+
+                                            {/* Amount paid */}
+                                            <p className="font-mono text-sm text-ink-600">
+                                                {enrolment.order ? formatAmount(enrolment.order.amount_paid, enrolment.order.currency) : '—'}
+                                            </p>
+
+                                            {/* Order status */}
+                                            {orderStatus && <Badge label={orderStatus.label} tone={orderStatus.tone} icon={orderStatus.icon} />}
+
+                                            {/* Transfer requested at */}
+                                            <p className="text-sm text-ink-600">{transferRequestedAt}</p>
+
+                                            {/* Withdrawal note */}
+                                            <p className="truncate text-sm text-ink-600" title={enrolment.withdrawal_note || ''}>
+                                                {enrolment.withdrawal_note || '—'}
+                                            </p>
+
+                                            {/* Actions */}
+                                            <div className="flex items-center justify-end gap-1">
+                                                <button
+                                                    onClick={() => setTransferringEnrolment(enrolment)}
+                                                    aria-label={`Transfer ${enrolment.student.name} to another course`}
+                                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-blue-600/10 hover:text-blue-600"
+                                                    title="Transfer to another course"
+                                                >
+                                                    <ArrowRight className="size-4" aria-hidden="true" />
+                                                </button>
+                                                <button
+                                                    onClick={() => setRefundingEnrolment(enrolment)}
+                                                    aria-label={`Process refund for ${enrolment.student.name}`}
+                                                    className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-danger-600/10 hover:text-danger-600"
+                                                    title="Process refund"
+                                                >
+                                                    <ReceiptText className="size-4" aria-hidden="true" />
+                                                </button>
+                                            </div>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
                     </div>
 
-                    {/* Rows */}
-                    <ul className="divide-y divide-surface-100">
-                        {enrolments.map((enrolment) => {
-                            const orderStatus = enrolment.order ? orderStatusDisplay(enrolment.order.status) : null;
-                            const transferRequestedAt = enrolment.transfer_requested_at 
-                                ? new Date(enrolment.transfer_requested_at).toLocaleDateString()
-                                : '—';
-
-                            return (
-                                <li
-                                    key={enrolment.id}
-                                    className="grid grid-cols-[minmax(180px,1.2fr)_minmax(160px,1.2fr)_minmax(120px,1fr)_120px_140px_140px_120px] items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-50"
-                                >
-                                    {/* Student */}
-                                    <div className="flex min-w-0 items-center gap-2">
-                                        <Avatar name={enrolment.student.name} size="sm" className="size-7 shrink-0 text-xs" />
-                                        <div className="min-w-0">
-                                            <p className="truncate text-sm font-medium text-ink-900">{enrolment.student.name}</p>
-                                            <p className="truncate text-xs text-ink-600">{enrolment.student.email}</p>
-                                        </div>
-                                    </div>
-
-                                    {/* Course & cohort */}
-                                    <div className="min-w-0">
-                                        <p className="truncate text-sm text-ink-900">{enrolment.course.title}</p>
-                                        <p className="truncate text-xs text-ink-600">{enrolment.cohort_course?.cohort_name ?? '—'}</p>
-                                    </div>
-
-                                    {/* Amount paid */}
-                                    <p className="font-mono text-sm text-ink-600">
-                                        {enrolment.order ? formatAmount(enrolment.order.amount_paid, enrolment.order.currency) : '—'}
-                                    </p>
-
-                                    {/* Order status */}
-                                    {orderStatus && <Badge label={orderStatus.label} tone={orderStatus.tone} icon={orderStatus.icon} />}
-
-                                    {/* Transfer requested at */}
-                                    <p className="text-sm text-ink-600">{transferRequestedAt}</p>
-
-                                    {/* Withdrawal note */}
-                                    <p className="truncate text-sm text-ink-600" title={enrolment.withdrawal_note || ''}>
-                                        {enrolment.withdrawal_note || '—'}
-                                    </p>
-
-                                    {/* Actions */}
-                                    <div className="flex items-center justify-end gap-1">
-                                        <button
-                                            onClick={() => setTransferringEnrolment(enrolment)}
-                                            aria-label={`Transfer ${enrolment.student.name} to another course`}
-                                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-blue-600/10 hover:text-blue-600"
-                                            title="Transfer to another course"
-                                        >
-                                            <ArrowRight className="size-4" aria-hidden="true" />
-                                        </button>
-                                        <button
-                                            onClick={() => setRefundingEnrolment(enrolment)}
-                                            aria-label={`Process refund for ${enrolment.student.name}`}
-                                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-danger-600/10 hover:text-danger-600"
-                                            title="Process refund"
-                                        >
-                                            <ReceiptText className="size-4" aria-hidden="true" />
-                                        </button>
-                                    </div>
-                                </li>
-                            );
-                        })}
-                    </ul>
+                    {data && <Pagination meta={data.meta} onPageChange={setPage} itemLabel="requests" />}
                 </div>
             )}
 
@@ -319,9 +335,10 @@ export function AdminTransferRequestsPage() {
                 <TransferModal
                     enrolment={transferringEnrolment}
                     courses={courses?.data ?? []}
-                    onClose={() => {
+                    onClose={() => setTransferringEnrolment(null)}
+                    onSuccess={() => {
+                        handleTransferSuccess(transferringEnrolment.student.name);
                         setTransferringEnrolment(null);
-                        if (successMessage) handleTransferSuccess(transferringEnrolment.student.name);
                     }}
                 />
             )}
@@ -329,9 +346,10 @@ export function AdminTransferRequestsPage() {
             {refundingEnrolment && (
                 <RefundModal
                     enrolment={refundingEnrolment}
-                    onClose={() => {
+                    onClose={() => setRefundingEnrolment(null)}
+                    onSuccess={() => {
+                        handleRefundSuccess(refundingEnrolment.student.name);
                         setRefundingEnrolment(null);
-                        if (successMessage) handleRefundSuccess(refundingEnrolment.student.name);
                     }}
                 />
             )}

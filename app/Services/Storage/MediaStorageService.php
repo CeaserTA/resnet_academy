@@ -104,6 +104,14 @@ final class MediaStorageService
             return $path;
         }
 
+        // store() falls back to the local 'public' disk when the R2 upload fails, so a file can
+        // live locally even with R2 configured. Always building the R2 URL then produced links
+        // that 404'd (e.g. payment receipts). A local existence check is a cheap filesystem
+        // call, so check it first. BACKEND_CHANGES.md §4.
+        if (Storage::disk('public')->exists($path)) {
+            return Storage::disk('public')->url($path);
+        }
+
         // If the R2 disk has a usable URL config, use it; otherwise fall back to local storage.
         $r2Url = config('filesystems.disks.r2.url');
         if ($r2Url) {

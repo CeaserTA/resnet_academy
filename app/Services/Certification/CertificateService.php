@@ -8,6 +8,7 @@ use App\Jobs\GenerateCertificatePdf;
 use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\User;
+use App\Services\Audit\AuditLogger;
 use App\Services\Notifications\NotificationDispatcher;
 use App\Services\Storage\MediaStorageService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -26,7 +27,44 @@ final class CertificateService
         private readonly NotificationDispatcher $notificationDispatcher,
         private readonly MediaStorageService $mediaStorage,
         private readonly CertificatePrintData $printData,
+        private readonly AuditLogger $auditLogger,
     ) {}
+
+    /**
+     * Withhold a certificate from its student (BACKEND_CHANGES.md §5). The row and PDF stay, so
+     * restore() gives back the same number. Audit-logged; the student is told why.
+     */
+    public function revoke(Certificate $certificate, User $admin, string $reason): void
+    {
+        $certificate->update(['revoked_at' => now(), 'revoked_by' => $admin->id, 'revoke_reason' => $reason]);
+
+        $this->auditLogger->log('certificate.revoked', 'certificate', $certificate->id, $admin->id, ['reason' => $reason]);
+
+        $this->notificationDispatcher->notify(
+            $certificate->student,
+            'certificate_revoked',
+            'Your certificate has been withheld',
+            "Your certificate for {$certificate->course->title} is unavailable for now. Reason: {$reason}",
+            'certificate',
+            $certificate->id,
+        );
+    }
+
+    public function restore(Certificate $certificate, User $admin): void
+    {
+        $certificate->update(['revoked_at' => null, 'revoked_by' => null, 'revoke_reason' => null]);
+
+        $this->auditLogger->log('certificate.restored', 'certificate', $certificate->id, $admin->id);
+
+        $this->notificationDispatcher->notify(
+            $certificate->student,
+            'certificate_restored',
+            'Your certificate is available again',
+            "Your certificate for {$certificate->course->title} is available to view and download again.",
+            'certificate',
+            $certificate->id,
+        );
+    }
 
     /**
      * Note: this is called from inside callers that already hold their own transaction

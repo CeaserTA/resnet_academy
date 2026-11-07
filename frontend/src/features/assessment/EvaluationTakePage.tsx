@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router';
-import { Award, CheckCircle2, Clock, Eye, Hash, ListChecks, XCircle } from 'lucide-react';
+import { Award, CheckCircle2, Clock, Eye, Hash, ListChecks, RotateCcw, XCircle } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Alert } from '@/components/ui/Alert';
 import { Spinner } from '@/components/ui/Spinner';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
+import { Modal } from '@/components/ui/Modal';
 import { useCourse } from '@/features/catalogue/useCourses';
 import { ApiError } from '@/lib/api/client';
 import {
@@ -18,12 +19,15 @@ import {
 } from '@/features/assessment/useAssessment';
 import { AttemptReviewModal } from '@/features/assessment/AttemptReviewModal';
 import type { AttemptAnswerInput } from '@/features/assessment/api';
+import { PageFrame } from '@/components/layout/PageFrame';
+import { cn } from '@/lib/utils';
 import type {
     AttemptQuestion,
     EvaluationAttempt,
     EvaluationOverview,
     StartAttemptResponse,
 } from '@/lib/api/types';
+import { formatDateTime } from '@/lib/formatDate';
 
 type AnswerState = Record<number, { selectedOptionIds: number[]; answerText: string }>;
 
@@ -68,27 +72,40 @@ function QuestionCard({
     };
 
     return (
-        <Card>
+        <Card className="p-3 sm:p-4">
             {/* Anti-cheating: question text + options are unselectable and block clipboard/context menu. */}
             <div className="select-none" {...antiCheatHandlers()}>
-                <p className="font-medium text-ink-900">
+                <p className="text-sm sm:text-base font-medium text-ink-900">
                     <span>{`${index + 1}. ${question.question_text}`}</span>
                     <span className="ml-2 text-xs text-ink-600">({question.points} pts)</span>
                 </p>
 
                 {isChoice && (
                     <div className="mt-3 flex flex-col gap-2">
-                        {question.options.map((option) => (
-                            <label key={option.id} className="flex items-center gap-2 text-sm text-ink-900">
-                                <input
-                                    type={isMulti ? 'checkbox' : 'radio'}
-                                    name={`question-${question.id}`}
-                                    checked={answer.selectedOptionIds.includes(option.id)}
-                                    onChange={() => toggleOption(option.id)}
-                                />
-                                {option.option_text}
-                            </label>
-                        ))}
+                        {question.options.map((option) => {
+                            const isSelected = answer.selectedOptionIds.includes(option.id);
+                            return (
+                                <button
+                                    key={option.id}
+                                    type="button"
+                                    onClick={() => toggleOption(option.id)}
+                                    className={cn(
+                                        'flex items-center gap-3 rounded-xl border px-4 py-2.5 text-left text-sm transition-colors',
+                                        isSelected
+                                            ? 'border-primary bg-primary/10 text-primary font-medium'
+                                            : 'border-border bg-surface-0 text-ink-900 hover:border-primary/50 hover:bg-surface-50',
+                                    )}
+                                >
+                                    <span className={cn(
+                                        'flex size-4 shrink-0 items-center justify-center rounded-full border-2',
+                                        isSelected ? 'border-primary bg-primary' : 'border-ink-300',
+                                    )}>
+                                        {isSelected && <span className="size-1.5 rounded-full bg-white" />}
+                                    </span>
+                                    {option.option_text}
+                                </button>
+                            );
+                        })}
                     </div>
                 )}
             </div>
@@ -147,14 +164,22 @@ function CountdownBadge({ deadline, onExpire }: { deadline: Date; onExpire: () =
     );
 }
 
-function AttemptResult({ attempt }: { attempt: EvaluationAttempt }) {
+function AttemptResult({ attempt, retake }: { attempt: EvaluationAttempt; retake?: { label: string; onClick: () => void } }) {
     const [showReview, setShowReview] = useState(false);
 
     const reviewButton = (
-        <Button variant="outline" onClick={() => setShowReview(true)} className="mt-3">
-            <Eye className="size-4" />
-            Review answers
-        </Button>
+        <div className="mt-3 flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => setShowReview(true)}>
+                <Eye className="size-4" />
+                Review answers
+            </Button>
+            {retake && (
+                <Button onClick={retake.onClick}>
+                    <RotateCcw className="size-4" aria-hidden="true" />
+                    {retake.label}
+                </Button>
+            )}
+        </div>
     );
 
     if (attempt.status === 'submitted') {
@@ -199,6 +224,62 @@ function AttemptResult({ attempt }: { attempt: EvaluationAttempt }) {
     );
 }
 
+/** Confirms starting (or retaking) an evaluation in the app's own modal, with its key limits. */
+function StartConfirmModal({
+    overview,
+    isStarting,
+    error,
+    onConfirm,
+    onClose,
+}: {
+    overview: EvaluationOverview;
+    isStarting: boolean;
+    error: string | null;
+    onConfirm: () => void;
+    onClose: () => void;
+}) {
+    return (
+        <Modal
+            isOpen
+            onClose={onClose}
+            title={`Start ${overview.title}?`}
+            footer={
+                <>
+                    <Button variant="ghost" onClick={onClose}>Cancel</Button>
+                    <Button onClick={onConfirm} isLoading={isStarting}>Start now</Button>
+                </>
+            }
+        >
+            {error && <Alert variant="error" message={error} className="mb-3" />}
+            <p className="text-sm text-ink-600">
+                {overview.time_limit_minutes !== null
+                    ? 'Your attempt and the timer begin as soon as you start.'
+                    : 'Your attempt begins as soon as you start.'}
+            </p>
+            <dl className="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
+                <div className="rounded-lg bg-surface-50 px-3 py-2">
+                    <dt className="text-xs text-ink-600">Time limit</dt>
+                    <dd className="font-medium text-ink-900">
+                        {overview.time_limit_minutes !== null ? `${overview.time_limit_minutes} minutes` : 'None'}
+                    </dd>
+                </div>
+                <div className="rounded-lg bg-surface-50 px-3 py-2">
+                    <dt className="text-xs text-ink-600">Attempt</dt>
+                    <dd className="font-medium text-ink-900">
+                        {overview.max_attempts !== null
+                            ? `${overview.attempts_used + 1} of ${overview.max_attempts}`
+                            : `${overview.attempts_used + 1} (unlimited)`}
+                    </dd>
+                </div>
+                <div className="rounded-lg bg-surface-50 px-3 py-2">
+                    <dt className="text-xs text-ink-600">Questions</dt>
+                    <dd className="font-medium text-ink-900">{overview.question_count}</dd>
+                </div>
+            </dl>
+        </Modal>
+    );
+}
+
 function StatTile({ icon: Icon, label, value }: { icon: typeof Clock; label: string; value: string }) {
     return (
         <div className="flex items-center gap-3 rounded-md border border-surface-100 bg-surface-50 px-3 py-2.5">
@@ -229,6 +310,7 @@ function InstructionScreen({
     error: string | null;
 }) {
     const [reviewAttempt, setReviewAttempt] = useState<EvaluationAttempt | null>(null);
+    const [isConfirmingStart, setIsConfirmingStart] = useState(false);
 
     const completedAttempts = attempts.filter((a) => a.status === 'submitted' || a.status === 'graded');
     // Passing completes the evaluation for the student — after that there is nothing left
@@ -236,7 +318,10 @@ function InstructionScreen({
     const alreadyCompleted = attempts.some((a) => a.passed === true);
     const hasInProgress = overview.in_progress_attempt !== null;
     const attemptsExhausted = overview.attempts_remaining === 0;
-    const canStart = !alreadyCompleted && !attemptsExhausted && overview.question_count > 0;
+    // An attempt with written answers waits for the instructor to mark it. Starting another
+    // meanwhile only burns an attempt (and repeats the same questions), so wait for the mark.
+    const awaitingMarking = attempts.some((a) => a.status === 'submitted');
+    const canStart = !alreadyCompleted && !attemptsExhausted && !awaitingMarking && overview.question_count > 0;
 
     const handleStartClick = () => {
         // Resuming an already-running attempt needs no confirmation — its timer started earlier.
@@ -244,13 +329,8 @@ function InstructionScreen({
             onStart();
             return;
         }
-
-        const confirmed = window.confirm(
-            'Are you sure you want to start? Your attempt and timer will begin immediately.',
-        );
-        if (confirmed) {
-            onStart();
-        }
+        // Same styled confirm modal as the app's other confirmations (not the browser's confirm()).
+        setIsConfirmingStart(true);
     };
 
     const attemptsLabel =
@@ -295,8 +375,17 @@ function InstructionScreen({
                         </p>
                     ) : (
                         <>
-                            {attemptsExhausted && (
-                                <Alert variant="error" message="You have used all of your attempts for this evaluation." />
+                            {awaitingMarking && !hasInProgress && (
+                                <Alert
+                                    variant="warning"
+                                    message="Your last attempt is waiting for your instructor to mark the written answers. You'll get a notification with your result — the next module opens once you pass."
+                                />
+                            )}
+                            {attemptsExhausted && !awaitingMarking && (
+                                <Alert
+                                    variant="error"
+                                    message="You have used all of your attempts for this evaluation. Message your instructor or contact support if you need another attempt."
+                                />
                             )}
                             {!attemptsExhausted && overview.question_count === 0 && (
                                 <Alert variant="error" message="This evaluation has no questions yet. Check back later." />
@@ -319,7 +408,7 @@ function InstructionScreen({
                                     <p className="font-medium">Attempt #{attempt.attempt_number}</p>
                                     <p className="text-sm text-ink-600">
                                         {attempt.score_percent !== null ? `Score: ${attempt.score_percent}%` : 'Awaiting grading'}
-                                        {attempt.submitted_at && ` · Submitted on ${new Date(attempt.submitted_at).toLocaleString()}`}
+                                        {attempt.submitted_at && ` · Submitted on ${formatDateTime(attempt.submitted_at)}`}
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -348,6 +437,16 @@ function InstructionScreen({
                     attemptNumber={reviewAttempt.attempt_number}
                 />
             )}
+
+            {isConfirmingStart && (
+                <StartConfirmModal
+                    overview={overview}
+                    isStarting={isStarting}
+                    error={error}
+                    onConfirm={onStart}
+                    onClose={() => setIsConfirmingStart(false)}
+                />
+            )}
         </div>
     );
 }
@@ -374,6 +473,7 @@ export function EvaluationTakePage() {
     const [answers, setAnswers] = useState<AnswerState>({});
     const [result, setResult] = useState<EvaluationAttempt | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [isConfirmingRetake, setIsConfirmingRetake] = useState(false);
 
     const handleStart = () => {
         setError(null);
@@ -381,6 +481,8 @@ export function EvaluationTakePage() {
             onSuccess: (data) => {
                 setSession(data);
                 setAnswers(emptyAnswers(data.questions));
+                setResult(null);
+                setIsConfirmingRetake(false);
             },
             onError: (err) => setError(err instanceof ApiError ? err.message : 'Could not start this evaluation.'),
         });
@@ -435,27 +537,42 @@ export function EvaluationTakePage() {
         }
 
         return (
-            <div className="mx-auto max-w-2xl">
-                <Breadcrumbs
-                    items={[
-                        { label: 'My Courses', to: '/dashboard' },
-                        { label: course?.title ?? '', to: `/learn/courses/${courseId}` },
-                        { label: overview.title },
-                    ]}
+            <PageFrame
+                width="reading"
+                breadcrumbs={[
+                    { label: 'My courses', to: '/my-courses' },
+                    { label: course?.title ?? '', to: `/learn/courses/${courseId}` },
+                    { label: overview.title },
+                ]}
+                title={overview.title}
+            >
+                <InstructionScreen
+                    overview={overview}
+                    attempts={myAttempts ?? []}
+                    onStart={handleStart}
+                    isStarting={startAttempt.isPending}
+                    error={error}
                 />
-                <h1 className="mt-2 text-2xl">{overview.title}</h1>
-                <div className="mt-6">
-                    <InstructionScreen
-                        overview={overview}
-                        attempts={myAttempts ?? []}
-                        onStart={handleStart}
-                        isStarting={startAttempt.isPending}
-                        error={error}
-                    />
-                </div>
-            </div>
+            </PageFrame>
         );
     }
+
+    // Retake: only after a graded attempt that did not pass, and only while attempts remain.
+    // `overview` is refetched when an attempt is submitted (useSubmitAttempt invalidates it), so
+    // attempts_remaining already counts the attempt just taken; null means unlimited.
+    const attemptsLeft = overview?.attempts_remaining ?? null;
+    const canRetake =
+        result !== null &&
+        result.status === 'graded' &&
+        result.passed === false &&
+        overview !== undefined &&
+        (attemptsLeft === null || attemptsLeft > 0);
+    const retake = canRetake
+        ? {
+            label: attemptsLeft === null ? 'Retake' : `Retake (${attemptsLeft} ${attemptsLeft === 1 ? 'attempt' : 'attempts'} left)`,
+            onClick: () => setIsConfirmingRetake(true),
+        }
+        : undefined;
 
     // Evaluation has no questions yet — guard before the student can submit an empty attempt
     if (session.questions.length === 0) {
@@ -482,20 +599,29 @@ export function EvaluationTakePage() {
             <div className="sticky top-0 z-20 flex flex-col gap-1 border-b border-surface-100 bg-surface-50 pb-3 pt-1 before:absolute before:inset-x-0 before:-top-8 before:h-8 before:bg-surface-50 before:content-['']">
                 <Breadcrumbs
                     items={[
-                        { label: 'My Courses', to: '/dashboard' },
+                        { label: 'My courses', to: '/my-courses' },
                         { label: course?.title ?? '', to: `/learn/courses/${courseId}` },
                         { label: `Attempt #${session.attempt.attempt_number}` },
                     ]}
                 />
                 <div className="flex items-center justify-between gap-3">
-                    <h1 className="text-2xl">Attempt #{session.attempt.attempt_number}</h1>
+                    <h1 className="text-lg font-semibold text-ink-900">Attempt #{session.attempt.attempt_number}</h1>
                     {deadline && !result && <CountdownBadge deadline={deadline} onExpire={handleSubmit} />}
                 </div>
             </div>
 
             {result ? (
                 <div className="mt-6">
-                    <AttemptResult attempt={result} />
+                    <AttemptResult attempt={result} retake={retake} />
+                    {isConfirmingRetake && overview && (
+                        <StartConfirmModal
+                            overview={overview}
+                            isStarting={startAttempt.isPending}
+                            error={error}
+                            onConfirm={handleStart}
+                            onClose={() => setIsConfirmingRetake(false)}
+                        />
+                    )}
                 </div>
             ) : (
                 <div className="mt-6 flex flex-col gap-4">
@@ -511,7 +637,7 @@ export function EvaluationTakePage() {
                         />
                     ))}
 
-                    <Button onClick={handleSubmit} isLoading={submitAttempt.isPending} className="self-start">
+                    <Button onClick={handleSubmit} isLoading={submitAttempt.isPending} className="self-start rounded-full">
                         Submit attempt
                     </Button>
                 </div>

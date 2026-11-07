@@ -30,7 +30,7 @@ export function AboutSection() {
                         }`}
                 >
                     {/* ── Left: image ── */}
-                    <div className="relative">
+                    <div className="relative order-2 lg:order-1">
                         <div className="overflow-hidden rounded-2xl">
                             <img
                                 src="/images/who_we_are.jpg"
@@ -46,7 +46,7 @@ export function AboutSection() {
                     </div>
 
                     {/* ── Right: text ── */}
-                    <div>
+                    <div className="order-1 lg:order-2">
                         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
                             Who we are
                         </p>

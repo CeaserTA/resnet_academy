@@ -29,7 +29,9 @@ final class AdminCertificateResource extends JsonResource
         return [
             'id' => $this->id,
             'certificate_number' => $this->certificate_number,
-            'status' => $this->certificate_url === null ? 'generating' : 'ready',
+            'status' => $this->revoked_at !== null ? 'revoked' : ($this->certificate_url === null ? 'generating' : 'ready'),
+            'revoked_at' => $this->revoked_at?->toIso8601String(),
+            'revoke_reason' => $this->revoke_reason,
             'issued_at' => $this->issued_at->toIso8601String(),
             'student' => [
                 'id' => $this->student->id,

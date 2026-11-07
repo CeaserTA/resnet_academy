@@ -22,6 +22,7 @@ final class CertificateController extends Controller
     {
         $certificates = Certificate::query()
             ->where('student_id', $request->user()->id)
+            ->whereNull('revoked_at')
             ->with('course')
             ->latest('issued_at')
             ->get();
@@ -68,6 +69,7 @@ final class CertificateController extends Controller
         // [App\Models\Certificate]", which this public, unauthenticated page would show verbatim
         // to an employer. "Not found" is an expected answer here, not an internal error.
         abort_if($certificate === null, 404, 'No certificate was found with that number. Check it matches the one printed on the certificate.');
+        abort_if($certificate->isRevoked(), 404, 'This certificate has been revoked and is no longer valid.');
 
         return new CertificateVerificationResource($certificate);
     }

@@ -1,6 +1,6 @@
 import { useMemo, useRef, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
-import { MessageSquare, Plus, Search, Send } from 'lucide-react';
+import { Link, useNavigate, useParams } from 'react-router';
+import { ArrowLeft, MessageSquare, Plus, Search, Send } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
@@ -11,6 +11,7 @@ import { useConversation, useConversations, useSendMessage } from '@/features/co
 import { useAuth } from '@/lib/auth/AuthContext';
 import { cn, formatRelativeTime } from '@/lib/utils';
 import type { Conversation } from '@/lib/api/types';
+import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 
 function otherParticipants(conversation: Conversation, currentUserId: number | undefined) {
     return conversation.participants.filter((p) => p.id !== currentUserId);
@@ -39,7 +40,7 @@ function ChatListItem({
             onClick={onSelect}
             className={cn(
                 'flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-50 rounded-lg',
-                isActive && 'bg-blue-600/8',
+                isActive && 'bg-primary/10',
             )}
         >
             <div className="relative shrink-0">
@@ -52,7 +53,7 @@ function ChatListItem({
             </div>
             <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-1">
-                    <p className={cn('truncate text-sm', unread > 0 ? 'font-semibold text-ink-900' : 'font-medium text-ink-900')}>
+                    <p className={cn('truncate text-sm', isActive ? 'font-semibold text-primary' : (unread > 0 ? 'font-semibold text-ink-900' : 'font-medium text-ink-900'))}>
                         {name}
                     </p>
                     {conversation.last_message && (
@@ -92,7 +93,7 @@ function ConversationThread({ conversationId }: { conversationId: number }) {
 
     if (isLoading || !conversation) {
         return (
-            <div className="flex flex-1 items-center justify-center overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
+            <div className="flex flex-1 items-center justify-center overflow-hidden rounded-xl border border-border bg-surface-0 shadow-sm">
                 <Spinner />
             </div>
         );
@@ -102,9 +103,16 @@ function ConversationThread({ conversationId }: { conversationId: number }) {
     const name = others.map((p) => p.name).join(', ') || 'Conversation';
 
     return (
-        <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
+        <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-border bg-surface-0 shadow-sm">
             {/* Thread header */}
-            <div className="flex shrink-0 items-center gap-3 border-b border-surface-100 bg-surface-50 px-4 py-3">
+            <div className="flex shrink-0 items-center gap-3 border-b border-border bg-surface-50 px-4 py-3">
+                <Link
+                    to="/messages"
+                    aria-label="Back to conversations"
+                    className="-ml-2 rounded-lg p-1.5 text-ink-600 hover:bg-surface-100 hover:text-ink-900 md:hidden"
+                >
+                    <ArrowLeft className="size-4" aria-hidden="true" />
+                </Link>
                 <Avatar name={others[0]?.name ?? name} src={others[0]?.avatar_url} size="sm" className="size-8" />
                 <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-ink-900">{name}</p>
@@ -152,7 +160,7 @@ function ConversationThread({ conversationId }: { conversationId: number }) {
             {/* Compose bar */}
             <form
                 onSubmit={handleSubmit}
-                className="flex shrink-0 items-center gap-2 border-t border-surface-100 bg-surface-50 px-3 py-2.5"
+                className="flex shrink-0 items-center gap-2 border-t border-border bg-surface-50 px-3 py-2.5"
             >
                 <input
                     value={body}
@@ -182,6 +190,7 @@ export function MessagesPage() {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { data: conversations, isLoading } = useConversations();
+    usePageHeader('Messages', 'Conversations with students, instructors and admins');
     const [isComposing, setIsComposing] = useState(false);
     const [search, setSearch] = useState('');
 
@@ -195,15 +204,22 @@ export function MessagesPage() {
     }, [conversations, search, user?.id]);
 
     const totalUnread = (conversations ?? []).reduce((sum, c) => sum + (c.unread_count ?? 0), 0);
+    // Phones show either the list or the open thread; tablet+ shows both side by side.
+    const hasThread = Number.isFinite(conversationId);
 
     return (
         <div className="flex h-full gap-3">
 
             {/* ── Conversation list ─────────────────────────────────────── */}
-            <div className="flex w-72 shrink-0 flex-col overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
+            <div
+                className={cn(
+                    'w-full shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-surface-0 shadow-sm md:flex md:w-72',
+                    hasThread ? 'hidden' : 'flex',
+                )}
+            >
 
                 {/* List header */}
-                <div className="flex shrink-0 items-center justify-between border-b border-surface-100 bg-surface-50 px-4 py-3">
+                <div className="flex shrink-0 items-center justify-between border-b border-border bg-surface-50 px-4 py-3">
                     <div className="flex items-center gap-2">
                         <h1 className="text-sm font-semibold text-ink-900">Messages</h1>
                         {totalUnread > 0 && (
@@ -213,7 +229,7 @@ export function MessagesPage() {
                     <button
                         onClick={() => setIsComposing(true)}
                         aria-label="New message"
-                        className="flex size-7 items-center justify-center rounded-lg text-ink-600 transition hover:bg-surface-100 hover:text-ink-900"
+                        className="flex size-7 items-center justify-center rounded-full text-ink-600 transition hover:bg-surface-100 hover:text-ink-900"
                     >
                         <Plus className="size-4" aria-hidden="true" />
                     </button>
@@ -263,10 +279,10 @@ export function MessagesPage() {
             </div>
 
             {/* ── Thread panel ─────────────────────────────────────────── */}
-            {Number.isFinite(conversationId) ? (
+            {hasThread ? (
                 <ConversationThread conversationId={conversationId} />
             ) : (
-                <div className="flex flex-1 items-center justify-center overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
+                <div className="hidden flex-1 items-center justify-center overflow-hidden rounded-xl border border-border bg-surface-0 shadow-sm md:flex">
                     <EmptyState
                         icon={MessageSquare}
                         title="No conversation selected"

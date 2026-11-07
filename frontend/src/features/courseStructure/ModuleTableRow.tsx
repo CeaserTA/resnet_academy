@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type HTMLAttributes } from 'react';
 import { Link } from 'react-router';
 import {
     BookOpen,
@@ -14,6 +14,7 @@ import {
     Globe,
     ListChecks,
     Package,
+    GripVertical,
     Pencil,
     Plus,
     Radio,
@@ -37,6 +38,9 @@ import { cn } from '@/lib/utils';
 import type { Module, ModuleItem, ResourceModuleItem } from '@/lib/api/types';
 import type { ResourcePayload } from '@/features/courseStructure/api';
 import type { AssignmentPayload, EvaluationPayload } from '@/features/assessment/api';
+import { formatDate } from '@/lib/formatDate';
+import { displayCohortName } from '@/lib/cohort';
+import { DropdownMenu } from '@/components/ui/DropdownMenu';
 
 // ─── Resource type labels + icons ─────────────────────────────────────────────
 
@@ -88,37 +92,6 @@ function IconBtn({
             )}
         >
             {children}
-        </button>
-    );
-}
-
-// ─── Descriptive action button ────────────────────────────────────────────────
-
-function ActionBtn({
-    label,
-    description,
-    onClick,
-    icon: Icon,
-    colorClass,
-}: {
-    label: string;
-    description: string;
-    onClick: () => void;
-    icon: React.ElementType;
-    colorClass: string;
-}) {
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            title={description}
-            className={cn(
-                'group flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all',
-                colorClass,
-            )}
-        >
-            <Icon className="size-3.5 shrink-0" aria-hidden="true" />
-            <span>{label}</span>
         </button>
     );
 }
@@ -179,7 +152,7 @@ function ItemRow({
                 )}
                 {/* Which intake a live session is run for. Absent means it is for the whole course. */}
                 {item.item_type === 'resource' && item.type === 'live_session' && item.details?.cohort_name && (
-                    <Badge label={item.details.cohort_name} tone="progress" />
+                    <Badge label={displayCohortName(item.details.cohort_name)} tone="progress" />
                 )}
             </div>
             <div className="flex shrink-0 items-center gap-0.5">
@@ -216,7 +189,6 @@ function ContentGroup({
     label,
     icon: Icon,
     count,
-    accentClass,
     emptyText,
     onAdd,
     children,
@@ -224,7 +196,6 @@ function ContentGroup({
     label: string;
     icon: React.ElementType;
     count: number;
-    accentClass: string;   // tailwind colour classes for the header stripe
     emptyText: string;
     onAdd: () => void;
     children: React.ReactNode;
@@ -234,7 +205,7 @@ function ContentGroup({
     return (
         <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0">
             {/* Group header */}
-            <div className={cn('flex items-center justify-between px-3 py-2', accentClass)}>
+            <div className="flex items-center justify-between border-b border-surface-100 bg-surface-50 px-3 py-2 text-ink-900">
                 <button
                     type="button"
                     onClick={() => setOpen((v) => !v)}
@@ -245,18 +216,16 @@ function ContentGroup({
                         ? <ChevronDown className="size-3.5 shrink-0" aria-hidden="true" />
                         : <ChevronRight className="size-3.5 shrink-0" aria-hidden="true" />
                     }
-                    <Icon className="size-3.5 shrink-0" aria-hidden="true" />
+                    <Icon className="size-3.5 shrink-0 text-ink-600" aria-hidden="true" />
                     <span className="text-xs font-semibold">{label}</span>
-                    <span className="flex size-4 items-center justify-center rounded-full bg-white/60 text-[10px] font-bold leading-none">
-                        {count}
-                    </span>
+                    <span className="text-xs text-ink-600">{count}</span>
                 </button>
 
                 {/* Add button lives on the group header */}
                 <button
                     type="button"
                     onClick={onAdd}
-                    className="flex items-center gap-1 rounded-md bg-white/60 px-2 py-0.5 text-xs font-medium transition hover:bg-white"
+                    className="flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium text-blue-600 transition hover:bg-blue-50"
                     aria-label={`Add ${label.toLowerCase()}`}
                 >
                     <Plus className="size-3" aria-hidden="true" />
@@ -278,18 +247,44 @@ function ContentGroup({
     );
 }
 
+// ─── Module summary ───────────────────────────────────────────────────────────
+
+
+/** "1 resource", "5 resources" — spelled out so a new admin doesn't have to decode "5R". */
+function countLabel(count: number, noun: string): string {
+    return `${count} ${noun}${count === 1 ? '' : 's'}`;
+}
+
 // ─── Module table row ─────────────────────────────────────────────────────────
+
+/** Drag-and-drop wiring for a module row — state lives in CourseBuilderPage. */
+export interface ModuleReorderProps {
+    /** Spread onto the summary <tr> (draggable, drag/drop handlers). */
+    rowProps: HTMLAttributes<HTMLTableRowElement> & { draggable?: boolean };
+    /** Pressing the handle arms the row for dragging, so text and buttons stay usable. */
+    onHandlePointerDown: () => void;
+    /** Keyboard alternative to dragging: move by one position. */
+    onMove: (direction: -1 | 1) => void;
+    isDragging: boolean;
+    isDropTarget: boolean;
+    canMoveUp: boolean;
+    canMoveDown: boolean;
+}
 
 export function ModuleTableRow({
     index,
     module,
     courseId,
     onDelete,
+    onEdit,
+    reorder,
 }: {
     index: number;
     module: Module;
     courseId: number;
     onDelete: () => void;
+    onEdit: () => void;
+    reorder: ModuleReorderProps;
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const [addingForm, setAddingForm] = useState<AddingForm>(null);
@@ -359,50 +354,66 @@ export function ModuleTableRow({
     return (
         <>
             {/* ── Summary row ────────────────────────────────────────────── */}
-            <tr className="hover:bg-surface-50">
+            <tr
+                {...reorder.rowProps}
+                className={cn(
+                    'hover:bg-surface-50',
+                    reorder.isDragging && 'opacity-50',
+                    // Drop indicator: a blue line along the top edge of the row being dropped onto.
+                    reorder.isDropTarget && 'bg-blue-50 shadow-[inset_0_2px_0_var(--color-blue-600)]',
+                )}
+            >
                 <td className="px-4 py-3">
-                    <button
-                        onClick={() => setIsOpen((v) => !v)}
-                        className="flex w-full items-center gap-3 text-left"
-                        aria-expanded={isOpen}
-                        aria-label={isOpen ? `Collapse ${module.title}` : `Expand ${module.title}`}
-                    >
-                        {isOpen
-                            ? <ChevronDown className="size-3.5 shrink-0 text-ink-600" aria-hidden="true" />
-                            : <ChevronRight className="size-3.5 shrink-0 text-ink-600" aria-hidden="true" />
-                        }
-                        <span className="flex size-5 shrink-0 items-center justify-center rounded bg-blue-600/10 text-xs font-semibold text-blue-600">
-                            {index + 1}
-                        </span>
-                        <span className="text-sm font-medium text-ink-900">{module.title}</span>
-                        {/* Mini summary chips */}
-                        <span className="flex items-center gap-1">
-                            {resources.length > 0 && (
-                                <span className="rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600">
-                                    {resources.length}R
+                    <div className="flex items-center gap-1">
+                        <button
+                            type="button"
+                            onPointerDown={reorder.onHandlePointerDown}
+                            onKeyDown={(e) => {
+                                if (e.key === 'ArrowUp' && reorder.canMoveUp) { e.preventDefault(); reorder.onMove(-1); }
+                                if (e.key === 'ArrowDown' && reorder.canMoveDown) { e.preventDefault(); reorder.onMove(1); }
+                            }}
+                            aria-label={`Reorder ${module.title}. Drag, or use the up and down arrow keys.`}
+                            title="Drag to reorder (or focus and use ↑/↓)"
+                            className="-ml-1.5 flex shrink-0 cursor-grab items-center justify-center rounded p-1 text-ink-300 transition-colors hover:bg-surface-100 hover:text-ink-600 active:cursor-grabbing"
+                        >
+                            <GripVertical className="size-4" aria-hidden="true" />
+                        </button>
+                        <button
+                            onClick={() => setIsOpen((v) => !v)}
+                            className="flex w-full items-center gap-3 text-left"
+                            aria-expanded={isOpen}
+                            aria-label={isOpen ? `Collapse ${module.title}` : `Expand ${module.title}`}
+                        >
+                            {isOpen
+                                ? <ChevronDown className="size-3.5 shrink-0 text-ink-600" aria-hidden="true" />
+                                : <ChevronRight className="size-3.5 shrink-0 text-ink-600" aria-hidden="true" />
+                            }
+                            <span className="flex size-5 shrink-0 items-center justify-center rounded bg-blue-600/10 text-xs font-semibold text-blue-600">
+                                {index + 1}
+                            </span>
+                            <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                                <span className="text-sm font-medium text-ink-900">{module.title}</span>
+                                {/* Content summary — plain text, so colour is left for things that need attention */}
+                                <span className="text-xs text-ink-600">
+                                    {module.items.length === 0
+                                        ? 'No content yet'
+                                        : [
+                                            resources.length > 0 && countLabel(resources.length, 'resource'),
+                                            assignments.length > 0 && countLabel(assignments.length, 'assignment'),
+                                            evaluations.length > 0 && countLabel(evaluations.length, 'evaluation'),
+                                        ]
+                                            .filter(Boolean)
+                                            .join(' · ')}
                                 </span>
-                            )}
-                            {assignments.length > 0 && (
-                                <span className="rounded-full bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-600">
-                                    {assignments.length}A
-                                </span>
-                            )}
-                            {evaluations.length > 0 && (
-                                <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600">
-                                    {evaluations.length}E
-                                </span>
-                            )}
-                            {module.items.length === 0 && (
-                                <span className="text-xs text-ink-600">empty</span>
-                            )}
-                        </span>
-                    </button>
+                            </span>
+                        </button>
+                    </div>
                 </td>
 
                 <td className="px-4 py-3">
                     {opensInFuture ? (
                         <Badge
-                            label={`Opens ${new Date(module.scheduled_start_at as string).toLocaleDateString()}`}
+                            label={`Opens ${formatDate(module.scheduled_start_at as string)}`}
                             tone="warning"
                             icon={Clock}
                         />
@@ -412,28 +423,36 @@ export function ModuleTableRow({
                 </td>
 
                 <td className="px-4 py-3">
-                    <div className="flex flex-wrap items-center justify-end gap-1.5">
-                        <ActionBtn
-                            label="Resource"
-                            description="Add a learning resource (video, document, link…)"
-                            onClick={() => { setAddingForm('resource'); setIsOpen(true); }}
-                            icon={FileEdit}
-                            colorClass="border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:border-blue-300"
+                    <div className="flex flex-wrap items-center justify-end gap-1.5 lg:flex-nowrap">
+                        <DropdownMenu
+                            align="right"
+                            trigger={(toggle) => (
+                                <button
+                                    type="button"
+                                    onClick={toggle}
+                                    aria-label={`Add content to ${module.title}`}
+                                    className="flex items-center gap-1 rounded-lg border border-blue-600 px-2.5 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-50"
+                                >
+                                    <Plus className="size-3.5" aria-hidden="true" />
+                                    Add
+                                    <ChevronDown className="size-3" aria-hidden="true" />
+                                </button>
+                            )}
+                            items={[
+                                { label: 'Resource', icon: FileEdit, onClick: () => { setAddingForm('resource'); setIsOpen(true); } },
+                                { label: 'Assignment', icon: FileCheck2, onClick: () => { setAddingForm('assignment'); setIsOpen(true); } },
+                                { label: 'Evaluation', icon: ListChecks, onClick: () => { setAddingForm('evaluation'); setIsOpen(true); } },
+                            ]}
                         />
-                        <ActionBtn
-                            label="Assignment"
-                            description="Add a graded assignment"
-                            onClick={() => { setAddingForm('assignment'); setIsOpen(true); }}
-                            icon={FileCheck2}
-                            colorClass="border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 hover:border-violet-300"
-                        />
-                        <ActionBtn
-                            label="Evaluation"
-                            description="Add a quiz or evaluation"
-                            onClick={() => { setAddingForm('evaluation'); setIsOpen(true); }}
-                            icon={ListChecks}
-                            colorClass="border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300"
-                        />
+                        <button
+                            type="button"
+                            onClick={onEdit}
+                            aria-label={`Edit ${module.title}`}
+                            title="Edit module"
+                            className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-ink-900"
+                        >
+                            <Pencil className="size-3.5" aria-hidden="true" />
+                        </button>
                         <button
                             type="button"
                             onClick={handleDeleteModule}
@@ -457,7 +476,6 @@ export function ModuleTableRow({
                                 label="Resources"
                                 icon={FileEdit}
                                 count={resources.length}
-                                accentClass="bg-blue-50 text-blue-700"
                                 emptyText="No resources yet — click Add to get started."
                                 onAdd={() => setAddingForm('resource')}
                             >
@@ -476,7 +494,6 @@ export function ModuleTableRow({
                                 label="Assignments"
                                 icon={FileCheck2}
                                 count={assignments.length}
-                                accentClass="bg-violet-50 text-violet-700"
                                 emptyText="No assignments yet — click Add to get started."
                                 onAdd={() => setAddingForm('assignment')}
                             >
@@ -494,7 +511,6 @@ export function ModuleTableRow({
                                 label="Evaluations"
                                 icon={ListChecks}
                                 count={evaluations.length}
-                                accentClass="bg-emerald-50 text-emerald-700"
                                 emptyText="No evaluations yet — click Add to get started."
                                 onAdd={() => setAddingForm('evaluation')}
                             >

@@ -7,6 +7,7 @@ namespace App\Services\Assessment;
 use App\Enums\EvaluationAttemptStatus;
 use App\Models\Evaluation;
 use App\Models\EvaluationAttempt;
+use App\Models\EvaluationAttemptAllowance;
 use App\Models\EvaluationAttemptAnswer;
 use App\Models\Question;
 use App\Models\User;
@@ -67,13 +68,27 @@ final class EvaluationAttemptService
                 return $existing;
             }
 
+            // A submitted attempt with written answers still waiting for manual marking: starting
+            // another would only burn an attempt on the same questions before the student knows
+            // whether they passed (BACKEND_CHANGES.md §2).
+            abort_if(
+                EvaluationAttempt::query()
+                    ->where('evaluation_id', $evaluation->id)
+                    ->where('student_id', $student->id)
+                    ->where('status', EvaluationAttemptStatus::Submitted)
+                    ->exists(),
+                422,
+                'Your last attempt is still waiting to be marked. You can try again once your instructor has graded it.',
+            );
+
             $attemptCount = EvaluationAttempt::query()
                 ->where('evaluation_id', $evaluation->id)
                 ->where('student_id', $student->id)
                 ->count();
 
+            $maxAttempts = $evaluation->maxAttemptsFor($student);
             abort_if(
-                $evaluation->max_attempts !== null && $attemptCount >= $evaluation->max_attempts,
+                $maxAttempts !== null && $attemptCount >= $maxAttempts,
                 403,
                 'You have used all the attempts allowed for this evaluation.',
             );
@@ -289,5 +304,45 @@ final class EvaluationAttemptService
         $selected = collect($selectedOptionIds)->sort()->values()->all();
 
         return $correctOptionIds === $selected;
+    }
+
+    /**
+     * Staff give one student more attempts on an evaluation (e.g. they used every attempt on a
+     * required quiz and would otherwise be stuck). Adds to any earlier grant, is audit-logged,
+     * and tells the student. BACKEND_CHANGES.md §3.
+     */
+    public function grantExtraAttempts(User $staff, Evaluation $evaluation, User $student, int $count, ?string $reason): EvaluationAttemptAllowance
+    {
+        $allowance = DB::transaction(function () use ($staff, $evaluation, $student, $count, $reason): EvaluationAttemptAllowance {
+            $allowance = EvaluationAttemptAllowance::query()->lockForUpdate()->firstOrNew([
+                'evaluation_id' => $evaluation->id,
+                'student_id' => $student->id,
+            ]);
+            $allowance->extra_attempts = (int) $allowance->extra_attempts + $count;
+            $allowance->granted_by = $staff->id;
+            $allowance->reason = $reason;
+            $allowance->save();
+
+            $this->auditLogger->log(
+                action: 'evaluation.extra_attempts_granted',
+                entityType: 'evaluation',
+                entityId: $evaluation->id,
+                actorId: $staff->id,
+                meta: ['student_id' => $student->id, 'added' => $count, 'total_extra' => $allowance->extra_attempts, 'reason' => $reason],
+            );
+
+            return $allowance;
+        });
+
+        $this->notificationDispatcher->notify(
+            $student,
+            'evaluation_extra_attempt',
+            'You have another attempt',
+            "Your instructor gave you {$count} more attempt".($count === 1 ? '' : 's')." at \"{$evaluation->title}\".",
+            'evaluation',
+            $evaluation->id,
+        );
+
+        return $allowance;
     }
 }

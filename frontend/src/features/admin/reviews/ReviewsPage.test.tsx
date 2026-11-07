@@ -75,8 +75,9 @@ it('shows all reviews pending-first on the All tab, and filters correctly on the
     const user = userEvent.setup();
     renderPage();
 
-    const rows = await screen.findAllByRole('row');
-    expect(rows[1]).toHaveTextContent('Pending');
+    const list = await screen.findByRole('list', { name: 'Course reviews' });
+    const items = within(list).getAllByRole('listitem');
+    expect(items[0]).toHaveTextContent('Pending');
     expect(screen.getByText('Kevin Ssemwogerere')).toBeInTheDocument();
     expect(screen.getByText('Priya Shah')).toBeInTheDocument();
 

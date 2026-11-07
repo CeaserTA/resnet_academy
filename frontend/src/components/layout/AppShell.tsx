@@ -1,5 +1,6 @@
 import { type ReactNode, useState } from 'react';
-import { Link, NavLink, Outlet } from 'react-router';
+import { Link, NavLink, Outlet, useLocation } from 'react-router';
+import * as Dialog from '@radix-ui/react-dialog';
 import {
     BookOpen,
     CalendarRange,
@@ -11,12 +12,15 @@ import {
     GraduationCap,
     LayoutDashboard,
     LifeBuoy,
+    Menu,
     MessagesSquare,
     MessageSquare,
+    PencilLine,
     Search,
     Star,
     Users,
     ArrowRight,
+    X,
     Award,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -31,6 +35,8 @@ import { cn } from '@/lib/utils';
 interface NavItem {
     to: string;
     label: string;
+    /** Shorter label for the phone bottom bar, when `label` won't fit. */
+    short?: string;
     icon: LucideIcon;
     end?: boolean;
     /** Optional divider line rendered ABOVE this item */
@@ -50,10 +56,11 @@ function navItemsForRole(role: string): NavItem[] {
             { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
             { to: '/admin/cohorts', label: 'Cohorts', icon: CalendarRange },
             { to: '/admin/courses', label: 'Courses', icon: BookOpen },
+            { to: '/grading', label: 'Grading', icon: PencilLine },
             ...communicationItems,
             { to: '/admin/applications', label: 'Applications', icon: FileCheck, divider: true },
             { to: '/admin/enrolments', label: 'Enrolments', icon: Users },
-            { to: '/admin/transfer-requests', label: 'Transfer Requests', icon: ArrowRight },
+            { to: '/admin/transfer-requests', label: 'Transfer Requests', short: 'Transfers', icon: ArrowRight },
             { to: '/admin/reviews', label: 'Reviews', icon: Star },
             { to: '/admin/certificates', label: 'Certificates', icon: Award },
             { to: '/admin/payments', label: 'Payments', icon: CreditCard },
@@ -67,6 +74,7 @@ function navItemsForRole(role: string): NavItem[] {
             { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
             { to: '/admin/cohorts', label: 'Cohorts', icon: CalendarRange },
             { to: '/admin/courses', label: 'My courses', icon: BookOpen },
+            { to: '/grading', label: 'Grading', icon: PencilLine },
             ...communicationItems,
             { to: '/admin/applications', label: 'Applications', icon: FileCheck, divider: true },
             { to: '/admin/enrolments', label: 'Enrolments', icon: Users },
@@ -74,10 +82,11 @@ function navItemsForRole(role: string): NavItem[] {
     }
 
     return [
-        { to: '/dashboard', label: 'My courses', icon: LayoutDashboard, end: true },
+        { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
+        { to: '/my-courses', label: 'My courses', icon: BookOpen },
         { to: '/forums', label: 'Forums', icon: MessagesSquare },
-        { to: '/#courses', label: 'Browse catalogue', icon: BookOpen },
         ...communicationItems,
+        { to: '/certificates', label: 'Certificates', icon: Award },
     ];
 }
 
@@ -132,10 +141,11 @@ function TopBar() {
     return (
         <header className="flex shrink-0 items-center justify-between gap-3 border-b border-surface-100 bg-surface-0 px-3 py-2 sm:px-4">
             {header ? (
-                <div className="min-w-0 shrink-0">
-                    <h1 className="text-base font-semibold text-ink-900">{header.title}</h1>
+                <div className="min-w-0">
+                    {/* Long titles (course names) shorten with "…" rather than pushing the bell/menu off */}
+                    <h1 className="truncate text-base font-semibold text-ink-900">{header.title}</h1>
                     {header.subtitle && (
-                        <p className="text-xs text-ink-600">{header.subtitle}</p>
+                        <p className="truncate text-xs text-ink-600">{header.subtitle}</p>
                     )}
                 </div>
             ) : (
@@ -171,6 +181,104 @@ function TopBar() {
                 </div>
             </div>
         </header>
+    );
+}
+
+// ─── Phone bottom bar ─────────────────────────────────────────────────────────
+
+const BAR_SLOTS = 5;
+
+/**
+ * Below `lg` the sidebar is hidden, so every nav item must stay reachable from here. Up to
+ * five items fit; beyond that the bar shows four plus "More", which opens a bottom sheet
+ * with the rest (admins have ~12 destinations).
+ */
+function MobileNav({ items }: { items: NavItem[] }) {
+    const [moreOpen, setMoreOpen] = useState(false);
+    const location = useLocation();
+    const overflowing = items.length > BAR_SLOTS;
+    const barItems = overflowing ? items.slice(0, BAR_SLOTS - 1) : items;
+    const moreItems = overflowing ? items.slice(BAR_SLOTS - 1) : [];
+    const moreActive = moreItems.some(({ to }) => location.pathname.startsWith(to.split('#')[0]) && to !== '/#courses');
+
+    const slotClass = (active: boolean) =>
+        cn(
+            'flex min-w-0 flex-1 flex-col items-center gap-0.5 px-1 py-1 text-[11px] font-medium',
+            active ? 'text-blue-600' : 'text-ink-600',
+        );
+
+    return (
+        <>
+            <nav
+                className="fixed inset-x-0 bottom-0 z-10 flex items-stretch border-t border-surface-100 bg-surface-0 pb-[env(safe-area-inset-bottom)] pt-1.5 lg:hidden"
+                aria-label="Primary"
+            >
+                {barItems.map(({ to, label, short, icon: Icon, end }) => (
+                    <NavLink key={to} to={to} end={end} className={({ isActive }) => slotClass(isActive)}>
+                        <Icon className="size-5" aria-hidden="true" />
+                        <span className="w-full truncate text-center">{short ?? label}</span>
+                    </NavLink>
+                ))}
+                {overflowing && (
+                    <button
+                        type="button"
+                        onClick={() => setMoreOpen(true)}
+                        aria-haspopup="dialog"
+                        aria-expanded={moreOpen}
+                        className={slotClass(moreActive)}
+                    >
+                        <Menu className="size-5" aria-hidden="true" />
+                        <span>More</span>
+                    </button>
+                )}
+            </nav>
+
+            <Dialog.Root open={moreOpen} onOpenChange={setMoreOpen}>
+                <Dialog.Portal>
+                    <Dialog.Overlay
+                        data-reduce-motion
+                        className="fixed inset-0 z-40 bg-navy/40 data-[state=closed]:animate-overlay-out data-[state=open]:animate-overlay-in lg:hidden"
+                    />
+                    <Dialog.Content
+                        data-reduce-motion
+                        className="fixed inset-x-0 bottom-0 z-50 max-h-[80dvh] overflow-y-auto rounded-t-2xl bg-surface-0 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 shadow-2xl data-[state=closed]:animate-sheet-out data-[state=open]:animate-sheet-in lg:hidden"
+                    >
+                        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-surface-100" aria-hidden="true" />
+                        <div className="mb-3 flex items-center justify-between">
+                            <Dialog.Title className="text-base text-ink-900">More</Dialog.Title>
+                            <Dialog.Close
+                                aria-label="Close"
+                                className="rounded-lg p-1.5 text-ink-600 hover:bg-surface-100 hover:text-ink-900"
+                            >
+                                <X className="size-4" aria-hidden="true" />
+                            </Dialog.Close>
+                        </div>
+                        <Dialog.Description className="sr-only">Other sections of the app</Dialog.Description>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {moreItems.map(({ to, label, icon: Icon, end }) => (
+                                <NavLink
+                                    key={to}
+                                    to={to}
+                                    end={end}
+                                    onClick={() => setMoreOpen(false)}
+                                    className={({ isActive }) =>
+                                        cn(
+                                            'flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-center text-xs font-medium transition-colors',
+                                            isActive
+                                                ? 'border-blue-100 bg-blue-50 text-blue-700'
+                                                : 'border-surface-100 text-ink-900 hover:bg-surface-50',
+                                        )
+                                    }
+                                >
+                                    <Icon className="size-5" aria-hidden="true" />
+                                    {label}
+                                </NavLink>
+                            ))}
+                        </div>
+                    </Dialog.Content>
+                </Dialog.Portal>
+            </Dialog.Root>
+        </>
     );
 }
 
@@ -250,28 +358,7 @@ export function AppShell(): ReactNode {
                     </main>
                 </PageHeaderProvider>
 
-                {/* ── Mobile bottom nav ─────────────────────────────────────── */}
-                <nav
-                    className="fixed inset-x-0 bottom-0 z-10 flex items-center justify-around border-t border-surface-100 bg-surface-0 py-2 lg:hidden"
-                    aria-label="Primary"
-                >
-                    {items.slice(0, 5).map(({ to, label, icon: Icon, end }) => (
-                        <NavLink
-                            key={to}
-                            to={to}
-                            end={end}
-                            className={({ isActive }) =>
-                                cn(
-                                    'flex flex-col items-center gap-0.5 px-2 text-xs font-medium',
-                                    isActive ? 'text-blue-600' : 'text-ink-600',
-                                )
-                            }
-                        >
-                            <Icon className="size-5" aria-hidden="true" />
-                            <span className="max-w-12 truncate">{label}</span>
-                        </NavLink>
-                    ))}
-                </nav>
+                <MobileNav items={items} />
             </div>
         </div>
     );

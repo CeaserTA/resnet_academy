@@ -6,9 +6,9 @@ export async function fetchPaymentSummary(): Promise<PaymentSummary> {
     return data.data;
 }
 
-export async function fetchOrders(status?: OrderStatus): Promise<PaginatedResponse<Order>> {
+export async function fetchOrders(status?: OrderStatus, page = 1): Promise<PaginatedResponse<Order>> {
     const { data } = await apiClient.get<PaginatedResponse<Order>>('/admin/orders', {
-        params: { status: status || undefined },
+        params: { status: status || undefined, page },
     });
     return data;
 }

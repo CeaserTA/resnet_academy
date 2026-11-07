@@ -5,6 +5,8 @@ import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useCohortCoursesForCourse } from './useCohorts';
 import { cohortCourseStatusDisplay } from '@/lib/statusBadge';
+import { formatDateRange } from '@/lib/formatDate';
+import { displayCohortName } from '@/lib/cohort';
 
 interface CourseCohortsPanelProps {
     courseId: number;
@@ -41,8 +43,8 @@ export function CourseCohortsPanel({ courseId }: CourseCohortsPanelProps) {
             <p className="text-xs text-ink-600">
                 Manage capacity, instructor and status for these offerings from each cohort&apos;s page.
             </p>
-            <div className="overflow-hidden rounded-lg border border-surface-100">
-                <table className="w-full text-sm">
+            <div className="overflow-x-auto rounded-lg border border-surface-100">
+                <table className="w-full min-w-[520px] text-sm">
                     <thead>
                         <tr className="border-b border-surface-100 bg-surface-50">
                             <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-ink-600">Cohort</th>
@@ -58,12 +60,12 @@ export function CourseCohortsPanel({ courseId }: CourseCohortsPanelProps) {
                                 <tr key={cc.id} className="hover:bg-surface-50">
                                     <td className="px-4 py-3">
                                         <Link to={`/admin/cohorts/${cc.cohort_id}`} className="font-medium text-ink-900 hover:text-blue-600">
-                                            {cc.cohort_name}
+                                            {displayCohortName(cc.cohort_name)}
                                         </Link>
                                     </td>
                                     <td className="px-4 py-3 text-ink-600">
                                         {cc.start_date && cc.end_date
-                                            ? `${new Date(cc.start_date).toLocaleDateString()} – ${new Date(cc.end_date).toLocaleDateString()}`
+                                            ? formatDateRange(cc.start_date, cc.end_date)
                                             : '—'}
                                     </td>
                                     <td className="px-4 py-3">

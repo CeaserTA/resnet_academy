@@ -35,6 +35,10 @@ export function CreateCohortModal({ isOpen, onClose }: CreateCohortModalProps) {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setErrors({});
+        if (startDate && endDate && endDate < startDate) {
+            setErrors({ end_date: 'The end date must be on or after the start date.' });
+            return;
+        }
 
         try {
             await createCohort.mutateAsync({
@@ -58,50 +62,63 @@ export function CreateCohortModal({ isOpen, onClose }: CreateCohortModalProps) {
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={handleClose} title="Create cohort">
-            <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        <Modal
+            isOpen={isOpen}
+            onClose={handleClose}
+            title="Create cohort"
+            footer={
+                <>
+                    <Button type="button" variant="ghost" onClick={handleClose}>
+                        Cancel
+                    </Button>
+                    <Button type="submit" form="create-cohort-form" isLoading={createCohort.isPending}>
+                        Create cohort
+                    </Button>
+                </>
+            }
+        >
+            <form id="create-cohort-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
                 <Input
                     label="Cohort name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
                     error={errors.name}
-                    placeholder="e.g., September 2026 Intake"
+                    placeholder="e.g. September 2026"
                 />
 
-                <Input
-                    label="Start date"
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    required
-                    error={errors.start_date}
-                />
+                <div className="grid gap-3 sm:grid-cols-2">
+                    <Input
+                        label="Start date"
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        required
+                        error={errors.start_date}
+                    />
+                    <Input
+                        label="End date"
+                        type="date"
+                        value={endDate}
+                        min={startDate || undefined}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        required
+                        error={errors.end_date}
+                    />
+                </div>
 
-                <Input
-                    label="End date"
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    required
-                    error={errors.end_date}
-                />
-
-                <Input
-                    label="Application deadline (optional)"
-                    type="date"
-                    value={applicationDeadline}
-                    onChange={(e) => setApplicationDeadline(e.target.value)}
-                    error={errors.application_deadline}
-                />
-
-                <div className="flex gap-2">
-                    <Button type="submit" isLoading={createCohort.isPending}>
-                        Create cohort
-                    </Button>
-                    <Button type="button" variant="ghost" onClick={handleClose}>
-                        Cancel
-                    </Button>
+                <div>
+                    <Input
+                        label="Application deadline (optional)"
+                        type="date"
+                        value={applicationDeadline}
+                        max={startDate || undefined}
+                        onChange={(e) => setApplicationDeadline(e.target.value)}
+                        error={errors.application_deadline}
+                    />
+                    {!errors.application_deadline && (
+                        <p className="mt-1 text-xs text-ink-600">The last day students can apply. Usually on or before the start date.</p>
+                    )}
                 </div>
             </form>
         </Modal>

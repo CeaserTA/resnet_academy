@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { Camera, Check } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -11,6 +11,8 @@ import { profileApi, type ProfileFormState } from '@/lib/api/profileApi';
 import { ApiError } from '@/lib/api/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { cn } from '@/lib/utils';
+import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
+import { ProgressBar } from '@/components/ui/ProgressBar';
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 
@@ -64,7 +66,21 @@ function Section({
 export function ProfileCompletionPage() {
     const { user, refetch } = useAuth();
     const navigate = useNavigate();
+    const { pathname } = useLocation();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        return () => {
+            if (redirectTimerRef.current) {
+                clearTimeout(redirectTimerRef.current);
+            }
+        };
+    }, []);
+    usePageHeader(
+        pathname.endsWith('/edit') ? 'Edit profile' : 'Complete your profile',
+        'Required to apply for courses',
+    );
 
     const [formData, setFormData] = useState<ProfileFormState>({
         first_name: '',
@@ -119,7 +135,7 @@ export function ProfileCompletionPage() {
     const validateField = (name: string, value: string): string | undefined => {
         if (name === 'phone') {
             if (!value.trim()) return 'Phone number is required';
-            if (!/^[0-9\s\-\+]+$/.test(value)) return 'Digits, spaces, hyphens and + only';
+            if (!/^[0-9\s\-+]+$/.test(value)) return 'Digits, spaces, hyphens and + only';
             if (value.length < 8) return 'At least 8 characters';
             if (value.length > 20) return 'Max 20 characters';
         }
@@ -208,7 +224,7 @@ export function ProfileCompletionPage() {
             await refetch();
             setSubmitSuccess(true);
 
-            setTimeout(() => {
+            redirectTimerRef.current = setTimeout(() => {
                 const returnUrl = sessionStorage.getItem('returnUrl');
                 if (returnUrl) { sessionStorage.removeItem('returnUrl'); navigate(returnUrl); }
                 else navigate('/dashboard');
@@ -234,26 +250,15 @@ export function ProfileCompletionPage() {
     const currentAvatarUrl = avatarPreview ?? user.avatar_url;
 
     return (
-        <div className="mx-auto max-w-6xl space-y-4">
+        <div className="space-y-4">
 
-            {/* Header + progress */}
-            <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
-                <div className="bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-sm font-semibold text-white">Complete your profile</h1>
-                            <p className="text-xs text-blue-100">Required to apply for courses</p>
-                        </div>
-                        <span className="font-mono text-lg font-bold text-white">{completionPercentage}%</span>
-                    </div>
-                    <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-white/20">
-                        <div
-                            className="h-full rounded-full bg-white transition-all duration-500"
-                            style={{ width: `${completionPercentage}%` }}
-                            role="presentation"
-                        />
-                    </div>
+            {/* Progress — the page title is in the top bar */}
+            <div className="rounded-xl border border-surface-100 bg-surface-0 p-4 shadow-sm">
+                <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-ink-900">Profile completion</p>
+                    <span className="text-sm font-semibold text-ink-900">{completionPercentage}%</span>
                 </div>
+                <ProgressBar percent={completionPercentage} className="mt-2" />
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -394,8 +399,15 @@ export function ProfileCompletionPage() {
                     </Section>
                 </div>
 
-                {/* Centered save button */}
-                <div className="flex justify-center pt-1">
+                {/* Action buttons */}
+                <div className="flex items-center justify-center gap-3 pt-1">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => navigate('/dashboard')}
+                    >
+                        Cancel
+                    </Button>
                     <Button
                         type="submit"
                         disabled={!isFormValid() || isSubmitting}

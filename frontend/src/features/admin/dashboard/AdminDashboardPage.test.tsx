@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -8,7 +8,21 @@ import { PageHeaderProvider } from '@/lib/pageHeader/PageHeaderContext';
 import type { DashboardSummary } from '@/lib/api/types';
 
 vi.mock('@/features/catalogue/api', () => ({
-    fetchCourses: vi.fn().mockResolvedValue({ data: [] }),
+    fetchCourses: vi.fn().mockResolvedValue({ data: [{ id: 6, title: 'SEO', status: 'published', instructors: [] }] }),
+}));
+
+// One published course with an at-risk student — the at-risk card should open its gradebook.
+vi.mock('@/features/analytics/api', () => ({
+    fetchCourseAnalytics: vi.fn().mockResolvedValue({
+        total_students: 5,
+        completed_students: 1,
+        completion_rate: 20,
+        at_risk_students: [
+            { student: { id: 9, name: 'Henry Lutaaya', email: 'henry@example.com' }, enrolled_at: '2026-08-22T12:00:00Z', last_engaged_at: null, final_grade_percent: null, risk_factor: 'No activity' },
+        ],
+        engagement_summary: {},
+        roster: [],
+    }),
 }));
 
 const { summary } = vi.hoisted(() => {
@@ -64,6 +78,38 @@ vi.mock('@/features/admin/dashboard/api', () => ({
     fetchDashboardSummary: vi.fn().mockResolvedValue(summary),
 }));
 
+// The Needs-action and Cohorts panels read from the same endpoints the Payments,
+// Applications and Cohorts pages use.
+const { page } = vi.hoisted(() => ({
+    page: <T,>(data: T[], total = data.length) => ({
+        data,
+        meta: { current_page: 1, last_page: 1, per_page: 50, total },
+        links: { first: null, last: null, prev: null, next: null },
+    }),
+}));
+
+vi.mock('@/features/admin/payments/api', () => ({
+    fetchOrders: vi.fn().mockResolvedValue(page([
+        { id: 1, pending_submission: { id: 9 } },
+        { id: 2, pending_submission: { id: 10 } },
+        { id: 3, pending_submission: null },
+    ])),
+    fetchPaymentSummary: vi.fn().mockResolvedValue({
+        by_currency: [{ currency: 'UGX', orders: 5, expected: 2000000, received: 500000, outstanding: 1500000 }],
+    }),
+}));
+
+vi.mock('@/features/courseApplications/api', () => ({
+    fetchCourseApplications: vi.fn().mockResolvedValue(page([], 7)),
+}));
+
+vi.mock('@/features/cohorts/api', () => ({
+    fetchCohorts: vi.fn().mockResolvedValue([
+        { id: 1, name: 'november-2099', start_date: '2099-11-02', end_date: '2099-12-18', application_deadline: '2099-10-23', status: 'published', course_count: 2, courses: [{ status: 'open', is_accepting_applications: true }] },
+        { id: 2, name: 'Legacy self-paced', start_date: '2026-01-01', end_date: '2036-01-01', application_deadline: null, status: 'archived', course_count: 1, courses: [] },
+    ]),
+}));
+
 function renderPage() {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
@@ -78,22 +124,31 @@ function renderPage() {
     );
 }
 
-it('shows stat cards from the fetched summary and quick action links to the right routes', async () => {
+it('shows needs-action counts, honest volume metrics, cohorts and readable activity', async () => {
     renderPage();
 
+    // Volume
     expect(await screen.findByText('42')).toBeInTheDocument();
-    expect(screen.getByText('5')).toBeInTheDocument();
-    expect(screen.getByText('10')).toBeInTheDocument();
-    expect(screen.getByText('8 published · 2 draft')).toBeInTheDocument();
     expect(screen.getByText('60')).toBeInTheDocument();
-    expect(screen.getByText('12')).toBeInTheDocument();
-    expect(screen.getByText('3')).toBeInTheDocument();
-    expect(screen.getByText('4')).toBeInTheDocument();
+    const receivedCard = screen.getByText('Received (MTD)').closest<HTMLElement>('.rounded-xl')!;
+    expect(within(receivedCard).getByText('UGX 500.0K')).toBeInTheDocument();
+    expect(await screen.findByText('UGX 1.5M still outstanding')).toBeInTheDocument();
+    expect(screen.getByText('Certificate rate')).toBeInTheDocument();
+    expect(screen.getByText('12 of 60 enrolments')).toBeInTheDocument();
+
+    // Needs action — including the counts that come from other endpoints
+    expect(await screen.findByRole('link', { name: /Payments\s*2\s*Receipts to confirm/ })).toHaveAttribute('href', '/admin/payments');
+    expect(await screen.findByRole('link', { name: /Applications\s*7\s*Waiting for a decision/ })).toHaveAttribute('href', '/admin/applications');
+    expect(await screen.findByRole('link', { name: /At-risk students\s*4/ })).toHaveAttribute('href', '/admin/courses/6/gradebook');
+    expect(await screen.findByText('Henry Lutaaya')).toBeInTheDocument();
+
+    // Cohorts: open cohorts shown with a humanised name; archived ones hidden
+    expect(await screen.findByText('November 2099')).toBeInTheDocument();
+    expect(screen.queryByText('Legacy self-paced')).not.toBeInTheDocument();
+    expect(screen.getByText(/8 published courses/)).toBeInTheDocument();
 
     expect(screen.getByRole('link', { name: /New course/ })).toHaveAttribute('href', '/admin/courses/new');
     expect(screen.getByRole('link', { name: /Provision user/ })).toHaveAttribute('href', '/admin/users');
-    expect(screen.queryByText('Categories')).not.toBeInTheDocument();
-
     expect(screen.getByText('Resnet Admin confirmed an enrolment.')).toBeInTheDocument();
 });
 

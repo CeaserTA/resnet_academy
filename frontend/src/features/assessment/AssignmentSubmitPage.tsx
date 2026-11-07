@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import {
     Award,
+    BookOpen,
     CheckCircle2,
     Clock,
     FileText,
@@ -18,17 +19,17 @@ import { useCourse } from '@/features/catalogue/useCourses';
 import { ApiError } from '@/lib/api/client';
 import { useAssignment, useAssignmentSubmissions, useSubmitAssignment } from '@/features/assessment/useAssessment';
 import { useMyEnrolments } from '@/features/enrolment/useEnrolments';
-import type { AssignmentSubmission } from '@/lib/api/types';
+import type { Assignment, AssignmentSubmission } from '@/lib/api/types';
+import { cn } from '@/lib/utils';
+import { PageFrame } from '@/components/layout/PageFrame';
+import { formatDateTime } from '@/lib/formatDate';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatDate(iso: string) {
-    return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-}
 
 // ─── Existing submission panel ────────────────────────────────────────────────
 
-function ExistingSubmission({ submission, onResubmit }: { submission: AssignmentSubmission; onResubmit: () => void }) {
+function ExistingSubmission({ submission }: { submission: AssignmentSubmission }) {
     const isGraded = submission.status === 'graded';
     const score = submission.final_score ?? submission.raw_score;
 
@@ -50,8 +51,8 @@ function ExistingSubmission({ submission, onResubmit }: { submission: Assignment
                 </div>
                 <div className="px-4 py-3">
                     <p className="text-xs text-ink-600">
-                        Submitted {formatDate(submission.submitted_at)}
-                        {submission.is_late && <span className="ml-2 text-amber-600">(late)</span>}
+                        Submitted {formatDateTime(submission.submitted_at)}
+                        {submission.is_late && <span className="ml-2 text-warning-600">(late)</span>}
                     </p>
                 </div>
             </div>
@@ -66,9 +67,9 @@ function ExistingSubmission({ submission, onResubmit }: { submission: Assignment
                         </div>
                     </div>
                     <div className="px-4 py-3">
-                        <p className="text-2xl font-bold text-success-600">{score} pts</p>
+                        <p className="text-2xl font-bold text-success-600">{formatPoints(score)} pts</p>
                         {submission.is_late && Number(submission.late_penalty_percent) > 0 && (
-                            <p className="mt-0.5 text-xs text-amber-600">
+                            <p className="mt-0.5 text-xs text-warning-600">
                                 {submission.late_penalty_percent}% late penalty applied
                             </p>
                         )}
@@ -84,8 +85,9 @@ function ExistingSubmission({ submission, onResubmit }: { submission: Assignment
             {/* Submitted content */}
             {submission.text_content && (
                 <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
-                    <div className="border-b border-surface-100 bg-surface-50 px-4 py-2.5">
-                        <p className="text-xs font-medium uppercase tracking-wide text-ink-600">Your answer</p>
+                    <div className="flex items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-3">
+                        <FileText className="size-4 shrink-0 text-blue-600" aria-hidden="true" />
+                        <p className="text-sm font-semibold text-ink-900">Your answer</p>
                     </div>
                     <p className="whitespace-pre-wrap px-4 py-3 text-sm text-ink-900 leading-relaxed">
                         {submission.text_content}
@@ -104,15 +106,23 @@ function ExistingSubmission({ submission, onResubmit }: { submission: Assignment
                     View submitted file
                 </a>
             )}
-
-            <Button variant="secondary" size="sm" onClick={onResubmit} className="self-start">
-                Submit another attempt
-            </Button>
         </div>
     );
 }
 
+/** "100.00" → "100", "72.50" → "72.5". */
+function formatPoints(value: number | string): string {
+    return String(Number(Number(value).toFixed(1)));
+}
+
 // ─── Submission form ──────────────────────────────────────────────────────────
+
+/** Plain-language names for the assignment's accepted submission format. */
+const SUBMISSION_TYPE_LABELS: Record<Assignment['submission_type'], string> = {
+    file: 'File upload',
+    text: 'Written answer',
+    both: 'File or written answer',
+};
 
 function SubmissionForm({ assignmentId, submissionType, onSuccess }: {
     assignmentId: number;
@@ -156,8 +166,8 @@ function SubmissionForm({ assignmentId, submissionType, onSuccess }: {
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             {error && <Alert variant="error" message={error} />}
 
-            <div className="overflow-hidden rounded-xl border border-dashed border-surface-100 bg-surface-50">
-                <div className="border-b border-surface-100 bg-surface-0 px-4 py-3">
+            <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
+                <div className="border-b border-surface-100 bg-surface-50 px-4 py-3">
                     <div className="flex items-center gap-2">
                         <Upload className="size-4 text-blue-600" aria-hidden="true" />
                         <p className="text-sm font-semibold text-ink-900">Your submission</p>
@@ -201,12 +211,14 @@ function SubmissionForm({ assignmentId, submissionType, onSuccess }: {
                         />
                     )}
                 </div>
-            </div>
 
-            <Button type="submit" isLoading={submit.isPending} className="w-full justify-center">
-                <Send className="size-4" aria-hidden="true" />
-                {submit.isPending ? 'Submitting…' : 'Submit assignment'}
-            </Button>
+                <div className="flex justify-end border-t border-surface-100 bg-surface-50 px-4 py-3">
+                    <Button type="submit" isLoading={submit.isPending} className="rounded-full">
+                        <Send className="size-4" aria-hidden="true" />
+                        {submit.isPending ? 'Submitting…' : 'Submit assignment'}
+                    </Button>
+                </div>
+            </div>
         </form>
     );
 }
@@ -224,7 +236,6 @@ export function AssignmentSubmitPage() {
     const { data: enrolmentsPage, isLoading: enrolmentsLoading } = useMyEnrolments();
     const { data: submissions, isLoading: submissionsLoading } = useAssignmentSubmissions(assignmentId, !!assignment);
 
-    const [showResubmitForm, setShowResubmitForm] = useState(false);
     const [justSubmitted, setJustSubmitted] = useState(false);
 
     if (assignmentLoading || enrolmentsLoading) {
@@ -235,7 +246,7 @@ export function AssignmentSubmitPage() {
         return (
             <div className="mx-auto max-w-xl py-12 text-center">
                 <p className="text-ink-600">Assignment not found.</p>
-                <Link to="/dashboard" className="mt-3 inline-block text-sm text-blue-600 hover:underline">
+                <Link to="/my-courses" className="mt-3 inline-block text-sm text-blue-600 hover:underline">
                     Back to my courses
                 </Link>
             </div>
@@ -247,7 +258,7 @@ export function AssignmentSubmitPage() {
         return (
             <div className="mx-auto max-w-xl py-12 text-center">
                 <p className="text-ink-600">This link is missing course context.</p>
-                <Link to="/dashboard" className="mt-3 inline-block text-sm text-blue-600 hover:underline">
+                <Link to="/my-courses" className="mt-3 inline-block text-sm text-blue-600 hover:underline">
                     Back to my courses
                 </Link>
             </div>
@@ -271,29 +282,26 @@ export function AssignmentSubmitPage() {
     const isOverdue = assignment.due_at !== null && new Date(assignment.due_at) < new Date();
     const latestSubmission: AssignmentSubmission | null =
         !submissionsLoading && submissions && submissions.length > 0 ? submissions[0] : null;
-    const hasExistingSubmission = !!latestSubmission && !showResubmitForm && !justSubmitted;
+    // One submission per assignment from the student's side — once submitted, the page shows it
+    // (and later the grade); there is no resubmit path.
+    const hasExistingSubmission = !!latestSubmission;
 
     // Completion progress for the progress bar
     const attemptCount = submissions?.length ?? 0;
 
     return (
-        <div className="mx-auto max-w-5xl space-y-4">
-
-            {/* Breadcrumb */}
-            <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-ink-600">
-                <Link to="/dashboard" className="hover:text-blue-600">My courses</Link>
-                {course && (
-                    <>
-                        <span aria-hidden="true">/</span>
-                        <Link to={`/learn/courses/${courseId}`} className="hover:text-blue-600">{course.title}</Link>
-                    </>
-                )}
-                <span aria-hidden="true">/</span>
-                <span className="text-ink-600">{assignment.title}</span>
-            </nav>
+        <PageFrame
+            breadcrumbs={[
+                { label: 'My courses', to: '/my-courses' },
+                { label: course?.title ?? '', to: `/learn/courses/${courseId}` },
+                { label: assignment.title },
+            ]}
+            title={assignment.title}
+            subtitle={course?.title}
+        >
 
             {/* Two-column layout */}
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:items-start">
 
                 {/* LEFT — assignment details (1/3) */}
                 <div className="flex flex-col gap-3">
@@ -304,10 +312,10 @@ export function AssignmentSubmitPage() {
                             <div className="flex items-start justify-between gap-2">
                                 <div className="flex items-center gap-2">
                                     <FileText className="size-4 text-blue-600 shrink-0" aria-hidden="true" />
-                                    <h1 className="text-sm font-semibold text-ink-900 leading-tight">{assignment.title}</h1>
+                                    <p className="text-sm font-semibold leading-tight text-ink-900">Assignment details</p>
                                 </div>
                                 {isOverdue && !justSubmitted && (
-                                    <Badge label="Past due" tone="warning" icon={Clock} />
+                                    <Badge label="Past due" tone="danger" icon={Clock} />
                                 )}
                             </div>
                         </div>
@@ -318,7 +326,7 @@ export function AssignmentSubmitPage() {
                                 <div className="flex items-start justify-between gap-2 text-xs">
                                     <span className="text-ink-600">Due</span>
                                     <span className={isOverdue ? 'font-medium text-danger-600' : 'text-ink-900'}>
-                                        {formatDate(assignment.due_at)}
+                                        {formatDateTime(assignment.due_at)}
                                     </span>
                                 </div>
                             )}
@@ -326,13 +334,25 @@ export function AssignmentSubmitPage() {
                             {/* Max score */}
                             <div className="flex items-center justify-between text-xs">
                                 <span className="text-ink-600">Max score</span>
-                                <span className="font-semibold text-ink-900">{assignment.max_score} pts</span>
+                                <span className="font-semibold text-ink-900">{formatPoints(assignment.max_score)} pts</span>
                             </div>
 
                             {/* Submission type */}
                             <div className="flex items-center justify-between text-xs">
-                                <span className="text-ink-600">Type</span>
-                                <span className="capitalize text-ink-900">{assignment.submission_type.replace('_', ' ')}</span>
+                                <span className="text-ink-600">Submit as</span>
+                                <span className="text-ink-900">{SUBMISSION_TYPE_LABELS[assignment.submission_type]}</span>
+                            </div>
+
+                            {/* Late policy — straight from allow_late / late_penalty_policy_id */}
+                            <div className="flex items-start justify-between gap-2 text-xs">
+                                <span className="text-ink-600">Late submissions</span>
+                                <span className={cn('text-right', assignment.allow_late ? 'text-ink-900' : 'font-medium text-danger-600')}>
+                                    {!assignment.allow_late
+                                        ? 'Not accepted'
+                                        : assignment.late_penalty_policy_id !== null
+                                            ? 'Accepted — a late penalty may apply'
+                                            : 'Accepted'}
+                                </span>
                             </div>
 
                             {/* Attempts */}
@@ -343,20 +363,15 @@ export function AssignmentSubmitPage() {
                                 </div>
                             )}
 
-                            {/* Late policy note */}
-                            {!assignment.allow_late && (
-                                <p className="rounded-lg bg-danger-600/5 px-3 py-2 text-xs text-danger-600">
-                                    Late submissions are not accepted.
-                                </p>
-                            )}
                         </div>
                     </div>
 
                     {/* Instructions */}
                     {assignment.instructions && (
                         <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
-                            <div className="border-b border-surface-100 bg-surface-50 px-4 py-2.5">
-                                <p className="text-xs font-medium uppercase tracking-wide text-ink-600">Instructions</p>
+                            <div className="flex items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-3">
+                                <BookOpen className="size-4 shrink-0 text-blue-600" aria-hidden="true" />
+                                <p className="text-sm font-semibold text-ink-900">Instructions</p>
                             </div>
                             <p className="whitespace-pre-wrap px-4 py-3 text-sm text-ink-900 leading-relaxed">
                                 {assignment.instructions}
@@ -366,7 +381,7 @@ export function AssignmentSubmitPage() {
                 </div>
 
                 {/* RIGHT — submission area (2/3) */}
-                <div className="lg:col-span-2 flex flex-col gap-3">
+                <div className="md:col-span-2 flex flex-col gap-3">
 
                     {/* Success */}
                     {justSubmitted && (
@@ -386,10 +401,7 @@ export function AssignmentSubmitPage() {
 
                     {/* Existing submission */}
                     {hasExistingSubmission && latestSubmission && (
-                        <ExistingSubmission
-                            submission={latestSubmission}
-                            onResubmit={() => setShowResubmitForm(true)}
-                        />
+                        <ExistingSubmission submission={latestSubmission} />
                     )}
 
                     {/* Submission form */}
@@ -397,14 +409,11 @@ export function AssignmentSubmitPage() {
                         <SubmissionForm
                             assignmentId={assignmentId}
                             submissionType={assignment.submission_type}
-                            onSuccess={() => {
-                                setShowResubmitForm(false);
-                                setJustSubmitted(true);
-                            }}
+                            onSuccess={() => setJustSubmitted(true)}
                         />
                     )}
                 </div>
             </div>
-        </div>
+        </PageFrame>
     );
 }

@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useQueries } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import {
     AlertTriangle,
-    ArrowRight,
     BookOpen,
+    CalendarRange,
+    CreditCard,
     ClipboardList,
     FileCheck,
     GraduationCap,
@@ -17,17 +19,29 @@ import {
     Users,
     Wallet,
 } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Spinner } from '@/components/ui/Spinner';
 import { Modal } from '@/components/ui/Modal';
 import { VolumeCard } from '@/components/dashboard/VolumeCard';
+import { AttentionCard } from '@/components/dashboard/AttentionCard';
+import { QuickActionButton, type QuickAction } from '@/components/dashboard/QuickActionButton';
+import { DashboardPanel, NeedsActionBand, SectionLabel, ViewAllLink } from '@/components/dashboard/DashboardPanel';
+import { PageFrame } from '@/components/layout/PageFrame';
+import { AtRiskPanel } from '@/components/dashboard/AtRiskPanel';
+import { collectAtRisk, worstAtRiskCourse } from '@/lib/atRisk';
+import { useCourses } from '@/features/catalogue/useCourses';
+import { fetchCourseAnalytics } from '@/features/analytics/api';
 import { useDashboardSummary } from '@/features/admin/dashboard/useDashboard';
+import { useOrders, usePaymentSummary } from '@/features/admin/payments/useAdminPayments';
+import { useCourseApplications } from '@/features/courseApplications/useCourseApplications';
+import { useCohorts } from '@/features/cohorts/useCohorts';
+import { cohortPhase, daysUntil, displayCohortName } from '@/lib/cohort';
+import type { Cohort } from '@/lib/api/types';
 import { BulkImportForm } from '@/features/admin/enrolments/BulkImportForm';
-import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import { formatRelativeTime } from '@/lib/utils';
 import { describeAuditLogEntry } from '@/lib/auditLog';
 import { cn } from '@/lib/utils';
+import { formatDateRange } from '@/lib/formatDate';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -37,80 +51,103 @@ function formatCurrency(amount: number, currency: string): string {
     return new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 0 }).format(amount);
 }
 
-// ─── Attention card ───────────────────────────────────────────────────────────
+// ─── Cohort row ───────────────────────────────────────────────────────────────
 
-interface AttentionCardProps {
-    icon: LucideIcon;
-    label: string;
-    value: number | string;
-    sub: string;
-    tone: 'danger' | 'warning' | 'neutral';
-    to?: string;
-}
+function CohortRow({ cohort }: { cohort: Cohort }) {
+    const running = cohortPhase(cohort) === 'in_progress';
+    const deadlineDays = cohort.application_deadline ? daysUntil(cohort.application_deadline) : null;
+    const courseCount = cohort.course_count ?? cohort.courses.length;
 
-const ATTENTION_STYLES: Record<AttentionCardProps['tone'], { card: string; icon: string; value: string }> = {
-    danger: { card: 'bg-danger-600/5 border-danger-600/15', icon: 'bg-danger-600/10 text-danger-600', value: 'text-danger-600' },
-    // accent-amber, not amber-500 — amber-500 is only 2.2:1 on white, too faint for text/icons.
-    warning: { card: 'bg-amber-100/50 border-amber-100', icon: 'bg-amber-100 text-accent-amber', value: 'text-accent-amber' },
-    neutral: { card: 'bg-surface-0 border-surface-100', icon: 'bg-surface-100 text-ink-600', value: 'text-ink-900' },
-};
-
-function AttentionCard({ icon: Icon, label, value, sub, tone, to }: AttentionCardProps) {
-    const s = ATTENTION_STYLES[tone];
-    const inner = (
-        <div className={cn('group flex flex-col gap-3 rounded-xl border p-4 shadow-sm transition-all hover:shadow-md', s.card)}>
-            <div className="flex items-start justify-between">
-                <p className="text-xs font-medium uppercase tracking-widest text-ink-600">{label}</p>
-                <span className={cn('flex size-7 items-center justify-center rounded-lg', s.icon)}>
-                    <Icon className="size-3.5" aria-hidden="true" />
+    return (
+        <li>
+            <Link to={`/admin/cohorts/${cohort.id}`} className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-surface-50">
+                <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <CalendarRange className="size-3.5" aria-hidden="true" />
                 </span>
-            </div>
-            <p className={cn('text-3xl font-bold tabular-nums', s.value)}>{value}</p>
-            <p className="text-xs text-ink-600">{sub}</p>
-        </div>
+                <span className="min-w-0 flex-1">
+                    <span className="flex items-center justify-between gap-2">
+                        <span className="truncate text-sm font-medium text-ink-900">{displayCohortName(cohort.name)}</span>
+                        <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold', running ? 'bg-primary/10 text-primary' : 'bg-success-600/10 text-success-600')}>
+                            {running ? 'Running' : 'Open'}
+                        </span>
+                    </span>
+                    <span className="mt-0.5 block text-xs text-ink-600">
+                        {formatDateRange(cohort.start_date, cohort.end_date)} · {courseCount} course{courseCount === 1 ? '' : 's'}
+                        {!running && deadlineDays !== null && deadlineDays >= 0 && ` · apply within ${deadlineDays} day${deadlineDays === 1 ? '' : 's'}`}
+                    </span>
+                </span>
+            </Link>
+        </li>
     );
-    if (to) return <Link to={to} className="block">{inner}</Link>;
-    return inner;
-}
-
-// ─── Quick action ─────────────────────────────────────────────────────────────
-
-interface QuickAction { label: string; icon: LucideIcon; to?: string; onClick?: () => void; }
-
-function QuickActionBtn({ action }: { action: QuickAction }) {
-    const cls = 'flex items-center gap-2.5 rounded-lg border border-surface-100 bg-surface-0 px-3 py-2.5 text-sm font-medium text-ink-900 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 w-full';
-    const inner = (
-        <>
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-blue-600/8 text-blue-600">
-                <action.icon className="size-3.5" aria-hidden="true" />
-            </span>
-            {action.label}
-            <ArrowRight className="ml-auto size-3.5 text-ink-300" aria-hidden="true" />
-        </>
-    );
-    if (action.to) return <Link to={action.to} className={cls}>{inner}</Link>;
-    return <button type="button" onClick={action.onClick} className={cls}>{inner}</button>;
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+function useDayGreeting() {
+    return useMemo(() => {
+        const hour = new Date().getHours();
+        if (hour < 12) return 'Good morning';
+        if (hour < 18) return 'Good afternoon';
+        return 'Good evening';
+    }, []);
+}
+
 export function AdminDashboardPage() {
-    usePageHeader('Dashboard', 'Overview of your academy');
+    const greeting = useDayGreeting();
     const { data, isLoading } = useDashboardSummary();
+    // The summary endpoint doesn't carry these, so read them from the same endpoints the
+    // Applications / Payments / Cohorts pages use.
+    const { data: pendingApplications } = useCourseApplications({ status: 'pending' });
+    const { data: receivables } = useOrders('pending');
+    const { data: paymentSummary } = usePaymentSummary();
+    const { data: cohorts } = useCohorts();
     const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
 
+    // Who is at risk, and in which course — the summary only carries the total. Same per-course
+    // analytics the instructor dashboard uses, for every published course.
+    const { data: coursesData } = useCourses({});
+    const publishedCourses = (coursesData?.data ?? []).filter((c) => c.status === 'published');
+    const analytics = useQueries({
+        queries: publishedCourses.map((course) => ({
+            queryKey: ['courses', course.id, 'analytics'],
+            queryFn: () => fetchCourseAnalytics(course.id),
+        })),
+    });
+    const atRiskList = collectAtRisk(publishedCourses, analytics.map((q) => q.data));
+    const worstCourse = worstAtRiskCourse(atRiskList);
+
     if (isLoading || !data) {
-        return <div className="flex h-64 items-center justify-center"><Spinner /></div>;
+        return (
+            <PageFrame title="Dashboard" subtitle="Overview of your academy">
+                <div className="flex h-64 items-center justify-center"><Spinner /></div>
+            </PageFrame>
+        );
     }
 
-    const totalRevenue =
-        data.revenue_by_currency.length > 0
-            ? formatCurrency(data.revenue_by_currency[0].total, data.revenue_by_currency[0].currency)
-            : '—';
+    // The first currency is the headline; any others are listed underneath rather than dropped.
+    const [revenue, ...otherRevenue] = data.revenue_by_currency;
+    const totalRevenue = revenue ? formatCurrency(revenue.total, revenue.currency) : formatCurrency(0, 'UGX');
+    const outstanding = paymentSummary?.by_currency.find((c) => c.currency === (revenue?.currency ?? 'UGX')) ?? paymentSummary?.by_currency[0];
+    const revenueSub = [
+        ...otherRevenue.map((r) => `+ ${formatCurrency(r.total, r.currency)}`),
+        ...(outstanding ? [`${formatCurrency(outstanding.outstanding, outstanding.currency)} still outstanding`] : []),
+    ].join(' · ');
 
-    const avgCompletion = data.confirmed_enrolments > 0
+    // Certificates ÷ confirmed enrolments — labelled as what it is, not "completion".
+    const certificateRate = data.confirmed_enrolments > 0
         ? `${Math.min(Math.round((data.certificates_issued / data.confirmed_enrolments) * 100), 100)}%`
         : '0%';
+
+    const paymentsToReview = receivables?.data.filter((order) => order.pending_submission).length;
+
+    // Cohorts people can still join or are studying in now, soonest first.
+    const activeCohorts = (cohorts ?? [])
+        .filter((cohort) => cohort.status === 'published' && ['open', 'in_progress'].includes(cohortPhase(cohort)))
+        .sort((a, b) => a.start_date.localeCompare(b.start_date))
+        .slice(0, 3);
+
+    // Newest first by when it happened (the API orders by id).
+    const recentActivity = [...data.recent_audit_logs].sort((a, b) => b.created_at.localeCompare(a.created_at));
 
     const quickActions: QuickAction[] = [
         { to: '/admin/courses/new', label: 'New course', icon: Plus },
@@ -120,29 +157,67 @@ export function AdminDashboardPage() {
     ];
 
     return (
-        <div className="max-w-7xl space-y-5">
+        <PageFrame title="Dashboard">
+
+            {/* ── Welcome banner ────────────────────────────────────────────── */}
+            <div className="flex items-center justify-between gap-4 rounded-2xl bg-navy px-6 py-6 shadow-sm sm:px-8">
+                <div className="min-w-0">
+                    <p className="text-xs text-navy-foreground/50">{greeting}, Admin</p>
+                    <h1 className="font-display text-2xl font-semibold text-navy-foreground sm:text-3xl">Admin Dashboard</h1>
+                    <p className="mt-0.5 text-sm text-navy-foreground/70">Overview of your academy</p>
+                    <div className="mt-4 flex flex-wrap gap-3">
+                        <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-navy-foreground">
+                            {data.students.toLocaleString()} students
+                        </span>
+                        <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-navy-foreground">
+                            {data.confirmed_enrolments.toLocaleString()} active enrolments
+                        </span>
+                        <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-navy-foreground">
+                            {data.certificates_issued.toLocaleString()} certificates issued
+                        </span>
+                    </div>
+                </div>
+                <div className="hidden md:flex items-center gap-3">
+                    <div className="rounded-xl bg-white/10 px-4 py-3 text-center">
+                        <p className="text-xs font-medium text-navy-foreground/60 uppercase tracking-wider">Total Revenue</p>
+                        <p className="mt-0.5 text-lg font-bold text-navy-foreground">{totalRevenue}</p>
+                    </div>
+                </div>
+            </div>
 
             {/* ── Needs action ──────────────────────────────────────────────── */}
             {/* Sits on a tinted band with a stronger label so it reads as "act on this", while the
                 Volume row below stays flat on the page background as purely informational. */}
-            <section className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
-                <p className="mb-3 text-xs font-bold uppercase tracking-widest text-blue-700">Needs action</p>
-                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                    <AttentionCard icon={AlertTriangle} label="At-risk students" value={data.at_risk_students} sub="No activity in 14 days" tone="danger" to="/admin/courses" />
-                    <AttentionCard icon={LifeBuoy} label="Open tickets" value={data.open_tickets} sub="Awaiting response" tone="warning" to="/tickets" />
-                    <AttentionCard icon={Star} label="Pending reviews" value={data.pending_reviews} sub="Awaiting approval" tone="neutral" to="/admin/reviews" />
-                    <AttentionCard icon={FileCheck} label="Applications" value="—" sub="Review pending applications" tone="neutral" to="/admin/applications" />
+            <NeedsActionBand>
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
+                    <AttentionCard icon={AlertTriangle} label="At-risk students" value={data.at_risk_students} sub="No activity in 14 days" tone={data.at_risk_students > 0 ? 'danger' : 'neutral'} to={worstCourse ? `/admin/courses/${worstCourse.id}/gradebook` : undefined} />
+                    <AttentionCard icon={CreditCard} label="Payments" value={paymentsToReview ?? '—'} sub="Receipts to confirm" tone={paymentsToReview ? 'warning' : 'neutral'} to="/admin/payments" />
+                    <AttentionCard icon={FileCheck} label="Applications" value={pendingApplications?.meta.total ?? '—'} sub="Waiting for a decision" tone={pendingApplications?.meta.total ? 'warning' : 'neutral'} to="/admin/applications" />
+                    <AttentionCard icon={LifeBuoy} label="Open tickets" value={data.open_tickets} sub="Awaiting response" tone={data.open_tickets > 0 ? 'warning' : 'neutral'} to="/tickets" />
+                    <AttentionCard icon={Star} label="Pending reviews" value={data.pending_reviews} sub="Awaiting approval" tone={data.pending_reviews > 0 ? 'warning' : 'neutral'} to="/admin/reviews" />
                 </div>
-            </section>
+            </NeedsActionBand>
 
             {/* ── Volume metrics ────────────────────────────────────────────── */}
             <section>
-                <p className="mb-2.5 text-xs font-semibold uppercase tracking-widest text-ink-600">Volume</p>
+                <SectionLabel>Volume</SectionLabel>
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                    <VolumeCard icon={Users} label="Total students" value={data.students.toLocaleString()} />
-                    <VolumeCard icon={UserCheck} label="Active enrolments" value={data.confirmed_enrolments.toLocaleString()} />
-                    <VolumeCard icon={Wallet} label="Revenue (MTD)" value={totalRevenue} />
-                    <VolumeCard icon={TrendingUp} label="Avg. completion" value={avgCompletion} />
+                    <VolumeCard icon={Users} label="Total students" value={data.students.toLocaleString()} accentColor="primary" />
+                    <VolumeCard icon={UserCheck} label="Active enrolments" value={data.confirmed_enrolments.toLocaleString()} accentColor="success" />
+                    <VolumeCard
+                        icon={Wallet}
+                        label="Received (MTD)"
+                        value={totalRevenue}
+                        sub={revenueSub || undefined}
+                        accentColor="amber"
+                    />
+                    <VolumeCard
+                        icon={TrendingUp}
+                        label="Certificate rate"
+                        value={certificateRate}
+                        sub={`${data.certificates_issued} of ${data.confirmed_enrolments.toLocaleString()} enrolments`}
+                        accentColor="primary"
+                    />
                 </div>
             </section>
 
@@ -150,19 +225,13 @@ export function AdminDashboardPage() {
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
 
                 {/* Recent activity — 2/3 */}
-                <div className="lg:col-span-2 overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
-                    <div className="flex items-center justify-between border-b border-surface-100 bg-surface-50 px-4 py-3">
-                        <h2 className="text-sm font-semibold text-ink-900">Recent activity</h2>
-                        <Link to="/admin/audit-log" className="flex items-center gap-1 text-xs text-blue-600 hover:underline">
-                            View all <ArrowRight className="size-3" aria-hidden="true" />
-                        </Link>
-                    </div>
+                <DashboardPanel title="Recent activity" action={<ViewAllLink to="/admin/audit-log" />} className="lg:col-span-2">
 
-                    {data.recent_audit_logs.length === 0 ? (
+                    {recentActivity.length === 0 ? (
                         <p className="px-4 py-8 text-center text-sm text-ink-600">Nothing logged yet.</p>
                     ) : (
                         <ul className="divide-y divide-surface-100">
-                            {data.recent_audit_logs.map((entry) => (
+                            {recentActivity.map((entry) => (
                                 <li key={entry.id} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-surface-50">
                                     <div className="flex min-w-0 items-center gap-3">
                                         <Avatar
@@ -171,7 +240,7 @@ export function AdminDashboardPage() {
                                             size="sm"
                                             className="size-7 shrink-0 text-xs"
                                         />
-                                        <p className="truncate text-sm text-ink-900">
+                                        <p className="line-clamp-2 text-sm text-ink-900 sm:line-clamp-1">
                                             {describeAuditLogEntry(entry)}
                                         </p>
                                     </div>
@@ -182,57 +251,47 @@ export function AdminDashboardPage() {
                             ))}
                         </ul>
                     )}
-                </div>
+                </DashboardPanel>
 
                 {/* Right column — quick actions + course breakdown */}
                 <div className="flex flex-col gap-4">
+                    <AtRiskPanel entries={atRiskList} isLoading={!coursesData || analytics.some((q) => q.isLoading)} limit={5} />
+
 
                     {/* Quick actions */}
-                    <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
-                        <div className="border-b border-surface-100 bg-surface-50 px-4 py-3">
-                            <h2 className="text-sm font-semibold text-ink-900">Quick actions</h2>
-                        </div>
-                        <div className="flex flex-col gap-1.5 p-3">
+                    <DashboardPanel title="Quick actions">
+                        <div className="grid grid-cols-2 gap-2 p-3">
                             {quickActions.map((action) => (
-                                <QuickActionBtn key={action.label} action={action} />
+                                <QuickActionButton key={action.label} action={action} />
                             ))}
                         </div>
-                    </div>
+                    </DashboardPanel>
 
-                    {/* Course breakdown */}
-                    <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
-                        <div className="border-b border-surface-100 bg-surface-50 px-4 py-3">
-                            <h2 className="text-sm font-semibold text-ink-900">Courses</h2>
-                        </div>
-                        {Object.entries(data.courses_by_status).length === 0 ? (
-                            <p className="px-4 py-5 text-center text-sm text-ink-600">No courses yet.</p>
+                    {/* Cohorts */}
+                    <DashboardPanel title="Cohorts" action={<ViewAllLink to="/admin/cohorts" label="All cohorts" />}>
+                        {activeCohorts.length === 0 ? (
+                            <p className="px-4 py-5 text-center text-sm text-ink-600">No open or running cohorts.</p>
                         ) : (
                             <ul className="divide-y divide-surface-100">
-                                {Object.entries(data.courses_by_status).map(([status, count]) => (
-                                    <li key={status} className="flex items-center justify-between px-4 py-2.5">
-                                        <div className="flex items-center gap-2">
-                                            <BookOpen className="size-3.5 text-ink-300" aria-hidden="true" />
-                                            <span className="text-sm capitalize text-ink-900">{status}</span>
-                                        </div>
-                                        <span className="text-sm font-semibold text-ink-900">{count}</span>
-                                    </li>
+                                {activeCohorts.map((cohort) => (
+                                    <CohortRow key={cohort.id} cohort={cohort} />
                                 ))}
-                                <li className="flex items-center justify-between bg-surface-50 px-4 py-2.5">
-                                    <div className="flex items-center gap-2">
-                                        <GraduationCap className="size-3.5 text-ink-300" aria-hidden="true" />
-                                        <span className="text-sm text-ink-600">Certificates issued</span>
-                                    </div>
-                                    <span className="text-sm font-semibold text-ink-900">{data.certificates_issued}</span>
-                                </li>
                             </ul>
                         )}
-                    </div>
+                        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-surface-100 bg-surface-50 px-4 py-2.5 text-xs text-ink-600">
+                            <BookOpen className="size-3.5 text-ink-300" aria-hidden="true" />
+                            {data.courses_by_status.published ?? 0} published courses
+                            <span aria-hidden="true">·</span>
+                            <GraduationCap className="size-3.5 text-ink-300" aria-hidden="true" />
+                            {data.certificates_issued} certificates issued
+                        </p>
+                    </DashboardPanel>
                 </div>
             </div>
 
             <Modal isOpen={isBulkImportOpen} onClose={() => setIsBulkImportOpen(false)} title="Bulk enrolment import">
                 <BulkImportForm onClose={() => setIsBulkImportOpen(false)} />
             </Modal>
-        </div>
+        </PageFrame>
     );
 }

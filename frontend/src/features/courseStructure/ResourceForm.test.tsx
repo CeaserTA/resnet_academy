@@ -30,12 +30,12 @@ it('shows only the fields relevant to the selected resource type', async () => {
     expect(await screen.findByLabelText('Lesson content')).toBeInTheDocument();
     expect(screen.queryByLabelText('Bunny Stream video ID')).not.toBeInTheDocument();
 
-    await selectRadixOption(user, 'Type', 'Video');
+    await user.click(screen.getByRole('button', { name: 'Video' }));
 
     expect(screen.getByLabelText('Bunny Stream video ID')).toBeInTheDocument();
     expect(screen.queryByLabelText('Lesson content')).not.toBeInTheDocument();
 
-    await selectRadixOption(user, 'Type', 'Live session');
+    await user.click(screen.getByRole('button', { name: 'Live' }));
 
     expect(screen.getByLabelText('Meeting URL')).toBeInTheDocument();
     expect(screen.getByLabelText('Duration (minutes)')).toBeInTheDocument();
@@ -79,7 +79,7 @@ it('defaults a document resource to file upload, and submits the picked file', a
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(<ResourceForm onSubmit={onSubmit} onCancel={vi.fn()} />);
 
-    await selectRadixOption(user, 'Type', 'Document (PDF/PPTX/DOCX)');
+    await user.click(screen.getByRole('button', { name: 'Document' }));
 
     expect(screen.queryByLabelText('File URL')).not.toBeInTheDocument();
 
@@ -98,7 +98,7 @@ it('lets a document resource fall back to pasting a URL instead of uploading', a
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(<ResourceForm onSubmit={onSubmit} onCancel={vi.fn()} />);
 
-    await selectRadixOption(user, 'Type', 'Document (PDF/PPTX/DOCX)');
+    await user.click(screen.getByRole('button', { name: 'Document' }));
     await user.click(screen.getByRole('button', { name: 'Paste a URL instead' }));
 
     await user.type(screen.getByLabelText('Title'), 'Syllabus');

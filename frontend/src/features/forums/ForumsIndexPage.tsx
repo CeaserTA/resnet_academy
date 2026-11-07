@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Alert } from '@/components/ui/Alert';
+import { PageFrame } from '@/components/layout/PageFrame';
+import { formatDate } from '@/lib/formatDate';
 
 /**
  * ForumsIndexPage - Unified view of all forums from enrolled courses
@@ -61,13 +63,7 @@ export function ForumsIndexPage() {
     }
 
     return (
-        <div className="mx-auto max-w-4xl py-6">
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold text-ink-900">Forums</h1>
-                <p className="mt-1 text-sm text-ink-600">
-                    Discuss course topics, ask questions, and collaborate with fellow students
-                </p>
-            </div>
+        <PageFrame title="Forums" subtitle="Discuss course topics, ask questions, and collaborate with fellow students">
 
             <div className="space-y-4">
                 {forums.map((forum) => (
@@ -131,7 +127,7 @@ export function ForumsIndexPage() {
                     </Link>
                 ))}
             </div>
-        </div>
+        </PageFrame>
     );
 }
 
@@ -151,6 +147,6 @@ function formatTimestamp(isoString: string): string {
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
 
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return formatDate(date);
 }
 
