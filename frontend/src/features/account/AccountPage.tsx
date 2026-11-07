@@ -21,6 +21,7 @@ import {
     useUploadAvatar,
 } from '@/features/account/useAccount';
 import type { User } from '@/lib/api/types';
+import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 
@@ -223,6 +224,7 @@ export function AccountPage() {
     const requestDeactivation = useRequestAccountDeactivation();
     const logoutOtherSessions = useLogoutOtherSessions();
     const uploadAvatar = useUploadAvatar();
+    usePageHeader('My profile', 'Your details, address and account security');
 
     const [isConfirmingDeactivation, setIsConfirmingDeactivation] = useState(false);
     const [avatarError, setAvatarError] = useState<string | null>(null);
@@ -239,12 +241,9 @@ export function AccountPage() {
         }
     }, []);
 
+    // Hard to reverse (signs out immediately; only an admin can reactivate), so it gets the same
+    // confirm modal as withdrawing from a course.
     const handleDeactivate = async () => {
-        if (!isConfirmingDeactivation) {
-            setIsConfirmingDeactivation(true);
-            return;
-        }
-
         await requestDeactivation.mutateAsync();
         await refetch();
         navigate('/?auth=login');
@@ -291,10 +290,8 @@ export function AccountPage() {
     const locationLabel = [user.city, user.country].filter(Boolean).join(', ');
 
     return (
-        <div className="mx-auto max-w-3xl">
-            <h1 className="text-2xl">My Profile</h1>
-
-            <Card className="mt-6 shadow-none">
+        <div>
+            <Card className="shadow-none">
                 {/* Profile */}
                 <div>
                     <div className="flex flex-wrap items-start justify-between gap-4">
@@ -431,9 +428,6 @@ export function AccountPage() {
                         </Button>
                     </div>
 
-                    {requestDeactivation.isError && (
-                        <Alert variant="error" message="Couldn't deactivate your account. Try again." className="mt-3" />
-                    )}
                     <div className="mt-4 flex items-center justify-between gap-4 border-t border-surface-100 pt-4">
                         <div>
                             <p className="text-sm text-ink-900">Deactivate my account</p>
@@ -441,14 +435,37 @@ export function AccountPage() {
                                 Signs you out and locks your account until an administrator reactivates it.
                             </p>
                         </div>
-                        <Button variant="destructive" onClick={handleDeactivate} isLoading={requestDeactivation.isPending}>
+                        <Button variant="destructive" onClick={() => setIsConfirmingDeactivation(true)}>
                             <ShieldAlert className="size-4" aria-hidden="true" />
-                            {isConfirmingDeactivation ? 'Confirm deactivation?' : 'Deactivate my account'}
+                            Deactivate my account
                         </Button>
                     </div>
                 </div>
             </Card>
 
+            {isConfirmingDeactivation && (
+                <Modal
+                    isOpen
+                    onClose={() => setIsConfirmingDeactivation(false)}
+                    title="Deactivate your account?"
+                    footer={
+                        <>
+                            <Button variant="ghost" onClick={() => setIsConfirmingDeactivation(false)}>Cancel</Button>
+                            <Button variant="destructive" onClick={handleDeactivate} isLoading={requestDeactivation.isPending}>
+                                Deactivate account
+                            </Button>
+                        </>
+                    }
+                >
+                    {requestDeactivation.isError && (
+                        <Alert variant="error" message="Couldn't deactivate your account. Try again." className="mb-3" />
+                    )}
+                    <p className="text-sm text-ink-600">
+                        You&apos;ll be signed out straight away and won&apos;t be able to sign in again until an administrator
+                        reactivates your account. Your courses, progress and certificates are kept.
+                    </p>
+                </Modal>
+            )}
             {isEditingProfile && <EditProfileModal user={user} onClose={() => setIsEditingProfile(false)} />}
             {isEditingAddress && <EditAddressModal user={user} onClose={() => setIsEditingAddress(false)} />}
             {isChangingPassword && <ChangePasswordModal onClose={() => setIsChangingPassword(false)} />}

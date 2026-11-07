@@ -12,6 +12,7 @@ use App\Http\Resources\AttemptReviewResource;
 use App\Http\Resources\EvaluationAttemptResource;
 use App\Models\Evaluation;
 use App\Models\EvaluationAttempt;
+use App\Models\User;
 use App\Services\Assessment\EvaluationAttemptService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -119,5 +120,34 @@ final class EvaluationAttemptController extends Controller
         $attempt = $this->attemptService->gradeManualAnswers($request->user(), $attempt, $request->validated('answer_grades'));
 
         return new EvaluationAttemptResource($attempt->load('answers'));
+    }
+
+    /**
+     * Staff give a student extra attempts at this evaluation (BACKEND_CHANGES.md §3).
+     */
+    public function grantExtraAttempts(Request $request, Evaluation $evaluation, User $student): JsonResponse
+    {
+        $this->authorize('grade', $evaluation);
+
+        $validated = $request->validate([
+            'attempts' => ['nullable', 'integer', 'min:1', 'max:5'],
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $allowance = $this->attemptService->grantExtraAttempts(
+            $request->user(),
+            $evaluation,
+            $student,
+            (int) ($validated['attempts'] ?? 1),
+            $validated['reason'] ?? null,
+        );
+
+        return response()->json([
+            'data' => [
+                'student_id' => $student->id,
+                'extra_attempts' => $allowance->extra_attempts,
+                'max_attempts' => $evaluation->maxAttemptsFor($student),
+            ],
+        ]);
     }
 }

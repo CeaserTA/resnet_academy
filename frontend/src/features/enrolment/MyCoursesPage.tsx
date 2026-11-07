@@ -1,40 +1,41 @@
 ﻿import { useEffect, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import {
     ArrowRight,
     Award,
     BookOpen,
     CalendarClock,
-    Compass,
     CreditCard,
     LogOut,
-    Star,
     TrendingUp,
     XCircle,
 } from 'lucide-react';
-import { useMyEnrolments, useSubmitPayment, useWithdrawEnrolment, useCancelTransferRequest } from '@/features/enrolment/useEnrolments';
+import { useMyEnrolments, useWithdrawEnrolment, useCancelTransferRequest } from '@/features/enrolment/useEnrolments';
 import { useDismissCourseApplication, useMyCourseApplications } from '@/features/courseApplications/useCourseApplications';
 import { useProgressDashboard } from '@/features/progress/useProgress';
-import { certificateDownloadUrl } from '@/features/progress/api';
+import { CertificateViewerModal } from '@/features/certificates/CertificateViewerModal';
 import { ApplicationStatusCard } from '@/features/enrolment/ApplicationStatusCard';
 import { ReviewFormModal } from '@/features/reviews/ReviewFormModal';
 import { useMyReviews } from '@/features/reviews/useReviews';
+import { ReviewStatus } from '@/features/reviews/ReviewStatus';
 import { ProfileCompletionModal } from '@/features/profile/ProfileCompletionModal';
 import { profileApi, type ProfileStatus } from '@/lib/api/profileApi';
 import { Spinner } from '@/components/ui/Spinner';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
 import { Alert } from '@/components/ui/Alert';
 import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ProgressBar } from '@/components/ui/ProgressBar';
+import { VolumeCard } from '@/components/dashboard/VolumeCard';
 import { courseProgressStatusDisplay, enrolmentStatusDisplay } from '@/lib/statusBadge';
-import { ApiError } from '@/lib/api/client';
 import type { CourseReview, Enrolment, ProgressDashboardRow } from '@/lib/api/types';
+import { formatDate } from '@/lib/formatDate';
+import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
+import { MakePaymentModal } from '@/features/enrolment/MakePaymentModal';
+import { payableEnrolments as payableEnrolmentsOf } from '@/lib/finance';
 
-const MAX_RECEIPT_BYTES = 5 * 1024 * 1024;
 const PROFILE_MODAL_DISMISSED_KEY = 'profile_completion_modal_dismissed';
 
 function formatAmount(amount: string | number, currency: string): string {
@@ -42,103 +43,6 @@ function formatAmount(amount: string | number, currency: string): string {
 }
 
 // ─── Profile completion modal ─────────────────────────────────────────────────
-
-// ─── Make payment modal ───────────────────────────────────────────────────────
-
-function MakePaymentModal({ enrolments, onClose, onSubmitted }: { enrolments: Enrolment[]; onClose: () => void; onSubmitted: () => void }) {
-    const submitPayment = useSubmitPayment();
-    const [selected, setSelected] = useState<Enrolment | null>(() => (enrolments.length === 1 ? enrolments[0] : null));
-    const [amount, setAmount] = useState(() =>
-        enrolments.length === 1 ? enrolments[0].order!.remaining_balance.toString() : '',
-    );
-    const [receipt, setReceipt] = useState<File | null>(null);
-    const [error, setError] = useState<string | null>(null);
-
-    const handleSelect = (enrolment: Enrolment) => {
-        setSelected(enrolment);
-        setAmount(enrolment.order!.remaining_balance.toString());
-    };
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        if (file.size > MAX_RECEIPT_BYTES) { setError('That file is over 5MB. Choose a smaller one.'); return; }
-        setError(null);
-        setReceipt(file);
-    };
-
-    const handleSubmit = async () => {
-        if (!selected?.order) return;
-        setError(null);
-        const numericAmount = Number(amount);
-        if (!numericAmount || numericAmount <= 0) { setError('Enter an amount greater than zero.'); return; }
-        if (numericAmount > selected.order.remaining_balance) { setError("You can't pay more than the remaining balance for this course."); return; }
-        if (!receipt) { setError('Attach a receipt image.'); return; }
-        try {
-            await submitPayment.mutateAsync({ orderId: selected.order.id, amount: numericAmount, receipt });
-            onSubmitted();
-            onClose();
-        } catch (err) {
-            setError(err instanceof ApiError ? err.message : 'Could not submit the payment. Try again.');
-        }
-    };
-
-    if (!selected) {
-        return (
-            <Modal isOpen onClose={onClose} title="Make a payment">
-                <div className="flex flex-col gap-2">
-                    <p className="text-sm text-ink-600">Choose which course you&apos;re paying for.</p>
-                    {enrolments.map((enrolment) => (
-                        <button
-                            key={enrolment.id}
-                            type="button"
-                            onClick={() => handleSelect(enrolment)}
-                            className="flex items-center justify-between rounded-md border border-surface-100 px-3 py-2.5 text-left text-sm hover:bg-surface-50"
-                        >
-                            <span className="font-medium text-ink-900">{enrolment.course.title}</span>
-                            <span className="text-ink-600">
-                                {formatAmount(enrolment.order!.remaining_balance, enrolment.order!.currency)}
-                            </span>
-                        </button>
-                    ))}
-                </div>
-            </Modal>
-        );
-    }
-
-    const order = selected.order!;
-    return (
-        <Modal
-            isOpen
-            onClose={onClose}
-            title={`Pay for ${selected.course.title}`}
-            footer={
-                <>
-                    <Button variant="ghost" onClick={onClose}>Cancel</Button>
-                    <Button onClick={handleSubmit} isLoading={submitPayment.isPending}>Submit</Button>
-                </>
-            }
-        >
-            <div className="flex flex-col gap-4">
-                {enrolments.length > 1 && (
-                    <button type="button" onClick={() => setSelected(null)} className="self-start text-sm text-blue-600 hover:underline">
-                        ← Choose a different course
-                    </button>
-                )}
-                {error && <Alert variant="error" message={error} />}
-                <p className="text-sm text-ink-600">
-                    Remaining balance: <span className="font-medium text-ink-900">{formatAmount(order.remaining_balance, order.currency)}</span>
-                </p>
-                <Input label={`Amount to pay (${order.currency})`} type="number" min={0} max={order.remaining_balance} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
-                <label className="flex flex-col gap-1.5">
-                    <span className="text-sm font-medium text-ink-900">Receipt image</span>
-                    <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileChange} className="text-sm text-ink-600" />
-                    {receipt && <span className="text-xs text-ink-600">{receipt.name}</span>}
-                </label>
-            </div>
-        </Modal>
-    );
-}
 
 // ─── Withdraw confirm modal ───────────────────────────────────────────────────
 
@@ -171,19 +75,24 @@ function WithdrawConfirmModal({ enrolment, onClose, onWithdrawSuccess }: { enrol
 
 // ─── Enrolment card ───────────────────────────────────────────────────────────
 
-function EnrolmentCard({ enrolment, progress, review, onWithdraw, onCancelTransfer, onReview }: {
+function EnrolmentCard({ enrolment, progress, review, reviewsLoaded, onWithdraw, onCancelTransfer, onReview, onPay, onViewCertificate }: {
     enrolment: Enrolment;
     progress: ProgressDashboardRow | undefined;
     review: CourseReview | undefined;
+    reviewsLoaded: boolean;
     onWithdraw: () => void;
     onCancelTransfer: () => void;
     onReview: () => void;
+    onPay: () => void;
+    onViewCertificate: () => void;
 }) {
     const status = enrolmentStatusDisplay(enrolment.status);
     const order = enrolment.order;
     const pendingSubmission = order?.pending_submission ?? null;
     const progressStatus = progress ? courseProgressStatusDisplay(progress.status) : null;
     const isTransferRequested = enrolment.status === 'transfer_requested';
+    // A finished course is revisited, not continued — and there is nothing left to withdraw from.
+    const isCompleted = progress?.status === 'completed';
 
     // Always link to the CoursePlayerPage — it handles "Continue where you left off" itself.
     // Previously this called useCourseSequence() inside .map(), violating rules of hooks and
@@ -194,30 +103,34 @@ function EnrolmentCard({ enrolment, progress, review, onWithdraw, onCancelTransf
         <Card className="flex flex-col gap-0 p-0 overflow-hidden">
             {/* Thumbnail */}
             <Link to={`/learn/courses/${enrolment.course.id}`} className="block" aria-label={`View ${enrolment.course.title}`}>
-                <div className="h-32 w-full overflow-hidden bg-surface-100">
+                <div className="h-28 sm:h-32 w-full overflow-hidden bg-surface-100">
                     {enrolment.course.thumbnail_url ? (
                         <img src={enrolment.course.thumbnail_url} alt={enrolment.course.title} className="h-full w-full object-cover transition duration-300 hover:scale-105" />
                     ) : (
-                        <div className="flex h-full items-center justify-center">
-                            <BookOpen className="size-8 text-ink-300" aria-hidden="true" />
+                        <div className="flex h-full items-center justify-center bg-primary/10">
+                            <BookOpen className="size-8 text-primary" aria-hidden="true" />
                         </div>
                     )}
                 </div>
             </Link>
 
             {/* Body */}
-            <div className="flex flex-1 flex-col gap-3 p-3">
+            <div className="flex flex-1 flex-col gap-3 p-3 sm:p-4">
                 <div>
-                    <div className="flex items-center gap-2">
-                        <Badge label={status.label} tone={status.tone} icon={status.icon} />
-                    </div>
+                    {/* "Confirmed" is the normal state and the progress badge below already says where the
+                        student is — show the enrolment badge only for states that need attention. */}
+                    {enrolment.status !== 'confirmed' && (
+                        <div className="mb-2 flex items-center gap-2">
+                            <Badge label={status.label} tone={status.tone} icon={status.icon} />
+                        </div>
+                    )}
                     <Link to={`/learn/courses/${enrolment.course.id}`}>
-                        <h3 className="mt-2 line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-tight text-ink-900 hover:text-blue-600">
+                        <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-tight text-ink-900 hover:text-blue-600">
                             {enrolment.course.title}
                         </h3>
                     </Link>
                     <p className="mt-0.5 text-xs text-ink-600">
-                        Enrolled {new Date(enrolment.applied_at).toLocaleDateString()}
+                        Enrolled {formatDate(enrolment.applied_at)}
                     </p>
                 </div>
 
@@ -225,7 +138,7 @@ function EnrolmentCard({ enrolment, progress, review, onWithdraw, onCancelTransf
                     <div className="flex flex-col gap-2">
                         <div className="flex items-center justify-between gap-2">
                             <Badge label={progressStatus!.label} tone={progressStatus!.tone} icon={progressStatus!.icon} />
-                            <span className="font-mono text-xs font-medium text-ink-900">{progress.percent_complete}%</span>
+                            <span className="text-xs font-semibold text-ink-900">{Math.round(progress.percent_complete)}%</span>
                         </div>
                         <ProgressBar percent={progress.percent_complete} />
                         {/* An upcoming intake gets the date instead of a button that would only
@@ -233,82 +146,66 @@ function EnrolmentCard({ enrolment, progress, review, onWithdraw, onCancelTransf
                             yet, and saying so is clearer than a dead end. */}
                         {progress.status === 'upcoming' && progress.starts_on ? (
                             <div className="flex items-start gap-2 rounded-lg border border-surface-100 bg-surface-50 px-3 py-2 text-sm text-ink-600">
-                                <CalendarClock className="mt-0.5 size-4 shrink-0 text-ink-400" aria-hidden="true" />
+                                <CalendarClock className="mt-0.5 size-4 shrink-0 text-ink-600" aria-hidden="true" />
                                 <span>
                                     Starts{' '}
                                     <span className="font-medium text-ink-900">
-                                        {new Date(progress.starts_on).toLocaleDateString(undefined, {
-                                            day: 'numeric',
-                                            month: 'long',
-                                            year: 'numeric',
-                                        })}
+                                        {formatDate(progress.starts_on)}
                                     </span>
                                     . Your place is reserved — course content opens on that date.
                                 </span>
                             </div>
                         ) : (
                             <Link to={continueHref}>
-                                <Button variant="primary" size="sm" className="w-full justify-center">
-                                    {progress.percent_complete === 0 ? 'Start learning' : 'Continue learning'}
+                                <Button variant="primary" size="sm" className="w-full justify-center rounded-full">
+                                    {isCompleted ? 'Review course' : progress.percent_complete === 0 ? 'Start learning' : 'Continue learning'}
                                     <ArrowRight className="size-3.5" aria-hidden="true" />
                                 </Button>
                             </Link>
                         )}
                         {progress.certificate && (
-                            /*
-                                Always the download endpoint, never the stored file URL: that URL
-                                is null until the PDF has been rendered, which previously left an
-                                href-less anchor reading "Certificate generating…" that could
-                                never be clicked. The endpoint renders on demand, so the link is
-                                live as soon as the certificate is issued.
-
-                                rel="noopener" only — NOT "noreferrer", for the same reason as the
-                                live-session join link: this target is a Sanctum-authenticated API
-                                route, and the stateful middleware only honours the session cookie
-                                when the Origin/Referer header identifies this SPA. "noreferrer"
-                                strips it, so the logged-in student is treated as a guest and
-                                bounced to /login instead of getting their certificate.
-                            */
-                            <a
-                                href={certificateDownloadUrl(progress.certificate.id)}
-                                target="_blank"
-                                rel="noopener"
-                                className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:underline"
+                            // Opens the in-app viewer, which has the Download button.
+                            <button
+                                type="button"
+                                onClick={onViewCertificate}
+                                className="inline-flex items-center gap-1.5 self-start text-xs text-blue-600 hover:underline"
                             >
                                 <Award className="size-3.5" aria-hidden="true" />
-                                Download certificate
-                            </a>
-                        )}
-                        {progress.certificate && (!review || review.status === 'rejected') && (
-                            <button type="button" onClick={onReview} className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline">
-                                <Star className="size-3.5" aria-hidden="true" />
-                                {review ? 'Edit your review' : 'Rate this course'}
+                                View certificate
                             </button>
+                        )}
+                        {progress.certificate && (
+                            <ReviewStatus review={review} isLoaded={reviewsLoaded} onReview={onReview} />
                         )}
                     </div>
                 )}
 
                 {order && order.remaining_balance > 0 && !pendingSubmission && (
-                    <div className="flex flex-col gap-1.5 border-t border-surface-100 pt-2">
+                    <div className="flex items-center justify-between gap-2 border-t border-surface-100 pt-2">
                         <p className="text-xs text-ink-600">
                             Amount owed: <span className="font-medium text-ink-900">{formatAmount(order.remaining_balance, order.currency)}</span>
                         </p>
+                        <button type="button" onClick={onPay} className="shrink-0 text-xs font-medium text-blue-600 hover:underline">
+                            Pay now
+                        </button>
                     </div>
                 )}
 
-                <div className="mt-auto border-t border-surface-100 pt-2">
-                    {isTransferRequested ? (
-                        <button type="button" onClick={onCancelTransfer} className="flex items-center gap-1.5 text-xs text-ink-600 hover:text-blue-600">
-                            <XCircle className="size-3.5" aria-hidden="true" />
-                            Cancel transfer request
-                        </button>
-                    ) : (
-                        <button type="button" onClick={onWithdraw} className="flex items-center gap-1.5 text-xs text-ink-600 hover:text-danger-600">
-                            <LogOut className="size-3.5" aria-hidden="true" />
-                            Withdraw
-                        </button>
-                    )}
-                </div>
+                {(isTransferRequested || !isCompleted) && (
+                    <div className="mt-auto border-t border-surface-100 pt-2">
+                        {isTransferRequested ? (
+                            <button type="button" onClick={onCancelTransfer} className="flex items-center gap-1.5 text-xs text-ink-600 hover:text-blue-600">
+                                <XCircle className="size-3.5" aria-hidden="true" />
+                                Cancel transfer request
+                            </button>
+                        ) : (
+                            <button type="button" onClick={onWithdraw} className="flex items-center gap-1.5 text-xs text-ink-600 hover:text-danger-600">
+                                <LogOut className="size-3.5" aria-hidden="true" />
+                                Withdraw
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
         </Card>
     );
@@ -321,34 +218,22 @@ function OverviewStrip({ activeEnrolments, progressRows }: { activeEnrolments: E
 
     const inProgress = progressRows.filter((r) => r.status === 'in_progress').length;
     const completed = progressRows.filter((r) => r.status === 'completed').length;
+    const certificates = progressRows.filter((r) => r.certificate).length;
     const avgCompletion = progressRows.length > 0
         ? Math.round(progressRows.reduce((sum, r) => sum + r.percent_complete, 0) / progressRows.length)
         : 0;
 
     return (
-        <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
-            <div className="flex flex-wrap divide-x divide-surface-100">
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-4 py-3">
-                    <p className="text-xs font-medium uppercase tracking-wide text-ink-600">Enrolled</p>
-                    <p className="text-2xl font-bold text-ink-900">{activeEnrolments.length}</p>
-                    <p className="text-xs text-ink-600">{inProgress} in progress · {completed} completed</p>
-                </div>
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-4 py-3">
-                    <p className="text-xs font-medium uppercase tracking-wide text-ink-600">Avg. completion</p>
-                    <div className="flex items-end gap-1.5">
-                        <p className="text-2xl font-bold text-blue-600">{avgCompletion}%</p>
-                        <TrendingUp className="mb-1 size-3.5 text-blue-400" aria-hidden="true" />
-                    </div>
-                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-surface-100">
-                        <div className="h-full rounded-full bg-blue-600 transition-all duration-500" style={{ width: `${avgCompletion}%` }} role="presentation" />
-                    </div>
-                </div>
-                {/* Deadlines — placeholder until GET /me/upcoming-deadlines is available */}
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-4 py-3">
-                    <p className="text-xs font-medium uppercase tracking-wide text-ink-600">Upcoming deadlines</p>
-                    <p className="mt-1 text-xs italic text-ink-300">No data yet</p>
-                </div>
-            </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+            <VolumeCard icon={BookOpen} label="Enrolled" value={activeEnrolments.length} sub={`${inProgress} in progress · ${completed} completed`} accentColor="primary" />
+            <VolumeCard icon={TrendingUp} label="Avg. completion" value={`${avgCompletion}%`} sub="Across your active courses" accentColor="amber" />
+            <VolumeCard
+                icon={Award}
+                label="Certificates"
+                value={certificates}
+                sub={certificates === 0 ? 'Finish a course to earn one' : 'Download from each course card'}
+                accentColor="success"
+            />
         </div>
     );
 }
@@ -359,13 +244,16 @@ export function MyCoursesPage() {
     const { data, isLoading } = useMyEnrolments();
     const { data: applications } = useMyCourseApplications();
     const { data: progressRows } = useProgressDashboard();
-    const { data: myReviews } = useMyReviews();
+    const { data: myReviews, isSuccess: reviewsLoaded } = useMyReviews();
     const dismissApplication = useDismissCourseApplication();
     const cancelTransferRequest = useCancelTransferRequest();
 
     const [withdrawingEnrolment, setWithdrawingEnrolment] = useState<Enrolment | null>(null);
-    const [isMakingPayment, setIsMakingPayment] = useState(false);
+    // "Pay now" on the Dashboard links here with ?pay=1 to open the payment window straight away.
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [isMakingPayment, setIsMakingPayment] = useState(() => searchParams.get('pay') === '1');
     const [reviewingCourse, setReviewingCourse] = useState<{ id: number; title: string } | null>(null);
+    const [viewingCertificate, setViewingCertificate] = useState<{ id: number; certificate_number: string; course: { title: string } } | null>(null);
     const [profileStatus, setProfileStatus] = useState<ProfileStatus | null>(null);
     const [showProfileModal, setShowProfileModal] = useState(false);
     const [transferSuccessMessage, setTransferSuccessMessage] = useState<string | null>(null);
@@ -391,6 +279,17 @@ export function MyCoursesPage() {
         fetchProfileStatus();
     }, []);
 
+    const activeCount = (data?.data ?? []).filter((e) => e.status !== 'withdrawn' && e.status !== 'transferred').length;
+    usePageHeader('My courses', isLoading ? undefined : `${activeCount} active enrolment${activeCount !== 1 ? 's' : ''}`);
+
+    // One-shot: drop ?pay=1 once read, so a refresh or back-navigation doesn't reopen the window.
+    useEffect(() => {
+        if (searchParams.has('pay')) {
+            searchParams.delete('pay');
+            setSearchParams(searchParams, { replace: true });
+        }
+    }, [searchParams, setSearchParams]);
+
     const handleCloseProfileModal = () => {
         setShowProfileModal(false);
         sessionStorage.setItem(PROFILE_MODAL_DISMISSED_KEY, '1');
@@ -404,16 +303,17 @@ export function MyCoursesPage() {
         }
     };
 
-    const handleCancelTransfer = async (enrolmentId: number) => {
-        await cancelTransferRequest.mutateAsync(enrolmentId);
+    // Low-stakes and reversible (the student can request a transfer again), so it acts straight
+    // away — but says so, like the other enrolment actions on this page.
+    const handleCancelTransfer = async (enrolment: Enrolment) => {
+        await cancelTransferRequest.mutateAsync(enrolment.id);
+        setTransferSuccessMessage(`Transfer request cancelled — you're still enrolled in ${enrolment.course.title}.`);
     };
 
     if (isLoading) return <Spinner />;
 
     const activeEnrolments = (data?.data ?? []).filter((e) => e.status !== 'withdrawn' && e.status !== 'transferred');
-    const payableEnrolments = activeEnrolments.filter(
-        (e) => e.order && e.order.remaining_balance > 0 && !e.order.pending_submission,
-    );
+    const payableEnrolments = payableEnrolmentsOf(activeEnrolments);
     const progressByCourseId = new Map((progressRows ?? []).map((r) => [r.course.id, r]));
     const reviewByCourseId = new Map((myReviews ?? []).flatMap((r) => (r.course ? [[r.course.id, r] as const] : [])));
     const sortedApplications = (applications ?? [])
@@ -424,34 +324,28 @@ export function MyCoursesPage() {
     return (
         <div className="space-y-5">
 
+            {/* Page header banner */}
+            <header className="rounded-2xl bg-navy px-5 py-5 shadow-sm">
+                <h1 className="font-display text-2xl font-semibold text-navy-foreground">My Courses</h1>
+                <p className="text-sm text-navy-foreground/70">
+                    {activeCount} active enrolment{activeCount !== 1 ? 's' : ''}
+                </p>
+            </header>
+
             {/* Profile completion modal — shown once per session when profile is incomplete */}
             {showProfileModal && profileStatus && (
                 <ProfileCompletionModal profileStatus={profileStatus} onClose={handleCloseProfileModal} />
             )}
 
-            {/* Page header */}
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                    <h1 className="text-lg font-semibold text-ink-900">My courses</h1>
-                    <p className="text-xs text-ink-600">
-                        {activeEnrolments.length} active enrolment{activeEnrolments.length !== 1 ? 's' : ''}
-                    </p>
+            {/* Page action — only when something is owed; the title and count are in the top bar */}
+            {payableEnrolments.length > 0 && (
+                <div className="flex justify-end">
+                    <Button size="sm" variant="secondary" onClick={() => setIsMakingPayment(true)}>
+                        <CreditCard className="size-3.5" aria-hidden="true" />
+                        Make a payment
+                    </Button>
                 </div>
-                <div className="flex items-center gap-2">
-                    {payableEnrolments.length > 0 && (
-                        <Button size="sm" variant="secondary" onClick={() => setIsMakingPayment(true)}>
-                            <CreditCard className="size-3.5" aria-hidden="true" />
-                            Make a payment
-                        </Button>
-                    )}
-                    <Link to="/courses">
-                        <Button size="sm" variant="secondary">
-                            <Compass className="size-3.5" aria-hidden="true" />
-                            Browse courses
-                        </Button>
-                    </Link>
-                </div>
-            </div>
+            )}
 
             {/* Success messages */}
             {transferSuccessMessage && (
@@ -492,15 +386,11 @@ export function MyCoursesPage() {
 
             {/* Course grid */}
             {activeEnrolments.length === 0 ? (
+                // Informational only — "Browse catalogue" on the Dashboard is the way to enrol.
                 <EmptyState
                     icon={BookOpen}
-                    title="No courses yet"
-                    description="Browse the catalogue to find your first course."
-                    action={
-                        <Link to="/courses">
-                            <Button size="sm">Browse the catalogue</Button>
-                        </Link>
-                    }
+                    title="You haven't enrolled in any courses yet"
+                    description="Courses you enrol in will appear here."
                 />
             ) : (
                 <div>
@@ -512,31 +402,23 @@ export function MyCoursesPage() {
                                 enrolment={enrolment}
                                 progress={progressByCourseId.get(enrolment.course.id)}
                                 review={reviewByCourseId.get(enrolment.course.id)}
+                                reviewsLoaded={reviewsLoaded}
                                 onWithdraw={() => setWithdrawingEnrolment(enrolment)}
-                                onCancelTransfer={() => handleCancelTransfer(enrolment.id)}
+                                onCancelTransfer={() => handleCancelTransfer(enrolment)}
                                 onReview={() => setReviewingCourse({ id: enrolment.course.id, title: enrolment.course.title })}
+                                onPay={() => setIsMakingPayment(true)}
+                                onViewCertificate={() => {
+                                    const certificate = progressByCourseId.get(enrolment.course.id)?.certificate;
+                                    if (certificate) setViewingCertificate({ ...certificate, course: { title: enrolment.course.title } });
+                                }}
                             />
                         ))}
-
-                        {/* "Add a course" card — always visible at the end of the grid */}
-                        <Link
-                            to="/courses"
-                            className="flex min-h-[200px] flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-surface-200 bg-surface-0 p-6 text-center transition hover:border-blue-300 hover:bg-blue-50"
-                        >
-                            <span className="flex size-10 items-center justify-center rounded-full bg-blue-50 ring-1 ring-blue-100">
-                                <Compass className="size-5 text-blue-500" aria-hidden="true" />
-                            </span>
-                            <div>
-                                <p className="text-sm font-semibold text-ink-900">Add a course</p>
-                                <p className="mt-0.5 text-xs text-ink-600">Browse the catalogue and enrol</p>
-                            </div>
-                        </Link>
                     </div>
                 </div>
             )}
 
             {/* Modals */}
-            {isMakingPayment && (
+            {isMakingPayment && payableEnrolments.length > 0 && (
                 <MakePaymentModal
                     enrolments={payableEnrolments}
                     onClose={() => setIsMakingPayment(false)}
@@ -548,6 +430,7 @@ export function MyCoursesPage() {
             {withdrawingEnrolment && (
                 <WithdrawConfirmModal enrolment={withdrawingEnrolment} onClose={() => setWithdrawingEnrolment(null)} onWithdrawSuccess={handleWithdrawSuccess} />
             )}
+            <CertificateViewerModal certificate={viewingCertificate} onClose={() => setViewingCertificate(null)} />
             {reviewingCourse && (
                 <ReviewFormModal
                     course={reviewingCourse}

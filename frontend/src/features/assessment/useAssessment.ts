@@ -16,6 +16,9 @@ import {
     fetchEvaluationAttempts,
     fetchEvaluationOverview,
     fetchGradebook,
+    fetchGradingQueue,
+    fetchOutOfAttempts,
+    grantExtraAttempts,
     fetchMyEvaluationAttempts,
     fetchQuestionBanks,
     gradeAttempt,
@@ -113,6 +116,7 @@ export function useGradeSubmission(assignmentId: number) {
         }) => gradeSubmission(submissionId, payload),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['assignments', assignmentId, 'submissions'] });
+            queryClient.invalidateQueries({ queryKey: ['grading-queue'] });
         },
     });
 }
@@ -198,6 +202,32 @@ export function useGradeAttempt(evaluationId: number) {
         }) => gradeAttempt(attemptId, answerGrades),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['evaluations', evaluationId, 'attempts'] });
+            queryClient.invalidateQueries({ queryKey: ['grading-queue'] });
+        },
+    });
+}
+
+/** Everything waiting for a mark (admin: all courses; instructor: courses they teach). */
+export function useGradingQueue(courseId?: number) {
+    return useQuery({
+        queryKey: ['grading-queue', courseId ?? 'all'],
+        queryFn: () => fetchGradingQueue(courseId),
+    });
+}
+
+export function useOutOfAttempts() {
+    return useQuery({ queryKey: ['grading-queue', 'out-of-attempts'], queryFn: fetchOutOfAttempts });
+}
+
+/** Give a student another attempt; pass the evaluation per call (Grading page) or fix it (quiz page). */
+export function useGrantExtraAttempts(evaluationId?: number) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ studentId, attempts, reason, evaluationId: perCall }: { studentId: number; attempts?: number; reason?: string; evaluationId?: number }) =>
+            grantExtraAttempts((perCall ?? evaluationId)!, studentId, attempts, reason),
+        onSuccess: (_data, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['evaluations', variables.evaluationId ?? evaluationId] });
+            queryClient.invalidateQueries({ queryKey: ['grading-queue'] });
         },
     });
 }

@@ -9,7 +9,6 @@ import {
     MoreVertical,
     Pencil,
     Plus,
-    Search,
     Trash2,
 } from 'lucide-react';
 import { useAllCourses } from '@/features/catalogue/useCourses';
@@ -19,6 +18,8 @@ import { Avatar } from '@/components/ui/Avatar';
 import { DropdownMenu } from '@/components/ui/DropdownMenu';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Alert } from '@/components/ui/Alert';
+import { SearchInput } from '@/components/ui/SearchInput';
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { ApiError } from '@/lib/api/client';
@@ -27,35 +28,108 @@ import type { Course, CourseStatus } from '@/lib/api/types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Deterministic gradient from course title — kept for list row thumbnail fallback */
-const GRADIENTS = [
-    'from-blue-500 to-indigo-600',
-    'from-violet-500 to-purple-700',
-    'from-emerald-500 to-teal-600',
-    'from-amber-400 to-orange-500',
-    'from-rose-500 to-pink-600',
-    'from-cyan-500 to-blue-600',
-    'from-fuchsia-500 to-violet-600',
-    'from-lime-500 to-green-600',
-];
-
-function gradientForTitle(title: string): string {
-    const idx = title.charCodeAt(0) % GRADIENTS.length;
-    return GRADIENTS[idx];
-}
-
 function formatPrice(price: string, currency: string): string {
     const n = Number(price);
     if (n === 0) return 'Free';
     return `${currency} ${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 }
 
+/** A course's own page (modules, forum, gradebook) — where a click on a course should land. */
+const coursePage = (course: Course) => `/admin/courses/${course.id}/modules`;
+
+// Status in semantic colours; published is the normal state, so it stays quiet (no dot).
+const STATUS_STYLE: Record<CourseStatus, { dot: string; label: string }> = {
+    published: { dot: 'bg-success-600', label: 'Published' },
+    draft: { dot: 'bg-amber-500', label: 'Draft' },
+    archived: { dot: 'bg-ink-300', label: 'Archived' },
+};
+
+function StatusLabel({ status }: { status: CourseStatus }) {
+    const s = STATUS_STYLE[status];
+    return (
+        <span className="inline-flex items-center gap-1.5 text-xs text-ink-600">
+            <span className={cn('size-1.5 rounded-full', s.dot)} aria-hidden="true" />
+            {s.label}
+        </span>
+    );
+}
+
+/** Neutral stand-in when a course has no thumbnail — one brand tint, not a rainbow per title. */
+function CourseInitial({ title, className }: { title: string; className?: string }) {
+    return (
+        <div className={cn('flex items-center justify-center bg-blue-50 font-display font-semibold text-blue-700', className)}>
+            {title.charAt(0).toUpperCase()}
+        </div>
+    );
+}
+
+function CourseActions({ course, isAdmin, onDelete, floating }: { course: Course; isAdmin: boolean; onDelete: () => void; floating?: boolean }) {
+    const navigate = useNavigate();
+    const handleDelete = () => {
+        if (window.confirm(`Delete "${course.title}"? This cannot be undone.`)) {
+            onDelete();
+        }
+    };
+
+    return (
+        <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+            <DropdownMenu
+                align="right"
+                trigger={(toggle) => (
+                    <button
+                        onClick={toggle}
+                        aria-label={`Actions for ${course.title}`}
+                        className={cn(
+                            'flex items-center justify-center rounded-lg p-1.5 text-ink-600 hover:text-ink-900',
+                            floating ? 'bg-surface-0/90 shadow-sm backdrop-blur-sm hover:bg-surface-0' : 'hover:bg-surface-100',
+                        )}
+                    >
+                        <MoreVertical className="size-4" aria-hidden="true" />
+                    </button>
+                )}
+                items={[
+                    { label: 'Open course', icon: Layers, onClick: () => navigate(coursePage(course)) },
+                    { label: 'Edit details', icon: Pencil, onClick: () => navigate(`/admin/courses/${course.id}/edit`) },
+                    ...(isAdmin
+                        ? [{ label: 'Delete', icon: Trash2, variant: 'danger' as const, onClick: handleDelete }]
+                        : []),
+                ]}
+            />
+        </div>
+    );
+}
+
+function InstructorLine({ course, isAdmin }: { course: Course; isAdmin: boolean }) {
+    const primaryInstructor = course.instructors[0];
+    if (primaryInstructor) {
+        return (
+            <span className="flex min-w-0 items-center gap-1.5">
+                <Avatar name={primaryInstructor.name} src={primaryInstructor.avatar_url} size="sm" className="size-5 text-[10px]" />
+                <span className="truncate">{primaryInstructor.name}</span>
+            </span>
+        );
+    }
+    // Only admins can assign instructors; for them an unstaffed course is worth the accent colour.
+    return isAdmin ? (
+        <Link
+            to={`/admin/courses/${course.id}/edit`}
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-1 font-medium text-accent-amber hover:underline"
+        >
+            <GraduationCap className="size-3.5" aria-hidden="true" />
+            Assign instructor
+        </Link>
+    ) : (
+        <span>No instructor</span>
+    );
+}
+
 // ─── Skeleton card ────────────────────────────────────────────────────────────
 
 function SkeletonCard() {
     return (
-        <div className="flex flex-col overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm animate-pulse">
-            <div className="aspect-video w-full bg-surface-100" />
+        <div className="flex animate-pulse flex-col overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
+            <div className="h-28 w-full bg-surface-100" />
             <div className="flex flex-col gap-2 p-3">
                 <div className="h-4 w-3/4 rounded bg-surface-100" />
                 <div className="h-3 w-1/2 rounded bg-surface-100" />
@@ -65,128 +139,44 @@ function SkeletonCard() {
     );
 }
 
-// ─── Status dot (only shown for non-published) ────────────────────────────────
-
-const STATUS_DOT: Record<CourseStatus, { dot: string; label: string } | null> = {
-    published: null, // silence the noise — published is the expected state
-    draft: { dot: 'bg-amber-400', label: 'Draft' },
-    archived: { dot: 'bg-ink-300', label: 'Archived' },
-};
-
 // ─── Course card (grid view) ──────────────────────────────────────────────────
 
 function CourseCard({ course, isAdmin, onDelete }: { course: Course; isAdmin: boolean; onDelete: () => void }) {
     const navigate = useNavigate();
-    const statusIndicator = STATUS_DOT[course.status];
-    const primaryInstructor = course.instructors[0];
-
-    const handleDelete = () => {
-        if (window.confirm(`Delete "${course.title}"? This cannot be undone.`)) {
-            onDelete();
-        }
-    };
 
     return (
         <div
-            onClick={() => navigate(`/admin/courses/${course.id}/edit`)}
+            onClick={() => navigate(coursePage(course))}
             role="button"
             tabIndex={0}
-            onKeyDown={(e) => e.key === 'Enter' && navigate(`/admin/courses/${course.id}/edit`)}
+            onKeyDown={(e) => e.key === 'Enter' && navigate(coursePage(course))}
             aria-label={`Open ${course.title}`}
-            className="group flex cursor-pointer flex-col overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-2 focus-visible:outline-blue-600"
+            className="group flex cursor-pointer flex-col overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-blue-100 hover:shadow-md focus-visible:outline-2 focus-visible:outline-blue-600"
         >
-            {/* ── Thumbnail ─────────────────────────────────────────────── */}
-            <div className="relative h-32 w-full overflow-hidden bg-surface-100">
+            <div className="relative h-28 w-full overflow-hidden">
                 {course.thumbnail_url ? (
-                    <img
-                        src={course.thumbnail_url}
-                        alt=""
-                        className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                    />
+                    <img src={course.thumbnail_url} alt="" className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
                 ) : (
-                    <div className="flex h-full w-full items-center justify-center">
-                        <BookOpen className="size-8 text-ink-300" aria-hidden="true" />
-                    </div>
+                    <CourseInitial title={course.title} className="h-full w-full text-3xl" />
                 )}
-
-                {/* Status indicator — only Draft / Archived */}
-                {statusIndicator && (
-                    <span className="absolute left-2.5 top-2.5 flex items-center gap-1.5 rounded-full bg-surface-0/90 px-2 py-0.5 text-xs font-medium text-ink-900 shadow-sm backdrop-blur-sm">
-                        <span className={cn('size-1.5 rounded-full', statusIndicator.dot)} aria-hidden="true" />
-                        {statusIndicator.label}
-                    </span>
-                )}
-
-                {/* Actions menu — stop propagation so clicking it doesn't navigate */}
-                <div
-                    className="absolute right-2 top-2"
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.stopPropagation()}
-                >
-                    <DropdownMenu
-                        align="right"
-                        trigger={(toggle) => (
-                            <button
-                                onClick={toggle}
-                                aria-label={`Actions for ${course.title}`}
-                                className="flex items-center justify-center rounded-lg bg-surface-0/90 p-1.5 text-ink-600 shadow-sm backdrop-blur-sm hover:bg-surface-0"
-                            >
-                                <MoreVertical className="size-3.5" aria-hidden="true" />
-                            </button>
-                        )}
-                        items={[
-                            { label: 'Edit', icon: Pencil, onClick: () => navigate(`/admin/courses/${course.id}/edit`) },
-                            { label: 'Manage modules', icon: Layers, onClick: () => navigate(`/admin/courses/${course.id}/modules`) },
-                            ...(isAdmin
-                                ? [{ label: 'Delete', icon: Trash2, variant: 'danger' as const, onClick: handleDelete }]
-                                : []),
-                        ]}
-                    />
+                <div className="absolute right-2 top-2">
+                    <CourseActions course={course} isAdmin={isAdmin} onDelete={onDelete} floating />
                 </div>
             </div>
 
-            {/* ── Card body ─────────────────────────────────────────────── */}
             <div className="flex flex-1 flex-col gap-2 p-3">
-                {/* Title — 2-line clamp, fixed height so grid rows align */}
-                <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-tight text-ink-900">
-                    {course.title}
-                </h3>
-
-                {/* Meta row — level + category */}
-                <div className="flex items-center gap-1.5 text-xs text-ink-600">
-                    <span className="capitalize">{course.level}</span>
-                    {course.category && (
-                        <>
-                            <span aria-hidden="true">·</span>
-                            <span className="truncate">{course.category.name}</span>
-                        </>
-                    )}
-                </div>
-
-                {/* Instructor */}
-                <div className="flex items-center gap-1.5 text-xs text-ink-600">
-                    {primaryInstructor ? (
-                        <>
-                            <Avatar name={primaryInstructor.name} src={primaryInstructor.avatar_url} size="sm"
-                                className="size-5 text-[10px]" />
-                            <span className="truncate">{primaryInstructor.name}</span>
-                        </>
-                    ) : (
-                        <Link
-                            to={`/admin/courses/${course.id}/edit`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="flex items-center gap-1 text-blue-600 hover:underline"
-                        >
-                            <GraduationCap className="size-3.5" aria-hidden="true" />
-                            Assign instructor
-                        </Link>
-                    )}
-                </div>
-
-                {/* Price */}
-                <p className="mt-auto pt-1 text-sm font-bold text-ink-900">
-                    {formatPrice(course.price, course.currency)}
+                <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-tight text-ink-900">{course.title}</h3>
+                <p className="truncate text-xs capitalize text-ink-600">
+                    {course.level}
+                    {course.category && ` · ${course.category.name}`}
                 </p>
+                <div className="text-xs text-ink-600">
+                    <InstructorLine course={course} isAdmin={isAdmin} />
+                </div>
+                <div className="mt-auto flex items-center justify-between gap-2 border-t border-surface-100 pt-2">
+                    <StatusLabel status={course.status} />
+                    <span className="text-sm font-semibold text-ink-900">{formatPrice(course.price, course.currency)}</span>
+                </div>
             </div>
         </div>
     );
@@ -194,89 +184,44 @@ function CourseCard({ course, isAdmin, onDelete }: { course: Course; isAdmin: bo
 
 // ─── Course row (list view) ───────────────────────────────────────────────────
 
+const LIST_COLUMNS = 'grid-cols-[minmax(0,1fr)_110px_120px_36px]';
+
 function CourseRow({ course, isAdmin, onDelete }: { course: Course; isAdmin: boolean; onDelete: () => void }) {
     const navigate = useNavigate();
-    const statusIndicator = STATUS_DOT[course.status];
-    const primaryInstructor = course.instructors[0];
-
-    const handleDelete = () => {
-        if (window.confirm(`Delete "${course.title}"? This cannot be undone.`)) {
-            onDelete();
-        }
-    };
 
     return (
-        <div
-            onClick={() => navigate(`/admin/courses/${course.id}/edit`)}
+        <li
+            onClick={() => navigate(coursePage(course))}
             role="button"
             tabIndex={0}
-            onKeyDown={(e) => e.key === 'Enter' && navigate(`/admin/courses/${course.id}/edit`)}
-            className="group flex cursor-pointer items-center gap-4 rounded-xl border border-surface-100 bg-surface-0 px-4 py-3 shadow-sm transition-all hover:shadow-md focus-visible:outline-2 focus-visible:outline-blue-600"
+            onKeyDown={(e) => e.key === 'Enter' && navigate(coursePage(course))}
+            className={cn(
+                'grid cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600',
+                LIST_COLUMNS,
+            )}
         >
-            {/* Thumbnail / gradient */}
-            <div className={cn(
-                'hidden h-10 w-16 shrink-0 overflow-hidden rounded-lg sm:block',
-                !course.thumbnail_url && 'bg-gradient-to-br',
-                !course.thumbnail_url && gradientForTitle(course.title),
-            )}>
+            <div className="flex min-w-0 items-center gap-3">
                 {course.thumbnail_url ? (
-                    <img src={course.thumbnail_url} alt="" className="h-full w-full object-cover" />
+                    <img src={course.thumbnail_url} alt="" className="hidden size-10 shrink-0 rounded-lg object-cover sm:block" />
                 ) : (
-                    <div className="flex h-full items-center justify-center">
-                        <span className="text-sm font-bold text-white/80">{course.title.charAt(0)}</span>
-                    </div>
+                    <CourseInitial title={course.title} className="hidden size-10 shrink-0 rounded-lg text-base sm:flex" />
                 )}
-            </div>
-
-            {/* Title + meta */}
-            <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                    <p className="truncate text-sm font-semibold text-ink-900">{course.title}</p>
-                    {statusIndicator && (
-                        <span className="flex shrink-0 items-center gap-1 text-xs text-ink-600">
-                            <span className={cn('size-1.5 rounded-full', statusIndicator.dot)} aria-hidden="true" />
-                            {statusIndicator.label}
-                        </span>
-                    )}
+                <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-ink-900">{course.title}</p>
+                    <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-ink-600">
+                        <InstructorLine course={course} isAdmin={isAdmin} />
+                        {course.category && <span className="truncate">· {course.category.name}</span>}
+                    </div>
                 </div>
-                <p className="mt-0.5 truncate text-xs text-ink-600">
-                    {primaryInstructor?.name ?? <span className="text-blue-600">No instructor</span>}
-                    {course.category && <> · {course.category.name}</>}
-                </p>
             </div>
-
-            {/* Price */}
-            <p className="shrink-0 text-sm font-semibold text-ink-900">
-                {formatPrice(course.price, course.currency)}
-            </p>
-
-            {/* Actions */}
-            <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-                <DropdownMenu
-                    align="right"
-                    trigger={(toggle) => (
-                        <button
-                            onClick={toggle}
-                            aria-label={`Actions for ${course.title}`}
-                            className="rounded-lg p-1.5 text-ink-600 hover:bg-surface-100 hover:text-ink-900"
-                        >
-                            <MoreVertical className="size-4" aria-hidden="true" />
-                        </button>
-                    )}
-                    items={[
-                        { label: 'Edit', icon: Pencil, onClick: () => navigate(`/admin/courses/${course.id}/edit`) },
-                        { label: 'Manage modules', icon: Layers, onClick: () => navigate(`/admin/courses/${course.id}/modules`) },
-                        ...(isAdmin
-                            ? [{ label: 'Delete', icon: Trash2, variant: 'danger' as const, onClick: handleDelete }]
-                            : []),
-                    ]}
-                />
-            </div>
-        </div>
+            <StatusLabel status={course.status} />
+            <p className="text-right text-sm font-semibold text-ink-900">{formatPrice(course.price, course.currency)}</p>
+            <CourseActions course={course} isAdmin={isAdmin} onDelete={onDelete} />
+        </li>
     );
 }
 
-// ─── Status filter chips ──────────────────────────────────────────────────────
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 const STATUS_FILTERS: { value: CourseStatus | 'all'; label: string }[] = [
     { value: 'all', label: 'All' },
@@ -284,8 +229,6 @@ const STATUS_FILTERS: { value: CourseStatus | 'all'; label: string }[] = [
     { value: 'draft', label: 'Draft' },
     { value: 'archived', label: 'Archived' },
 ];
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export function CourseListPage() {
     const { user } = useAuth();
@@ -300,9 +243,13 @@ export function CourseListPage() {
     const isAdmin = user?.role === 'admin';
     usePageHeader(
         isAdmin ? 'Courses' : 'My courses',
-        isAdmin ? 'Manage and monitor your curriculum' : 'Manage the courses you teach',
+        isAdmin ? 'Manage and monitor your curriculum' : 'The courses you teach',
     );
-    const courses = useMemo(() => data ?? [], [data]);
+    // "My courses" for an instructor means the courses they teach — not the whole catalogue.
+    const courses = useMemo(
+        () => (data ?? []).filter((c) => isAdmin || c.instructors.some((i) => i.id === user?.id)),
+        [data, isAdmin, user?.id],
+    );
 
     const handleDelete = (course: Course) => {
         setDeleteError(null);
@@ -320,154 +267,94 @@ export function CourseListPage() {
         });
     }, [courses, search, statusFilter]);
 
+    const newCourseButton = (
+        <Button size="sm" asChild>
+            <Link to="/admin/courses/new">
+                <Plus className="size-3.5" aria-hidden="true" />
+                New course
+            </Link>
+        </Button>
+    );
+
     return (
         <div className="space-y-4">
-
-            {/* ── Primary action — title/subtitle live in the top bar (usePageHeader) ── */}
-            {isAdmin && (
-                <div className="flex items-center justify-end">
-                    <Button size="sm" asChild>
-                        <Link to="/admin/courses/new">
-                            <Plus className="size-3.5" aria-hidden="true" />
-                            New course
-                        </Link>
-                    </Button>
-                </div>
-            )}
-
             {deleteError && <Alert variant="error" message={deleteError} />}
 
-            {/* ── Toolbar ───────────────────────────────────────────────────── */}
+            {/* ── Toolbar: search + status on the left, view toggle + New course on the right ── */}
             <div className="flex flex-wrap items-center gap-2">
-                {/* Search */}
-                <div className="relative min-w-0 flex-1 sm:max-w-48">
-                    <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-600" aria-hidden="true" />
-                    <input
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Search courses…"
-                        className="w-full rounded-lg border border-surface-100 bg-surface-0 py-1.5 pl-8 pr-3 text-sm text-ink-900 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600"
-                    />
-                </div>
+                <SearchInput value={search} onChange={setSearch} placeholder="Search courses…" className="ml-0 sm:w-56" />
+                <SegmentedTabs label="Course status" value={statusFilter} onChange={setStatusFilter} tabs={STATUS_FILTERS} />
 
-                {/* Status filter chips */}
-                <div className="flex items-center gap-1 rounded-lg border border-surface-100 bg-surface-50 p-0.5">
-                    {STATUS_FILTERS.map(({ value, label }) => (
-                        <button
-                            key={value}
-                            onClick={() => setStatusFilter(value)}
-                            className={cn(
-                                'rounded-md px-3 py-1 text-xs font-medium transition-colors',
-                                statusFilter === value
-                                    ? 'bg-blue-600 text-white shadow-sm'
-                                    : 'text-ink-600 hover:text-ink-900',
-                            )}
-                        >
-                            {label}
-                        </button>
-                    ))}
-                </div>
-
-                {/* Spacer */}
-                <div className="flex-1" />
-
-                {/* Grid / list toggle */}
-                <div className="flex items-center gap-0.5 rounded-lg border border-surface-100 bg-surface-0 p-0.5">
-                    <button
-                        onClick={() => setViewMode('grid')}
-                        aria-label="Grid view"
-                        className={cn(
-                            'rounded-md p-1.5 transition-colors',
-                            viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-ink-600 hover:text-ink-900',
-                        )}
-                    >
-                        <Grid2x2 className="size-3.5" aria-hidden="true" />
-                    </button>
-                    <button
-                        onClick={() => setViewMode('list')}
-                        aria-label="List view"
-                        className={cn(
-                            'rounded-md p-1.5 transition-colors',
-                            viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-ink-600 hover:text-ink-900',
-                        )}
-                    >
-                        <List className="size-3.5" aria-hidden="true" />
-                    </button>
+                <div className="ml-auto flex items-center gap-2">
+                    <div className="flex items-center gap-0.5 rounded-lg border border-surface-100 bg-surface-0 p-0.5">
+                        {([['grid', Grid2x2, 'Grid view'], ['list', List, 'List view']] as const).map(([mode, Icon, label]) => (
+                            <button
+                                key={mode}
+                                onClick={() => setViewMode(mode)}
+                                aria-label={label}
+                                aria-pressed={viewMode === mode}
+                                className={cn(
+                                    'rounded-md p-1.5 transition-colors',
+                                    viewMode === mode ? 'bg-blue-600 text-white' : 'text-ink-600 hover:text-ink-900',
+                                )}
+                            >
+                                <Icon className="size-3.5" aria-hidden="true" />
+                            </button>
+                        ))}
+                    </div>
+                    {newCourseButton}
                 </div>
             </div>
 
-            {/* ── Content ───────────────────────────────────────────────────── */}
-
-            {/* Skeleton */}
             {isLoading && (
-                <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
-                    {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
+                <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
+                    {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
                 </div>
             )}
 
-            {/* Empty state */}
             {!isLoading && filteredCourses.length === 0 && (
                 <EmptyState
                     icon={BookOpen}
                     title={courses.length === 0 ? 'No courses yet' : 'No courses match this filter'}
                     description={
                         courses.length === 0
-                            ? 'Create your first course to get started.'
+                            ? isAdmin ? 'Create your first course to get started.' : "Create a course, or ask an admin to add you to one."
                             : 'Try a different status filter or clear the search.'
                     }
-                    action={
-                        courses.length === 0 && isAdmin ? (
-                            <Link to="/admin/courses/new">
-                                <Button size="sm">
-                                    <Plus className="size-3.5" />
-                                    New course
-                                </Button>
-                            </Link>
-                        ) : undefined
-                    }
+                    action={courses.length === 0 ? newCourseButton : undefined}
                     className="mt-4"
                 />
             )}
 
-            {/* Grid view */}
             {!isLoading && filteredCourses.length > 0 && viewMode === 'grid' && (
-                <div
-                    className="grid gap-3"
-                    style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}
-                >
+                <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
                     {filteredCourses.map((course) => (
-                        <CourseCard
-                            key={course.id}
-                            course={course}
-                            isAdmin={isAdmin}
-                            onDelete={() => handleDelete(course)}
-                        />
+                        <CourseCard key={course.id} course={course} isAdmin={isAdmin} onDelete={() => handleDelete(course)} />
                     ))}
                 </div>
             )}
 
-            {/* List view */}
             {!isLoading && filteredCourses.length > 0 && viewMode === 'list' && (
-                <div className="flex flex-col gap-2">
-                    {/* Header row */}
-                    <div className="flex items-center gap-4 px-4 text-xs font-medium uppercase tracking-wide text-ink-600">
-                        <div className="hidden w-16 shrink-0 sm:block" aria-hidden="true" />
-                        <span className="flex-1">Course</span>
-                        <span className="shrink-0">Price</span>
-                        <span className="w-8 shrink-0" aria-hidden="true" />
+                <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
+                    <div
+                        className={cn(
+                            'grid items-center gap-3 border-b border-surface-100 bg-surface-50 px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-ink-600',
+                            LIST_COLUMNS,
+                        )}
+                    >
+                        <span>Course</span>
+                        <span>Status</span>
+                        <span className="text-right">Price</span>
+                        <span aria-hidden="true" />
                     </div>
-                    {filteredCourses.map((course) => (
-                        <CourseRow
-                            key={course.id}
-                            course={course}
-                            isAdmin={isAdmin}
-                            onDelete={() => handleDelete(course)}
-                        />
-                    ))}
+                    <ul className="divide-y divide-surface-100">
+                        {filteredCourses.map((course) => (
+                            <CourseRow key={course.id} course={course} isAdmin={isAdmin} onDelete={() => handleDelete(course)} />
+                        ))}
+                    </ul>
                 </div>
             )}
 
-            {/* Result count */}
             {!isLoading && filteredCourses.length > 0 && (
                 <p className="text-xs text-ink-600">
                     {filteredCourses.length} course{filteredCourses.length !== 1 ? 's' : ''}

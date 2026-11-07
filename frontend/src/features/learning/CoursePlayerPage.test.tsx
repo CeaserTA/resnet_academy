@@ -10,6 +10,7 @@ import { fetchCourseProgress } from '@/features/learning/api';
 import { fetchProgressDashboard } from '@/features/progress/api';
 import { fetchMyReviews } from '@/features/reviews/api';
 import type { Course, CourseReview, Module, ModuleProgressEntry, ProgressDashboardRow, User } from '@/lib/api/types';
+import { PageHeaderProvider } from '@/lib/pageHeader/PageHeaderContext';
 
 const { course, modules, progress, progressRows, student } = vi.hoisted(() => {
     const course: Course = {
@@ -172,7 +173,7 @@ function renderPlayer() {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
     return render(
-        <QueryClientProvider client={queryClient}>
+        <QueryClientProvider client={queryClient}><PageHeaderProvider>
             <AuthProvider>
                 <MemoryRouter initialEntries={['/learn/courses/1']}>
                     <Routes>
@@ -180,7 +181,7 @@ function renderPlayer() {
                     </Routes>
                 </MemoryRouter>
             </AuthProvider>
-        </QueryClientProvider>,
+        </PageHeaderProvider></QueryClientProvider>,
     );
 }
 
@@ -208,7 +209,7 @@ it('explains why a locked module is locked', async () => {
 it('shows the overall progress percentage from the progress dashboard', async () => {
     renderPlayer();
 
-    expect(await screen.findByText('50%')).toBeInTheDocument();
+    expect(await screen.findByText('50% complete')).toBeInTheDocument();
 });
 
 it('numbers modules and offers a Start Module action linking to the next incomplete item', async () => {

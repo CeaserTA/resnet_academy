@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ProfileCompletionPage } from './ProfileCompletionPage';
 import * as profileApi from '@/lib/api/profileApi';
 import type { User } from '@/lib/api/types';
+import { PageHeaderProvider } from '@/lib/pageHeader/PageHeaderContext';
 
 // Mock useNavigate
 const mockNavigate = vi.fn();
@@ -77,11 +78,11 @@ const renderWithProviders = (user: User) => {
     });
 
     return render(
-        <QueryClientProvider client={queryClient}>
+        <QueryClientProvider client={queryClient}><PageHeaderProvider>
             <BrowserRouter>
                 <ProfileCompletionPage />
             </BrowserRouter>
-        </QueryClientProvider>
+        </PageHeaderProvider></QueryClientProvider>
     );
 };
 

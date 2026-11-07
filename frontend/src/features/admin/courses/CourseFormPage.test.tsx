@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { it, expect, vi, beforeEach } from 'vitest';
 import { CourseFormPage } from '@/features/admin/courses/CourseFormPage';
 import type { Course } from '@/lib/api/types';
+import { PageHeaderProvider } from '@/lib/pageHeader/PageHeaderContext';
 
 const { baseCourse, fetchCourseMock, updateCourseMock } = vi.hoisted(() => {
     const baseCourse: Course = {
@@ -36,6 +37,12 @@ const { baseCourse, fetchCourseMock, updateCourseMock } = vi.hoisted(() => {
     return { baseCourse, fetchCourseMock: vi.fn(), updateCourseMock: vi.fn().mockResolvedValue(baseCourse) };
 });
 
+// The form reads the signed-in user (an instructor creating a course is pre-assigned to it);
+// these tests are written from an admin's point of view.
+vi.mock('@/lib/auth/AuthContext', () => ({
+    useAuth: () => ({ user: { id: 1, name: 'Admin User', role: 'admin' } }),
+}));
+
 vi.mock('@/features/catalogue/api', () => ({
     fetchCourse: fetchCourseMock,
     fetchCategories: vi.fn().mockResolvedValue([]),
@@ -55,14 +62,14 @@ function renderPage(course: Course = baseCourse) {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
     return render(
-        <QueryClientProvider client={queryClient}>
+        <QueryClientProvider client={queryClient}><PageHeaderProvider>
             <MemoryRouter initialEntries={['/admin/courses/1/edit']}>
                 <Routes>
                     <Route path="/admin/courses/:id/edit" element={<CourseFormPage />} />
                     <Route path="/admin/courses" element={<p>Course list</p>} />
                 </Routes>
             </MemoryRouter>
-        </QueryClientProvider>,
+        </PageHeaderProvider></QueryClientProvider>,
     );
 }
 

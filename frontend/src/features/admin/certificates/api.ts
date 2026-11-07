@@ -18,3 +18,14 @@ export async function regenerateCertificate(certificateId: number): Promise<Admi
     const { data } = await apiClient.post<{ data: AdminCertificate }>(`/admin/certificates/${certificateId}/regenerate`);
     return data.data;
 }
+
+/** Withhold a certificate from its student; the reason is shown to them. */
+export async function revokeCertificate(certificateId: number, reason: string): Promise<AdminCertificate> {
+    const { data } = await apiClient.post<{ data: AdminCertificate }>(`/admin/certificates/${certificateId}/revoke`, { reason });
+    return data.data;
+}
+
+export async function restoreCertificate(certificateId: number): Promise<AdminCertificate> {
+    const { data } = await apiClient.post<{ data: AdminCertificate }>(`/admin/certificates/${certificateId}/restore`);
+    return data.data;
+}

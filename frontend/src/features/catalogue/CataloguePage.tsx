@@ -21,6 +21,7 @@ import { useCategories, useCourses } from '@/features/catalogue/useCourses';
 import { usePublicCohortOfferings } from '@/features/cohorts/useCohorts';
 import { CourseCard } from '@/features/catalogue/CourseCard';
 import { courseImageMap, courseDurationMap } from '@/features/catalogue/courseImages';
+import { CourseFinderIllustration } from '@/features/catalogue/CourseFinderIllustration';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { cn } from '@/lib/utils';
@@ -97,6 +98,27 @@ function FaqItem({ q, a }: { q: string; a: string }) {
     );
 }
 
+/** Mobile-only accordion row for the "What's included" items */
+function IncludeAccordionItem({ icon: Icon, title, description }: { icon: React.ElementType; title: string; description: string }) {
+    const [open, setOpen] = useState(false);
+    return (
+        <div className="border-t border-border">
+            <button
+                onClick={() => setOpen((v) => !v)}
+                aria-expanded={open}
+                className="flex w-full items-center gap-3 py-3 text-left"
+            >
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50">
+                    <Icon className="size-4 text-primary" aria-hidden="true" />
+                </div>
+                <span className="flex-1 text-sm font-semibold text-ink-900">{title}</span>
+                <ChevronDown className={cn('size-4 shrink-0 text-ink-300 transition-transform duration-200', open && 'rotate-180')} aria-hidden="true" />
+            </button>
+            {open && <p className="pb-3 pl-11 text-sm leading-6 text-ink-600">{description}</p>}
+        </div>
+    );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export function CataloguePage() {
@@ -111,6 +133,7 @@ export function CataloguePage() {
     const [activeLevel, setActiveLevel] = useState<string | undefined>(() => {
         return searchParams.get('level') ?? undefined;
     });
+    const [showAllBenefits, setShowAllBenefits] = useState(false);
 
     const apiFilters: CourseFilters = useMemo(() => ({ status: 'published' }), []);
 
@@ -170,125 +193,63 @@ export function CataloguePage() {
             />
 
             <main>
-                {/* §1 Hero — isometric illustration left, text+search right */}
-                <section className="overflow-hidden bg-navy">
-                    <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-2 lg:items-center">
+                {/* §1 Hero — animated illustration left, text on an organic white panel right */}
+                <section className="relative overflow-hidden bg-navy">
+                    {/* White panel: always the right half of the section, bleeding to the viewport
+                        edge. Its left curve stays inside the text column's left padding, so it never
+                        clips the copy. */}
+                    <svg
+                        viewBox="0 0 500 420"
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="absolute inset-y-0 right-0 hidden h-full w-1/2 lg:block"
+                        preserveAspectRatio="none"
+                        aria-hidden="true"
+                    >
+                        <path
+                            d="M500,0 L500,420 L112,420 C62,420 30,396 32,352 C34,306 54,272 42,214 C30,158 6,128 18,82 C30,36 66,0 118,0 Z"
+                            className="fill-surface-0"
+                        />
+                    </svg>
 
-                        {/* Left: custom isometric SVG illustration */}
-                        <div className="flex items-center justify-center px-6 py-14 lg:py-16">
-                            <svg
-                                viewBox="0 0 400 360"
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="w-full max-w-sm"
-                                aria-hidden="true"
-                            >
-                                {/* Soft organic blob */}
-                                <path d="M195,25 C275,5 365,55 368,145 C372,235 305,320 210,318 C115,320 32,258 28,168 C22,78 115,45 195,25Z" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)" strokeWidth="1.2" />
-                                {/* Central laptop */}
-                                <g stroke="rgba(255,255,255,0.85)" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                                    <rect x="130" y="105" width="140" height="98" rx="6" fill="rgba(255,255,255,0.06)" />
-                                    <rect x="142" y="116" width="116" height="76" rx="3" fill="rgba(255,255,255,0.04)" />
-                                    <rect x="152" y="128" width="60" height="5" rx="2" fill="rgba(232,163,61,0.7)" stroke="none" />
-                                    <rect x="152" y="140" width="90" height="5" rx="2" fill="rgba(255,255,255,0.2)" stroke="none" />
-                                    <rect x="152" y="152" width="45" height="5" rx="2" fill="rgba(255,255,255,0.2)" stroke="none" />
-                                    <circle cx="220" cy="173" r="13" stroke="rgba(232,163,61,0.9)" strokeWidth="1.5" />
-                                    <polygon points="216,168 216,178 228,173" fill="rgba(232,163,61,0.85)" stroke="none" />
-                                    <path d="M148,203 L252,203 L264,218 L136,218 Z" fill="rgba(255,255,255,0.06)" />
-                                    <line x1="136" y1="218" x2="264" y2="218" />
-                                    <line x1="200" y1="218" x2="200" y2="228" />
-                                    <line x1="182" y1="228" x2="218" y2="228" />
-                                </g>
-                                {/* Orbit circle */}
-                                <circle cx="200" cy="178" r="118" stroke="rgba(255,255,255,0.15)" strokeWidth="1.2" strokeDasharray="6 6" fill="none" />
-                                {/* Step 1: Browse — top */}
-                                <g transform="translate(170,28)" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="30" cy="24" r="22" fill="rgba(27,79,160,0.6)" stroke="rgba(255,255,255,0.4)" strokeWidth="1.4" />
-                                    <circle cx="27" cy="21" r="7" stroke="white" strokeWidth="1.6" fill="none" />
-                                    <line x1="32" y1="27" x2="37" y2="32" stroke="white" strokeWidth="1.6" />
-                                    <text x="30" y="56" textAnchor="middle" fill="rgba(255,255,255,0.7)" fontSize="9" fontFamily="system-ui">BROWSE</text>
-                                </g>
-                                {/* Step 2: Apply — right */}
-                                <g transform="translate(298,150)" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="24" cy="24" r="22" fill="rgba(27,79,160,0.6)" stroke="rgba(255,255,255,0.4)" strokeWidth="1.4" />
-                                    <rect x="14" y="15" width="20" height="18" rx="2" stroke="white" strokeWidth="1.6" fill="none" />
-                                    <line x1="18" y1="21" x2="30" y2="21" stroke="white" strokeWidth="1.4" />
-                                    <line x1="18" y1="26" x2="26" y2="26" stroke="white" strokeWidth="1.4" />
-                                    <polyline points="20,33 24,37 34,28" stroke="rgba(232,163,61,0.9)" strokeWidth="1.6" fill="none" />
-                                    <text x="24" y="56" textAnchor="middle" fill="rgba(255,255,255,0.7)" fontSize="9" fontFamily="system-ui">APPLY</text>
-                                </g>
-                                {/* Step 3: Learn — bottom */}
-                                <g transform="translate(170,276)" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="30" cy="24" r="22" fill="rgba(27,79,160,0.6)" stroke="rgba(255,255,255,0.4)" strokeWidth="1.4" />
-                                    <rect x="18" y="14" width="24" height="20" rx="2" stroke="white" strokeWidth="1.6" fill="none" />
-                                    <line x1="30" y1="14" x2="30" y2="34" stroke="white" strokeWidth="1.4" />
-                                    <line x1="22" y1="20" x2="28" y2="20" stroke="white" strokeWidth="1.2" />
-                                    <line x1="22" y1="26" x2="28" y2="26" stroke="white" strokeWidth="1.2" />
-                                    <text x="30" y="56" textAnchor="middle" fill="rgba(255,255,255,0.7)" fontSize="9" fontFamily="system-ui">LEARN</text>
-                                </g>
-                                {/* Step 4: Graduate — left, amber = achievement */}
-                                <g transform="translate(58,150)" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="24" cy="24" r="22" fill="rgba(232,163,61,0.2)" stroke="rgba(232,163,61,0.7)" strokeWidth="1.4" />
-                                    <path d="M24,13 L38,19 L24,25 L10,19 Z" stroke="rgba(232,163,61,0.95)" strokeWidth="1.6" fill="rgba(232,163,61,0.15)" />
-                                    <line x1="38" y1="19" x2="38" y2="30" stroke="rgba(232,163,61,0.95)" strokeWidth="1.6" />
-                                    <path d="M16,23 Q16,33 24,33 Q32,33 32,23" stroke="rgba(232,163,61,0.95)" strokeWidth="1.6" fill="none" />
-                                    <text x="24" y="56" textAnchor="middle" fill="rgba(232,163,61,0.85)" fontSize="9" fontFamily="system-ui">GRADUATE</text>
-                                </g>
-                                {/* Directional arrows */}
-                                <g fill="rgba(255,255,255,0.35)" stroke="none">
-                                    <polygon points="278,88 285,95 275,97" />
-                                    <polygon points="278,268 285,261 275,259" />
-                                    <polygon points="122,268 115,261 125,259" />
-                                    <polygon points="122,88 115,95 125,97" />
-                                </g>
-                                {/* Amber dots */}
-                                <g fill="rgba(232,163,61,0.6)">
-                                    <circle cx="200" cy="60" r="3" />
-                                    <circle cx="318" cy="178" r="3" />
-                                    <circle cx="200" cy="296" r="3" />
-                                    <circle cx="82" cy="178" r="3" />
-                                </g>
-                            </svg>
+                    <div className="relative mx-auto max-w-7xl lg:grid lg:grid-cols-2 lg:items-center">
+
+                        {/* Left: animated course-journey illustration */}
+                        <div className="flex items-center justify-center px-6 py-10 lg:py-12">
+                            <CourseFinderIllustration className="max-w-md" />
                         </div>
 
-                        {/* Right: organic white blob + description */}
-                        <div className="relative hidden lg:flex lg:items-stretch">
-                            {/* Organic blob SVG — white shape bleeding from right */}
-                            <svg viewBox="0 0 500 420" xmlns="http://www.w3.org/2000/svg" className="absolute inset-0 h-full w-full" preserveAspectRatio="none" aria-hidden="true">
-                                <path d="M500,0 L500,420 L120,420 C70,420 20,375 10,310 C0,245 30,175 50,120 C70,65 40,20 100,5 C130,0 170,0 210,0 Z" fill="white" />
-                            </svg>
-                            {/* Text inside the blob */}
-                            <div className="relative z-10 flex flex-col justify-center px-14 py-14">
-                                <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-                                    <span className="size-1.5 rounded-full bg-amber-500" aria-hidden="true" />
-                                    Next intake: September 2026
-                                </span>
-                                <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                                    Course Finder
-                                </p>
-                                <h1 className="mt-2 text-4xl text-ink-900 sm:text-5xl">
-                                    Find the right<br />course to begin.
-                                </h1>
-                                <p className="mt-4 max-w-xs text-base leading-7 text-ink-600">
-                                    Practical web development in Kampala. Real projects, expert mentors, and a verifiable certificate.
-                                </p>
-                                <div className="mt-6 flex flex-wrap gap-3 border-t border-border pt-5">
-                                    {[
-                                        { icon: FolderOpen, label: 'Project-based' },
-                                        { icon: Users, label: 'Mentor support' },
-                                        { icon: Trophy, label: 'Certificate' },
-                                        { icon: CalendarDays, label: 'Flexible payment' },
-                                    ].map(({ icon: Icon, label }) => (
-                                        <div key={label} className="flex items-center gap-1.5 text-sm text-ink-600">
-                                            <Icon className="size-4 text-primary" aria-hidden="true" />
-                                            {label}
-                                        </div>
-                                    ))}
-                                </div>
+                        {/* Right: copy on the white panel */}
+                        <div className="hidden flex-col justify-center py-14 pl-20 pr-8 lg:flex xl:pl-24">
+                            <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-amber-100 bg-amber-100/60 px-3 py-1 text-xs font-semibold text-accent-amber">
+                                <span className="size-1.5 rounded-full bg-amber-500" aria-hidden="true" />
+                                Next intake: September 2026
+                            </span>
+                            <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                                Course Finder
+                            </p>
+                            <h1 className="mt-2 text-4xl text-ink-900 sm:text-5xl">
+                                Find the right<br />course to begin.
+                            </h1>
+                            <p className="mt-4 max-w-xs text-base leading-7 text-ink-600">
+                                Practical web development in Kampala. Real projects, expert mentors, and a verifiable certificate.
+                            </p>
+                            <div className="mt-6 flex flex-wrap gap-3 border-t border-border pt-5">
+                                {[
+                                    { icon: FolderOpen, label: 'Project-based' },
+                                    { icon: Users, label: 'Mentor support' },
+                                    { icon: Trophy, label: 'Certificate' },
+                                    { icon: CalendarDays, label: 'Flexible payment' },
+                                ].map(({ icon: Icon, label }) => (
+                                    <div key={label} className="flex items-center gap-1.5 text-sm text-ink-600">
+                                        <Icon className="size-4 text-primary" aria-hidden="true" />
+                                        {label}
+                                    </div>
+                                ))}
                             </div>
                         </div>
 
                         {/* Mobile: white text below illustration */}
-                        <div className="w-full bg-white px-4 py-8 lg:hidden">
+                        <div className="w-full bg-surface-0 px-4 py-8 lg:hidden">
                             <h1 className="text-3xl text-ink-900">Find the right course to begin.</h1>
                             <p className="mt-3 text-sm leading-7 text-ink-600">Practical web development in Kampala. Real projects, expert mentors, certificate.</p>
                         </div>
@@ -495,7 +456,24 @@ export function CataloguePage() {
                                 <p className="mt-2 text-sm leading-6 text-ink-600">
                                     Technical practice combined with feedback and career preparation.
                                 </p>
-                                <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+
+                                {/* Mobile: accordion list */}
+                                <div className="mt-4 sm:hidden">
+                                    {(showAllBenefits ? includes : includes.slice(0, 3)).map(({ icon, title, description }) => (
+                                        <IncludeAccordionItem key={title} icon={icon} title={title} description={description} />
+                                    ))}
+                                    <div className="border-t border-border" />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowAllBenefits((v) => !v)}
+                                        className="mt-2 text-sm text-primary underline"
+                                    >
+                                        {showAllBenefits ? 'Show fewer' : 'Show all 6 benefits'}
+                                    </button>
+                                </div>
+
+                                {/* sm+: original 2-col grid */}
+                                <div className="mt-5 hidden grid-cols-2 gap-3 sm:grid">
                                     {includes.map(({ icon: Icon, title, description }) => (
                                         <div key={title} className="flex items-start gap-3 rounded-xl border border-border bg-surface-50 p-3">
                                             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50">
@@ -519,7 +497,26 @@ export function CataloguePage() {
                     <div className="mx-auto max-w-7xl">
                         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">Your learning journey</p>
                         <h2 className="mt-3 text-3xl text-navy-foreground sm:text-4xl">From first lesson to finished portfolio.</h2>
-                        <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+
+                        {/* Mobile: compact vertical timeline */}
+                        <div className="mt-5 flex flex-col gap-0 sm:hidden">
+                            {journey.map(({ number, label }, i) => (
+                                <div key={number}>
+                                    <div className="flex items-start gap-3">
+                                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/20 text-xs font-bold">
+                                            {i + 1}
+                                        </div>
+                                        <p className="text-sm text-navy-foreground/90 py-1">{label}</p>
+                                    </div>
+                                    {i < journey.length - 1 && (
+                                        <div className="ml-3 h-4 w-px bg-white/20" aria-hidden="true" />
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* sm+: original 4-col grid */}
+                        <div className="mt-6 hidden gap-6 sm:grid sm:grid-cols-2 lg:grid-cols-4">
                             {journey.map(({ number, label }) => (
                                 <div key={number} className="flex flex-col gap-3">
                                     <div className="h-px w-full bg-white/20" aria-hidden="true" />
@@ -601,6 +598,6 @@ export function CataloguePage() {
                 onLoginClick={() => openAuth('login')}
                 onSignupClick={() => openAuth('signup')}
             />
-        </div >
+        </div>
     );
 }

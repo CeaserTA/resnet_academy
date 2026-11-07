@@ -18,6 +18,7 @@ import {
     Unlock,
     User,
     XCircle,
+    RotateCcw,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { BadgeTone } from '@/components/ui/Badge';
@@ -36,6 +37,7 @@ import type {
     UserRole,
     UserStatus,
 } from '@/lib/api/types';
+import { formatDate } from '@/lib/formatDate';
 
 interface StatusDisplay {
     label: string;
@@ -120,7 +122,7 @@ export function assignmentDueBadge(dueAt: string | null, isComplete: boolean | n
     const daysUntilDue = (due.getTime() - now.getTime()) / (24 * 60 * 60 * 1000);
 
     if (daysUntilDue <= 3) {
-        return { label: `Due ${due.toLocaleDateString()}`, tone: 'warning', icon: Clock };
+        return { label: `Due ${formatDate(due)}`, tone: 'warning', icon: Clock };
     }
 
     return null;
@@ -233,6 +235,9 @@ const notificationTypeMap: Record<string, StatusDisplay> = {
     payment_submitted: { label: 'Payment submitted', tone: 'warning', icon: CreditCard },
     payment_confirmed: { label: 'Payment confirmed', tone: 'success', icon: CheckCircle2 },
     payment_rejected: { label: 'Payment rejected', tone: 'danger', icon: XCircle },
+    evaluation_extra_attempt: { label: 'Another attempt', tone: 'success', icon: RotateCcw },
+    certificate_revoked: { label: 'Certificate withheld', tone: 'danger', icon: XCircle },
+    certificate_restored: { label: 'Certificate restored', tone: 'success', icon: Award },
 };
 
 const defaultNotificationTypeDisplay: StatusDisplay = { label: 'Notification', tone: 'neutral', icon: Circle };

@@ -19,6 +19,25 @@ export function useCourseApplications(params: { status?: string; page?: number }
     });
 }
 
+/**
+ * Every application for a status, across all pages. The list endpoint pages at 25 and has no
+ * text search, so the Applications search needs the full set to filter — only fetched while a
+ * search term is entered (`enabled`).
+ */
+export function useAllCourseApplications(status: string | undefined, enabled: boolean) {
+    return useQuery({
+        queryKey: [...ADMIN_QUERY_KEY, status ?? null, 'all'],
+        enabled,
+        queryFn: async () => {
+            const first = await fetchCourseApplications({ status, page: 1 });
+            const rest = await Promise.all(
+                Array.from({ length: first.meta.last_page - 1 }, (_, i) => fetchCourseApplications({ status, page: i + 2 })),
+            );
+            return [first, ...rest].flatMap((page) => page.data);
+        },
+    });
+}
+
 export function useMyCourseApplications(enabled = true) {
     return useQuery({
         queryKey: MINE_QUERY_KEY,

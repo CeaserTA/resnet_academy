@@ -6,6 +6,7 @@ import { it, expect, vi, beforeEach } from 'vitest';
 import { EvaluationTakePage } from '@/features/assessment/EvaluationTakePage';
 import { fetchMyEvaluationAttempts } from '@/features/assessment/api';
 import type { EvaluationAttempt, EvaluationOverview, StartAttemptResponse } from '@/lib/api/types';
+import { PageHeaderProvider } from '@/lib/pageHeader/PageHeaderContext';
 
 const { startResponse, gradedAttempt, overview } = vi.hoisted(() => {
     const startResponse: StartAttemptResponse = {
@@ -70,8 +71,6 @@ vi.mock('@/features/assessment/api', () => ({
 }));
 
 beforeEach(() => {
-    // jsdom's confirm() returns false by default; the start flow gates on it.
-    vi.stubGlobal('confirm', vi.fn(() => true));
 });
 
 it('shows instructions first, then lets a student answer a question and see whether they passed', async () => {
@@ -79,13 +78,13 @@ it('shows instructions first, then lets a student answer a question and see whet
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
     render(
-        <QueryClientProvider client={queryClient}>
+        <QueryClientProvider client={queryClient}><PageHeaderProvider>
             <MemoryRouter initialEntries={['/learn/evaluations/5?course=1']}>
                 <Routes>
                     <Route path="/learn/evaluations/:id" element={<EvaluationTakePage />} />
                 </Routes>
             </MemoryRouter>
-        </QueryClientProvider>,
+        </PageHeaderProvider></QueryClientProvider>,
     );
 
     // Pre-start instructions screen.
@@ -93,6 +92,8 @@ it('shows instructions first, then lets a student answer a question and see whet
     expect(screen.getByText('No time limit')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Start Evaluation' }));
+    // Starting is confirmed in the app's own modal, not the browser's confirm().
+    await user.click(await screen.findByRole('button', { name: 'Start now' }));
 
     expect(await screen.findByText('1. What is 2 + 2?')).toBeInTheDocument();
     // Never shown an answer key on this screen.
@@ -119,13 +120,13 @@ it('hides the start button once the student has passed, but keeps past attempts 
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
     render(
-        <QueryClientProvider client={queryClient}>
+        <QueryClientProvider client={queryClient}><PageHeaderProvider>
             <MemoryRouter initialEntries={['/learn/evaluations/5?course=1']}>
                 <Routes>
                     <Route path="/learn/evaluations/:id" element={<EvaluationTakePage />} />
                 </Routes>
             </MemoryRouter>
-        </QueryClientProvider>,
+        </PageHeaderProvider></QueryClientProvider>,
     );
 
     expect(await screen.findByText('Past Attempts')).toBeInTheDocument();

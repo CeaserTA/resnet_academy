@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { it, expect, vi } from 'vitest';
 import { NotificationBell } from '@/features/communication/NotificationBell';
 import type { NotificationListResponse, User } from '@/lib/api/types';
+import { MemoryRouter } from 'react-router';
 
 const { response, mockUseAuth } = vi.hoisted(() => {
     const response: NotificationListResponse = {
@@ -39,7 +40,9 @@ function renderBell() {
 
     return render(
         <QueryClientProvider client={queryClient}>
-            <NotificationBell />
+            <MemoryRouter>
+                <NotificationBell />
+            </MemoryRouter>
         </QueryClientProvider>,
     );
 }

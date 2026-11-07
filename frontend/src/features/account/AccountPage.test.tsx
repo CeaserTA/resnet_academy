@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
@@ -6,6 +6,7 @@ import { it, expect, vi } from 'vitest';
 import { AccountPage } from '@/features/account/AccountPage';
 import { AuthProvider } from '@/lib/auth/AuthContext';
 import type { User } from '@/lib/api/types';
+import { PageHeaderProvider } from '@/lib/pageHeader/PageHeaderContext';
 
 const { student } = vi.hoisted(() => {
     const student: User = {
@@ -57,29 +58,28 @@ function renderPage() {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
     return render(
-        <QueryClientProvider client={queryClient}>
+        <QueryClientProvider client={queryClient}><PageHeaderProvider>
             <MemoryRouter initialEntries={['/account']}>
                 <AuthProvider>
                     <AccountPage />
                 </AuthProvider>
             </MemoryRouter>
-        </QueryClientProvider>,
+        </PageHeaderProvider></QueryClientProvider>,
     );
 }
 
-it('requires a second click to confirm deactivation, then calls the API', async () => {
+it('asks for confirmation in a modal before deactivating, then calls the API', async () => {
     const user = userEvent.setup();
     renderPage();
 
     expect(await screen.findByText(/quiet@example.com/)).toBeInTheDocument();
 
-    const deactivateButton = screen.getByRole('button', { name: 'Deactivate my account' });
-    await user.click(deactivateButton);
+    await user.click(screen.getByRole('button', { name: 'Deactivate my account' }));
 
-    expect(await screen.findByRole('button', { name: 'Confirm deactivation?' })).toBeInTheDocument();
+    const dialog = await screen.findByRole('dialog', { name: 'Deactivate your account?' });
     expect(requestAccountDeactivation).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole('button', { name: 'Confirm deactivation?' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Deactivate account' }));
 
     expect(requestAccountDeactivation).toHaveBeenCalledTimes(1);
 });

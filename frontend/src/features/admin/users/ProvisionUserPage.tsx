@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Mail, Plus, Search, Settings2, Users } from 'lucide-react';
+import { Mail, Plus, Settings2, Users } from 'lucide-react';
 import { useProvisionUser, useUpdateUser, useUsers } from '@/features/admin/users/useAdminUsers';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -19,6 +19,10 @@ import { usePageHeader } from '@/lib/pageHeader/PageHeaderContext';
 import { userRoleDisplay, userStatusDisplay } from '@/lib/statusBadge';
 import { cn } from '@/lib/utils';
 import type { User, UserRole, UserStatus } from '@/lib/api/types';
+import { SearchInput } from '@/components/ui/SearchInput';
+import { matchesSearch } from '@/lib/search';
+import { useAllAdminEnrolments } from '@/features/admin/enrolments/useAdminEnrolments';
+import { displayCohortName } from '@/lib/cohort';
 
 type RoleTab = 'all' | UserRole;
 
@@ -154,15 +158,21 @@ export function ProvisionUserPage() {
     const [search, setSearch] = useState('');
     usePageHeader('Team', 'Every user in the system, and their role.');
 
-    const filteredUsers = useMemo(() => {
-        const term = search.trim().toLowerCase();
-        if (!term) {
-            return users ?? [];
-        }
-        return (users ?? []).filter(
-            (member) => member.name.toLowerCase().includes(term) || member.email.toLowerCase().includes(term),
-        );
-    }, [users, search]);
+    // Which cohort (intake + year) each student is in — from their enrolments, withdrawn ones excluded.
+    const { data: allEnrolments } = useAllAdminEnrolments(roleTab === 'all' || roleTab === 'student');
+    const cohortsByStudent = new Map<number, { key: number; cohort: string; course: string }[]>();
+    (allEnrolments ?? [])
+        .filter((e) => e.status !== 'withdrawn' && e.status !== 'transferred')
+        .forEach((e) => {
+            const list = cohortsByStudent.get(e.student.id) ?? [];
+            list.push({ key: e.id, cohort: displayCohortName(e.cohort_course?.cohort_name) || 'Self-paced', course: e.course.title });
+            cohortsByStudent.set(e.student.id, list);
+        });
+
+    const filteredUsers = useMemo(
+        () => (users ?? []).filter((member) => matchesSearch(search, member.name, member.email)),
+        [users, search],
+    );
 
     return (
         <div className="mx-auto max-w-4xl space-y-4">
@@ -191,19 +201,7 @@ export function ProvisionUserPage() {
                     ))}
                 </div>
 
-                <div className="relative ml-auto w-full max-w-56">
-                    <Search
-                        className="absolute left-3 top-1/2 z-10 size-3.5 -translate-y-1/2 text-ink-600"
-                        aria-hidden="true"
-                    />
-                    <input
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Search name or email"
-                        aria-label="Search team by name or email"
-                        className="w-full rounded-lg border border-surface-100 bg-surface-50 py-1.5 pl-8 pr-3 text-sm text-ink-900 transition focus-visible:bg-surface-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-                    />
-                </div>
+                <SearchInput value={search} onChange={setSearch} placeholder="Search name or email" label="Search team by name or email" />
             </div>
 
             <div>
@@ -222,65 +220,87 @@ export function ProvisionUserPage() {
 
                 {!isLoading && filteredUsers.length > 0 && (
                     <div className="overflow-hidden rounded-xl border border-surface-100 bg-surface-0 shadow-sm">
-                        {/* Column headers */}
-                        <div className="grid grid-cols-[minmax(180px,1fr)_130px_minmax(140px,1fr)_60px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
-                            <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Name</span>
-                            <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Role</span>
-                            <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Status</span>
-                            <span />
-                        </div>
+                        {/* Scrolls sideways on narrow screens instead of clipping columns */}
+                        <div className="overflow-x-auto">
+                            <div className="min-w-[720px]">
+                                {/* Column headers */}
+                                <div className="grid grid-cols-[minmax(180px,1fr)_minmax(150px,1fr)_120px_minmax(130px,1fr)_60px] items-center gap-2 border-b border-surface-100 bg-surface-50 px-4 py-2.5">
+                                    <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Name</span>
+                                    <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Cohort</span>
+                                    <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Role</span>
+                                    <span className="text-xs font-medium uppercase tracking-wide text-ink-600">Status</span>
+                                    <span />
+                                </div>
 
-                        {/* Rows */}
-                        <ul className="divide-y divide-surface-100">
-                            {filteredUsers.map((member) => {
-                                const role = userRoleDisplay(member.role);
-                                const status = userStatusDisplay(member.status);
-                                const isSelf = member.id === currentUser?.id;
+                                {/* Rows */}
+                                <ul className="divide-y divide-surface-100">
+                                    {filteredUsers.map((member) => {
+                                        const role = userRoleDisplay(member.role);
+                                        const status = userStatusDisplay(member.status);
+                                        const isSelf = member.id === currentUser?.id;
 
-                                return (
-                                    <li
-                                        key={member.id}
-                                        className="grid grid-cols-[minmax(180px,1fr)_130px_minmax(140px,1fr)_60px] items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-50"
-                                    >
-                                        {/* Name */}
-                                        <div className="flex min-w-0 items-center gap-2">
-                                            <Avatar
-                                                name={member.name}
-                                                size="sm"
-                                                className="size-7 shrink-0 text-xs"
-                                            />
-                                            <div className="min-w-0">
-                                                <p className="truncate text-sm text-ink-900">{member.name}</p>
-                                                <p className="truncate text-xs text-ink-600">{member.email}</p>
-                                            </div>
-                                        </div>
-
-                                        {/* Role */}
-                                        <Badge label={role.label} tone={role.tone} icon={role.icon} />
-
-                                        {/* Status */}
-                                        <div className="flex flex-wrap items-center gap-1.5">
-                                            <Badge label={status.label} tone={status.tone} icon={status.icon} />
-                                            {!member.last_login_at && member.role !== 'student' && (
-                                                <Badge label="Invited" tone="neutral" icon={Mail} />
-                                            )}
-                                        </div>
-
-                                        {/* Actions */}
-                                        <div className="flex justify-end">
-                                            <button
-                                                onClick={() => setManagingUser(member)}
-                                                disabled={isSelf}
-                                                aria-label={`Manage ${member.name}`}
-                                                className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-ink-900 disabled:pointer-events-none disabled:opacity-40"
+                                        return (
+                                            <li
+                                                key={member.id}
+                                                className="grid grid-cols-[minmax(180px,1fr)_minmax(150px,1fr)_120px_minmax(130px,1fr)_60px] items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-50"
                                             >
-                                                <Settings2 className="size-4" aria-hidden="true" />
-                                            </button>
-                                        </div>
-                                    </li>
-                                );
-                            })}
-                        </ul>
+                                                {/* Name */}
+                                                <div className="flex min-w-0 items-center gap-2">
+                                                    <Avatar
+                                                        name={member.name}
+                                                        size="sm"
+                                                        className="size-7 shrink-0 text-xs"
+                                                    />
+                                                    <div className="min-w-0">
+                                                        <p className="truncate text-sm text-ink-900">{member.name}</p>
+                                                        <p className="truncate text-xs text-ink-600">{member.email}</p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Cohort — students only: each intake (and its year) they're enrolled in */}
+                                                <div className="min-w-0">
+                                                    {member.role !== 'student' ? (
+                                                        <span className="text-xs text-ink-300">—</span>
+                                                    ) : (cohortsByStudent.get(member.id) ?? []).length === 0 ? (
+                                                        <span className="text-xs text-ink-600">Not enrolled</span>
+                                                    ) : (
+                                                        (cohortsByStudent.get(member.id) ?? []).map((c) => (
+                                                            <p key={c.key} className="truncate text-xs text-ink-900" title={`${c.cohort} · ${c.course}`}>
+                                                                <span className="font-medium">{c.cohort}</span>
+                                                                <span className="text-ink-600"> · {c.course}</span>
+                                                            </p>
+                                                        ))
+                                                    )}
+                                                </div>
+
+                                                {/* Role */}
+                                                <Badge label={role.label} tone={role.tone} icon={role.icon} />
+
+                                                {/* Status */}
+                                                <div className="flex flex-wrap items-center gap-1.5">
+                                                    <Badge label={status.label} tone={status.tone} icon={status.icon} />
+                                                    {!member.last_login_at && member.role !== 'student' && (
+                                                        <Badge label="Invited" tone="neutral" icon={Mail} />
+                                                    )}
+                                                </div>
+
+                                                {/* Actions */}
+                                                <div className="flex justify-end">
+                                                    <button
+                                                        onClick={() => setManagingUser(member)}
+                                                        disabled={isSelf}
+                                                        aria-label={`Manage ${member.name}`}
+                                                        className="flex items-center justify-center rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-surface-100 hover:text-ink-900 disabled:pointer-events-none disabled:opacity-40"
+                                                    >
+                                                        <Settings2 className="size-4" aria-hidden="true" />
+                                                    </button>
+                                                </div>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>

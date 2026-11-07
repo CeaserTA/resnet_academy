@@ -9,6 +9,7 @@ import { CohortSection } from '@/components/landing/CohortSection';
 import { Testimonials } from '@/components/landing/Testimonials';
 import { CtaBanner } from '@/components/landing/CtaBanner';
 import { Footer } from '@/components/landing/Footer';
+import { BrandIntro } from '@/components/layout/BrandIntro';
 
 export function LandingPage() {
     const { openAuth } = useAuthModal();
@@ -24,6 +25,7 @@ export function LandingPage() {
 
     return (
         <div>
+            <BrandIntro />
             <LandingHeader onLoginClick={handleLoginClick} onSignupClick={handleSignupClick} />
 
             <main>
