@@ -166,7 +166,7 @@ describe('UpdateProfileRequest Validation Error Message Specificity Property Tes
         };
         
         // Generate a value that exceeds max length
-        $tooLongValue = $faker->text($maxLength + $faker->numberBetween(1, 50));
+        $tooLongValue = str_repeat('a', $maxLength + 1);
         
         $data = [$field => $tooLongValue];
         

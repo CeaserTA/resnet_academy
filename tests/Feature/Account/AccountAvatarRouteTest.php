@@ -56,7 +56,7 @@ it('POST /api/v1/account/avatar rejects files larger than 5MB', function (): voi
         ]);
 
     $response->assertUnprocessable();
-    $response->assertJsonValidationErrors(['avatar']);
+    $response->assertJsonValidationErrors(['avatar'], responseKey: 'error.fields');
 });
 
 it('POST /api/v1/account/avatar uploads to R2 storage and updates avatar_url', function (): void {
@@ -120,5 +120,5 @@ it('POST /api/v1/account/avatar rejects non-image files', function (): void {
         ]);
 
     $response->assertUnprocessable();
-    $response->assertJsonValidationErrors(['avatar']);
+    $response->assertJsonValidationErrors(['avatar'], responseKey: 'error.fields');
 });

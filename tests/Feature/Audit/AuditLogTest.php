@@ -51,7 +51,11 @@ it('audits an enrolment withdrawal with the from/to status in meta', function ()
     $log = AuditLog::where('action', 'enrolment.status_changed')->where('entity_id', $enrolment->id)->first();
     expect($log)->not->toBeNull();
     expect($log->actor_id)->toBe($student->id);
-    expect($log->meta)->toBe(['from' => 'confirmed', 'to' => 'withdrawn']);
+    expect($log->meta)->toBe([
+        'from' => 'confirmed',
+        'to' => 'withdrawn',
+        'cohort_course_id' => $enrolment->cohort_course_id,
+    ]);
 });
 
 it('denies a student from withdrawing another students enrolment', function (): void {

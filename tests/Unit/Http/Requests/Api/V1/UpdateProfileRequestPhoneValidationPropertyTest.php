@@ -42,8 +42,8 @@ describe('UpdateProfileRequest Phone Validation Property Tests', function (): vo
             $shortPhone .= $faker->randomElement(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ' ', '-', '+']);
         }
         
-        // Ensure the string is not empty (edge case with length=0 shouldn't happen, but safety check)
-        if (strlen($shortPhone) === 0) {
+        // Ensure the string is not empty or whitespace-only (which sometimes rule treats as empty)
+        if (trim($shortPhone) === '') {
             $shortPhone = '123'; // Fallback to ensure we have a short phone
         }
         

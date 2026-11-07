@@ -21,7 +21,7 @@ beforeEach(function (): void {
 
 it('summarizes system-wide counts for the admin dashboard', function (): void {
     $admin = User::factory()->admin()->create();
-    User::factory()->instructor()->count(2)->create();
+    $instructors = User::factory()->instructor()->count(2)->create();
     User::factory()->student()->count(3)->create();
 
     Course::factory()->create(['status' => CourseStatus::Draft]);
@@ -30,12 +30,12 @@ it('summarizes system-wide counts for the admin dashboard', function (): void {
 
     $paidStudent = User::factory()->student()->create();
     $enrolmentService = app(EnrolmentService::class);
-    $ugxCohortCourse = CohortCourse::factory()->for($ugxCourse)->open()->create();
+    $ugxCohortCourse = CohortCourse::factory()->for($ugxCourse)->open()->create(['primary_instructor_id' => $instructors[0]->id]);
     $enrolmentService->enrol($paidStudent, $ugxCourse, EnrolmentSource::Self, $ugxCohortCourse->id);
     Order::where('course_id', $ugxCourse->id)->update(['status' => OrderStatus::Paid]);
 
     $otherPaidStudent = User::factory()->student()->create();
-    $usdCohortCourse = CohortCourse::factory()->for($usdCourse)->open()->create();
+    $usdCohortCourse = CohortCourse::factory()->for($usdCourse)->open()->create(['primary_instructor_id' => $instructors[1]->id]);
     $enrolmentService->enrol($otherPaidStudent, $usdCourse, EnrolmentSource::Self, $usdCohortCourse->id);
     Order::where('course_id', $usdCourse->id)->update(['status' => OrderStatus::Paid]);
 
